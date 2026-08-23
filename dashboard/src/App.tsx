@@ -10,12 +10,16 @@ import {
   AlertTriangle, Flame, ArrowRight, Play, Pause, SkipForward, SkipBack,
   Sparkles, Compass, Search, Terminal, Zap, Bug, Clock,
   Filter, Command, Lock, Server, Check, X, Layers, RefreshCw, Eye,
-  Database, FlaskConical, PlusCircle, BookmarkCheck, ArrowUpRight
+  Database, FlaskConical, PlusCircle, BookmarkCheck, ArrowUpRight, Route, Wrench
 } from 'lucide-react';
+import { SideRail, type NavPage } from './components/SideRail';
+import {
+  cx, Tile, TileHead, Eyebrow, SectionHead, StatusBadge, RiskPill,
+  Meter, Stat, EmptyState, riskTone,
+} from './components/ui';
 
 // ─── Types & Enums ─────────────────────────────────────────────────────
 
-type NavPage = 'overview' | 'traces' | 'incidents' | 'drift' | 'telemetry-lab' | 'incident-replay' | 'experiments' | 'datasets';
 type ReasoningStrategy = 'ALL' | 'DIRECT' | 'COT' | 'AOT';
 
 interface IncidentStep {
@@ -32,65 +36,20 @@ interface IncidentStep {
 
 // ─── Status & Badge Components ─────────────────────────────────────────
 
-function StatusBadge({ status }: { status: 'healthy' | 'watch' | 'critical' | 'running' | 'success' | 'error' | string }) {
-  const s = status.toLowerCase();
-  if (s === 'healthy' || s === 'success') {
-    return (
-      <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-mono font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-        <span>HEALTHY</span>
-      </span>
-    );
-  }
-  if (s === 'watch' || s === 'running') {
-    return (
-      <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-mono font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20">
-        <span className="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
-        <span>WATCH</span>
-      </span>
-    );
-  }
-  return (
-    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-mono font-medium bg-rose-500/10 text-rose-400 border border-rose-500/20">
-      <span className="w-1.5 h-1.5 rounded-full bg-rose-400 animate-pulse"></span>
-      <span>CRITICAL</span>
-    </span>
-  );
-}
-
-function RiskScorePill({ score, label }: { score: number | null | undefined; label?: string }) {
-  if (score === null || score === undefined) {
-    return <span className="font-mono text-xs text-slate-500">—</span>;
-  }
-  const isHigh = score > 0.7;
-  const isMed = score > 0.4 && score <= 0.7;
-  const colorCls = isHigh
-    ? 'bg-rose-500/10 text-rose-400 border-rose-500/30'
-    : isMed
-      ? 'bg-amber-500/10 text-amber-400 border-amber-500/30'
-      : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30';
-
-  return (
-    <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-mono font-medium border ${colorCls}`}>
-      <span>{score.toFixed(3)}</span>
-      {label && <span className="text-[10px] text-slate-400 uppercase">({label})</span>}
-    </span>
-  );
-}
+// StatusBadge and RiskPill now live in components/ui.tsx so the semantic
+// risk thresholds have a single definition shared across every view.
+const RiskScorePill = RiskPill;
 
 // ─── 1. Global Navigation & Compact Health Strip ────────────────────────
 
-function TopControlBar({
-  currentPage, onNavigate, metrics, agents, openIncidentsCount, isConnected, onOpenCommandPalette,
-  activeStrategy, onSelectStrategy
+function TopBar({
+  title, sub, metrics, agents, openIncidentsCount, activeStrategy, onSelectStrategy,
 }: {
-  currentPage: NavPage;
-  onNavigate: (p: NavPage) => void;
+  title: string;
+  sub: string;
   metrics: Metrics | null;
   agents: Agent[];
   openIncidentsCount: number;
-  isConnected: boolean;
-  onOpenCommandPalette: () => void;
   activeStrategy: ReasoningStrategy;
   onSelectStrategy: (s: ReasoningStrategy) => void;
 }) {
@@ -100,171 +59,72 @@ function TopControlBar({
     : 100;
 
   return (
-    <header className="bg-[#0c0e14] border-b border-slate-800 sticky top-0 z-40">
-      {/* Primary App Bar */}
-      <div className="px-6 py-2.5 flex items-center justify-between gap-4">
-        {/* Brand & Tabs */}
-        <div className="flex items-center gap-6">
-          <div className="flex items-center gap-2.5">
-            <div className="w-6 h-6 rounded bg-indigo-600 flex items-center justify-center text-white font-mono font-bold text-xs">
-              AP
-            </div>
-            <span className="font-semibold text-slate-100 text-sm tracking-tight font-sans">
-              AgentPulse <span className="text-slate-500 font-mono text-xs font-normal">/ Control Plane</span>
-            </span>
-          </div>
-
-          <div className="h-4 w-px bg-slate-800" />
-
-          {/* Navigation Links */}
-          <nav className="flex items-center gap-1 text-xs font-medium">
-            <button
-              onClick={() => onNavigate('overview')}
-              className={`px-3 py-1.5 rounded-md transition-colors ${
-                currentPage === 'overview' ? 'bg-slate-800 text-white font-semibold' : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              Overview
-            </button>
-            <button
-              onClick={() => onNavigate('traces')}
-              className={`px-3 py-1.5 rounded-md transition-colors ${
-                currentPage === 'traces' ? 'bg-slate-800 text-white font-semibold' : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              Traces
-            </button>
-            <button
-              onClick={() => onNavigate('incidents')}
-              className={`px-3 py-1.5 rounded-md transition-colors flex items-center gap-1.5 ${
-                currentPage === 'incidents' ? 'bg-slate-800 text-white font-semibold' : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              <span>Incidents</span>
-              {openIncidentsCount > 0 && (
-                <span className="px-1.5 py-0.2 rounded-full bg-rose-500/20 text-rose-300 text-[10px] font-mono font-bold">
-                  {openIncidentsCount}
-                </span>
-              )}
-            </button>
-            <button
-              onClick={() => onNavigate('incident-replay')}
-              className={`px-3 py-1.5 rounded-md transition-colors ${
-                currentPage === 'incident-replay' ? 'bg-slate-800 text-white font-semibold' : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              Replay Debugger
-            </button>
-            <button
-              onClick={() => onNavigate('drift')}
-              className={`px-3 py-1.5 rounded-md transition-colors ${
-                currentPage === 'drift' ? 'bg-slate-800 text-white font-semibold' : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              Drift & Stability
-            </button>
-            <button
-              onClick={() => onNavigate('experiments')}
-              className={`px-3 py-1.5 rounded-md transition-colors flex items-center gap-1 text-indigo-400 ${
-                currentPage === 'experiments' ? 'bg-slate-800 font-semibold' : 'hover:text-indigo-300'
-              }`}
-            >
-              <FlaskConical className="w-3.5 h-3.5" />
-              <span>Experiments</span>
-            </button>
-            <button
-              onClick={() => onNavigate('datasets')}
-              className={`px-3 py-1.5 rounded-md transition-colors flex items-center gap-1 text-emerald-400 ${
-                currentPage === 'datasets' ? 'bg-slate-800 font-semibold' : 'hover:text-emerald-300'
-              }`}
-            >
-              <Database className="w-3.5 h-3.5" />
-              <span>Datasets</span>
-            </button>
-            <button
-              onClick={() => onNavigate('telemetry-lab')}
-              className={`px-3 py-1.5 rounded-md transition-colors flex items-center gap-1 text-amber-400 ${
-                currentPage === 'telemetry-lab' ? 'bg-slate-800 font-semibold' : 'hover:text-amber-300'
-              }`}
-            >
-              <Zap className="w-3.5 h-3.5" />
-              <span>Telemetry Lab</span>
-            </button>
-          </nav>
+    <header className="sticky top-0 z-30 bg-surface/85 backdrop-blur-md border-b border-line">
+      <div className="h-14 px-6 flex items-center justify-between gap-6">
+        <div className="min-w-0">
+          <h1 className="text-sm font-semibold tracking-tight text-ink truncate">{title}</h1>
+          <p className="text-2xs font-mono text-ink-faint truncate">{sub}</p>
         </div>
 
-        {/* Global Controls & Status */}
-        <div className="flex items-center gap-4 text-xs font-mono">
-          {/* Strategy Selector */}
-          <div className="flex items-center gap-1 bg-[#141824] border border-slate-800 px-1.5 py-0.5 rounded">
-            <span className="text-[10px] text-slate-500 pr-1">STRATEGY:</span>
-            {(['ALL', 'DIRECT', 'COT', 'AOT'] as ReasoningStrategy[]).map((strat) => (
+        <div className="flex items-center gap-2 shrink-0">
+          <Eyebrow className="hidden lg:inline">Strategy</Eyebrow>
+          <div className="flex items-center gap-0.5 p-0.5 rounded border border-line bg-surface-2">
+            {(['ALL', 'DIRECT', 'COT', 'AOT'] as ReasoningStrategy[]).map((s) => (
               <button
-                key={strat}
-                onClick={() => onSelectStrategy(strat)}
-                className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
-                  activeStrategy === strat ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-slate-200'
-                }`}
+                key={s}
+                onClick={() => onSelectStrategy(s)}
+                aria-pressed={activeStrategy === s}
+                className={cx(
+                  'px-2 py-1 rounded text-2xs font-mono font-semibold cursor-pointer transition-colors',
+                  activeStrategy === s
+                    ? 'bg-signal/15 text-signal'
+                    : 'text-ink-faint hover:text-ink-dim',
+                )}
               >
-                {strat}
+                {s}
               </button>
             ))}
           </div>
-
-          <div className="flex items-center gap-2 text-slate-400">
-            <span className={`w-2 h-2 rounded-full ${isConnected ? 'bg-emerald-400' : 'bg-rose-500'}`} />
-            <span>{isConnected ? 'LIVE WS' : 'SYNC POLLING'}</span>
-          </div>
-
-          <button
-            onClick={onOpenCommandPalette}
-            className="flex items-center gap-2 bg-[#141824] hover:bg-slate-800 border border-slate-800 px-2.5 py-1 rounded text-slate-300 transition-colors"
-          >
-            <Search className="w-3.5 h-3.5 text-slate-400" />
-            <span className="text-slate-400">Search actions</span>
-            <kbd className="bg-slate-800/80 px-1.5 py-0.5 rounded text-[10px] text-slate-400 border border-slate-700 font-mono">⌘K</kbd>
-          </button>
         </div>
       </div>
 
-      {/* Global Compact Health Strip */}
-      <div className="bg-[#090b10] border-t border-slate-800/60 px-6 py-1.5 flex flex-wrap items-center justify-between text-xs font-mono text-slate-400">
-        <div className="flex items-center gap-6">
-          <div className="flex items-center gap-2">
-            <span>AGENTS:</span>
-            <span className="font-semibold text-slate-200">{agents.length || 5} active</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span>TRACES:</span>
-            <span className="font-semibold text-slate-200">{metrics?.total_traces ?? 0}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span>COMPOSITE RISK:</span>
-            <span className={`font-semibold ${avgRisk > 0.5 ? 'text-rose-400' : 'text-emerald-400'}`}>
-              {avgRisk.toFixed(3)}
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span>SYSTEM ASI:</span>
-            <span className={`font-semibold ${avgAsi >= 70 ? 'text-emerald-400' : 'text-amber-400'}`}>
-              {avgAsi.toFixed(0)}/100
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span>OPEN INCIDENTS:</span>
-            <span className={`font-semibold ${openIncidentsCount > 0 ? 'text-rose-400' : 'text-slate-400'}`}>
-              {openIncidentsCount}
-            </span>
-          </div>
-        </div>
-
-        <div className="text-[11px] text-slate-500">
-          Evaluated Model: <span className="text-slate-300">Qwen 2.5 7B Instruct</span> (Cascade NLI)
+      {/* Fleet readout strip */}
+      <div className="px-6 py-2 border-t border-line/70 flex flex-wrap items-center gap-x-7 gap-y-1.5">
+        <Readout label="Agents" value={String(agents.length)} />
+        <Readout label="Traces" value={String(metrics?.total_traces ?? 0)} />
+        <Readout
+          label="Composite risk"
+          value={avgRisk.toFixed(3)}
+          tone={avgRisk > 0.7 ? 'bad' : avgRisk > 0.4 ? 'warn' : 'ok'}
+        />
+        <Readout
+          label="System ASI"
+          value={`${avgAsi.toFixed(0)}/100`}
+          tone={avgAsi >= 70 ? 'ok' : 'warn'}
+        />
+        <Readout
+          label="Open incidents"
+          value={String(openIncidentsCount)}
+          tone={openIncidentsCount > 0 ? 'bad' : undefined}
+        />
+        <div className="ml-auto text-2xs font-mono text-ink-faint">
+          EVALUATOR <span className="text-ink-dim">DeBERTa-v3 + MiniLM cascade</span>
         </div>
       </div>
     </header>
   );
 }
+
+function Readout({ label, value, tone }: { label: string; value: string; tone?: 'ok' | 'warn' | 'bad' }) {
+  const toneCls = tone === 'bad' ? 'text-state-bad' : tone === 'warn' ? 'text-state-warn' : tone === 'ok' ? 'text-state-ok' : 'text-ink';
+  return (
+    <div className="flex items-center gap-2">
+      <Eyebrow>{label}</Eyebrow>
+      <span className={cx('font-mono text-xs font-semibold tnum', toneCls)}>{value}</span>
+    </div>
+  );
+}
+
 
 // ─── 2. Agent Topology (Aggregated & Expanded Views) ───────────────────
 
@@ -286,80 +146,88 @@ function AgentTopologySection({
   const agentMap = useMemo(() => new Map(agents.map(a => [a.agent_id, a])), [agents]);
 
   return (
-    <div className="bg-[#11141f] border border-slate-800 rounded-lg p-4 space-y-3">
-      <div className="flex items-center justify-between">
+    <Tile className="p-4" hover={false} index={4}>
+      <div className="flex items-start justify-between gap-4 mb-3">
         <div>
-          <h2 className="text-sm font-bold text-slate-100 font-sans tracking-tight">Agent Execution Topology</h2>
-          <p className="text-xs text-slate-400">Live DAG pipeline with real-time risk propagation & ASI health status</p>
+          <h2 className="text-sm font-semibold text-ink tracking-tight">Agent Execution Topology</h2>
+          <p className="text-xs text-ink-dim mt-0.5">
+            Live DAG pipeline with risk propagation and agent stability index
+          </p>
         </div>
-        <div className="flex items-center gap-4 text-xs font-mono text-slate-400">
-          <div className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-emerald-400" />
-            <span>ASI ≥ 70</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-amber-400" />
-            <span>ASI 50-69</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-rose-400" />
-            <span>ASI &lt; 50</span>
-          </div>
+        <div className="hidden md:flex items-center gap-3.5 shrink-0">
+          {[
+            { c: 'bg-state-ok', l: 'ASI ≥ 70' },
+            { c: 'bg-state-warn', l: 'ASI 50–69' },
+            { c: 'bg-state-bad', l: 'ASI < 50' },
+          ].map((k) => (
+            <span key={k.l} className="flex items-center gap-1.5">
+              <span className={cx('w-1.5 h-1.5 rounded-full', k.c)} aria-hidden="true" />
+              <Eyebrow>{k.l}</Eyebrow>
+            </span>
+          ))}
         </div>
       </div>
 
-      {/* DAG Flow */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-3 pt-2">
+      {/* DAG flow. Chevrons between nodes convey execution direction, which a
+          plain grid of cards does not. */}
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-2.5">
         {TOPOLOGY_NODES.map((node, index) => {
           const liveAgent = agentMap.get(node.id);
           const isSelected = selectedAgentId === node.id;
           const asi = liveAgent?.current_asi ?? 98.4;
           const risk = liveAgent?.avg_risk_score ?? 0.04;
           const spansCount = liveAgent?.total_spans ?? 24;
-
           const status = asi < 50 ? 'critical' : asi < 70 ? 'watch' : 'healthy';
 
           return (
-            <div
+            <button
               key={node.id}
               onClick={() => onSelectAgent(node.id)}
-              className={`p-3.5 rounded-lg border text-left cursor-pointer transition-all ${
-                isSelected
-                  ? 'border-indigo-500 bg-[#161b2b] shadow-lg shadow-indigo-950/40 ring-1 ring-indigo-500'
-                  : 'border-slate-800 bg-[#0e111a] hover:border-slate-700 hover:bg-[#131724]'
-              }`}
+              aria-pressed={isSelected}
+              className={cx(
+                'relative tile bracket p-3 text-left cursor-pointer',
+                isSelected ? 'tile-active bracket-on' : 'tile-hover',
+              )}
             >
               <div className="flex items-center justify-between mb-2">
-                <span className="text-[10px] font-mono text-slate-500 font-bold">NODE 0{index + 1}</span>
+                <Eyebrow>Node {String(index + 1).padStart(2, '0')}</Eyebrow>
                 <StatusBadge status={status} />
               </div>
 
-              <div className="font-semibold text-slate-100 text-sm font-sans">{node.name}</div>
-              <div className="text-xs text-slate-400 font-mono mt-0.5">{node.role}</div>
+              <div className="text-[13px] font-semibold text-ink leading-tight">{node.name}</div>
+              <div className="text-2xs font-mono text-ink-faint mt-0.5">{node.role}</div>
 
-              <div className="mt-3 pt-2.5 border-t border-slate-800/80 flex items-center justify-between text-xs font-mono">
+              <div className="mt-3 pt-2.5 border-t border-line grid grid-cols-3 gap-1">
                 <div>
-                  <span className="text-[10px] text-slate-500 block">ASI</span>
-                  <span className={`font-bold ${asi >= 70 ? 'text-emerald-400' : 'text-amber-400'}`}>
+                  <Eyebrow>ASI</Eyebrow>
+                  <div className={cx(
+                    'font-mono text-xs font-semibold tnum mt-0.5',
+                    asi >= 70 ? 'text-state-ok' : asi >= 50 ? 'text-state-warn' : 'text-state-bad',
+                  )}>
                     {asi.toFixed(0)}
-                  </span>
+                  </div>
                 </div>
                 <div>
-                  <span className="text-[10px] text-slate-500 block">RISK</span>
-                  <span className={`font-bold ${risk > 0.5 ? 'text-rose-400' : 'text-slate-300'}`}>
+                  <Eyebrow>Risk</Eyebrow>
+                  <div className={cx(
+                    'font-mono text-xs font-semibold tnum mt-0.5',
+                    risk > 0.7 ? 'text-state-bad' : risk > 0.4 ? 'text-state-warn' : 'text-ink-dim',
+                  )}>
                     {risk.toFixed(2)}
-                  </span>
+                  </div>
                 </div>
                 <div>
-                  <span className="text-[10px] text-slate-500 block">SPANS</span>
-                  <span className="font-bold text-slate-300">{spansCount}</span>
+                  <Eyebrow>Spans</Eyebrow>
+                  <div className="font-mono text-xs font-semibold tnum mt-0.5 text-ink-dim">{spansCount}</div>
                 </div>
               </div>
-            </div>
+
+              <Meter value={risk} className="mt-2.5" />
+            </button>
           );
         })}
       </div>
-    </div>
+    </Tile>
   );
 }
 
@@ -395,70 +263,71 @@ function TraceWaterfallSection({
   const totalDuration = 490;
 
   return (
-    <div className="bg-[#11141f] border border-slate-800 rounded-lg p-4 space-y-3">
-      <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+    <Tile className="p-4" hover={false} index={5}>
+      <div className="flex items-center justify-between gap-4 pb-2.5 mb-2.5 border-b border-line">
         <div>
-          <h2 className="text-sm font-bold text-slate-100 font-sans tracking-tight">Active Trace Waterfall</h2>
-          <p className="text-xs text-slate-400 font-mono">Trace ID: <span className="text-indigo-400 font-bold">tr_e2e_research_48821</span></p>
+          <h2 className="text-sm font-semibold text-ink tracking-tight">Active Trace Waterfall</h2>
+          <p className="text-2xs font-mono text-ink-faint mt-0.5">
+            TRACE <span className="text-signal">tr_e2e_research_48821</span>
+          </p>
         </div>
-        <div className="text-xs font-mono text-slate-400">
-          TOTAL DURATION: <span className="text-slate-200 font-bold">483ms</span>
+        <div className="text-right shrink-0">
+          <Eyebrow>Total duration</Eyebrow>
+          <div className="font-mono text-xs font-semibold tnum text-ink">483ms</div>
         </div>
       </div>
 
-      <div className="space-y-2 pt-2">
+      <div className="space-y-1.5">
         {SAMPLE_WATERFALL_SPANS.map((span) => {
           const leftPercent = (span.startMs / totalDuration) * 100;
           const widthPercent = Math.max((span.durationMs / totalDuration) * 100, 3);
           const isSelected = selectedSpanId === span.id;
+          const barColor =
+            span.riskScore > 0.7 ? 'bg-state-bad'
+              : span.riskScore > 0.4 ? 'bg-state-warn'
+                : 'bg-state-ok';
 
           return (
-            <div
+            <button
               key={span.id}
               onClick={() => onSelectSpan(span)}
-              className={`p-2.5 rounded border text-xs font-mono cursor-pointer transition-colors ${
-                isSelected
-                  ? 'border-indigo-500 bg-[#161b2b]'
-                  : 'border-slate-800/80 bg-[#0e111a] hover:bg-[#131724]'
-              }`}
+              aria-pressed={isSelected}
+              className={cx(
+                'w-full tile p-2.5 text-left cursor-pointer',
+                isSelected ? 'tile-active' : 'tile-hover',
+              )}
             >
-              <div className="flex items-center justify-between text-[11px] mb-1.5">
-                <div className="flex items-center gap-2">
-                  <span className="font-bold text-slate-200 capitalize">@{span.agent}</span>
-                  <span className="text-slate-500">({span.role})</span>
+              <div className="flex items-center justify-between gap-3 mb-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="font-mono text-xs font-semibold text-ink capitalize truncate">
+                    @{span.agent}
+                  </span>
+                  <span className="text-2xs font-mono text-ink-faint truncate">{span.role}</span>
                   {span.toolUsed && (
-                    <span className="text-cyan-400 text-[10px] font-bold px-1 rounded bg-cyan-950/40 border border-cyan-800/30">
-                      🔧 {span.toolUsed}
+                    <span className="inline-flex items-center gap-1 shrink-0 px-1.5 py-px rounded border border-signal/25 bg-signal/10 text-signal text-2xs font-mono">
+                      <Wrench className="w-2.5 h-2.5" aria-hidden="true" />
+                      {span.toolUsed}
                     </span>
                   )}
                 </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-slate-400">{span.durationMs}ms</span>
+                <div className="flex items-center gap-2.5 shrink-0">
+                  <span className="font-mono text-2xs tnum text-ink-faint">{span.durationMs}ms</span>
                   <RiskScorePill score={span.riskScore} />
                 </div>
               </div>
 
-              {/* Timeline Bar */}
-              <div className="w-full h-2 bg-slate-900 rounded-full overflow-hidden relative">
+              {/* Timeline bar positioned along the trace's total duration */}
+              <div className="w-full h-1.5 rounded-full bg-surface-3 relative overflow-hidden">
                 <div
-                  className={`absolute top-0 bottom-0 rounded-full ${
-                    span.riskScore > 0.7
-                      ? 'bg-rose-500'
-                      : span.riskScore > 0.3
-                        ? 'bg-amber-500'
-                        : 'bg-emerald-500'
-                  }`}
-                  style={{
-                    left: `${leftPercent}%`,
-                    width: `${widthPercent}%`,
-                  }}
+                  className={cx('absolute top-0 bottom-0 rounded-full', barColor)}
+                  style={{ left: `${leftPercent}%`, width: `${widthPercent}%` }}
                 />
               </div>
-            </div>
+            </button>
           );
         })}
       </div>
-    </div>
+    </Tile>
   );
 }
 
@@ -468,13 +337,13 @@ function EvidenceInspectorPanel({ selectedSpan }: { selectedSpan?: WaterfallSpan
   const [activeTab, setActiveTab] = useState<'evidence' | 'tools' | 'eval' | 'drift' | 'meta'>('evidence');
 
   return (
-    <div className="bg-[#11141f] border border-slate-800 rounded-lg p-4 flex flex-col h-full space-y-4">
+    <Tile className="p-4 flex flex-col h-full space-y-4" hover={false} index={6}>
       <div>
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-bold text-slate-100 font-sans tracking-tight">Evidence & Grounding Inspector</h2>
-          <span className="text-[10px] font-mono text-slate-500">Span: {selectedSpan?.id || 'sp-03'}</span>
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-sm font-semibold text-ink tracking-tight">Evidence &amp; Grounding Inspector</h2>
+          <Eyebrow>{selectedSpan?.id || 'sp-03'}</Eyebrow>
         </div>
-        <p className="text-xs text-slate-400">Verifies model claims against source premise documents</p>
+        <p className="text-xs text-ink-dim mt-0.5">Verifies model claims against source premise documents</p>
       </div>
 
       {/* Tabs */}
@@ -553,7 +422,7 @@ function EvidenceInspectorPanel({ selectedSpan }: { selectedSpan?: WaterfallSpan
           </div>
         )}
       </div>
-    </div>
+    </Tile>
   );
 }
 
@@ -1252,11 +1121,13 @@ export function App() {
   const [traces, setTraces] = useState<TraceListItem[]>([]);
   const [alerts, setAlerts] = useState<AlertItem[]>([]);
 
+  // Must match the backend route in backend/app/routers/websocket.py
+  // (@router.websocket("/v1/ws/live")) — a bare /v1/ws does not exist.
   const wsUrl =
     import.meta.env.VITE_WS_URL ||
     (import.meta.env.VITE_API_URL
-      ? import.meta.env.VITE_API_URL.replace(/^http/, 'ws') + '/v1/ws'
-      : `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}/v1/ws`);
+      ? import.meta.env.VITE_API_URL.replace(/^http/, 'ws') + '/v1/ws/live'
+      : `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}/v1/ws/live`);
   const { lastMessage, isConnected } = useWebSocket(wsUrl);
 
   const loadData = useCallback(async () => {
@@ -1327,32 +1198,84 @@ export function App() {
 
   const openIncidentsCount = alerts.filter(a => !a.acknowledged).length;
 
+  const PAGE_META: Record<NavPage, { title: string; sub: string }> = {
+    'overview': { title: 'Fleet Overview', sub: 'LIVE AGENT TOPOLOGY / GROUNDING RISK' },
+    'traces': { title: 'Execution Traces', sub: 'MULTI-AGENT SESSIONS / GROUNDING AUDITS' },
+    'incidents': { title: 'Incident Inbox', sub: 'TRIGGERED ALERTS / TRIAGE QUEUE' },
+    'incident-replay': { title: 'Replay Debugger', sub: 'STEP-THROUGH FAULT PROPAGATION' },
+    'drift': { title: 'Drift & Stability', sub: 'CENTROID DISTANCE / AGENT STABILITY INDEX' },
+    'experiments': { title: 'Experiments', sub: 'ABLATION / REASONING STRATEGY BENCHMARKS' },
+    'datasets': { title: 'Datasets', sub: 'CURATED EVALUATION CASES' },
+    'telemetry-lab': { title: 'Telemetry Lab', sub: 'SCENARIO SIMULATION' },
+  };
+  const meta = PAGE_META[currentPage];
+
   return (
-    <div className="min-h-screen flex flex-col bg-[#090b10] text-slate-200 font-sans selection:bg-indigo-600 selection:text-white">
-      {/* Top App Bar & Compact Health Strip */}
-      <TopControlBar
-        currentPage={currentPage}
+    <div className="min-h-screen flex bg-void text-ink font-sans">
+      <div className="deck-field" aria-hidden="true" />
+      <div className="deck-wash" aria-hidden="true" />
+
+      <SideRail
+        current={currentPage}
         onNavigate={setCurrentPage}
-        metrics={metrics}
-        agents={agents}
-        openIncidentsCount={openIncidentsCount}
+        openIncidents={openIncidentsCount}
         isConnected={isConnected}
-        onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
-        activeStrategy={activeStrategy}
-        onSelectStrategy={setActiveStrategy}
+        onOpenPalette={() => setIsCommandPaletteOpen(true)}
       />
+
+      <div className="flex-1 min-w-0 relative z-10 flex flex-col">
+        <TopBar
+          title={meta.title}
+          sub={meta.sub}
+          metrics={metrics}
+          agents={agents}
+          openIncidentsCount={openIncidentsCount}
+          activeStrategy={activeStrategy}
+          onSelectStrategy={setActiveStrategy}
+        />
 
       {/* Main Workspace Area */}
       <main className="flex-1 p-6 overflow-y-auto">
         {currentPage === 'overview' ? (
-          <div className="space-y-6">
+          <div className="space-y-5">
+            {/* Bento: headline signals sized by importance */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              <Stat
+                index={0}
+                label="Composite risk"
+                value={metrics?.avg_risk_score ?? 0}
+                decimals={3}
+                tone={riskTone(metrics?.avg_risk_score ?? 0)}
+                foot={<Meter value={metrics?.avg_risk_score ?? 0} />}
+              />
+              <Stat
+                index={1}
+                label="Total traces"
+                value={metrics?.total_traces ?? 0}
+                foot={<Eyebrow>{metrics?.total_spans ?? 0} spans evaluated</Eyebrow>}
+              />
+              <Stat
+                index={2}
+                label="Open incidents"
+                value={openIncidentsCount}
+                tone={openIncidentsCount > 0 ? 'bad' : 'ok'}
+                foot={<Eyebrow>{alerts.length} total alerts</Eyebrow>}
+              />
+              <Stat
+                index={3}
+                label="Active agents"
+                value={agents.length}
+                foot={<Eyebrow>{traces.length} recent traces</Eyebrow>}
+              />
+            </div>
+
             <AgentTopologySection
               agents={agents}
               selectedAgentId={selectedAgentId}
               onSelectAgent={(id) => setSelectedAgentId(id)}
             />
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
               <div className="lg:col-span-2">
                 <TraceWaterfallSection
                   selectedSpanId={selectedSpan?.id}
@@ -1366,36 +1289,49 @@ export function App() {
             </div>
           </div>
         ) : currentPage === 'traces' ? (
-          <div className="space-y-4">
-            <div>
-              <h2 className="text-lg font-bold text-slate-100 font-sans tracking-tight">Execution Traces</h2>
-              <p className="text-xs text-slate-400">Multi-agent execution sessions and grounding audits</p>
-            </div>
+          <div>
+            <SectionHead
+              title="Execution Traces"
+              sub="Multi-agent execution sessions and grounding audits"
+              right={<Eyebrow>{traces.length} traces</Eyebrow>}
+            />
 
-            <div className="bg-[#11141f] border border-slate-800 rounded-lg overflow-hidden">
-              <table className="w-full text-xs font-mono text-left">
-                <thead>
-                  <tr className="text-slate-400 border-b border-slate-800 bg-[#0e111a]">
-                    <th className="p-3">Trace ID</th>
-                    <th className="p-3">Pipeline</th>
-                    <th className="p-3 text-center">Spans</th>
-                    <th className="p-3 text-center">Risk Score</th>
-                    <th className="p-3 text-right">Timestamp</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800/60">
-                  {traces.map((t) => (
-                    <tr key={t.trace_id} className="hover:bg-slate-800/40 cursor-pointer">
-                      <td className="p-3 text-indigo-400 font-bold">{t.trace_id}</td>
-                      <td className="p-3 text-slate-300">{t.pipeline_id || 'research_pipeline'}</td>
-                      <td className="p-3 text-center text-slate-200">{t.total_spans}</td>
-                      <td className="p-3 text-center"><RiskScorePill score={t.overall_risk_score} /></td>
-                      <td className="p-3 text-right text-slate-500">{new Date(t.start_time).toLocaleString()}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <Tile className="overflow-hidden" hover={false} index={0}>
+              {traces.length === 0 ? (
+                <EmptyState
+                  icon={<Route className="w-7 h-7" />}
+                  title="No traces captured yet"
+                  hint="Send spans through the SDK, or run a scenario from Telemetry Lab, and they will appear here."
+                />
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs text-left">
+                    <thead>
+                      <tr className="border-b border-line bg-surface">
+                        <th className="px-4 py-2.5 font-normal"><Eyebrow>Trace ID</Eyebrow></th>
+                        <th className="px-4 py-2.5 font-normal"><Eyebrow>Pipeline</Eyebrow></th>
+                        <th className="px-4 py-2.5 font-normal text-center"><Eyebrow>Spans</Eyebrow></th>
+                        <th className="px-4 py-2.5 font-normal text-center"><Eyebrow>Risk</Eyebrow></th>
+                        <th className="px-4 py-2.5 font-normal text-right"><Eyebrow>Timestamp</Eyebrow></th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-line/60">
+                      {traces.map((t) => (
+                        <tr key={t.trace_id} className="hover:bg-surface-3/60 cursor-pointer transition-colors">
+                          <td className="px-4 py-2.5 font-mono text-signal">{t.trace_id}</td>
+                          <td className="px-4 py-2.5 text-ink-dim">{t.pipeline_id || 'research_pipeline'}</td>
+                          <td className="px-4 py-2.5 text-center font-mono tnum text-ink">{t.total_spans}</td>
+                          <td className="px-4 py-2.5 text-center"><RiskScorePill score={t.overall_risk_score} /></td>
+                          <td className="px-4 py-2.5 text-right font-mono tnum text-ink-faint">
+                            {new Date(t.start_time).toLocaleString()}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </Tile>
           </div>
         ) : currentPage === 'incidents' ? (
           <IncidentInboxView
@@ -1429,6 +1365,7 @@ export function App() {
         onClose={() => setIsCommandPaletteOpen(false)}
         onSelectAction={handleCommandPaletteAction}
       />
+      </div>
     </div>
   );
 }
