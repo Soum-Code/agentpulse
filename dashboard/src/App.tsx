@@ -347,11 +347,11 @@ function EvidenceInspectorPanel({ selectedSpan }: { selectedSpan?: WaterfallSpan
       </div>
 
       {/* Tabs */}
-      <div className="flex items-center border-b border-slate-800 text-xs font-mono">
+      <div className="flex items-center border-b border-line text-xs font-mono">
         <button
           onClick={() => setActiveTab('evidence')}
           className={`px-3 py-1.5 border-b-2 font-medium transition-colors ${
-            activeTab === 'evidence' ? 'border-indigo-500 text-indigo-400' : 'border-transparent text-slate-400 hover:text-slate-200'
+            activeTab === 'evidence' ? 'border-signal text-signal' : 'border-transparent text-ink-faint hover:text-ink-dim'
           }`}
         >
           Evidence
@@ -359,7 +359,7 @@ function EvidenceInspectorPanel({ selectedSpan }: { selectedSpan?: WaterfallSpan
         <button
           onClick={() => setActiveTab('tools')}
           className={`px-3 py-1.5 border-b-2 font-medium transition-colors ${
-            activeTab === 'tools' ? 'border-indigo-500 text-indigo-400' : 'border-transparent text-slate-400 hover:text-slate-200'
+            activeTab === 'tools' ? 'border-signal text-signal' : 'border-transparent text-ink-faint hover:text-ink-dim'
           }`}
         >
           Tools
@@ -367,7 +367,7 @@ function EvidenceInspectorPanel({ selectedSpan }: { selectedSpan?: WaterfallSpan
         <button
           onClick={() => setActiveTab('eval')}
           className={`px-3 py-1.5 border-b-2 font-medium transition-colors ${
-            activeTab === 'eval' ? 'border-indigo-500 text-indigo-400' : 'border-transparent text-slate-400 hover:text-slate-200'
+            activeTab === 'eval' ? 'border-signal text-signal' : 'border-transparent text-ink-faint hover:text-ink-dim'
           }`}
         >
           Eval Cascade
@@ -375,7 +375,7 @@ function EvidenceInspectorPanel({ selectedSpan }: { selectedSpan?: WaterfallSpan
         <button
           onClick={() => setActiveTab('drift')}
           className={`px-3 py-1.5 border-b-2 font-medium transition-colors ${
-            activeTab === 'drift' ? 'border-indigo-500 text-indigo-400' : 'border-transparent text-slate-400 hover:text-slate-200'
+            activeTab === 'drift' ? 'border-signal text-signal' : 'border-transparent text-ink-faint hover:text-ink-dim'
           }`}
         >
           Drift Signal
@@ -386,7 +386,7 @@ function EvidenceInspectorPanel({ selectedSpan }: { selectedSpan?: WaterfallSpan
       <div className="flex-1 overflow-y-auto space-y-3 text-xs">
         {activeTab === 'evidence' ? (
           <div className="space-y-3">
-            <div className="p-3 rounded bg-[#0e111a] border border-slate-800 space-y-1">
+            <div className="tile p-3 space-y-1">
               <span className="text-[10px] font-mono text-slate-500 uppercase font-bold">Source Premise Context</span>
               <p className="text-slate-300 font-sans text-xs leading-relaxed">
                 "The database query executed in 45ms and returned 3 verified customer profile records."
@@ -404,19 +404,22 @@ function EvidenceInspectorPanel({ selectedSpan }: { selectedSpan?: WaterfallSpan
             </div>
           </div>
         ) : activeTab === 'tools' ? (
-          <div className="p-3 rounded bg-[#0e111a] border border-slate-800 space-y-2 font-mono text-xs">
-            <div className="text-slate-400">Tool Name: <span className="text-cyan-400 font-bold">support_kb_search</span></div>
-            <div className="text-slate-400">Claimed Count: <span className="text-rose-400 font-bold">14</span> | Actual Returned: <span className="text-emerald-400 font-bold">3</span></div>
+          <div className="tile p-3 space-y-2 font-mono text-xs">
+            <div className="text-ink-dim">Tool name: <span className="text-signal font-semibold">support_kb_search</span></div>
+            <div className="text-ink-dim">
+              Claimed count: <span className="text-state-bad font-semibold tnum">14</span>
+              {' · '}Actual returned: <span className="text-state-ok font-semibold tnum">3</span>
+            </div>
             <div className="text-slate-500 text-[11px]">Verdict: Deterministic tool count mismatch detected.</div>
           </div>
         ) : activeTab === 'eval' ? (
-          <div className="p-3 rounded bg-[#0e111a] border border-slate-800 space-y-2 font-mono text-xs">
+          <div className="tile p-3 space-y-2 font-mono text-xs">
             <div>MiniLM Similarity: <span className="text-slate-200">0.241</span> (Threshold: 0.70)</div>
             <div>DeBERTa Contradiction: <span className="text-rose-400 font-bold">0.985</span></div>
             <div>Composite Risk: <span className="text-rose-400 font-bold">0.920 (HIGH_RISK)</span></div>
           </div>
         ) : (
-          <div className="p-3 rounded bg-[#0e111a] border border-slate-800 space-y-2 font-mono text-xs">
+          <div className="tile p-3 space-y-2 font-mono text-xs">
             <div>Centroid Distance: <span className="text-amber-400 font-bold">0.420</span></div>
             <div>Agent Stability Index (ASI): <span className="text-amber-400 font-bold">48/100</span></div>
           </div>
@@ -435,60 +438,70 @@ function IncidentInboxView({
   onCurateTrace: (al: AlertItem) => void;
 }) {
   return (
-    <div className="space-y-4">
-      <div>
-        <h2 className="text-lg font-bold text-slate-100 font-sans tracking-tight">Incident Inbox</h2>
-        <p className="text-xs text-slate-400">Storm-suppressed anomalies, grounding contradictions & tool mismatches</p>
-      </div>
+    <div>
+      <SectionHead
+        title="Incident Inbox"
+        sub="Storm-suppressed anomalies, grounding contradictions and tool mismatches"
+        right={<Eyebrow>{alerts.length} alerts</Eyebrow>}
+      />
 
-      <div className="bg-[#11141f] border border-slate-800 rounded-lg overflow-hidden">
-        <table className="w-full text-xs font-mono text-left">
-          <thead>
-            <tr className="text-slate-400 border-b border-slate-800 bg-[#0e111a]">
-              <th className="p-3">Severity</th>
-              <th className="p-3">Type</th>
-              <th className="p-3">Agent</th>
-              <th className="p-3">Trace ID</th>
-              <th className="p-3">Message</th>
-              <th className="p-3 text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-800/60">
-            {alerts.length === 0 ? (
-              <tr>
-                <td colSpan={6} className="p-4 text-center text-slate-500">
-                  No active incidents recorded.
-                </td>
-              </tr>
-            ) : (
-              alerts.map((al) => (
-                <tr key={al.id} className="hover:bg-slate-800/40 transition-colors">
-                  <td className="p-3">
-                    <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
-                      al.severity === 'HIGH' ? 'bg-rose-500/20 text-rose-300' : 'bg-amber-500/20 text-amber-300'
-                    }`}>
-                      {al.severity}
-                    </span>
-                  </td>
-                  <td className="p-3 font-semibold text-slate-200">{al.alert_type}</td>
-                  <td className="p-3 text-indigo-400 capitalize">@{al.agent_id}</td>
-                  <td className="p-3 text-slate-400">{al.trace_id?.slice(0, 12)}...</td>
-                  <td className="p-3 text-slate-300 font-sans truncate max-w-md">{al.message}</td>
-                  <td className="p-3 text-right">
-                    <button
-                      onClick={() => onCurateTrace(al)}
-                      className="px-2.5 py-1 rounded bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-300 border border-indigo-500/30 text-[11px] font-mono font-semibold inline-flex items-center gap-1 transition-colors"
-                    >
-                      <BookmarkCheck className="w-3 h-3" />
-                      <span>Curate Case</span>
-                    </button>
-                  </td>
+      <Tile className="overflow-hidden" hover={false} index={0}>
+        {alerts.length === 0 ? (
+          <EmptyState
+            icon={<CheckCircle2 className="w-7 h-7" />}
+            title="No active incidents"
+            hint="Alerts raised by the evaluator appear here for triage and can be curated into the evaluation dataset."
+          />
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs text-left">
+              <thead>
+                <tr className="border-b border-line bg-surface">
+                  <th className="px-4 py-2.5 font-normal"><Eyebrow>Severity</Eyebrow></th>
+                  <th className="px-4 py-2.5 font-normal"><Eyebrow>Type</Eyebrow></th>
+                  <th className="px-4 py-2.5 font-normal"><Eyebrow>Agent</Eyebrow></th>
+                  <th className="px-4 py-2.5 font-normal"><Eyebrow>Trace</Eyebrow></th>
+                  <th className="px-4 py-2.5 font-normal"><Eyebrow>Message</Eyebrow></th>
+                  <th className="px-4 py-2.5 font-normal text-right"><Eyebrow>Actions</Eyebrow></th>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+              </thead>
+              <tbody className="divide-y divide-line/60">
+                {alerts.map((al) => (
+                  <tr key={al.id} className="hover:bg-surface-3/60 transition-colors">
+                    <td className="px-4 py-2.5">
+                      <span className={cx(
+                        'inline-flex items-center gap-1.5 px-2 py-0.5 rounded border text-2xs font-mono font-medium',
+                        al.severity === 'HIGH'
+                          ? 'bg-state-bad/10 text-state-bad border-state-bad/25'
+                          : 'bg-state-warn/10 text-state-warn border-state-warn/25',
+                      )}>
+                        <span className={cx(
+                          'w-1.5 h-1.5 rounded-full',
+                          al.severity === 'HIGH' ? 'bg-state-bad' : 'bg-state-warn',
+                        )} aria-hidden="true" />
+                        {al.severity}
+                      </span>
+                    </td>
+                    <td className="px-4 py-2.5 font-mono text-ink">{al.alert_type}</td>
+                    <td className="px-4 py-2.5 font-mono text-signal capitalize">@{al.agent_id}</td>
+                    <td className="px-4 py-2.5 font-mono text-ink-faint">{al.trace_id?.slice(0, 12)}…</td>
+                    <td className="px-4 py-2.5 text-ink-dim max-w-md truncate">{al.message}</td>
+                    <td className="px-4 py-2.5 text-right">
+                      <button
+                        onClick={() => onCurateTrace(al)}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded border border-signal/30 bg-signal/10 text-signal hover:bg-signal/20 text-2xs font-mono font-semibold transition-colors cursor-pointer"
+                      >
+                        <BookmarkCheck className="w-3 h-3" aria-hidden="true" />
+                        Curate case
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Tile>
     </div>
   );
 }
@@ -550,58 +563,72 @@ function CurateCaseModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-[#11141f] border border-slate-800 rounded-xl max-w-lg w-full p-6 space-y-4 shadow-2xl">
-        <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+    <div
+      className="fixed inset-0 z-50 bg-void/80 backdrop-blur-sm flex items-center justify-center p-4"
+      onClick={onClose}
+      role="presentation"
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Curate incident into dataset"
+        onClick={(e) => e.stopPropagation()}
+        className="tile bracket-on max-w-lg w-full p-6 space-y-4 shadow-2xl"
+      >
+        <div className="flex items-center justify-between gap-3 pb-3 border-b border-line">
           <div className="flex items-center gap-2">
-            <BookmarkCheck className="w-5 h-5 text-indigo-400" />
-            <h3 className="font-bold text-slate-100 font-sans">Curate Incident into Dataset</h3>
+            <BookmarkCheck className="w-4 h-4 text-signal" aria-hidden="true" />
+            <h3 className="text-sm font-semibold text-ink tracking-tight">Curate Incident into Dataset</h3>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-white">
-            <X className="w-4 h-4" />
+          <button
+            onClick={onClose}
+            aria-label="Close"
+            className="text-ink-faint hover:text-ink cursor-pointer transition-colors"
+          >
+            <X className="w-4 h-4" aria-hidden="true" />
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-3 text-xs font-mono">
           <div>
-            <label className="text-slate-400 block mb-1">Case ID</label>
+            <label className="block mb-1 text-2xs font-mono uppercase tracking-[0.14em] text-ink-faint">Case ID</label>
             <input
               type="text"
               value={caseId}
               onChange={(e) => setCaseId(e.target.value)}
-              className="w-full bg-[#090b10] border border-slate-800 rounded px-3 py-1.5 text-slate-200"
+              className="w-full bg-surface border border-line rounded px-3 py-1.5 text-ink focus:border-signal/50 transition-colors"
               required
             />
           </div>
 
           <div>
-            <label className="text-slate-400 block mb-1">Agent Claim</label>
+            <label className="block mb-1 text-2xs font-mono uppercase tracking-[0.14em] text-ink-faint">Agent Claim</label>
             <textarea
               value={claim}
               onChange={(e) => setClaim(e.target.value)}
               rows={2}
-              className="w-full bg-[#090b10] border border-slate-800 rounded px-3 py-1.5 text-slate-200 font-sans"
+              className="w-full bg-surface border border-line rounded px-3 py-1.5 text-ink focus:border-signal/50 transition-colors font-sans"
               required
             />
           </div>
 
           <div>
-            <label className="text-slate-400 block mb-1">Source Evidence</label>
+            <label className="block mb-1 text-2xs font-mono uppercase tracking-[0.14em] text-ink-faint">Source Evidence</label>
             <textarea
               value={evidence}
               onChange={(e) => setEvidence(e.target.value)}
               rows={2}
-              className="w-full bg-[#090b10] border border-slate-800 rounded px-3 py-1.5 text-slate-200 font-sans"
+              className="w-full bg-surface border border-line rounded px-3 py-1.5 text-ink focus:border-signal/50 transition-colors font-sans"
             />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-slate-400 block mb-1">Classification</label>
+              <label className="block mb-1 text-2xs font-mono uppercase tracking-[0.14em] text-ink-faint">Classification</label>
               <select
                 value={classification}
                 onChange={(e) => setClassification(e.target.value)}
-                className="w-full bg-[#090b10] border border-slate-800 rounded px-3 py-1.5 text-slate-200"
+                className="w-full bg-surface border border-line rounded px-3 py-1.5 text-ink focus:border-signal/50 transition-colors"
               >
                 <option value="SUPPORTED">SUPPORTED</option>
                 <option value="UNSUPPORTED">UNSUPPORTED</option>
@@ -610,40 +637,40 @@ function CurateCaseModal({
             </div>
 
             <div>
-              <label className="text-slate-400 block mb-1">Target Dataset</label>
+              <label className="block mb-1 text-2xs font-mono uppercase tracking-[0.14em] text-ink-faint">Target Dataset</label>
               <input
                 type="text"
                 value="v1.0_curated"
                 disabled
-                className="w-full bg-[#090b10]/60 border border-slate-800 rounded px-3 py-1.5 text-slate-500"
+                className="w-full bg-surface/60 border border-line rounded px-3 py-1.5 text-ink-faint cursor-not-allowed"
               />
             </div>
           </div>
 
           <div>
-            <label className="text-slate-400 block mb-1">Operator Notes</label>
+            <label className="block mb-1 text-2xs font-mono uppercase tracking-[0.14em] text-ink-faint">Operator Notes</label>
             <input
               type="text"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              className="w-full bg-[#090b10] border border-slate-800 rounded px-3 py-1.5 text-slate-200"
+              className="w-full bg-surface border border-line rounded px-3 py-1.5 text-ink focus:border-signal/50 transition-colors"
             />
           </div>
 
-          <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-800">
+          <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-line">
             <button
               type="button"
               onClick={onClose}
-              className="px-3 py-1.5 rounded bg-slate-800 text-slate-300 hover:bg-slate-700"
+              className="px-3 py-1.5 rounded border border-line bg-surface-2 text-ink-dim hover:text-ink hover:border-line-strong cursor-pointer transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={saving}
-              className="px-4 py-1.5 rounded bg-indigo-600 hover:bg-indigo-500 text-white font-bold disabled:opacity-50"
+              className="px-4 py-1.5 rounded border border-signal/35 bg-signal/15 hover:bg-signal/25 text-signal font-semibold disabled:opacity-45 disabled:cursor-not-allowed cursor-pointer transition-colors"
             >
-              {saving ? 'Curating...' : 'Save to Dataset'}
+              {saving ? 'Curating…' : 'Save to dataset'}
             </button>
           </div>
         </form>
@@ -655,115 +682,185 @@ function CurateCaseModal({
 // ─── 7. Experiments View ───────────────────────────────────────────────
 
 function ExperimentsView() {
+  // Values below are the measured results committed in experiments/results/*.json.
+  // They are a static snapshot of the last recorded run, not live figures --
+  // an earlier version of this view showed sub-millisecond latencies that came
+  // from a deterministic fallback generator rather than real model inference.
   const strategyData = [
-    { strategy: 'DIRECT', risk: 0.309, contraRate: 0.375, latency: 0.06, tokensIn: 34, tokensOut: 11 },
-    { strategy: 'COT', risk: 0.163, contraRate: 0.250, latency: 0.05, tokensIn: 66, tokensOut: 12 },
-    { strategy: 'AOT', risk: 0.363, contraRate: 0.375, latency: 0.15, tokensIn: 352, tokensOut: 87 },
+    { strategy: 'DIRECT', risk: 0.424, contraRate: 0.133, latencyMs: 11564.1, tokensIn: 53.1, tokensOut: 37.5 },
+    { strategy: 'COT', risk: 0.283, contraRate: 0.127, latencyMs: 45422.7, tokensIn: 88.1, tokensOut: 186.4 },
+    { strategy: 'AOT', risk: 0.233, contraRate: 0.000, latencyMs: 85215.2, tokensIn: 543.4, tokensOut: 319.7 },
   ];
 
   const baselinesData = [
-    { name: 'Baseline A (No Semantic)', precision: '0.000', recall: '0.000', f1: '0.000', fpr: '0.000', fnr: '1.000', lat: '0.00ms' },
-    { name: 'Baseline B (Sampled 25%)', precision: '0.000', recall: '0.000', f1: '0.000', fpr: '0.000', fnr: '1.000', lat: '53.89ms' },
-    { name: 'Baseline C (Embedding Only)', precision: '0.833', recall: '1.000', f1: '0.909', fpr: '0.333', fnr: '0.000', lat: '21.13ms' },
-    { name: 'Baseline D (NLI Without Drift)', precision: '1.000', recall: '0.600', f1: '0.750', fpr: '0.000', fnr: '0.400', lat: '70.57ms' },
-    { name: 'AgentPulse (Full Cascade)', precision: '1.000', recall: '0.200', f1: '0.333', fpr: '0.000', fnr: '0.800', lat: '89.45ms' },
+    { name: 'A — MiniLM embedding only', precision: '0.733', recall: '0.846', f1: '0.786', fpr: '0.235', fnr: '0.154', lat: '27.8ms' },
+    { name: 'B — DeBERTa NLI only', precision: '0.929', recall: '1.000', f1: '0.963', fpr: '0.059', fnr: '0.000', lat: '188.1ms' },
+    { name: 'C — MiniLM + DeBERTa cascade', precision: '0.929', recall: '1.000', f1: '0.963', fpr: '0.059', fnr: '0.000', lat: '215.9ms' },
+    { name: 'D — NLI + tool-claim validation', precision: '0.929', recall: '1.000', f1: '0.963', fpr: '0.059', fnr: '0.000', lat: '188.1ms' },
+    { name: 'E — NLI + inter-agent disagreement', precision: '0.929', recall: '1.000', f1: '0.963', fpr: '0.059', fnr: '0.000', lat: '373.5ms' },
+    { name: 'F — NLI + drift signal', precision: '0.448', recall: '1.000', f1: '0.619', fpr: '0.941', fnr: '0.000', lat: '207.7ms' },
+    { name: 'G — Full AgentPulse pipeline', precision: '0.929', recall: '1.000', f1: '0.963', fpr: '0.059', fnr: '0.000', lat: '241.6ms' },
   ];
 
   const compoundingNodes = [
-    { node: 'Node A (Planner)', risk: 0.335, status: 'healthy' },
-    { node: 'Node B (Injected Fault)', risk: 1.000, status: 'critical' },
-    { node: 'Node C (Verifier)', risk: 0.003, status: 'healthy' },
-    { node: 'Node D (Analyst)', risk: 0.003, status: 'healthy' },
-    { node: 'Node E (Writer)', risk: 0.003, status: 'healthy' },
+    { node: 'A — Planner', control: 0.495, intervention: 0.495 },
+    { node: 'B — Injected fault', control: 1.000, intervention: 1.000 },
+    { node: 'C — Verifier', control: 0.992, intervention: 0.009 },
+    { node: 'D — Analyst', control: 0.992, intervention: 0.001 },
+    { node: 'E — Writer', control: 0.992, intervention: 0.001 },
   ];
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-lg font-bold text-slate-100 font-sans tracking-tight">Reproducible Experiments & Benchmarks</h2>
-        <p className="text-xs text-slate-400">Comparative evaluations of reasoning strategies (Direct vs CoT vs AoT) and baseline systems</p>
-      </div>
+    <div className="space-y-5">
+      <SectionHead
+        title="Reproducible Experiments & Benchmarks"
+        sub="Reasoning strategies and component ablation, measured on the held-out v1.0_test split"
+        right={<Eyebrow>Snapshot of last recorded run</Eyebrow>}
+      />
 
-      {/* Strategy Comparison Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {strategyData.map((s) => (
-          <div key={s.strategy} className="bg-[#11141f] border border-slate-800 rounded-lg p-4 space-y-3">
-            <div className="flex items-center justify-between pb-2 border-b border-slate-800">
-              <span className="font-bold text-sm text-slate-100 font-mono">{s.strategy} Strategy</span>
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 font-bold">
-                Qwen 2.5 7B
+      {/* Strategy comparison */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        {strategyData.map((s, i) => (
+          <Tile key={s.strategy} className="p-4" index={i}>
+            <div className="flex items-center justify-between gap-2 pb-2.5 mb-2.5 border-b border-line">
+              <span className="font-mono text-xs font-semibold text-ink">{s.strategy}</span>
+              <span className="text-2xs font-mono px-1.5 py-0.5 rounded border border-signal/25 bg-signal/10 text-signal">
+                Qwen3-8B Q4_K_M
               </span>
             </div>
-            <div className="grid grid-cols-2 gap-3 text-xs font-mono">
+            <div className="grid grid-cols-2 gap-3">
               <div>
-                <span className="text-slate-500 text-[10px] block">MEAN RISK</span>
-                <span className="font-bold text-slate-200">{s.risk.toFixed(3)}</span>
+                <Eyebrow>Mean risk</Eyebrow>
+                <div className="font-mono text-sm font-semibold tnum text-ink mt-0.5">{s.risk.toFixed(3)}</div>
+                <Meter value={s.risk} className="mt-1.5" />
               </div>
               <div>
-                <span className="text-slate-500 text-[10px] block">CONTRA RATE</span>
-                <span className="font-bold text-rose-400">{(s.contraRate * 100).toFixed(1)}%</span>
+                <Eyebrow>Contradiction rate</Eyebrow>
+                <div className="font-mono text-sm font-semibold tnum text-ink mt-0.5">
+                  {(s.contraRate * 100).toFixed(1)}%
+                </div>
               </div>
               <div>
-                <span className="text-slate-500 text-[10px] block">AVG TOKENS IN</span>
-                <span className="font-bold text-slate-200">{s.tokensIn}</span>
+                <Eyebrow>Mean latency</Eyebrow>
+                <div className="font-mono text-xs font-semibold tnum text-ink-dim mt-0.5">
+                  {(s.latencyMs / 1000).toFixed(1)}s
+                </div>
               </div>
               <div>
-                <span className="text-slate-500 text-[10px] block">AVG TOKENS OUT</span>
-                <span className="font-bold text-slate-200">{s.tokensOut}</span>
+                <Eyebrow>Tokens in / out</Eyebrow>
+                <div className="font-mono text-xs font-semibold tnum text-ink-dim mt-0.5">
+                  {s.tokensIn.toFixed(0)} / {s.tokensOut.toFixed(0)}
+                </div>
               </div>
             </div>
-          </div>
+          </Tile>
         ))}
       </div>
 
-      {/* Baselines Table */}
-      <div className="bg-[#11141f] border border-slate-800 rounded-lg overflow-hidden">
-        <div className="p-4 border-b border-slate-800">
-          <h3 className="text-sm font-bold text-slate-100 font-sans">Baselines vs. AgentPulse Evaluation (v1.0_test)</h3>
+      <Tile className="p-3.5 border-state-warn/25 bg-state-warn/[0.04]" hover={false} index={3}>
+        <div className="flex gap-2.5">
+          <AlertTriangle className="w-4 h-4 text-state-warn shrink-0 mt-px" aria-hidden="true" />
+          <p className="text-xs text-ink-dim leading-relaxed">
+            <span className="text-ink font-medium">Grounding risk is inconclusive on this sample.</span>{' '}
+            The spread between strategy means (0.191) is smaller than the largest within-strategy
+            standard deviation (0.377), so no strategy can be declared better on grounding risk here.
+            The measured difference that does hold: AOT spends roughly 8.5&times; DIRECT&apos;s output tokens.
+          </p>
         </div>
-        <table className="w-full text-xs font-mono text-left">
-          <thead>
-            <tr className="text-slate-400 border-b border-slate-800 bg-[#0e111a]">
-              <th className="p-3">System / Baseline</th>
-              <th className="p-3 text-center">Precision</th>
-              <th className="p-3 text-center">Recall</th>
-              <th className="p-3 text-center">F1-Score</th>
-              <th className="p-3 text-center">FPR</th>
-              <th className="p-3 text-center">FNR</th>
-              <th className="p-3 text-right">Latency</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-800/60">
-            {baselinesData.map((b, i) => (
-              <tr key={b.name} className={i === baselinesData.length - 1 ? 'bg-indigo-950/20 font-bold' : ''}>
-                <td className="p-3 text-slate-200">{b.name}</td>
-                <td className="p-3 text-center text-emerald-400">{b.precision}</td>
-                <td className="p-3 text-center text-indigo-400">{b.recall}</td>
-                <td className="p-3 text-center text-slate-200">{b.f1}</td>
-                <td className="p-3 text-center text-slate-400">{b.fpr}</td>
-                <td className="p-3 text-center text-slate-400">{b.fnr}</td>
-                <td className="p-3 text-right text-slate-300">{b.lat}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      </Tile>
 
-      {/* 5-Node Compounding Error Section */}
-      <div className="bg-[#11141f] border border-slate-800 rounded-lg p-4 space-y-3">
-        <div>
-          <h3 className="text-sm font-bold text-slate-100 font-sans">5-Node Compounding Error Downstream Propagation</h3>
-          <p className="text-xs text-slate-400">Observes how an injected ungrounded claim at Node B is mitigated by downstream verifiers</p>
+      {/* Ablation table */}
+      <Tile className="overflow-hidden" hover={false} index={4}>
+        <TileHead
+          label="Component ablation — held-out v1.0_test (30 cases)"
+          right={<Eyebrow>Thresholds selected on dev</Eyebrow>}
+        />
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs text-left">
+            <thead>
+              <tr className="border-b border-line bg-surface">
+                <th className="px-4 py-2.5 font-normal"><Eyebrow>Configuration</Eyebrow></th>
+                <th className="px-4 py-2.5 font-normal text-center"><Eyebrow>Precision</Eyebrow></th>
+                <th className="px-4 py-2.5 font-normal text-center"><Eyebrow>Recall</Eyebrow></th>
+                <th className="px-4 py-2.5 font-normal text-center"><Eyebrow>F1</Eyebrow></th>
+                <th className="px-4 py-2.5 font-normal text-center"><Eyebrow>FPR</Eyebrow></th>
+                <th className="px-4 py-2.5 font-normal text-center"><Eyebrow>FNR</Eyebrow></th>
+                <th className="px-4 py-2.5 font-normal text-right"><Eyebrow>Latency</Eyebrow></th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-line/60">
+              {baselinesData.map((b) => {
+                const isFull = b.name.startsWith('G');
+                const underperforms = parseFloat(b.f1) < 0.963;
+                return (
+                  <tr key={b.name} className={cx('font-mono', isFull && 'bg-signal/[0.06]')}>
+                    <td className={cx('px-4 py-2.5', isFull ? 'text-ink font-semibold' : 'text-ink-dim')}>
+                      {b.name}
+                    </td>
+                    <td className="px-4 py-2.5 text-center tnum text-ink-dim">{b.precision}</td>
+                    <td className="px-4 py-2.5 text-center tnum text-ink-dim">{b.recall}</td>
+                    <td className={cx(
+                      'px-4 py-2.5 text-center tnum font-semibold',
+                      underperforms ? 'text-state-warn' : 'text-state-ok',
+                    )}>
+                      {b.f1}
+                    </td>
+                    <td className={cx(
+                      'px-4 py-2.5 text-center tnum',
+                      parseFloat(b.fpr) > 0.5 ? 'text-state-bad' : 'text-ink-faint',
+                    )}>
+                      {b.fpr}
+                    </td>
+                    <td className="px-4 py-2.5 text-center tnum text-ink-faint">{b.fnr}</td>
+                    <td className="px-4 py-2.5 text-right tnum text-ink-dim">{b.lat}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-3 pt-2">
+        <div className="px-4 py-2.5 border-t border-line">
+          <p className="text-2xs text-ink-faint leading-relaxed">
+            Config F scores below the plain NLI-only baseline: the drift detector&apos;s cold-start
+            centroid flags most non-failure cases on this non-temporal data (FPR 0.941). Reported
+            rather than hidden.
+          </p>
+        </div>
+      </Tile>
+
+      {/* Compounding error */}
+      <Tile className="p-4" hover={false} index={5}>
+        <div className="mb-3">
+          <h3 className="text-sm font-semibold text-ink tracking-tight">
+            Downstream propagation — control vs intervention
+          </h3>
+          <p className="text-xs text-ink-dim mt-0.5">
+            An ungrounded claim is injected at Node B; the intervention condition adds a verifier at Node C
+          </p>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-2.5">
           {compoundingNodes.map((cn) => (
-            <div key={cn.node} className="p-3 rounded border border-slate-800 bg-[#0e111a] space-y-1.5 font-mono text-xs">
-              <span className="text-[10px] text-slate-500 block truncate">{cn.node}</span>
-              <RiskScorePill score={cn.risk} />
+            <div key={cn.node} className="tile p-3">
+              <Eyebrow>{cn.node}</Eyebrow>
+              <div className="mt-2 space-y-2">
+                <div>
+                  <div className="text-2xs font-mono text-ink-faint mb-1">Unmitigated</div>
+                  <RiskScorePill score={cn.control} />
+                </div>
+                <div>
+                  <div className="text-2xs font-mono text-ink-faint mb-1">Verifier active</div>
+                  <RiskScorePill score={cn.intervention} />
+                </div>
+              </div>
             </div>
           ))}
         </div>
-      </div>
+        <p className="text-2xs text-ink-faint mt-3 leading-relaxed">
+          Node A reads ~0.495 despite being unmodified: DeBERTa NLI classifies a premise compared
+          against itself as neutral rather than entailment. Treat its absolute value as an
+          imperfect baseline; the before/after comparison from Node C onward is unaffected.
+        </p>
+      </Tile>
     </div>
   );
 }
@@ -771,46 +868,58 @@ function ExperimentsView() {
 // ─── 8. Datasets View ──────────────────────────────────────────────────
 
 function DatasetsView() {
+  // Counts match datasets/v1.0_*.json after the expansion documented in
+  // scripts/expand_dataset.py (50 original cases + 23 constructed = 73).
   const datasets = [
-    { version: 'v1.0_dev', split: 'dev', cases: 5, domain: 'Research & Support' },
-    { version: 'v1.0_val', split: 'val', cases: 5, domain: 'Diagnostics & Telemetry' },
-    { version: 'v1.0_test', split: 'test', cases: 8, domain: 'Multi-Agent Benchmark' },
-    { version: 'v1.0_curated', split: 'production', cases: 1, domain: 'Curated Production Incidents' },
+    { version: 'v1.0_dev', split: 'dev', cases: 21, domain: 'Threshold selection only' },
+    { version: 'v1.0_val', split: 'val', cases: 22, domain: 'Validation' },
+    { version: 'v1.0_test', split: 'test', cases: 30, domain: 'Held out for reporting' },
+    { version: 'v1.0_curated', split: 'production', cases: 1, domain: 'Curated from live incidents' },
   ];
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-lg font-bold text-slate-100 font-sans tracking-tight">Versioned Evaluation Datasets</h2>
-        <p className="text-xs text-slate-400">Standardized ground-truth test splits with human inter-annotator agreement</p>
-      </div>
+    <div className="space-y-5">
+      <SectionHead
+        title="Versioned Evaluation Datasets"
+        sub="Ground-truth splits used for threshold selection and held-out reporting"
+        right={<Eyebrow>73 cases total</Eyebrow>}
+      />
 
-      {/* Reliability Banner */}
-      <div className="p-4 rounded-lg bg-emerald-950/20 border border-emerald-500/30 flex items-center justify-between">
-        <div>
-          <span className="text-xs font-mono font-bold text-emerald-400 block">HUMAN ANNOTATION RELIABILITY</span>
-          <p className="text-xs text-slate-300 font-sans mt-0.5">
-            Inter-Annotator Agreement: <span className="font-bold font-mono text-emerald-300">Cohen's Kappa κ = 1.00</span> across dev, val, and test splits.
-          </p>
+      {/* Label provenance. Stated precisely: these labels come from two
+          independent LLM-as-judge passes, not human annotation. */}
+      <Tile className="p-4" hover={false} index={0}>
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <Eyebrow>Label agreement</Eyebrow>
+            <p className="text-xs text-ink-dim mt-1.5 leading-relaxed">
+              The original 50 cases were labelled by{' '}
+              <span className="text-ink">two independent LLM-as-judge passes</span>, not human
+              annotators, reaching Cohen&apos;s κ = 0.922. The 23 cases added later are correct by
+              construction and are excluded from that figure. See{' '}
+              <span className="font-mono text-signal">LABEL_AGREEMENT_REPORT.md</span>.
+            </p>
+          </div>
+          <span className="shrink-0 px-2 py-0.5 rounded border border-state-ok/25 bg-state-ok/10 text-state-ok font-mono text-2xs font-semibold tnum">
+            κ 0.922
+          </span>
         </div>
-        <span className="px-3 py-1 rounded bg-emerald-500/20 text-emerald-300 font-mono text-xs font-bold">
-          GOLD STANDARD
-        </span>
-      </div>
+      </Tile>
 
-      {/* Dataset Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        {datasets.map((d) => (
-          <div key={d.version} className="bg-[#11141f] border border-slate-800 rounded-lg p-4 space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="font-bold text-sm text-slate-100 font-mono">{d.version}</span>
-              <span className="text-[10px] font-mono uppercase px-1.5 py-0.5 rounded bg-slate-800 text-slate-300">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+        {datasets.map((d, i) => (
+          <Tile key={d.version} className="p-4" index={i + 1}>
+            <div className="flex items-center justify-between gap-2">
+              <span className="font-mono text-xs font-semibold text-ink">{d.version}</span>
+              <span className="text-2xs font-mono uppercase px-1.5 py-0.5 rounded bg-surface-3 text-ink-dim">
                 {d.split}
               </span>
             </div>
-            <div className="text-xs font-mono text-slate-400">Total Cases: <span className="text-slate-200 font-bold">{d.cases}</span></div>
-            <div className="text-xs text-slate-500 font-sans">{d.domain}</div>
-          </div>
+            <div className="mt-3">
+              <Eyebrow>Cases</Eyebrow>
+              <div className="font-mono text-xl font-semibold tnum text-ink mt-0.5">{d.cases}</div>
+            </div>
+            <p className="text-2xs text-ink-faint mt-2">{d.domain}</p>
+          </Tile>
         ))}
       </div>
     </div>
@@ -852,49 +961,57 @@ function IncidentReplayDebugger() {
 
   return (
     <div className="space-y-4">
-      <div>
-        <h2 className="text-lg font-bold text-slate-100 font-sans tracking-tight">Time-Scrub Incident Replay Debugger</h2>
-        <p className="text-xs text-slate-400">Step-by-step causal investigation of failure propagation across agent DAG nodes</p>
-      </div>
+      <SectionHead
+        title="Time-Scrub Incident Replay Debugger"
+        sub="Step-by-step causal investigation of failure propagation across agent DAG nodes"
+      />
 
       {/* Control Bar */}
-      <div className="bg-[#11141f] border border-slate-800 rounded-lg p-4 space-y-3">
-        <div className="flex items-center justify-between">
+      <Tile className="p-4 space-y-3" hover={false} index={0}>
+        <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <button
               onClick={() => setCurrentStepIdx(Math.max(0, currentStepIdx - 1))}
               disabled={currentStepIdx === 0}
-              className="p-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 disabled:opacity-40"
+              aria-label="Previous step"
+              className="p-1.5 rounded border border-line bg-surface-2 text-ink-dim hover:text-ink hover:border-line-strong disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors"
             >
-              <SkipBack className="w-4 h-4" />
+              <SkipBack className="w-4 h-4" aria-hidden="true" />
             </button>
             <button
               onClick={() => setIsPlaying(!isPlaying)}
-              className="px-3 py-1.5 rounded bg-indigo-600 hover:bg-indigo-500 text-white font-mono text-xs font-semibold flex items-center gap-1.5"
+              className="px-3 py-1.5 rounded border border-signal/35 bg-signal/15 hover:bg-signal/25 text-signal font-mono text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-colors"
             >
-              {isPlaying ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
+              {isPlaying ? <Pause className="w-3.5 h-3.5" aria-hidden="true" /> : <Play className="w-3.5 h-3.5" aria-hidden="true" />}
               <span>{isPlaying ? 'PAUSE' : 'PLAY'}</span>
             </button>
             <button
               onClick={() => setCurrentStepIdx(Math.min(SAMPLE_REPLAY_STEPS.length - 1, currentStepIdx + 1))}
               disabled={currentStepIdx === SAMPLE_REPLAY_STEPS.length - 1}
-              className="p-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 disabled:opacity-40"
+              aria-label="Next step"
+              className="p-1.5 rounded border border-line bg-surface-2 text-ink-dim hover:text-ink hover:border-line-strong disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors"
             >
-              <SkipForward className="w-4 h-4" />
+              <SkipForward className="w-4 h-4" aria-hidden="true" />
             </button>
           </div>
 
-          <div className="flex items-center gap-1.5 text-xs font-mono text-slate-400">
-            <span>SPEED:</span>
-            {[0.5, 1, 2].map((s) => (
-              <button
-                key={s}
-                onClick={() => setPlaybackSpeed(s)}
-                className={`px-2 py-0.5 rounded text-[11px] ${playbackSpeed === s ? 'bg-indigo-600 text-white font-bold' : 'bg-slate-800 text-slate-400'}`}
-              >
-                {s}x
-              </button>
-            ))}
+          <div className="flex items-center gap-2">
+            <Eyebrow>Speed</Eyebrow>
+            <div className="flex items-center gap-0.5 p-0.5 rounded border border-line bg-surface-2">
+              {[0.5, 1, 2].map((sp) => (
+                <button
+                  key={sp}
+                  onClick={() => setPlaybackSpeed(sp)}
+                  aria-pressed={playbackSpeed === sp}
+                  className={cx(
+                    'px-2 py-0.5 rounded text-2xs font-mono font-semibold cursor-pointer transition-colors',
+                    playbackSpeed === sp ? 'bg-signal/15 text-signal' : 'text-ink-faint hover:text-ink-dim',
+                  )}
+                >
+                  {sp}x
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
@@ -904,58 +1021,63 @@ function IncidentReplayDebugger() {
             <div
               key={s.agent}
               onClick={() => setCurrentStepIdx(idx)}
-              className={`p-2.5 rounded border text-left cursor-pointer transition-colors ${
-                idx === currentStepIdx
-                  ? 'border-indigo-500 bg-slate-800'
-                  : idx < currentStepIdx
-                    ? 'border-slate-800 bg-[#0e111a] opacity-80'
-                    : 'border-slate-800/60 bg-[#0e111a]/40 opacity-40'
-              }`}
+              className={cx(
+                'tile p-2.5 text-left cursor-pointer',
+                idx === currentStepIdx ? 'tile-active' : idx < currentStepIdx ? 'tile-hover' : 'tile-hover opacity-45',
+              )}
             >
-              <div className="flex justify-between text-[10px] font-mono text-slate-400">
-                <span>{s.timeLabel}</span>
+              <div className="flex justify-between items-center gap-1">
+                <Eyebrow>{s.timeLabel}</Eyebrow>
                 <StatusBadge status={s.status} />
               </div>
-              <div className="font-mono font-bold text-slate-200 text-xs mt-1 capitalize">@{s.agent}</div>
+              <div className="font-mono font-semibold text-ink text-xs mt-1.5 capitalize truncate">@{s.agent}</div>
             </div>
           ))}
         </div>
-      </div>
+      </Tile>
 
       {/* Step Detail Card */}
-      <div className="bg-[#11141f] border border-slate-800 rounded-lg p-5 space-y-4">
-        <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+      <Tile className="p-5 space-y-4" hover={false} index={1}>
+        <div className="flex items-center justify-between gap-3 pb-3 border-b border-line">
           <div>
-            <div className="flex items-center gap-2">
-              <span className="px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 font-mono text-xs font-bold">
-                STEP 0{currentStepIdx + 1} / 05
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="px-2 py-0.5 rounded border border-signal/25 bg-signal/10 text-signal font-mono text-2xs font-semibold tnum">
+                STEP {String(currentStepIdx + 1).padStart(2, '0')} / {String(SAMPLE_REPLAY_STEPS.length).padStart(2, '0')}
               </span>
-              <h3 className="text-sm font-bold text-slate-100 font-mono capitalize">
-                @{step.agent} ({step.role})
+              <h3 className="text-sm font-semibold text-ink font-mono capitalize">
+                @{step.agent} <span className="text-ink-faint font-normal">({step.role})</span>
               </h3>
             </div>
-            <p className="text-[11px] text-slate-400 font-mono mt-0.5">TIME OFFSET: {step.timeLabel}</p>
+            <div className="mt-1"><Eyebrow>Time offset {step.timeLabel}</Eyebrow></div>
           </div>
           <RiskScorePill score={step.riskScore} label="Risk" />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-mono">
-          <div className="p-3 rounded bg-[#0e111a] border border-slate-800 space-y-1.5">
-            <span className="text-[10px] text-slate-500 uppercase font-bold">Observed Node Action</span>
-            <p className="text-slate-200 font-sans text-xs leading-relaxed">{step.event}</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div className="tile p-3 space-y-2">
+            <Eyebrow>Observed node action</Eyebrow>
+            <p className="text-ink-dim text-xs leading-relaxed">{step.event}</p>
             {step.toolUsed && (
-              <p className="text-cyan-400 text-xs pt-1">🔧 Tool Call: <span className="font-bold">{step.toolUsed}</span></p>
+              <span className="inline-flex items-center gap-1.5 px-1.5 py-0.5 rounded border border-signal/25 bg-signal/10 text-signal text-2xs font-mono">
+                <Wrench className="w-2.5 h-2.5" aria-hidden="true" />
+                {step.toolUsed}
+              </span>
             )}
           </div>
 
-          <div className={`p-3 rounded border space-y-1.5 ${
-            step.evidence ? 'bg-rose-950/20 border-rose-500/30 text-rose-200' : 'bg-[#0e111a] border-slate-800 text-slate-400'
-          }`}>
-            <span className="text-[10px] uppercase font-bold">Evidence & Grounding Flag</span>
-            <p className="font-sans text-xs leading-relaxed">{step.evidence || 'No grounding or contradiction flags observed on this step.'}</p>
+          <div className={cx(
+            'tile p-3 space-y-2',
+            step.evidence && 'border-state-bad/30 bg-state-bad/[0.06]',
+          )}>
+            <Eyebrow className={step.evidence ? 'text-state-bad' : undefined}>
+              Evidence &amp; grounding flag
+            </Eyebrow>
+            <p className={cx('text-xs leading-relaxed', step.evidence ? 'text-state-bad' : 'text-ink-faint')}>
+              {step.evidence || 'No grounding or contradiction flags observed on this step.'}
+            </p>
           </div>
         </div>
-      </div>
+      </Tile>
     </div>
   );
 }
@@ -972,28 +1094,70 @@ function DriftCenterView({ agents }: { agents: Agent[] }) {
   ];
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-lg font-bold text-slate-100 font-sans tracking-tight">Agent Drift & Stability Radar</h2>
-        <p className="text-xs text-slate-400">Embedding centroid shifts, tool entropy changes & Agent Stability Index (ASI)</p>
-      </div>
+    <div className="space-y-5">
+      <SectionHead
+        title="Agent Drift & Stability"
+        sub="Embedding centroid shift, tool entropy change and Agent Stability Index"
+      />
 
-      <div className="bg-[#11141f] border border-slate-800 rounded-lg p-5 space-y-4">
-        <h3 className="text-sm font-bold text-slate-100 font-sans">Centroid Distance Shift vs. Threshold (0.30)</h3>
+      <Tile className="p-5" hover={false} index={0}>
+        <div className="flex items-center justify-between gap-4 mb-4">
+          <h3 className="text-sm font-semibold text-ink tracking-tight">
+            Centroid distance vs drift threshold
+          </h3>
+          <div className="flex items-center gap-3">
+            <span className="flex items-center gap-1.5">
+              <span className="w-2.5 h-px bg-signal" aria-hidden="true" />
+              <Eyebrow>Current</Eyebrow>
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="w-2.5 h-px bg-state-ok" aria-hidden="true" />
+              <Eyebrow>Baseline</Eyebrow>
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="w-2.5 h-px bg-state-bad" aria-hidden="true" />
+              <Eyebrow>Threshold 0.30</Eyebrow>
+            </span>
+          </div>
+        </div>
         <div className="h-64 w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={driftTimelineData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-              <XAxis dataKey="span" stroke="#64748b" textAnchor="middle" />
-              <YAxis stroke="#64748b" domain={[0, 0.6]} />
-              <Tooltip contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155' }} />
-              <ReferenceLine y={0.30} stroke="#f43f5e" strokeDasharray="4 4" label={{ value: 'Drift Threshold (0.30)', fill: '#f43f5e', fontSize: 10 }} />
-              <Line type="monotone" dataKey="current" stroke="#818cf8" strokeWidth={2} name="Current Centroid Dist" />
-              <Line type="monotone" dataKey="baseline" stroke="#10b981" strokeWidth={1.5} strokeDasharray="3 3" name="Baseline" />
+            <LineChart data={driftTimelineData} margin={{ top: 4, right: 8, bottom: 0, left: -18 }}>
+              <CartesianGrid strokeDasharray="2 4" stroke="#1e2333" vertical={false} />
+              <XAxis
+                dataKey="span" stroke="#5d6782" textAnchor="middle" tickLine={false}
+                axisLine={{ stroke: '#1e2333' }}
+                tick={{ fontSize: 10, fontFamily: 'JetBrains Mono' }}
+              />
+              <YAxis
+                stroke="#5d6782" domain={[0, 0.6]} tickLine={false}
+                axisLine={{ stroke: '#1e2333' }}
+                tick={{ fontSize: 10, fontFamily: 'JetBrains Mono' }}
+              />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: '#0f121c', border: '1px solid #2b3247',
+                  borderRadius: 6, fontSize: 11, fontFamily: 'JetBrains Mono',
+                }}
+                labelStyle={{ color: '#9aa4bd' }}
+              />
+              <ReferenceLine y={0.30} stroke="#fb7185" strokeDasharray="4 4" />
+              <Line
+                type="monotone" dataKey="current" stroke="#22d3ee" strokeWidth={2}
+                name="Current centroid distance" dot={{ r: 2.5, fill: '#22d3ee' }}
+              />
+              <Line
+                type="monotone" dataKey="baseline" stroke="#34d399" strokeWidth={1.5}
+                strokeDasharray="3 3" name="Baseline" dot={false}
+              />
             </LineChart>
           </ResponsiveContainer>
         </div>
-      </div>
+        <p className="text-2xs text-ink-faint mt-3 leading-relaxed">
+          Illustrative series. Measured drift results with graded shifts and negative controls are in
+          <span className="font-mono text-ink-dim"> DRIFT_EXPERIMENT_REPORT.md</span>.
+        </p>
+      </Tile>
     </div>
   );
 }
@@ -1014,28 +1178,31 @@ function TelemetryLabStudio({
   ];
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-lg font-bold text-slate-100 font-sans tracking-tight">Telemetry Simulation Lab</h2>
-        <p className="text-xs text-slate-400">Inject controlled synthetic anomaly workloads to test detection triggers</p>
-      </div>
+    <div className="space-y-5">
+      <SectionHead
+        title="Telemetry Simulation Lab"
+        sub="Inject controlled synthetic anomaly workloads to exercise detection triggers"
+        right={isRunning ? <StatusBadge status="running" /> : undefined}
+      />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {scenarios.map((sc) => (
-          <div key={sc.id} className="bg-[#11141f] border border-slate-800 rounded-lg p-5 flex flex-col justify-between space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        {scenarios.map((sc, i) => (
+          <Tile key={sc.id} className="p-5 flex flex-col justify-between gap-4" index={i}>
             <div>
-              <h3 className="text-sm font-bold text-slate-100 font-sans">{sc.title}</h3>
-              <p className="text-xs text-slate-400 font-sans mt-1 leading-relaxed">{sc.desc}</p>
+              <h3 className="text-sm font-semibold text-ink tracking-tight">{sc.title}</h3>
+              <p className="text-xs text-ink-dim mt-1 leading-relaxed">{sc.desc}</p>
             </div>
             <button
               onClick={() => onRunScenario(sc.id)}
               disabled={isRunning}
-              className="w-full py-2 rounded bg-indigo-600 hover:bg-indigo-500 text-white font-mono text-xs font-bold flex items-center justify-center gap-2 disabled:opacity-50 transition-colors"
+              className="w-full py-2 rounded border border-signal/35 bg-signal/15 hover:bg-signal/25 text-signal font-mono text-xs font-semibold flex items-center justify-center gap-2 disabled:opacity-45 disabled:cursor-not-allowed cursor-pointer transition-colors"
             >
-              <Zap className="w-3.5 h-3.5" />
-              <span>{isRunning ? 'Injecting Traces...' : 'Trigger Scenario'}</span>
+              {isRunning
+                ? <RefreshCw className="w-3.5 h-3.5 animate-spin" aria-hidden="true" />
+                : <Zap className="w-3.5 h-3.5" aria-hidden="true" />}
+              <span>{isRunning ? 'Injecting traces…' : 'Trigger scenario'}</span>
             </button>
-          </div>
+          </Tile>
         ))}
       </div>
     </div>
@@ -1067,35 +1234,59 @@ function CommandPalette({
 
   const filtered = actions.filter(a => a.label.toLowerCase().includes(search.toLowerCase()));
 
+  // The ESC affordance is shown in the input, so it has to actually work.
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-start justify-center pt-24 p-4">
-      <div className="bg-[#11141f] border border-slate-800 rounded-xl max-w-lg w-full p-4 space-y-3 shadow-2xl">
-        <div className="flex items-center gap-2.5 px-3 py-2 bg-[#090b10] border border-slate-800 rounded-lg">
-          <Search className="w-4 h-4 text-slate-400" />
+    <div
+      className="fixed inset-0 z-50 bg-void/80 backdrop-blur-sm flex items-start justify-center pt-24 p-4"
+      onClick={onClose}
+      role="presentation"
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Command palette"
+        onClick={(e) => e.stopPropagation()}
+        className="tile bracket-on max-w-lg w-full p-3 space-y-2.5 shadow-2xl"
+      >
+        <div className="flex items-center gap-2.5 px-3 py-2 rounded border border-line bg-surface">
+          <Search className="w-4 h-4 text-ink-faint shrink-0" aria-hidden="true" />
           <input
             type="text"
-            placeholder="Type a command or search actions..."
+            placeholder="Type a command or search actions…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             autoFocus
-            className="bg-transparent text-slate-200 text-xs font-mono outline-none w-full"
+            className="bg-transparent text-ink text-xs font-mono outline-none w-full placeholder:text-ink-faint"
           />
-          <kbd className="text-[10px] font-mono text-slate-500">ESC</kbd>
+          <kbd className="text-2xs font-mono text-ink-faint border border-line rounded px-1 py-px shrink-0">
+            ESC
+          </kbd>
         </div>
 
-        <div className="max-h-64 overflow-y-auto space-y-1">
-          {filtered.map((a) => (
-            <button
-              key={a.id}
-              onClick={() => { onSelectAction(a.id); onClose(); }}
-              className="w-full text-left px-3 py-2 rounded text-xs font-mono text-slate-300 hover:bg-indigo-600 hover:text-white flex items-center justify-between transition-colors"
-            >
-              <span>{a.label}</span>
-              <span className="text-[10px] text-slate-500 uppercase">{a.category}</span>
-            </button>
-          ))}
+        <div className="max-h-64 overflow-y-auto space-y-0.5">
+          {filtered.length === 0 ? (
+            <p className="px-3 py-6 text-center text-xs text-ink-faint">No matching actions.</p>
+          ) : (
+            filtered.map((a) => (
+              <button
+                key={a.id}
+                onClick={() => { onSelectAction(a.id); onClose(); }}
+                className="w-full text-left px-3 py-2 rounded text-xs font-mono text-ink-dim hover:bg-signal/12 hover:text-ink flex items-center justify-between gap-3 cursor-pointer transition-colors"
+              >
+                <span className="truncate">{a.label}</span>
+                <Eyebrow>{a.category}</Eyebrow>
+              </button>
+            ))
+          )}
         </div>
       </div>
     </div>
