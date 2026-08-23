@@ -77,9 +77,17 @@ A separate, verified limitation of the grounding signal: DeBERTa NLI classifies 
 
 ## 4. Reasoning strategy comparison: Direct vs CoT vs AoT
 
-Real local inference via `Qwen/Qwen3-8B-GGUF` (Q4_K_M, llama.cpp, CPU-only). Measured sustained throughput on this hardware: 4.3 tokens/sec.
+Real local inference via `Qwen/Qwen3-8B-GGUF` (Q4_K_M, llama.cpp, CPU-only, 16 logical cores, no GPU). Full run: 30 test cases x 5 stochastic runs x 3 strategies, `max_tokens=200` per call.
 
-A prior version of this section reported latencies of 0.04-0.15 ms for this comparison. Those numbers were the output of a deterministic fallback text generator, not model inference — `load_immediately` was never set to `True` anywhere in the codebase, so no model weights were ever loaded for that run. That bug is fixed (see `experiments/reasoning_strategies.py`), and this section will be replaced with the results of a full run (30 test cases x 5 runs x 3 strategies, real inference) once it completes. A 2-case smoke test confirmed the pipeline runs correctly end to end with real per-call latencies in the 4-96 second range depending on strategy and token budget — see `REASONING_STRATEGY_EVALUATION_REPORT.md` for the current state of this result.
+A prior version of this section reported latencies of 0.04-0.15 ms for this comparison. Those numbers were the output of a deterministic fallback text generator, not model inference — `load_immediately` was never set to `True` anywhere in the codebase, so no model weights were ever loaded for that run. That bug is fixed (see `experiments/reasoning_strategies.py`); the numbers below are from the real, completed run.
+
+| Strategy | Mean latency (ms) | Median (ms) | Std dev (ms) | Mean tokens in | Mean tokens out | Mean grounding risk | Risk std dev | Contradiction rate |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| DIRECT | 11564.1 | 6044.7 | 13667.7 | 53.1 | 37.5 | 0.424 | 0.377 | 0.133 |
+| COT | 45422.7 | 47682.3 | 7549.1 | 88.1 | 186.4 | 0.283 | 0.324 | 0.127 |
+| AOT | 85215.2 | 74577.1 | 36663.8 | 543.4 | 319.7 | 0.233 | 0.331 | 0.000 |
+
+**Grounding risk is inconclusive on this sample**: the spread between strategy means (0.191) is smaller than the largest within-strategy run-to-run standard deviation (0.377), so no strategy can be declared better on grounding risk here — this is reported as-is rather than picking the lowest mean and calling it a finding. What the data does support: DIRECT is fastest and cheapest (37.5 mean output tokens), AOT is slowest and most expensive (319.7 mean output tokens, ~8.5x DIRECT's), and AOT had zero contradictions across all 150 runs versus DIRECT's 13.3% and COT's 12.7% — a real, measured difference, distinct from the inconclusive risk-score comparison. Full detail and limitations in `REASONING_STRATEGY_EVALUATION_REPORT.md`.
 
 ## 5. Baseline and ablation comparison
 
