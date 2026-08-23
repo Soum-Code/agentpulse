@@ -12,10 +12,10 @@ subjective judgment:
 - CONTRADICTED/TOOL_EXECUTION_FAILURE_CLAIM cases claim success when
   tool_records show status="error".
 
-This is NOT a substitute for the original 50 cases' two-independent-annotator
-process (documented in HUMAN_ANNOTATION_REPORT.md) -- it's a deterministic
-construction method, and is labeled as such in that report rather than
-being folded into the human-annotation Cohen's Kappa numbers.
+This is NOT a substitute for the original 50 cases' dual LLM-as-judge
+evaluation process (documented in LABEL_AGREEMENT_REPORT.md) -- it's a
+deterministic construction method, and is labeled as such in that report
+rather than being folded into the label-agreement Cohen's Kappa numbers.
 
 Evidence statements use real, checkable facts (published ML papers, standard
 sysadmin/networking behavior, elementary statistics) so nothing fabricated

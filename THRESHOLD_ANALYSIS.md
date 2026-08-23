@@ -92,6 +92,6 @@ Selection rule: highest F1, ties broken by higher recall.
   arbitrary ordering, not production drift.
 - **Latency figures** are per-case means of the components each configuration uses, measured on
   CPU. They are not end-to-end request latencies.
-- Ground truth is the dataset's `is_failure` label, described in `HUMAN_ANNOTATION_REPORT.md`.
+- Ground truth is the dataset's `is_failure` label. For the original 50 cases this comes from dual LLM-as-judge evaluation, not human review; for the 23 cases added later it's correct by construction. See `LABEL_AGREEMENT_REPORT.md`.
 
 *Data source:* `experiments/results/ablation_results.json`
