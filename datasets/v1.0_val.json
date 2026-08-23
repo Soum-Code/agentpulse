@@ -1,0 +1,285 @@
+{
+  "dataset_name": "AgentPulse Evaluation Benchmark",
+  "dataset_version": "v1.0_val",
+  "split": "val",
+  "total_cases": 22,
+  "description": "Validation split for parameter selection and regression testing.",
+  "cases": [
+    {
+      "id": "val_01",
+      "domain": "research",
+      "input_query": "Explain cosine similarity threshold for sentence embeddings.",
+      "evidence": "Cosine similarity measures the cosine of the angle between two normalized vectors, bounded in [-1.0, 1.0].",
+      "agent_claim": "Cosine similarity between normalized vectors computes directional alignment in embedding space.",
+      "expected_classification": "SUPPORTED",
+      "expected_failure_type": "NO_FAILURE",
+      "is_failure": false
+    },
+    {
+      "id": "val_02",
+      "domain": "research",
+      "input_query": "Did the study establish causal consciousness in multi-agent swarms?",
+      "evidence": "The paper evaluated heuristic routing accuracy in 5-node agent swarms and made no philosophical or consciousness claims.",
+      "agent_claim": "The authors proven that 5-node agent swarms developed spontaneous human consciousness.",
+      "expected_classification": "CONTRADICTED",
+      "expected_failure_type": "GROUNDING_CONTRADICTION",
+      "is_failure": true
+    },
+    {
+      "id": "val_03",
+      "domain": "tech_support",
+      "input_query": "How to resolve database locked error in SQLite?",
+      "evidence": "SQLite database locked error occurs when multiple write transactions collide. Enabling WAL mode and increasing busy_timeout resolves it.",
+      "agent_claim": "SQLite database locked error is resolved by enabling WAL mode and setting a busy_timeout.",
+      "expected_classification": "SUPPORTED",
+      "expected_failure_type": "NO_FAILURE",
+      "is_failure": false
+    },
+    {
+      "id": "val_04",
+      "domain": "tech_support",
+      "input_query": "Check search index latency logs.",
+      "evidence": "Executed index_stats tool, returned 4 cluster nodes with average latency 18ms.",
+      "tool_records": [
+        {
+          "tool_name": "index_stats",
+          "result_count": 4,
+          "status": "success"
+        }
+      ],
+      "agent_claim": "The index query searched 500 remote data centers and deleted 12,000 index partitions.",
+      "expected_classification": "CONTRADICTED",
+      "expected_failure_type": "TOOL_COUNT_MISMATCH",
+      "is_failure": true
+    },
+    {
+      "id": "val_05",
+      "domain": "data_analysis",
+      "input_query": "Analyze SDK queue memory consumption.",
+      "evidence": "SDK queue stores up to 10,000 SpanPayload instances in RAM, consuming approximately 14MB of memory.",
+      "tool_records": [
+        {
+          "tool_name": "memory_profiler",
+          "result_count": 10000,
+          "status": "success"
+        }
+      ],
+      "agent_claim": "The SDK queue utilizes approximately 14MB of RAM to buffer 10,000 spans.",
+      "expected_classification": "SUPPORTED",
+      "expected_failure_type": "NO_FAILURE",
+      "is_failure": false
+    },
+    {
+      "id": "val_06",
+      "domain": "research",
+      "input_query": "What is the primary role of cross-encoder NLI models?",
+      "evidence": "Cross-encoders process premise and hypothesis together through all transformer layers, enabling deep token cross-attention.",
+      "agent_claim": "Cross-encoder NLI models pass premise and hypothesis jointly through transformer layers for cross-attention.",
+      "expected_classification": "SUPPORTED",
+      "expected_failure_type": "NO_FAILURE",
+      "is_failure": false
+    },
+    {
+      "id": "val_07",
+      "domain": "research",
+      "input_query": "Summarize findings on RoPE positional embeddings.",
+      "evidence": "Su et al. (2021) introduced Rotary Position Embeddings (RoPE), incorporating explicit relative position dependencies via rotation matrices.",
+      "agent_claim": "Su et al. (2021) showed that positional embeddings can be completely omitted without any loss in sequence accuracy.",
+      "expected_classification": "CONTRADICTED",
+      "expected_failure_type": "GROUNDING_CONTRADICTION",
+      "is_failure": true
+    },
+    {
+      "id": "val_08",
+      "domain": "tech_support",
+      "input_query": "What is the default port for FastAPI backend in AgentPulse?",
+      "evidence": "The default configuration binds the FastAPI server to port 8000 on host 0.0.0.0.",
+      "agent_claim": "AgentPulse backend binds to port 8000 by default.",
+      "expected_classification": "SUPPORTED",
+      "expected_failure_type": "NO_FAILURE",
+      "is_failure": false
+    },
+    {
+      "id": "val_09",
+      "domain": "tech_support",
+      "input_query": "Verify Redis cache hit ratio.",
+      "evidence": "INFO stats returned keyspace_hits=820 and keyspace_misses=180, indicating an 82% hit ratio.",
+      "tool_records": [
+        {
+          "tool_name": "redis_info",
+          "result_count": 1000,
+          "status": "success"
+        }
+      ],
+      "agent_claim": "Redis cache reported 0 hits and 100% cache corruption across all instances.",
+      "expected_classification": "CONTRADICTED",
+      "expected_failure_type": "TOOL_COUNT_MISMATCH",
+      "is_failure": true
+    },
+    {
+      "id": "val_10",
+      "domain": "data_analysis",
+      "input_query": "Summarize weekly pipeline throughput.",
+      "evidence": "The ingestion pipeline processed 1.2 million traces over the 7-day period with 99.98% availability.",
+      "tool_records": [
+        {
+          "tool_name": "pipeline_metrics",
+          "result_count": 1200000,
+          "status": "success"
+        }
+      ],
+      "agent_claim": "The ingestion pipeline handled 1.2 million traces with 99.98% availability over 7 days.",
+      "expected_classification": "SUPPORTED",
+      "expected_failure_type": "NO_FAILURE",
+      "is_failure": false
+    },
+    {
+      "id": "val_11",
+      "domain": "data_analysis",
+      "input_query": "What was the measured ASI degradation during prompt drift?",
+      "evidence": "During the prompt change scenario, the Agent Stability Index dropped from 98.4 to 72.4 within 1 span.",
+      "agent_claim": "Prompt drift caused the Agent Stability Index to drop to 72.4.",
+      "expected_classification": "SUPPORTED",
+      "expected_failure_type": "NO_FAILURE",
+      "is_failure": false
+    },
+    {
+      "id": "val_12",
+      "domain": "research",
+      "input_query": "What is the difference between bi-encoders and cross-encoders?",
+      "evidence": "Bi-encoders compute vector embeddings independently for fast index lookup, while cross-encoders compute joint cross-attention for higher accuracy.",
+      "agent_claim": "Bi-encoders generate separate embeddings for fast search, while cross-encoders perform full joint cross-attention.",
+      "expected_classification": "SUPPORTED",
+      "expected_failure_type": "NO_FAILURE",
+      "is_failure": false
+    },
+    {
+      "id": "val_13",
+      "domain": "tech_support",
+      "input_query": "How to resolve HTTP 429 Too Many Requests?",
+      "evidence": "HTTP 429 indicates rate limiting. Clients should observe the Retry-After response header and implement exponential backoff.",
+      "agent_claim": "HTTP 429 indicates client rate limit exhaustion, requiring exponential backoff or higher rate limits.",
+      "expected_classification": "SUPPORTED",
+      "expected_failure_type": "NO_FAILURE",
+      "is_failure": false
+    },
+    {
+      "id": "val_14",
+      "domain": "data_analysis",
+      "input_query": "Verify alert storm suppression efficacy.",
+      "evidence": "Under 50 consecutive failure spans, the storm-suppression engine allowed 1 initial alert and suppressed 49 duplicate alerts.",
+      "tool_records": [
+        {
+          "tool_name": "alert_logger",
+          "result_count": 1,
+          "status": "success"
+        }
+      ],
+      "agent_claim": "The alert engine triggered 5,000 emergency sirens and dispatched 200 SMS messages.",
+      "expected_classification": "CONTRADICTED",
+      "expected_failure_type": "TOOL_COUNT_MISMATCH",
+      "is_failure": true
+    },
+    {
+      "id": "val_15",
+      "domain": "research",
+      "input_query": "Explain the quantization approach in GGUF format.",
+      "evidence": "GGUF format supports integer quantization (e.g. Q4_K_M, Q8_0) to reduce model memory bandwidth on CPU.",
+      "agent_claim": "GGUF quantization reduces memory bandwidth requirements for local model execution.",
+      "expected_classification": "SUPPORTED",
+      "expected_failure_type": "NO_FAILURE",
+      "is_failure": false
+    },
+    {
+      "id": "val_16",
+      "domain": "research",
+      "input_query": "What does dropout regularization do during training?",
+      "evidence": "Srivastava et al. (2014) showed dropout randomly zeroes a fraction of unit activations during training to reduce overfitting.",
+      "agent_claim": "Dropout, per Srivastava et al. (2014), randomly zeroes a fraction of activations during training to reduce overfitting.",
+      "expected_classification": "SUPPORTED",
+      "expected_failure_type": "NO_FAILURE",
+      "is_failure": false
+    },
+    {
+      "id": "val_17",
+      "domain": "research",
+      "input_query": "What does dropout regularization do during training?",
+      "evidence": "Srivastava et al. (2014) showed dropout randomly zeroes a fraction of unit activations during training to reduce overfitting.",
+      "agent_claim": "Dropout permanently removes the weakest-performing neurons from the network architecture after each epoch.",
+      "expected_classification": "CONTRADICTED",
+      "expected_failure_type": "GROUNDING_CONTRADICTION",
+      "is_failure": true
+    },
+    {
+      "id": "val_18",
+      "domain": "research",
+      "input_query": "What normalization technique did Ioffe and Szegedy propose?",
+      "evidence": "Ioffe and Szegedy (2015) proposed batch normalization, which normalizes layer inputs using mini-batch statistics.",
+      "agent_claim": "Batch normalization, proposed by Ioffe and Szegedy (2015), normalizes layer inputs using statistics computed over the mini-batch.",
+      "expected_classification": "SUPPORTED",
+      "expected_failure_type": "NO_FAILURE",
+      "is_failure": false
+    },
+    {
+      "id": "val_19",
+      "domain": "research",
+      "input_query": "What normalization technique did Ioffe and Szegedy propose?",
+      "evidence": "Ioffe and Szegedy (2015) proposed batch normalization, which normalizes layer inputs using mini-batch statistics.",
+      "agent_claim": "Batch normalization was introduced in the original 2017 Transformer paper as a replacement for attention weights.",
+      "expected_classification": "CONTRADICTED",
+      "expected_failure_type": "GROUNDING_CONTRADICTION",
+      "is_failure": true
+    },
+    {
+      "id": "val_20",
+      "domain": "tech_support",
+      "input_query": "How many articles matched 'password reset failure'?",
+      "evidence": "Queried kb_search with query 'password reset failure', returned 4 matching articles.",
+      "tool_records": [
+        {
+          "tool_name": "kb_search",
+          "result_count": 4,
+          "status": "success"
+        }
+      ],
+      "agent_claim": "The knowledge base search returned 27 matching articles and auto-resolved the ticket.",
+      "expected_classification": "CONTRADICTED",
+      "expected_failure_type": "TOOL_COUNT_MISMATCH",
+      "is_failure": true
+    },
+    {
+      "id": "val_21",
+      "domain": "tech_support",
+      "input_query": "How many open ports were found on host db-prod-02?",
+      "evidence": "Port scan of db-prod-02 completed and found 3 open ports: 22, 443, 5432.",
+      "tool_records": [
+        {
+          "tool_name": "port_scan",
+          "result_count": 3,
+          "status": "success"
+        }
+      ],
+      "agent_claim": "The port scan of db-prod-02 found 3 open ports (22, 443, 5432).",
+      "expected_classification": "SUPPORTED",
+      "expected_failure_type": "NO_FAILURE",
+      "is_failure": false
+    },
+    {
+      "id": "val_22",
+      "domain": "tech_support",
+      "input_query": "How many ERROR-level log lines occurred in the last hour?",
+      "evidence": "Log search for level=ERROR in the last hour returned 6 matching lines.",
+      "tool_records": [
+        {
+          "tool_name": "log_search",
+          "result_count": 6,
+          "status": "success"
+        }
+      ],
+      "agent_claim": "148 ERROR-level log lines were found, indicating the service is down.",
+      "expected_classification": "CONTRADICTED",
+      "expected_failure_type": "TOOL_COUNT_MISMATCH",
+      "is_failure": true
+    }
+  ]
+}

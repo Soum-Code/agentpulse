@@ -1,0 +1,44 @@
+version: "3.9"
+
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    volumes:
+      # A named volume (not a host bind mount) for the SQLite data dir: WAL
+      # mode needs a working shared-memory mmap, which Docker Desktop's
+      # bind-mount translation on Windows doesn't support reliably (observed:
+      # "disk I/O error" from PRAGMA journal_mode=WAL over a bind mount).
+      - agentpulse_data:/data
+      - ./models:/models
+    env_file:
+      - .env
+    environment:
+      - AGENTPULSE_DATABASE_URL=sqlite+aiosqlite:////data/agentpulse.db
+      - AGENTPULSE_MODEL_CACHE_DIR=/models
+      - AGENTPULSE_LOCAL_DEV_MODE=false
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  dashboard:
+    build:
+      context: ./dashboard
+      dockerfile: Dockerfile
+      args:
+        VITE_API_KEY: ${AGENTPULSE_API_KEY:-change-me-to-a-secure-key}
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:5173/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  agentpulse_data:

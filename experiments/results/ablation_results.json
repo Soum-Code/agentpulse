@@ -1,0 +1,331 @@
+{
+  "timestamp": "2026-08-23 11:28:51 UTC",
+  "methodology": {
+    "threshold_selection_split": "v1.0_dev",
+    "reporting_split": "v1.0_test",
+    "note": "Thresholds were selected on the development split and applied unchanged to the held-out test split."
+  },
+  "n_dev_cases": 21,
+  "n_test_cases": 30,
+  "selected_operating_point": {
+    "nli_contradiction_threshold": 0.5,
+    "semantic_low_similarity_floor": 0.1,
+    "dev_metrics": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1_score": 1.0,
+      "fpr": 0.0,
+      "fnr": 0.0,
+      "latency_ms": 366.93,
+      "tp": 9,
+      "fp": 0,
+      "fn": 0,
+      "tn": 12
+    },
+    "test_metrics": {
+      "precision": 0.929,
+      "recall": 1.0,
+      "f1_score": 0.963,
+      "fpr": 0.059,
+      "fnr": 0.0,
+      "latency_ms": 349.02,
+      "tp": 13,
+      "fp": 1,
+      "fn": 0,
+      "tn": 16
+    }
+  },
+  "ablation_configurations": {
+    "Config_A_MiniLM_Only": {
+      "description": "MiniLM embedding cosine only",
+      "precision": 0.733,
+      "recall": 0.846,
+      "f1_score": 0.786,
+      "fpr": 0.235,
+      "fnr": 0.154,
+      "latency_ms": 48.53,
+      "tp": 11,
+      "fp": 4,
+      "fn": 2,
+      "tn": 13
+    },
+    "Config_B_DeBERTa_Only": {
+      "description": "DeBERTa-v3 NLI only",
+      "precision": 0.929,
+      "recall": 1.0,
+      "f1_score": 0.963,
+      "fpr": 0.059,
+      "fnr": 0.0,
+      "latency_ms": 300.48,
+      "tp": 13,
+      "fp": 1,
+      "fn": 0,
+      "tn": 16
+    },
+    "Config_C_Cascade": {
+      "description": "MiniLM + DeBERTa cascade",
+      "precision": 0.929,
+      "recall": 1.0,
+      "f1_score": 0.963,
+      "fpr": 0.059,
+      "fnr": 0.0,
+      "latency_ms": 349.02,
+      "tp": 13,
+      "fp": 1,
+      "fn": 0,
+      "tn": 16
+    },
+    "Config_D_NLI_Plus_Tool": {
+      "description": "NLI + deterministic tool-claim validation",
+      "precision": 0.929,
+      "recall": 1.0,
+      "f1_score": 0.963,
+      "fpr": 0.059,
+      "fnr": 0.0,
+      "latency_ms": 300.54,
+      "tp": 13,
+      "fp": 1,
+      "fn": 0,
+      "tn": 16
+    },
+    "Config_E_NLI_Plus_Disagreement": {
+      "description": "NLI + inter-agent disagreement",
+      "precision": 0.929,
+      "recall": 1.0,
+      "f1_score": 0.963,
+      "fpr": 0.059,
+      "fnr": 0.0,
+      "latency_ms": 598.03,
+      "tp": 13,
+      "fp": 1,
+      "fn": 0,
+      "tn": 16
+    },
+    "Config_F_NLI_Plus_Drift": {
+      "description": "NLI + drift signal",
+      "precision": 0.448,
+      "recall": 1.0,
+      "f1_score": 0.619,
+      "fpr": 0.941,
+      "fnr": 0.0,
+      "latency_ms": 329.93,
+      "tp": 13,
+      "fp": 16,
+      "fn": 0,
+      "tn": 1
+    },
+    "Config_G_Full_AgentPulse": {
+      "description": "Full AgentPulse pipeline (grounding + tool + disagreement + drift + risk aggregation)",
+      "precision": 0.542,
+      "recall": 1.0,
+      "f1_score": 0.703,
+      "fpr": 0.647,
+      "fnr": 0.0,
+      "latency_ms": 359.33,
+      "tp": 13,
+      "fp": 11,
+      "fn": 0,
+      "tn": 6
+    }
+  },
+  "threshold_sweep_dev": [
+    {
+      "semantic_low_similarity_floor": 0.1,
+      "nli_contradiction_threshold": 0.5,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1_score": 1.0,
+      "fpr": 0.0,
+      "fnr": 0.0
+    },
+    {
+      "semantic_low_similarity_floor": 0.1,
+      "nli_contradiction_threshold": 0.6,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1_score": 1.0,
+      "fpr": 0.0,
+      "fnr": 0.0
+    },
+    {
+      "semantic_low_similarity_floor": 0.1,
+      "nli_contradiction_threshold": 0.7,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1_score": 1.0,
+      "fpr": 0.0,
+      "fnr": 0.0
+    },
+    {
+      "semantic_low_similarity_floor": 0.1,
+      "nli_contradiction_threshold": 0.8,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1_score": 1.0,
+      "fpr": 0.0,
+      "fnr": 0.0
+    },
+    {
+      "semantic_low_similarity_floor": 0.2,
+      "nli_contradiction_threshold": 0.5,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1_score": 1.0,
+      "fpr": 0.0,
+      "fnr": 0.0
+    },
+    {
+      "semantic_low_similarity_floor": 0.2,
+      "nli_contradiction_threshold": 0.6,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1_score": 1.0,
+      "fpr": 0.0,
+      "fnr": 0.0
+    },
+    {
+      "semantic_low_similarity_floor": 0.2,
+      "nli_contradiction_threshold": 0.7,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1_score": 1.0,
+      "fpr": 0.0,
+      "fnr": 0.0
+    },
+    {
+      "semantic_low_similarity_floor": 0.2,
+      "nli_contradiction_threshold": 0.8,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1_score": 1.0,
+      "fpr": 0.0,
+      "fnr": 0.0
+    },
+    {
+      "semantic_low_similarity_floor": 0.3,
+      "nli_contradiction_threshold": 0.5,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1_score": 1.0,
+      "fpr": 0.0,
+      "fnr": 0.0
+    },
+    {
+      "semantic_low_similarity_floor": 0.3,
+      "nli_contradiction_threshold": 0.6,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1_score": 1.0,
+      "fpr": 0.0,
+      "fnr": 0.0
+    },
+    {
+      "semantic_low_similarity_floor": 0.3,
+      "nli_contradiction_threshold": 0.7,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1_score": 1.0,
+      "fpr": 0.0,
+      "fnr": 0.0
+    },
+    {
+      "semantic_low_similarity_floor": 0.3,
+      "nli_contradiction_threshold": 0.8,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1_score": 1.0,
+      "fpr": 0.0,
+      "fnr": 0.0
+    },
+    {
+      "semantic_low_similarity_floor": 0.35,
+      "nli_contradiction_threshold": 0.5,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1_score": 1.0,
+      "fpr": 0.0,
+      "fnr": 0.0
+    },
+    {
+      "semantic_low_similarity_floor": 0.35,
+      "nli_contradiction_threshold": 0.6,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1_score": 1.0,
+      "fpr": 0.0,
+      "fnr": 0.0
+    },
+    {
+      "semantic_low_similarity_floor": 0.35,
+      "nli_contradiction_threshold": 0.7,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1_score": 1.0,
+      "fpr": 0.0,
+      "fnr": 0.0
+    },
+    {
+      "semantic_low_similarity_floor": 0.35,
+      "nli_contradiction_threshold": 0.8,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1_score": 1.0,
+      "fpr": 0.0,
+      "fnr": 0.0
+    },
+    {
+      "semantic_low_similarity_floor": 0.4,
+      "nli_contradiction_threshold": 0.5,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1_score": 1.0,
+      "fpr": 0.0,
+      "fnr": 0.0
+    },
+    {
+      "semantic_low_similarity_floor": 0.4,
+      "nli_contradiction_threshold": 0.6,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1_score": 1.0,
+      "fpr": 0.0,
+      "fnr": 0.0
+    },
+    {
+      "semantic_low_similarity_floor": 0.4,
+      "nli_contradiction_threshold": 0.7,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1_score": 1.0,
+      "fpr": 0.0,
+      "fnr": 0.0
+    },
+    {
+      "semantic_low_similarity_floor": 0.4,
+      "nli_contradiction_threshold": 0.8,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1_score": 1.0,
+      "fpr": 0.0,
+      "fnr": 0.0
+    }
+  ],
+  "analysis": {
+    "best_f1_config": "Config_B_DeBERTa_Only",
+    "configs_tied_at_best_f1": [
+      "Config_B_DeBERTa_Only",
+      "Config_C_Cascade",
+      "Config_D_NLI_Plus_Tool",
+      "Config_E_NLI_Plus_Disagreement"
+    ],
+    "configs_identical_to_nli_only": [
+      "Config_E_NLI_Plus_Disagreement"
+    ],
+    "configs_underperforming_nli_only_baseline": [
+      "Config_A_MiniLM_Only",
+      "Config_F_NLI_Plus_Drift",
+      "Config_G_Full_AgentPulse"
+    ],
+    "dev_threshold_sweep_uninformative": true
+  }
+}

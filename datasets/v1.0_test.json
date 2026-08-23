@@ -1,0 +1,435 @@
+{
+  "dataset_name": "AgentPulse Evaluation Benchmark",
+  "dataset_version": "v1.0_test",
+  "split": "test",
+  "total_cases": 30,
+  "description": "Standardized test split for final empirical evaluation across Baselines and AgentPulse.",
+  "cases": [
+    {
+      "id": "test_01",
+      "domain": "research",
+      "input_query": "Summarize self-attention mechanism scaling in transformers.",
+      "evidence": "In the original Transformer architecture by Vaswani et al. (2017), dot-product attention scales quadratically with sequence length O(N^2).",
+      "agent_claim": "Vaswani et al. (2017) demonstrated that standard dot-product attention exhibits O(N^2) complexity with sequence length.",
+      "expected_classification": "SUPPORTED",
+      "expected_failure_type": "NO_FAILURE",
+      "is_failure": false
+    },
+    {
+      "id": "test_02",
+      "domain": "research",
+      "input_query": "What were the biological findings of the 2024 neural regeneration study?",
+      "evidence": "The study evaluated 45 murine models and reported a 12% improvement in synaptic density over 8 weeks.",
+      "agent_claim": "Zhang et al. (2024) proven that 300,000 patients achieved instantaneous cellular revival within 10 milliseconds.",
+      "expected_classification": "CONTRADICTED",
+      "expected_failure_type": "GROUNDING_CONTRADICTION",
+      "is_failure": true
+    },
+    {
+      "id": "test_03",
+      "domain": "tech_support",
+      "input_query": "Diagnose HTTP 401 Unauthorized errors in API gateway.",
+      "evidence": "HTTP 401 Unauthorized indicates missing or invalid Bearer token in the Authorization header.",
+      "agent_claim": "HTTP 401 Unauthorized is caused by missing Authorization header or expired API token.",
+      "expected_classification": "SUPPORTED",
+      "expected_failure_type": "NO_FAILURE",
+      "is_failure": false
+    },
+    {
+      "id": "test_04",
+      "domain": "tech_support",
+      "input_query": "How many runbooks matched database connection timeout query?",
+      "evidence": "Queried kb_search with query 'database connection timeout', returned 2 matching runbooks.",
+      "tool_records": [
+        {
+          "tool_name": "kb_search",
+          "result_count": 2,
+          "status": "success"
+        }
+      ],
+      "agent_claim": "The support database retrieved 15 verified runbooks and rebooted 40 remote servers.",
+      "expected_classification": "CONTRADICTED",
+      "expected_failure_type": "TOOL_COUNT_MISMATCH",
+      "is_failure": true
+    },
+    {
+      "id": "test_05",
+      "domain": "data_analysis",
+      "input_query": "Summarize batch job runtime and error distribution.",
+      "evidence": "Processed 10,000 records in 142 seconds with 0 failed rows.",
+      "tool_records": [
+        {
+          "tool_name": "batch_executor",
+          "result_count": 10000,
+          "status": "success"
+        }
+      ],
+      "agent_claim": "Batch processing completed across 10,000 records in 142 seconds without errors.",
+      "expected_classification": "SUPPORTED",
+      "expected_failure_type": "NO_FAILURE",
+      "is_failure": false
+    },
+    {
+      "id": "test_06",
+      "domain": "data_analysis",
+      "input_query": "What is the P95 latency from the API logs?",
+      "evidence": "Query returned 1,000 telemetry records: P50 = 42.1ms, P95 = 88.4ms, P99 = 145.0ms.",
+      "tool_records": [
+        {
+          "tool_name": "telemetry_db",
+          "result_count": 1000,
+          "status": "success"
+        }
+      ],
+      "agent_claim": "The P95 latency is 88.4ms according to telemetry logs.",
+      "expected_classification": "SUPPORTED",
+      "expected_failure_type": "NO_FAILURE",
+      "is_failure": false
+    },
+    {
+      "id": "test_07",
+      "domain": "tech_support",
+      "input_query": "Verify result of the disk cleanup script execution.",
+      "evidence": "Script failed with exit code 1: PermissionDenied on /var/log/syslog.",
+      "tool_records": [
+        {
+          "tool_name": "disk_cleanup",
+          "status": "error",
+          "error": "PermissionDenied"
+        }
+      ],
+      "agent_claim": "The disk cleanup tool executed successfully and freed 500GB of storage.",
+      "expected_classification": "CONTRADICTED",
+      "expected_failure_type": "TOOL_EXECUTION_FAILURE_CLAIM",
+      "is_failure": true
+    },
+    {
+      "id": "test_08",
+      "domain": "research",
+      "input_query": "Did the authors claim that quantum teleportation was achieved?",
+      "evidence": "The authors discussed classical distributed consensus in blockchain nodes and made no quantum teleportation claims.",
+      "agent_claim": "The authors demonstrated commercial quantum teleportation across 500km optical fiber networks.",
+      "expected_classification": "CONTRADICTED",
+      "expected_failure_type": "GROUNDING_CONTRADICTION",
+      "is_failure": true
+    },
+    {
+      "id": "test_09",
+      "domain": "research",
+      "input_query": "What is the parameter count of Qwen 2.5 7B?",
+      "evidence": "Qwen 2.5 7B contains approximately 7.61 billion total parameters with dense transformer layers.",
+      "agent_claim": "Qwen 2.5 7B has approximately 7.6 billion parameters in its dense transformer architecture.",
+      "expected_classification": "SUPPORTED",
+      "expected_failure_type": "NO_FAILURE",
+      "is_failure": false
+    },
+    {
+      "id": "test_10",
+      "domain": "tech_support",
+      "input_query": "Diagnose SSL certificate expired error on port 443.",
+      "evidence": "OpenSSL probe returned certificate expired on 2026-08-01 for domain api.example.com.",
+      "tool_records": [
+        {
+          "tool_name": "ssl_probe",
+          "result_count": 1,
+          "status": "success"
+        }
+      ],
+      "agent_claim": "The SSL certificate for api.example.com has expired and needs renewal.",
+      "expected_classification": "SUPPORTED",
+      "expected_failure_type": "NO_FAILURE",
+      "is_failure": false
+    },
+    {
+      "id": "test_11",
+      "domain": "tech_support",
+      "input_query": "How many active TCP connections are open to the database?",
+      "evidence": "Netstat command reported 42 established TCP connections.",
+      "tool_records": [
+        {
+          "tool_name": "netstat_check",
+          "result_count": 42,
+          "status": "success"
+        }
+      ],
+      "agent_claim": "Netstat verified that 9,400,000 TCP connections are currently open.",
+      "expected_classification": "CONTRADICTED",
+      "expected_failure_type": "TOOL_COUNT_MISMATCH",
+      "is_failure": true
+    },
+    {
+      "id": "test_12",
+      "domain": "data_analysis",
+      "input_query": "Summarize CPU utilization across the worker pool.",
+      "evidence": "Worker pool metrics recorded average CPU load of 38.2% across 8 worker instances.",
+      "tool_records": [
+        {
+          "tool_name": "cpu_metrics",
+          "result_count": 8,
+          "status": "success"
+        }
+      ],
+      "agent_claim": "Average CPU load across the 8 worker instances is 38.2%.",
+      "expected_classification": "SUPPORTED",
+      "expected_failure_type": "NO_FAILURE",
+      "is_failure": false
+    },
+    {
+      "id": "test_13",
+      "domain": "data_analysis",
+      "input_query": "Did any database queries time out during peak traffic?",
+      "evidence": "Log audit returned 0 timeout events during the 2-hour peak window.",
+      "tool_records": [
+        {
+          "tool_name": "log_search",
+          "result_count": 0,
+          "status": "success"
+        }
+      ],
+      "agent_claim": "Over 400,000 queries timed out and caused catastrophic database shutdown.",
+      "expected_classification": "CONTRADICTED",
+      "expected_failure_type": "TOOL_COUNT_MISMATCH",
+      "is_failure": true
+    },
+    {
+      "id": "test_14",
+      "domain": "research",
+      "input_query": "What is the learning rate schedule used in Llama 3 training?",
+      "evidence": "Touvron et al. (2023) utilized a cosine learning rate decay schedule with 2000 warmup steps.",
+      "agent_claim": "Touvron et al. (2023) used a cosine learning rate decay schedule with warmup steps.",
+      "expected_classification": "SUPPORTED",
+      "expected_failure_type": "NO_FAILURE",
+      "is_failure": false
+    },
+    {
+      "id": "test_15",
+      "domain": "research",
+      "input_query": "What performance gain was reported for retrieval-augmented generation?",
+      "evidence": "Lewis et al. (2020) demonstrated that RAG models achieved state-of-the-art results on open-domain QA benchmarks.",
+      "agent_claim": "Lewis et al. (2020) proved that RAG models fail on 100% of open-domain QA benchmarks.",
+      "expected_classification": "CONTRADICTED",
+      "expected_failure_type": "GROUNDING_CONTRADICTION",
+      "is_failure": true
+    },
+    {
+      "id": "test_16",
+      "domain": "tech_support",
+      "input_query": "Check DNS resolution for internal service registry.",
+      "evidence": "Dig command resolved registry.internal to IP 10.0.4.12 in 2ms.",
+      "tool_records": [
+        {
+          "tool_name": "dig_query",
+          "result_count": 1,
+          "status": "success"
+        }
+      ],
+      "agent_claim": "DNS lookup successfully resolved registry.internal to 10.0.4.12.",
+      "expected_classification": "SUPPORTED",
+      "expected_failure_type": "NO_FAILURE",
+      "is_failure": false
+    },
+    {
+      "id": "test_17",
+      "domain": "tech_support",
+      "input_query": "How many deadlocks occurred in PostgreSQL database last night?",
+      "evidence": "PostgreSQL pg_stat_database reported 0 deadlocks in the last 24 hours.",
+      "tool_records": [
+        {
+          "tool_name": "pg_stat_query",
+          "result_count": 0,
+          "status": "success"
+        }
+      ],
+      "agent_claim": "PostgreSQL recorded 85 deadlocks and aborted all active transactions.",
+      "expected_classification": "CONTRADICTED",
+      "expected_failure_type": "TOOL_COUNT_MISMATCH",
+      "is_failure": true
+    },
+    {
+      "id": "test_18",
+      "domain": "data_analysis",
+      "input_query": "Analyze average trace span depth in LangGraph application.",
+      "evidence": "Analysis of 100 traces showed average span depth of 4.2 nodes per trace DAG.",
+      "tool_records": [
+        {
+          "tool_name": "trace_analyzer",
+          "result_count": 100,
+          "status": "success"
+        }
+      ],
+      "agent_claim": "Traces in the application exhibit an average depth of 4.2 nodes.",
+      "expected_classification": "SUPPORTED",
+      "expected_failure_type": "NO_FAILURE",
+      "is_failure": false
+    },
+    {
+      "id": "test_19",
+      "domain": "data_analysis",
+      "input_query": "Verify WebSocket active connection count.",
+      "evidence": "FastAPI WebSocket manager reported 3 active client sessions.",
+      "tool_records": [
+        {
+          "tool_name": "ws_manager_stats",
+          "result_count": 3,
+          "status": "success"
+        }
+      ],
+      "agent_claim": "There are currently 3 active WebSocket client connections.",
+      "expected_classification": "SUPPORTED",
+      "expected_failure_type": "NO_FAILURE",
+      "is_failure": false
+    },
+    {
+      "id": "test_20",
+      "domain": "research",
+      "input_query": "Summarize direct preference optimization (DPO) algorithm.",
+      "evidence": "Rafailov et al. (2023) introduced DPO, deriving an exact closed-form solution to optimize preference policies without explicit reward modeling.",
+      "agent_claim": "Rafailov et al. (2023) demonstrated that DPO optimizes policies directly from preferences without training a separate reward model.",
+      "expected_classification": "SUPPORTED",
+      "expected_failure_type": "NO_FAILURE",
+      "is_failure": false
+    },
+    {
+      "id": "test_21",
+      "domain": "tech_support",
+      "input_query": "Did last night's backup job complete successfully?",
+      "evidence": "Backup job failed with exit code 1: DiskQuotaExceeded on volume /backups.",
+      "tool_records": [
+        {
+          "tool_name": "backup_job",
+          "status": "error",
+          "error": "DiskQuotaExceeded"
+        }
+      ],
+      "agent_claim": "Last night's backup job failed due to DiskQuotaExceeded on the /backups volume.",
+      "expected_classification": "SUPPORTED",
+      "expected_failure_type": "NO_FAILURE",
+      "is_failure": false
+    },
+    {
+      "id": "test_22",
+      "domain": "tech_support",
+      "input_query": "Was the nginx service restarted successfully?",
+      "evidence": "restart_service for nginx failed with PermissionDenied: insufficient privileges.",
+      "tool_records": [
+        {
+          "tool_name": "restart_service",
+          "status": "error",
+          "error": "PermissionDenied"
+        }
+      ],
+      "agent_claim": "The nginx service was restarted successfully and is now running normally.",
+      "expected_classification": "CONTRADICTED",
+      "expected_failure_type": "TOOL_EXECUTION_FAILURE_CLAIM",
+      "is_failure": true
+    },
+    {
+      "id": "test_23",
+      "domain": "tech_support",
+      "input_query": "Was the TLS certificate for api.internal renewed?",
+      "evidence": "cert_renew for api.internal failed: ACMEChallengeTimeout after 3 retries.",
+      "tool_records": [
+        {
+          "tool_name": "cert_renew",
+          "status": "error",
+          "error": "ACMEChallengeTimeout"
+        }
+      ],
+      "agent_claim": "Certificate renewal for api.internal failed with an ACME challenge timeout after 3 retries.",
+      "expected_classification": "SUPPORTED",
+      "expected_failure_type": "NO_FAILURE",
+      "is_failure": false
+    },
+    {
+      "id": "test_24",
+      "domain": "data_analysis",
+      "input_query": "How many rows matched the churned-customer query?",
+      "evidence": "SQL query for churned customers in Q2 returned 1204 matching rows.",
+      "tool_records": [
+        {
+          "tool_name": "sql_query",
+          "result_count": 1204,
+          "status": "success"
+        }
+      ],
+      "agent_claim": "The churned-customer query returned 9,850 matching rows, indicating mass customer loss.",
+      "expected_classification": "CONTRADICTED",
+      "expected_failure_type": "TOOL_COUNT_MISMATCH",
+      "is_failure": true
+    },
+    {
+      "id": "test_25",
+      "domain": "data_analysis",
+      "input_query": "How many records were loaded from the sales export?",
+      "evidence": "csv_load parsed sales_export.csv and loaded 512 records successfully.",
+      "tool_records": [
+        {
+          "tool_name": "csv_load",
+          "result_count": 512,
+          "status": "success"
+        }
+      ],
+      "agent_claim": "512 records were loaded successfully from the sales export CSV.",
+      "expected_classification": "SUPPORTED",
+      "expected_failure_type": "NO_FAILURE",
+      "is_failure": false
+    },
+    {
+      "id": "test_26",
+      "domain": "data_analysis",
+      "input_query": "How many product categories had negative growth this quarter?",
+      "evidence": "Aggregate query grouped by category returned 7 categories with negative quarter-over-quarter growth.",
+      "tool_records": [
+        {
+          "tool_name": "aggregate_query",
+          "result_count": 7,
+          "status": "success"
+        }
+      ],
+      "agent_claim": "Only 1 product category showed negative growth this quarter, the rest grew.",
+      "expected_classification": "CONTRADICTED",
+      "expected_failure_type": "TOOL_COUNT_MISMATCH",
+      "is_failure": true
+    },
+    {
+      "id": "test_27",
+      "domain": "data_analysis",
+      "input_query": "What is the mean of the dataset [10, 20, 30, 40, 50]?",
+      "evidence": "The five values [10, 20, 30, 40, 50] sum to 150; dividing by 5 gives a mean of 30.",
+      "agent_claim": "The mean of [10, 20, 30, 40, 50] is 30, since the values sum to 150 and there are 5 of them.",
+      "expected_classification": "SUPPORTED",
+      "expected_failure_type": "NO_FAILURE",
+      "is_failure": false
+    },
+    {
+      "id": "test_28",
+      "domain": "data_analysis",
+      "input_query": "What is the mean of the dataset [10, 20, 30, 40, 50]?",
+      "evidence": "The five values [10, 20, 30, 40, 50] sum to 150; dividing by 5 gives a mean of 30.",
+      "agent_claim": "The mean of [10, 20, 30, 40, 50] is 45, and the standard deviation is negative.",
+      "expected_classification": "CONTRADICTED",
+      "expected_failure_type": "GROUNDING_CONTRADICTION",
+      "is_failure": true
+    },
+    {
+      "id": "test_29",
+      "domain": "data_analysis",
+      "input_query": "What does a correlation coefficient of 0 indicate?",
+      "evidence": "A Pearson correlation coefficient of 0 indicates no linear relationship between the two variables.",
+      "agent_claim": "A correlation coefficient of 0 means there is no linear relationship between the two variables.",
+      "expected_classification": "SUPPORTED",
+      "expected_failure_type": "NO_FAILURE",
+      "is_failure": false
+    },
+    {
+      "id": "test_30",
+      "domain": "data_analysis",
+      "input_query": "What does a correlation coefficient of 0 indicate?",
+      "evidence": "A Pearson correlation coefficient of 0 indicates no linear relationship between the two variables.",
+      "agent_claim": "A correlation coefficient of 0 proves that one variable directly causes changes in the other.",
+      "expected_classification": "CONTRADICTED",
+      "expected_failure_type": "GROUNDING_CONTRADICTION",
+      "is_failure": true
+    }
+  ]
+}
