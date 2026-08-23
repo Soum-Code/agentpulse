@@ -58,6 +58,7 @@ class LocalGGUFAdapter(LLMAdapter):
         seed: Optional[int] = 42,
         n_ctx: int = 4096,
         n_threads: Optional[int] = None,
+        n_gpu_layers: int = 0,
         enable_thinking: bool = False,
         load_immediately: bool = False,
     ):
@@ -76,6 +77,9 @@ class LocalGGUFAdapter(LLMAdapter):
         # so running one thread per SMT sibling costs more in contention than it
         # gains (same oversubscription effect measured in the backend evaluator).
         self.n_threads = n_threads or _physical_core_count()
+        # 0 = CPU-only (default, matches the local benchmark run). Pass -1 to
+        # offload every layer to GPU, or a positive count for partial offload.
+        self.n_gpu_layers = n_gpu_layers
         self.enable_thinking = enable_thinking
         self._llm = None
         self._is_loaded = False
@@ -104,6 +108,7 @@ class LocalGGUFAdapter(LLMAdapter):
             model_path=self.model_path,
             n_ctx=self.n_ctx,
             n_threads=self.n_threads,
+            n_gpu_layers=self.n_gpu_layers,
             verbose=False,
         )
         self._load_time_ms = (time.perf_counter() - t_start) * 1000.0
