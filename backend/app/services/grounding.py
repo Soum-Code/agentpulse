@@ -47,6 +47,19 @@ class GroundingResult:
 STAGE1_SAFE_THRESHOLD = 0.85  # Above this: likely grounded, skip Stage 2
 STAGE1_RISK_THRESHOLD = 0.40  # Below this: likely problematic, go to Stage 2
 
+# grounding_score = contradiction_prob + NEUTRAL_RISK_WEIGHT * neutral_prob.
+# DeBERTa NLI classifies verbatim/near-verbatim premise-hypothesis pairs as
+# "neutral" far more often than "entailment" (out-of-distribution for a model
+# trained on genuine NLI pairs), so scoring neutral the same as contradiction
+# (the old grounding_score = 1 - entailment_prob, i.e. weight 1.0) makes
+# well-supported claims read as near-maximum risk. 0.5 is a principled default
+# (neutral counts as half as risky as contradiction) rather than a value fitted
+# to data -- the dev split was too small/clear-cut to discriminate between
+# candidate weights. See GROUNDING_SCORE_CALIBRATION_REPORT.md for the full
+# sweep, the self-comparison demonstration, and the held-out test-split
+# improvement this produced (F1 0.703 -> 0.963, FPR 0.647 -> 0.059).
+NEUTRAL_RISK_WEIGHT = 0.5
+
 
 def compute_semantic_similarity(
     source_text: str,
@@ -115,8 +128,9 @@ def compute_nli_grounding(
         neutral_prob = float(probs[1])
         entailment_prob = float(probs[2])
 
-        # Grounding score: higher = more risky (ungrounded)
-        grounding_score = 1.0 - entailment_prob
+        # Grounding score: higher = more risky (ungrounded). See
+        # NEUTRAL_RISK_WEIGHT above for why this isn't simply 1 - entailment_prob.
+        grounding_score = contradiction_prob + NEUTRAL_RISK_WEIGHT * neutral_prob
 
         # Label
         label_idx = int(np.argmax(probs))

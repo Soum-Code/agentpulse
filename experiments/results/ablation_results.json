@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-08-23 11:28:51 UTC",
+  "timestamp": "2026-08-23 17:56:09 UTC",
   "methodology": {
     "threshold_selection_split": "v1.0_dev",
     "reporting_split": "v1.0_test",
@@ -16,7 +16,7 @@
       "f1_score": 1.0,
       "fpr": 0.0,
       "fnr": 0.0,
-      "latency_ms": 366.93,
+      "latency_ms": 235.3,
       "tp": 9,
       "fp": 0,
       "fn": 0,
@@ -28,7 +28,7 @@
       "f1_score": 0.963,
       "fpr": 0.059,
       "fnr": 0.0,
-      "latency_ms": 349.02,
+      "latency_ms": 215.9,
       "tp": 13,
       "fp": 1,
       "fn": 0,
@@ -43,7 +43,7 @@
       "f1_score": 0.786,
       "fpr": 0.235,
       "fnr": 0.154,
-      "latency_ms": 48.53,
+      "latency_ms": 27.83,
       "tp": 11,
       "fp": 4,
       "fn": 2,
@@ -56,7 +56,7 @@
       "f1_score": 0.963,
       "fpr": 0.059,
       "fnr": 0.0,
-      "latency_ms": 300.48,
+      "latency_ms": 188.07,
       "tp": 13,
       "fp": 1,
       "fn": 0,
@@ -69,7 +69,7 @@
       "f1_score": 0.963,
       "fpr": 0.059,
       "fnr": 0.0,
-      "latency_ms": 349.02,
+      "latency_ms": 215.9,
       "tp": 13,
       "fp": 1,
       "fn": 0,
@@ -82,7 +82,7 @@
       "f1_score": 0.963,
       "fpr": 0.059,
       "fnr": 0.0,
-      "latency_ms": 300.54,
+      "latency_ms": 188.11,
       "tp": 13,
       "fp": 1,
       "fn": 0,
@@ -95,7 +95,7 @@
       "f1_score": 0.963,
       "fpr": 0.059,
       "fnr": 0.0,
-      "latency_ms": 598.03,
+      "latency_ms": 373.47,
       "tp": 13,
       "fp": 1,
       "fn": 0,
@@ -108,7 +108,7 @@
       "f1_score": 0.619,
       "fpr": 0.941,
       "fnr": 0.0,
-      "latency_ms": 329.93,
+      "latency_ms": 207.65,
       "tp": 13,
       "fp": 16,
       "fn": 0,
@@ -116,16 +116,16 @@
     },
     "Config_G_Full_AgentPulse": {
       "description": "Full AgentPulse pipeline (grounding + tool + disagreement + drift + risk aggregation)",
-      "precision": 0.542,
+      "precision": 0.929,
       "recall": 1.0,
-      "f1_score": 0.703,
-      "fpr": 0.647,
+      "f1_score": 0.963,
+      "fpr": 0.059,
       "fnr": 0.0,
-      "latency_ms": 359.33,
+      "latency_ms": 241.64,
       "tp": 13,
-      "fp": 11,
+      "fp": 1,
       "fn": 0,
-      "tn": 6
+      "tn": 16
     }
   },
   "threshold_sweep_dev": [
@@ -316,15 +316,15 @@
       "Config_B_DeBERTa_Only",
       "Config_C_Cascade",
       "Config_D_NLI_Plus_Tool",
-      "Config_E_NLI_Plus_Disagreement"
+      "Config_E_NLI_Plus_Disagreement",
+      "Config_G_Full_AgentPulse"
     ],
     "configs_identical_to_nli_only": [
       "Config_E_NLI_Plus_Disagreement"
     ],
     "configs_underperforming_nli_only_baseline": [
       "Config_A_MiniLM_Only",
-      "Config_F_NLI_Plus_Drift",
-      "Config_G_Full_AgentPulse"
+      "Config_F_NLI_Plus_Drift"
     ],
     "dev_threshold_sweep_uninformative": true
   }

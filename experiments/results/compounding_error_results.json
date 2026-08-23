@@ -1,12 +1,13 @@
 {
-  "timestamp": "2026-08-23 11:50:09 UTC",
+  "timestamp": "2026-08-23 17:54:47 UTC",
+  "known_limitation_baseline_node_risk": "Node_A (baseline, no fault) reads as medium_risk (~0.50) in both conditions above, despite near-zero contradiction_prob (~0.002). Root cause verified directly: DeBERTa NLI classifies a premise compared against itself as 'neutral' (~98.7%), not 'entailment' (~1%) -- verbatim self-repetition is out-of-distribution for a model trained on genuine premise/hypothesis pairs. grounding_score used to be 1 - entailment_prob, which scored this neutral classification almost as risky as a genuine contradiction (~0.99, high_risk); it is now contradiction_prob + 0.5 * neutral_prob (see GROUNDING_SCORE_CALIBRATION_REPORT.md), which roughly halves the penalty (~0.50, medium_risk) but does not eliminate it, since neutral still contributes some risk by design. Treat Node_A's risk score as an improved-but-still-imperfect estimate of a clean baseline in this experiment; the propagation comparison (fault node onward) is unaffected either way since it's a relative before/after difference, not an absolute risk magnitude.",
   "base_premise": "The database query executed in 45ms and returned 3 verified customer profile records.",
   "injected_fault_node": "Node_B",
   "condition_a_unmitigated_control": [
     {
       "node": "Node_A (Planner)",
-      "risk_score": 0.989,
-      "label": "high_risk",
+      "risk_score": 0.495,
+      "label": "medium_risk",
       "contradiction_prob": 0.002
     },
     {
@@ -43,8 +44,8 @@
   "condition_b_active_intervention": [
     {
       "node": "Node_A (Planner)",
-      "risk_score": 0.989,
-      "label": "high_risk",
+      "risk_score": 0.495,
+      "label": "medium_risk",
       "contradiction_prob": 0.002
     },
     {

@@ -73,7 +73,7 @@ Current weights (initial heuristic values, not empirically calibrated — see `T
 | $w_d$ | 0.20 | Inter-agent disagreement |
 | $w_s$ | 0.15 | Semantic dissimilarity (defined, not wired in) |
 
-A separate, verified limitation of the grounding signal: DeBERTa NLI classifies a statement compared against itself (verbatim, maximally supported) as "neutral" (~99%) rather than "entailment" (~1%), because identical premise/hypothesis pairs are out of distribution for a model trained on genuine NLI pairs. Since `grounding_score = 1 - entailment_prob`, this means a fully-supported claim can score close to maximum risk if the NLI model classifies it as neutral instead of confidently entailed. This affects any evaluation with paraphrased or verbatim-correct claims and is not yet fixed; see Section 6 and `THRESHOLD_ANALYSIS.md`.
+A separate, verified limitation of the grounding signal, now fixed: DeBERTa NLI classifies a statement compared against itself (verbatim, maximally supported) as "neutral" (~99%) rather than "entailment" (~1%), because identical premise/hypothesis pairs are out of distribution for a model trained on genuine NLI pairs. The original formula, `grounding_score = 1 - entailment_prob` (equivalently `contradiction_prob + neutral_prob`), scored this neutral classification almost as risky as a genuine contradiction, so a fully-supported claim could score close to maximum risk if the NLI model classified it as neutral instead of confidently entailed. The formula is now `grounding_score = contradiction_prob + 0.5 * neutral_prob` (`backend/app/services/grounding.py`), halving the weight given to a neutral classification relative to an outright contradiction. The 0.5 weight is a principled default, not a value fitted to data: the development split was too small and clear-cut to discriminate between candidate weights (every weight from 0.0-0.9 tied at F1=1.0 in the sweep). On the held-out test split, this change moved classification metrics from F1=0.703/FPR=0.647 to F1=0.963/FPR=0.059, and the documented self-comparison case (Section 6) moved from a 0.989 risk score to 0.496. See `GROUNDING_SCORE_CALIBRATION_REPORT.md` for the full sweep and methodology.
 
 ## 4. Reasoning strategy comparison: Direct vs CoT vs AoT
 
@@ -95,15 +95,15 @@ Ablation configurations were evaluated with thresholds selected on the developme
 
 | Configuration | Precision | Recall | F1 | FPR | FNR | Latency (ms) |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: |
-| A: MiniLM embedding only | 0.733 | 0.846 | 0.786 | 0.235 | 0.154 | 48.5 |
-| B: DeBERTa NLI only | 0.929 | 1.000 | 0.963 | 0.059 | 0.000 | 300.5 |
-| C: MiniLM + DeBERTa cascade | 0.929 | 1.000 | 0.963 | 0.059 | 0.000 | 349.0 |
-| D: NLI + tool-claim validation | 0.929 | 1.000 | 0.963 | 0.059 | 0.000 | 300.5 |
-| E: NLI + inter-agent disagreement | 0.929 | 1.000 | 0.963 | 0.059 | 0.000 | 598.0 |
-| F: NLI + drift signal | 0.448 | 1.000 | 0.619 | 0.941 | 0.000 | 329.9 |
-| G: Full AgentPulse pipeline | 0.542 | 1.000 | 0.703 | 0.647 | 0.000 | 359.3 |
+| A: MiniLM embedding only | 0.733 | 0.846 | 0.786 | 0.235 | 0.154 | 27.8 |
+| B: DeBERTa NLI only | 0.929 | 1.000 | 0.963 | 0.059 | 0.000 | 188.1 |
+| C: MiniLM + DeBERTa cascade | 0.929 | 1.000 | 0.963 | 0.059 | 0.000 | 215.9 |
+| D: NLI + tool-claim validation | 0.929 | 1.000 | 0.963 | 0.059 | 0.000 | 188.1 |
+| E: NLI + inter-agent disagreement | 0.929 | 1.000 | 0.963 | 0.059 | 0.000 | 373.5 |
+| F: NLI + drift signal | 0.448 | 1.000 | 0.619 | 0.941 | 0.000 | 207.7 |
+| G: Full AgentPulse pipeline | 0.929 | 1.000 | 0.963 | 0.059 | 0.000 | 241.6 |
 
-Configurations E and F produce metrics identical to (E) or worse than (F) Config B on this dataset. E collapses to B because the dataset's evaluation cases are single-agent records, so the only pair available to the disagreement engine is the same evidence-to-claim comparison NLI already makes. F and G score below the plain NLI-only baseline because the drift detector's cold-start centroid, computed over case-file order rather than real temporal traffic, flags most of the non-failure test cases — this is not a subtle effect: F's false positive rate is 0.941. Both limitations are analyzed in `THRESHOLD_ANALYSIS.md`.
+Configuration E produces metrics identical to Config B on this dataset: it collapses to B because the dataset's evaluation cases are single-agent records, so the only pair available to the disagreement engine is the same evidence-to-claim comparison NLI already makes. F scores below the plain NLI-only baseline because the drift detector's cold-start centroid, computed over case-file order rather than real temporal traffic, flags most of the non-failure test cases — this is not a subtle effect: F's false positive rate is 0.941. This limitation is analyzed in `THRESHOLD_ANALYSIS.md`. G (the full pipeline) now ties with B/C/D/E after the grounding-score recalibration described in Section 3 — an earlier version of this table showed G at F1=0.703/FPR=0.647 before that fix, since G's `overall_risk_score` incorporates `grounding_score` while A-F use `contradiction_prob` directly.
 
 Threshold sensitivity: every combination swept on the development split (semantic floor 0.10-0.40, NLI contradiction threshold 0.50-0.80) tied at F1 = 1.0. At 21 development cases, the sweep does not currently discriminate between thresholds; a larger development set is needed before threshold selection here is meaningful.
 
@@ -113,7 +113,7 @@ Five-node pipeline (A through E) with a fabricated claim injected at Node B, eva
 
 | Node | Condition A — unmitigated (risk / contradiction prob) | Condition B — verifier intervenes (risk / contradiction prob) |
 | :--- | :---: | :---: |
-| A: Planner | 0.989 / 0.002 | 0.989 / 0.002 |
+| A: Planner | 0.495 / 0.002 | 0.495 / 0.002 |
 | B: Retriever (fault injected) | 1.000 / 1.000 | 1.000 / 1.000 |
 | C: Verifier | 0.992 / 0.992 | 0.009 / 0.009 |
 | D: Analyst | 0.992 / 0.992 | 0.001 / 0.000 |
@@ -121,7 +121,7 @@ Five-node pipeline (A through E) with a fabricated claim injected at Node B, eva
 
 Mean downstream risk after the fault node: 0.992 under the unmitigated condition, 0.004 once the verifier intervenes. This demonstrates that a caught contradiction stops propagating in this pipeline; it is a propagation measurement, not a proof that verification always catches faults in general.
 
-Node A's risk score (0.989) in a case with near-zero contradiction probability (0.002) is the neutral-vs-entailment grounding limitation described in Section 3, reproduced here: comparing the baseline premise against itself scores as high risk despite being maximally supported. Treat Node A's absolute score as unreliable; the before/after comparison at Node C onward is unaffected since it is a relative difference, not an absolute magnitude.
+Node A's risk score (0.495, medium_risk) in a case with near-zero contradiction probability (0.002) reflects the neutral-vs-entailment grounding limitation described in Section 3: comparing the baseline premise against itself lands as "neutral" rather than "entailment" in the underlying NLI model. Before the Section 3 grounding-score fix, this scored 0.989 (high_risk); the recalibrated formula roughly halves it to 0.495 but does not eliminate it, since the fix reduces rather than removes the weight given to a neutral classification. Treat Node A's absolute score as an improved-but-imperfect estimate of a clean baseline; the before/after comparison at Node C onward is unaffected either way since it is a relative difference, not an absolute magnitude.
 
 ## 7. Drift detection with negative controls
 
