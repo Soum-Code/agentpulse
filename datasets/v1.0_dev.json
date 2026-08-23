@@ -1,0 +1,254 @@
+{
+  "dataset_name": "AgentPulse Evaluation Benchmark",
+  "dataset_version": "v1.0_dev",
+  "split": "dev",
+  "total_cases": 21,
+  "description": "Development split for threshold tuning and sensitivity evaluation.",
+  "cases": [
+    {
+      "id": "dev_01",
+      "domain": "research",
+      "input_query": "Explain self-attention mechanism scaling in transformers.",
+      "evidence": "In the original Transformer architecture by Vaswani et al. (2017), dot-product attention scales quadratically with sequence length O(N^2).",
+      "agent_claim": "Vaswani et al. (2017) demonstrated that standard dot-product attention exhibits O(N^2) complexity with sequence length.",
+      "expected_classification": "SUPPORTED",
+      "expected_failure_type": "NO_FAILURE",
+      "is_failure": false
+    },
+    {
+      "id": "dev_02",
+      "domain": "research",
+      "input_query": "What were the biological findings of the 2024 neural regeneration study?",
+      "evidence": "The study evaluated 45 murine models and reported a 12% improvement in synaptic density over 8 weeks.",
+      "agent_claim": "Zhang et al. (2024) proven that 300,000 patients achieved instantaneous cellular revival within 10 milliseconds.",
+      "expected_classification": "CONTRADICTED",
+      "expected_failure_type": "GROUNDING_CONTRADICTION",
+      "is_failure": true
+    },
+    {
+      "id": "dev_03",
+      "domain": "tech_support",
+      "input_query": "Diagnose HTTP 401 Unauthorized errors in API gateway.",
+      "evidence": "HTTP 401 Unauthorized indicates missing or invalid Bearer token in the Authorization header.",
+      "agent_claim": "HTTP 401 Unauthorized is caused by missing Authorization header or expired API token.",
+      "expected_classification": "SUPPORTED",
+      "expected_failure_type": "NO_FAILURE",
+      "is_failure": false
+    },
+    {
+      "id": "dev_04",
+      "domain": "tech_support",
+      "input_query": "How many runbooks matched database connection timeout query?",
+      "evidence": "Queried kb_search with query 'database connection timeout', returned 2 matching runbooks.",
+      "tool_records": [
+        {
+          "tool_name": "kb_search",
+          "result_count": 2,
+          "status": "success"
+        }
+      ],
+      "agent_claim": "The support database retrieved 15 verified runbooks and rebooted 40 remote servers.",
+      "expected_classification": "CONTRADICTED",
+      "expected_failure_type": "TOOL_COUNT_MISMATCH",
+      "is_failure": true
+    },
+    {
+      "id": "dev_05",
+      "domain": "data_analysis",
+      "input_query": "Summarize batch job runtime and error distribution.",
+      "evidence": "Processed 10,000 records in 142 seconds with 0 failed rows.",
+      "tool_records": [
+        {
+          "tool_name": "batch_executor",
+          "result_count": 10000,
+          "status": "success"
+        }
+      ],
+      "agent_claim": "Batch processing completed across 10,000 records in 142 seconds without errors.",
+      "expected_classification": "SUPPORTED",
+      "expected_failure_type": "NO_FAILURE",
+      "is_failure": false
+    },
+    {
+      "id": "dev_06",
+      "domain": "research",
+      "input_query": "What is the primary advantage of SQLite WAL mode?",
+      "evidence": "Write-Ahead Logging (WAL) permits concurrent readers while a writer commits changes.",
+      "agent_claim": "SQLite in WAL mode permits concurrent readers alongside an active writer.",
+      "expected_classification": "SUPPORTED",
+      "expected_failure_type": "NO_FAILURE",
+      "is_failure": false
+    },
+    {
+      "id": "dev_07",
+      "domain": "research",
+      "input_query": "What memory reduction was achieved by FlashAttention?",
+      "evidence": "FlashAttention reduced memory overhead from quadratic O(N^2) to linear O(N) by tiling SRAM blocks.",
+      "agent_claim": "FlashAttention eliminated all GPU memory usage by running directly inside optical cables.",
+      "expected_classification": "CONTRADICTED",
+      "expected_failure_type": "GROUNDING_CONTRADICTION",
+      "is_failure": true
+    },
+    {
+      "id": "dev_08",
+      "domain": "tech_support",
+      "input_query": "How to resolve HTTP 504 Gateway Timeout?",
+      "evidence": "HTTP 504 indicates the upstream service took longer than the configured gateway timeout (default 30s).",
+      "agent_claim": "HTTP 504 Gateway Timeout occurs when upstream server fails to reply within the timeout threshold.",
+      "expected_classification": "SUPPORTED",
+      "expected_failure_type": "NO_FAILURE",
+      "is_failure": false
+    },
+    {
+      "id": "dev_09",
+      "domain": "tech_support",
+      "input_query": "Check cluster pod health after node restart.",
+      "evidence": "Cluster status returned 8 running pods and 1 pod in CrashLoopBackOff.",
+      "tool_records": [
+        {
+          "tool_name": "k8s_status",
+          "result_count": 9,
+          "status": "success"
+        }
+      ],
+      "agent_claim": "All 150 cluster pods are running with 100% quantum efficiency.",
+      "expected_classification": "CONTRADICTED",
+      "expected_failure_type": "TOOL_COUNT_MISMATCH",
+      "is_failure": true
+    },
+    {
+      "id": "dev_10",
+      "domain": "data_analysis",
+      "input_query": "Analyze average API response times.",
+      "evidence": "Telemetry logged 500 requests with mean latency 34.2ms and P99 latency 112.5ms.",
+      "tool_records": [
+        {
+          "tool_name": "telemetry_query",
+          "result_count": 500,
+          "status": "success"
+        }
+      ],
+      "agent_claim": "Telemetry recorded 500 API calls with mean latency of 34.2ms.",
+      "expected_classification": "SUPPORTED",
+      "expected_failure_type": "NO_FAILURE",
+      "is_failure": false
+    },
+    {
+      "id": "dev_11",
+      "domain": "data_analysis",
+      "input_query": "Check database table row count for users table.",
+      "evidence": "SELECT count(*) returned 4,520 verified active rows.",
+      "tool_records": [
+        {
+          "tool_name": "sql_query",
+          "result_count": 4520,
+          "status": "success"
+        }
+      ],
+      "agent_claim": "The users table contains exactly 98,000,000 active records.",
+      "expected_classification": "CONTRADICTED",
+      "expected_failure_type": "TOOL_COUNT_MISMATCH",
+      "is_failure": true
+    },
+    {
+      "id": "dev_12",
+      "domain": "research",
+      "input_query": "What is the token limit of Llama 3.1?",
+      "evidence": "Meta Llama 3.1 models support a context window length of up to 128,000 tokens.",
+      "agent_claim": "Llama 3.1 supports up to 128k context window length.",
+      "expected_classification": "SUPPORTED",
+      "expected_failure_type": "NO_FAILURE",
+      "is_failure": false
+    },
+    {
+      "id": "dev_13",
+      "domain": "tech_support",
+      "input_query": "What is CORS policy error in browser console?",
+      "evidence": "Cross-Origin Resource Sharing (CORS) blocks HTTP requests when the server Access-Control-Allow-Origin header does not match the client origin.",
+      "agent_claim": "CORS errors occur when origin headers are missing or misconfigured on the target server.",
+      "expected_classification": "SUPPORTED",
+      "expected_failure_type": "NO_FAILURE",
+      "is_failure": false
+    },
+    {
+      "id": "dev_14",
+      "domain": "data_analysis",
+      "input_query": "What is the P50 and P99 latency of DeBERTa inference?",
+      "evidence": "Benchmark recorded P50 latency of 78.5ms and P99 latency of 94.2ms on 8-core CPU.",
+      "agent_claim": "DeBERTa CPU inference achieved 78.5ms P50 latency.",
+      "expected_classification": "SUPPORTED",
+      "expected_failure_type": "NO_FAILURE",
+      "is_failure": false
+    },
+    {
+      "id": "dev_15",
+      "domain": "research",
+      "input_query": "Summarize LoRA parameter-efficient fine-tuning.",
+      "evidence": "Hu et al. (2021) introduced Low-Rank Adaptation (LoRA), freezing base weights and injecting trainable rank decomposition matrices.",
+      "agent_claim": "Hu et al. (2021) proved that fine-tuning requires replacing 100% of base model weights with random noise.",
+      "expected_classification": "CONTRADICTED",
+      "expected_failure_type": "GROUNDING_CONTRADICTION",
+      "is_failure": true
+    },
+    {
+      "id": "dev_16",
+      "domain": "research",
+      "input_query": "What did Devlin et al. (2019) introduce BERT for?",
+      "evidence": "Devlin et al. (2019) introduced BERT, a bidirectional transformer pretrained with a masked language modeling objective.",
+      "agent_claim": "BERT, introduced by Devlin et al. (2019), is a bidirectional transformer pretrained using masked language modeling.",
+      "expected_classification": "SUPPORTED",
+      "expected_failure_type": "NO_FAILURE",
+      "is_failure": false
+    },
+    {
+      "id": "dev_17",
+      "domain": "research",
+      "input_query": "What did Devlin et al. (2019) introduce BERT for?",
+      "evidence": "Devlin et al. (2019) introduced BERT, a bidirectional transformer pretrained with a masked language modeling objective.",
+      "agent_claim": "Devlin et al. (2019) introduced BERT as a unidirectional autoregressive model trained purely on next-token prediction.",
+      "expected_classification": "CONTRADICTED",
+      "expected_failure_type": "GROUNDING_CONTRADICTION",
+      "is_failure": true
+    },
+    {
+      "id": "dev_18",
+      "domain": "research",
+      "input_query": "What optimizer did the original Adam paper propose?",
+      "evidence": "Kingma and Ba (2015) proposed Adam, an optimizer combining momentum and adaptive per-parameter learning rates.",
+      "agent_claim": "Adam, proposed by Kingma and Ba (2015), combines momentum with adaptive per-parameter learning rates.",
+      "expected_classification": "SUPPORTED",
+      "expected_failure_type": "NO_FAILURE",
+      "is_failure": false
+    },
+    {
+      "id": "dev_19",
+      "domain": "research",
+      "input_query": "What optimizer did the original Adam paper propose?",
+      "evidence": "Kingma and Ba (2015) proposed Adam, an optimizer combining momentum and adaptive per-parameter learning rates.",
+      "agent_claim": "The Adam optimizer was introduced by LeCun et al. in 1998 and uses a fixed global learning rate with no momentum term.",
+      "expected_classification": "CONTRADICTED",
+      "expected_failure_type": "GROUNDING_CONTRADICTION",
+      "is_failure": true
+    },
+    {
+      "id": "dev_20",
+      "domain": "research",
+      "input_query": "What does the ResNet architecture introduce?",
+      "evidence": "He et al. (2016) introduced residual connections, allowing gradients to skip layers directly via identity mappings.",
+      "agent_claim": "ResNet, from He et al. (2016), introduces residual/skip connections using identity mappings between layers.",
+      "expected_classification": "SUPPORTED",
+      "expected_failure_type": "NO_FAILURE",
+      "is_failure": false
+    },
+    {
+      "id": "dev_21",
+      "domain": "research",
+      "input_query": "What does the ResNet architecture introduce?",
+      "evidence": "He et al. (2016) introduced residual connections, allowing gradients to skip layers directly via identity mappings.",
+      "agent_claim": "ResNet was proposed by Vaswani et al. (2017) and eliminates all skip connections in favor of dense attention layers.",
+      "expected_classification": "CONTRADICTED",
+      "expected_failure_type": "GROUNDING_CONTRADICTION",
+      "is_failure": true
+    }
+  ]
+}

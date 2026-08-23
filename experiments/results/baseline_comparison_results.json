@@ -1,0 +1,68 @@
+{
+  "timestamp": "2026-08-18 19:02:59 UTC",
+  "dataset": "v1.0_test",
+  "total_test_cases": 20,
+  "model": "qwen-7b",
+  "baselines": {
+    "Baseline_A_No_Semantic": {
+      "precision": 1.0,
+      "recall": 0.125,
+      "f1_score": 0.222,
+      "false_positive_rate": 0.0,
+      "false_negative_rate": 0.875,
+      "avg_latency_ms": 0.0,
+      "tp": 1,
+      "fp": 0,
+      "fn": 7,
+      "tn": 12
+    },
+    "Baseline_B_Sampled_Eval": {
+      "precision": 0.75,
+      "recall": 0.75,
+      "f1_score": 0.75,
+      "false_positive_rate": 0.167,
+      "false_negative_rate": 0.25,
+      "avg_latency_ms": 53.18,
+      "tp": 6,
+      "fp": 2,
+      "fn": 2,
+      "tn": 10
+    },
+    "Baseline_C_Embedding_Only": {
+      "precision": 0.833,
+      "recall": 0.625,
+      "f1_score": 0.714,
+      "false_positive_rate": 0.083,
+      "false_negative_rate": 0.375,
+      "avg_latency_ms": 15.09,
+      "tp": 5,
+      "fp": 1,
+      "fn": 3,
+      "tn": 11
+    },
+    "Baseline_D_NLI_Without_Drift": {
+      "precision": 0.889,
+      "recall": 1.0,
+      "f1_score": 0.941,
+      "false_positive_rate": 0.083,
+      "false_negative_rate": 0.0,
+      "avg_latency_ms": 72.6,
+      "tp": 8,
+      "fp": 1,
+      "fn": 0,
+      "tn": 11
+    },
+    "AgentPulse_Full_System": {
+      "precision": 0.727,
+      "recall": 1.0,
+      "f1_score": 0.842,
+      "false_positive_rate": 0.25,
+      "false_negative_rate": 0.0,
+      "avg_latency_ms": 101.54,
+      "tp": 8,
+      "fp": 3,
+      "fn": 0,
+      "tn": 9
+    }
+  }
+}

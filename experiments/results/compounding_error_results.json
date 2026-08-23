@@ -1,0 +1,81 @@
+{
+  "timestamp": "2026-08-23 11:50:09 UTC",
+  "base_premise": "The database query executed in 45ms and returned 3 verified customer profile records.",
+  "injected_fault_node": "Node_B",
+  "condition_a_unmitigated_control": [
+    {
+      "node": "Node_A (Planner)",
+      "risk_score": 0.989,
+      "label": "high_risk",
+      "contradiction_prob": 0.002
+    },
+    {
+      "node": "Node_B (Retriever - Fault Injected)",
+      "risk_score": 1.0,
+      "label": "high_risk",
+      "contradiction_prob": 1.0
+    },
+    {
+      "node": "Node_C (Verifier)",
+      "risk_score": 0.992,
+      "label": "high_risk",
+      "contradiction_prob": 0.992
+    },
+    {
+      "node": "Node_D (Analyst)",
+      "risk_score": 0.992,
+      "label": "high_risk",
+      "contradiction_prob": 0.992
+    },
+    {
+      "node": "Node_E (Writer)",
+      "risk_score": 0.992,
+      "label": "high_risk",
+      "contradiction_prob": 0.992
+    }
+  ],
+  "condition_a_downstream_propagation_summary": {
+    "fault_node_risk": 1.0,
+    "mean_downstream_risk": 0.992,
+    "max_downstream_risk": 0.992,
+    "downstream_high_risk_node_count": 3
+  },
+  "condition_b_active_intervention": [
+    {
+      "node": "Node_A (Planner)",
+      "risk_score": 0.989,
+      "label": "high_risk",
+      "contradiction_prob": 0.002
+    },
+    {
+      "node": "Node_B (Retriever - Fault Injected)",
+      "risk_score": 1.0,
+      "label": "high_risk",
+      "contradiction_prob": 1.0
+    },
+    {
+      "node": "Node_C (Verifier)",
+      "risk_score": 0.009,
+      "label": "low_risk",
+      "contradiction_prob": 0.009
+    },
+    {
+      "node": "Node_D (Analyst)",
+      "risk_score": 0.001,
+      "label": "low_risk",
+      "contradiction_prob": 0.0
+    },
+    {
+      "node": "Node_E (Writer)",
+      "risk_score": 0.001,
+      "label": "low_risk",
+      "contradiction_prob": 0.0
+    }
+  ],
+  "condition_b_downstream_propagation_summary": {
+    "fault_node_risk": 1.0,
+    "mean_downstream_risk": 0.004,
+    "max_downstream_risk": 0.009,
+    "downstream_high_risk_node_count": 0
+  }
+}

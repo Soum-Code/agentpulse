@@ -1,0 +1,139 @@
+{
+  "timestamp": "2026-08-18 18:59:05 UTC",
+  "drift_threshold": 0.3,
+  "scenarios_evaluated": 11,
+  "results": [
+    {
+      "scenario_id": "sc_prompt_10",
+      "scenario_name": "Prompt Formatting Change (10% shift)",
+      "drift_type": "prompt_drift",
+      "shift_level": 0.1,
+      "is_anomaly": false,
+      "detected": false,
+      "false_alert": false,
+      "time_to_detect_spans": "N/A",
+      "final_asi": 100.0,
+      "final_centroid_dist": 0.001
+    },
+    {
+      "scenario_id": "sc_prompt_25",
+      "scenario_name": "Prompt Tone Shift (25% shift)",
+      "drift_type": "prompt_drift",
+      "shift_level": 0.25,
+      "is_anomaly": false,
+      "detected": false,
+      "false_alert": false,
+      "time_to_detect_spans": "N/A",
+      "final_asi": 99.7,
+      "final_centroid_dist": 0.007
+    },
+    {
+      "scenario_id": "sc_prompt_50",
+      "scenario_name": "Prompt Template Rewrite (50% shift)",
+      "drift_type": "prompt_drift",
+      "shift_level": 0.5,
+      "is_anomaly": true,
+      "detected": false,
+      "false_alert": false,
+      "time_to_detect_spans": "N/A",
+      "final_asi": 98.5,
+      "final_centroid_dist": 0.042
+    },
+    {
+      "scenario_id": "sc_model_50",
+      "scenario_name": "Model Version Update (Qwen-7B to Llama-8B)",
+      "drift_type": "model_drift",
+      "shift_level": 0.5,
+      "is_anomaly": true,
+      "detected": false,
+      "false_alert": false,
+      "time_to_detect_spans": "N/A",
+      "final_asi": 98.5,
+      "final_centroid_dist": 0.042
+    },
+    {
+      "scenario_id": "sc_temp_35",
+      "scenario_name": "Temperature Shift (T=0.1 to T=0.9)",
+      "drift_type": "hyperparam_drift",
+      "shift_level": 0.35,
+      "is_anomaly": true,
+      "detected": false,
+      "false_alert": false,
+      "time_to_detect_spans": "N/A",
+      "final_asi": 99.4,
+      "final_centroid_dist": 0.017
+    },
+    {
+      "scenario_id": "sc_tool_25",
+      "scenario_name": "Tool Frequency Fluctuation (25% delta)",
+      "drift_type": "tool_entropy",
+      "shift_level": 0.25,
+      "is_anomaly": false,
+      "detected": false,
+      "false_alert": false,
+      "time_to_detect_spans": "N/A",
+      "final_asi": 99.7,
+      "final_centroid_dist": 0.007
+    },
+    {
+      "scenario_id": "sc_tool_60",
+      "scenario_name": "Uncalibrated External Tool Shift (60% delta)",
+      "drift_type": "tool_entropy",
+      "shift_level": 0.6,
+      "is_anomaly": true,
+      "detected": true,
+      "false_alert": false,
+      "time_to_detect_spans": 1,
+      "final_asi": 82.7,
+      "final_centroid_dist": 0.064
+    },
+    {
+      "scenario_id": "sc_hallucination_75",
+      "scenario_name": "Hallucination & Contradiction Burst (75% risk)",
+      "drift_type": "quality_regression",
+      "shift_level": 0.75,
+      "is_anomaly": true,
+      "detected": true,
+      "false_alert": false,
+      "time_to_detect_spans": 1,
+      "final_asi": 96.5,
+      "final_centroid_dist": 0.099
+    },
+    {
+      "scenario_id": "ctrl_neg_paraphrase",
+      "scenario_name": "Negative Control: Legitimate Paraphrasing",
+      "drift_type": "negative_control",
+      "shift_level": 0.12,
+      "is_anomaly": false,
+      "detected": false,
+      "false_alert": false,
+      "time_to_detect_spans": "N/A",
+      "final_asi": 100.0,
+      "final_centroid_dist": 0.001
+    },
+    {
+      "scenario_id": "ctrl_neg_valid_tool",
+      "scenario_name": "Negative Control: Equivalent Tool Substitution",
+      "drift_type": "negative_control",
+      "shift_level": 0.15,
+      "is_anomaly": false,
+      "detected": false,
+      "false_alert": false,
+      "time_to_detect_spans": "N/A",
+      "final_asi": 99.9,
+      "final_centroid_dist": 0.002
+    },
+    {
+      "scenario_id": "ctrl_neg_stable_flow",
+      "scenario_name": "Negative Control: Baseline Invariant Operation",
+      "drift_type": "negative_control",
+      "shift_level": 0.0,
+      "is_anomaly": false,
+      "detected": false,
+      "false_alert": false,
+      "time_to_detect_spans": "N/A",
+      "final_asi": 100.0,
+      "final_centroid_dist": 0.0
+    }
+  ]
+}

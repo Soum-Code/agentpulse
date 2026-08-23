@@ -1,0 +1,198 @@
+{
+  "timestamp": "2026-08-23 10:43:48 UTC",
+  "model": "qwen3-8b",
+  "model_id": "Qwen/Qwen3-8B-GGUF:Q4_K_M",
+  "adapter": "Qwen3GGUFAdapter",
+  "provider": "Q4_K_M",
+  "real_inference": true,
+  "warmup_ms": 4996.38,
+  "hardware": {
+    "platform": "Windows-11-10.0.26200-SP0",
+    "processor": "AMD64 Family 25 Model 117 Stepping 2, AuthenticAMD",
+    "python": "3.13.7",
+    "cpu_count": 16,
+    "gpu": "none (CPU-only benchmark)"
+  },
+  "dataset": "v1.0_test",
+  "n_cases": 2,
+  "runs_per_case": 2,
+  "max_tokens_per_call": 120,
+  "summary": {
+    "DIRECT": {
+      "mean_latency_ms": 16040.14,
+      "median_latency_ms": 16040.14,
+      "stdev_latency_ms": 7592.52,
+      "mean_tokens_in": 61.0,
+      "mean_tokens_out": 59.0,
+      "mean_grounding_risk": 0.001,
+      "stdev_grounding_risk": 0.0,
+      "contradiction_rate": 0.0
+    },
+    "COT": {
+      "mean_latency_ms": 33037.4,
+      "median_latency_ms": 33037.4,
+      "stdev_latency_ms": 97.47,
+      "mean_tokens_in": 96.0,
+      "mean_tokens_out": 120.0,
+      "mean_grounding_risk": 0.515,
+      "stdev_grounding_risk": 0.642,
+      "contradiction_rate": 0.0
+    },
+    "AOT": {
+      "mean_latency_ms": 95918.5,
+      "median_latency_ms": 95918.5,
+      "stdev_latency_ms": 60094.79,
+      "mean_tokens_in": 608.5,
+      "mean_tokens_out": 319.0,
+      "mean_grounding_risk": 0.001,
+      "stdev_grounding_risk": 0.0,
+      "contradiction_rate": 0.0
+    }
+  },
+  "detailed_results": {
+    "direct": [
+      {
+        "case_id": "test_01",
+        "domain": "research",
+        "is_failure_ground_truth": false,
+        "n_runs": 2,
+        "avg_latency_ms": 21408.86,
+        "median_latency_ms": 21408.86,
+        "stdev_latency_ms": 3487.76,
+        "avg_tokens_in": 62.0,
+        "avg_tokens_out": 78.5,
+        "stdev_tokens_out": 7.78,
+        "avg_risk_score": 0.001,
+        "stdev_risk_score": 0.0,
+        "contradiction_rate": 0.0,
+        "raw_latencies_ms": [
+          23875.08,
+          18942.64
+        ],
+        "raw_risk_scores": [
+          0.001,
+          0.001
+        ]
+      },
+      {
+        "case_id": "test_02",
+        "domain": "research",
+        "is_failure_ground_truth": true,
+        "n_runs": 2,
+        "avg_latency_ms": 10671.42,
+        "median_latency_ms": 10671.42,
+        "stdev_latency_ms": 1060.98,
+        "avg_tokens_in": 60.0,
+        "avg_tokens_out": 39.5,
+        "stdev_tokens_out": 0.71,
+        "avg_risk_score": 0.001,
+        "stdev_risk_score": 0.0,
+        "contradiction_rate": 0.0,
+        "raw_latencies_ms": [
+          11421.65,
+          9921.19
+        ],
+        "raw_risk_scores": [
+          0.001,
+          0.001
+        ]
+      }
+    ],
+    "cot": [
+      {
+        "case_id": "test_01",
+        "domain": "research",
+        "is_failure_ground_truth": false,
+        "n_runs": 2,
+        "avg_latency_ms": 33106.32,
+        "median_latency_ms": 33106.32,
+        "stdev_latency_ms": 1679.74,
+        "avg_tokens_in": 97.0,
+        "avg_tokens_out": 120.0,
+        "stdev_tokens_out": 0.0,
+        "avg_risk_score": 0.061,
+        "stdev_risk_score": 0.07,
+        "contradiction_rate": 0.0,
+        "raw_latencies_ms": [
+          34294.08,
+          31918.56
+        ],
+        "raw_risk_scores": [
+          0.113,
+          0.008
+        ]
+      },
+      {
+        "case_id": "test_02",
+        "domain": "research",
+        "is_failure_ground_truth": true,
+        "n_runs": 2,
+        "avg_latency_ms": 32968.48,
+        "median_latency_ms": 32968.48,
+        "stdev_latency_ms": 1094.8,
+        "avg_tokens_in": 95.0,
+        "avg_tokens_out": 120.0,
+        "stdev_tokens_out": 0.0,
+        "avg_risk_score": 0.969,
+        "stdev_risk_score": 0.04,
+        "contradiction_rate": 0.0,
+        "raw_latencies_ms": [
+          33742.62,
+          32194.35
+        ],
+        "raw_risk_scores": [
+          0.997,
+          0.941
+        ]
+      }
+    ],
+    "aot": [
+      {
+        "case_id": "test_01",
+        "domain": "research",
+        "is_failure_ground_truth": false,
+        "n_runs": 2,
+        "avg_latency_ms": 138411.93,
+        "median_latency_ms": 138411.93,
+        "stdev_latency_ms": 2768.6,
+        "avg_tokens_in": 738.0,
+        "avg_tokens_out": 473.0,
+        "stdev_tokens_out": 0.0,
+        "avg_risk_score": 0.001,
+        "stdev_risk_score": 0.0,
+        "contradiction_rate": 0.0,
+        "raw_latencies_ms": [
+          140369.63,
+          136454.24
+        ],
+        "raw_risk_scores": [
+          0.001,
+          0.001
+        ]
+      },
+      {
+        "case_id": "test_02",
+        "domain": "research",
+        "is_failure_ground_truth": true,
+        "n_runs": 2,
+        "avg_latency_ms": 53425.07,
+        "median_latency_ms": 53425.07,
+        "stdev_latency_ms": 903.76,
+        "avg_tokens_in": 479.0,
+        "avg_tokens_out": 165.0,
+        "stdev_tokens_out": 0.0,
+        "avg_risk_score": 0.001,
+        "stdev_risk_score": 0.0,
+        "contradiction_rate": 0.0,
+        "raw_latencies_ms": [
+          52786.02,
+          54064.12
+        ],
+        "raw_risk_scores": [
+          0.001,
+          0.001
+        ]
+      }
+    ]
+  }
+}

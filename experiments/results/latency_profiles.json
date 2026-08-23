@@ -1,0 +1,103 @@
+{
+  "timestamp": "2026-08-18 18:57:12 UTC",
+  "hardware": {
+    "platform": "Windows",
+    "release": "11",
+    "cpu_cores": 16,
+    "device": "cpu"
+  },
+  "runs_per_layer": 25,
+  "layers": {
+    "1_prompt_preparation": {
+      "mean_ms": 0.0,
+      "std_ms": 0.0,
+      "p50_ms": 0.0,
+      "p95_ms": 0.001,
+      "p99_ms": 0.001
+    },
+    "2_model_inference_warm": {
+      "mean_ms": 0.011,
+      "std_ms": 0.01,
+      "p50_ms": 0.008,
+      "p95_ms": 0.019,
+      "p99_ms": 0.057
+    },
+    "3_token_generation": {
+      "mean_ms": 0.003,
+      "std_ms": 0.002,
+      "p50_ms": 0.003,
+      "p95_ms": 0.006,
+      "p99_ms": 0.013
+    },
+    "4_agent_node_execution": {
+      "mean_ms": 0.0,
+      "std_ms": 0.0,
+      "p50_ms": 0.0,
+      "p95_ms": 0.001,
+      "p99_ms": 0.001
+    },
+    "5_tool_execution": {
+      "mean_ms": 0.003,
+      "std_ms": 0.001,
+      "p50_ms": 0.003,
+      "p95_ms": 0.006,
+      "p99_ms": 0.007
+    },
+    "6_local_retrieval": {
+      "mean_ms": 15.362,
+      "std_ms": 24.287,
+      "p50_ms": 10.675,
+      "p95_ms": 12.185,
+      "p99_ms": 134.255
+    },
+    "7_sdk_enqueue": {
+      "mean_ms": 0.025,
+      "std_ms": 0.037,
+      "p50_ms": 0.016,
+      "p95_ms": 0.032,
+      "p99_ms": 0.205
+    },
+    "8_http_ingestion_overhead": {
+      "mean_ms": 0.981,
+      "std_ms": 0.084,
+      "p50_ms": 0.981,
+      "p95_ms": 1.108,
+      "p99_ms": 1.124
+    },
+    "9_evaluation_dispatch": {
+      "mean_ms": 0.149,
+      "std_ms": 0.014,
+      "p50_ms": 0.152,
+      "p95_ms": 0.169,
+      "p99_ms": 0.17
+    },
+    "10_minilm_inference": {
+      "mean_ms": 13.325,
+      "std_ms": 1.483,
+      "p50_ms": 12.809,
+      "p95_ms": 14.954,
+      "p99_ms": 18.879
+    },
+    "11_deberta_inference": {
+      "mean_ms": 70.82,
+      "std_ms": 21.46,
+      "p50_ms": 66.915,
+      "p95_ms": 71.883,
+      "p99_ms": 174.88
+    },
+    "12_full_evaluation_cascade": {
+      "mean_ms": 90.808,
+      "std_ms": 4.339,
+      "p50_ms": 90.956,
+      "p95_ms": 97.789,
+      "p99_ms": 102.564
+    },
+    "13_entire_workflow_execution": {
+      "mean_ms": 106.202,
+      "std_ms": 0.0,
+      "p50_ms": 106.202,
+      "p95_ms": 106.202,
+      "p99_ms": 106.202
+    }
+  }
+}

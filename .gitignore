@@ -1,0 +1,56 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+*.egg
+.venv/
+venv/
+env/
+
+# Node
+node_modules/
+dashboard/dist/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Local Claude Code tool config (not part of the project)
+.claude/skills/
+
+# Environment
+.env
+*.env.local
+
+# Database
+*.db
+*.db-shm
+*.db-wal
+*.sqlite3
+data/
+
+# Models
+models/
+*.onnx
+*.bin
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+docker-compose.override.yml
+
+# Testing
+.coverage
+htmlcov/
+.pytest_cache/
+
+# Logs
+*.log
+logs/

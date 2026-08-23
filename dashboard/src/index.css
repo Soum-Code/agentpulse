@@ -1,0 +1,270 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  font-family: 'Outfit', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  color-scheme: dark;
+}
+
+body {
+  background-color: #070913;
+  color: #f1f5f9;
+  min-height: 100vh;
+  margin: 0;
+  overflow-x: hidden;
+}
+
+/* ─── Ambient Liquid Blobs ────────────────────────────────────────────── */
+.liquid-ambient-blob-1 {
+  position: fixed;
+  top: -10%;
+  left: 15%;
+  width: 550px;
+  height: 550px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(99, 102, 241, 0.28) 0%, rgba(139, 92, 246, 0.08) 60%, transparent 80%);
+  filter: blur(80px);
+  pointer-events: none;
+  z-index: 0;
+  animation: float 14s ease-in-out infinite;
+}
+
+.liquid-ambient-blob-2 {
+  position: fixed;
+  bottom: 5%;
+  right: 10%;
+  width: 500px;
+  height: 500px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(6, 182, 212, 0.22) 0%, rgba(59, 130, 246, 0.06) 60%, transparent 80%);
+  filter: blur(90px);
+  pointer-events: none;
+  z-index: 0;
+  animation: floatRev 18s ease-in-out infinite;
+}
+
+.liquid-ambient-blob-3 {
+  position: fixed;
+  top: 40%;
+  right: 35%;
+  width: 420px;
+  height: 420px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(244, 63, 94, 0.15) 0%, rgba(217, 70, 239, 0.04) 60%, transparent 80%);
+  filter: blur(85px);
+  pointer-events: none;
+  z-index: 0;
+  animation: float 12s ease-in-out infinite reverse;
+}
+
+/* Subtle architectural grid pattern overlay */
+.liquid-grid-overlay {
+  background-image: radial-gradient(rgba(255, 255, 255, 0.07) 1px, transparent 0);
+  background-size: 28px 28px;
+  background-position: -19px -19px;
+}
+
+/* ─── Ultra-Glass & Liquid Glass Classes ────────────────────────────── */
+.liquid-glass {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.07) 0%, rgba(255, 255, 255, 0.02) 100%);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 15px 35px -10px rgba(0, 0, 0, 0.6), inset 0 1px 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+.liquid-glass-card {
+  background: linear-gradient(145deg, rgba(30, 41, 59, 0.6) 0%, rgba(15, 23, 42, 0.75) 100%);
+  backdrop-filter: blur(24px) saturate(190%);
+  -webkit-backdrop-filter: blur(24px) saturate(190%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.7), inset 0 1px 2px 0 rgba(255, 255, 255, 0.12);
+  border-radius: 1.25rem;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.liquid-glass-card:hover {
+  border-color: rgba(99, 102, 241, 0.35);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 25px -5px rgba(99, 102, 241, 0.2), inset 0 1px 2px 0 rgba(255, 255, 255, 0.25);
+  transform: translateY(-2px);
+}
+
+.specular-shine {
+  position: relative;
+  overflow: hidden;
+}
+
+.specular-shine::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.08), transparent);
+  transform: skewX(-20deg);
+  pointer-events: none;
+  transition: 0.75s;
+}
+
+.specular-shine:hover::after {
+  left: 150%;
+}
+
+/* ─── Hand-Drawn Organic Minimalist Accents ─────────────────────────── */
+.font-hand {
+  font-family: 'Caveat', cursive;
+}
+
+.hand-drawn-border {
+  border: 1.5px dashed rgba(255, 255, 255, 0.2);
+  border-radius: 255px 15px 225px 15px/15px 225px 15px 255px;
+}
+
+.sketch-badge {
+  font-family: 'Caveat', cursive;
+  font-size: 1.05rem;
+  line-height: 1;
+  padding: 0.25rem 0.65rem;
+  border-radius: 255px 20px 225px 20px/20px 225px 20px 255px;
+  border: 1.5px solid currentColor;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  transition: transform 0.2s ease;
+}
+
+.sketch-badge:hover {
+  transform: rotate(-2deg) scale(1.05);
+}
+
+.sketch-note {
+  font-family: 'Caveat', cursive;
+  font-size: 1.15rem;
+  background: rgba(254, 240, 138, 0.07);
+  border: 1px solid rgba(254, 240, 138, 0.25);
+  border-radius: 12px 2px 14px 3px;
+  transform: rotate(-0.75deg);
+  box-shadow: 2px 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.hand-drawn-underline {
+  position: relative;
+  display: inline-block;
+}
+
+.hand-drawn-underline::after {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  left: 0;
+  width: 100%;
+  height: 4px;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 20' preserveAspectRatio='none'%3E%3Cpath d='M0 10 Q 25 18, 50 10 T 100 12' fill='none' stroke='%23818cf8' stroke-width='4' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-size: 100% 100%;
+  opacity: 0.85;
+}
+
+.hand-drawn-circle {
+  position: relative;
+}
+
+.hand-drawn-circle::before {
+  content: '';
+  position: absolute;
+  inset: -6px;
+  border: 2px solid #818cf8;
+  border-radius: 58% 42% 63% 37% / 41% 59% 41% 59%;
+  pointer-events: none;
+  opacity: 0.7;
+}
+
+/* ─── Risk & Severity Badges ────────────────────────────────────────── */
+.risk-low {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  box-shadow: 0 0 15px -3px rgba(16, 185, 129, 0.25);
+}
+
+.risk-medium {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  box-shadow: 0 0 15px -3px rgba(245, 158, 11, 0.25);
+}
+
+.risk-high {
+  background: rgba(244, 63, 94, 0.15);
+  color: #fb7185;
+  border: 1px solid rgba(244, 63, 94, 0.35);
+  box-shadow: 0 0 18px -2px rgba(244, 63, 94, 0.3);
+}
+
+.risk-critical {
+  background: rgba(225, 29, 72, 0.25);
+  color: #fca5a5;
+  border: 1px solid rgba(244, 63, 94, 0.6);
+  box-shadow: 0 0 25px 0 rgba(225, 29, 72, 0.4);
+}
+
+/* ─── Fluid Animated Wave for ASI ───────────────────────────────────── */
+.liquid-bubble {
+  position: relative;
+  overflow: hidden;
+  border-radius: 50%;
+  background: rgba(15, 23, 42, 0.85);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  box-shadow: inset 0 2px 6px rgba(255, 255, 255, 0.25), 0 12px 28px rgba(0, 0, 0, 0.6);
+}
+
+.liquid-wave-layer {
+  position: absolute;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  border-radius: 38%;
+  animation: liquid-spin 7s linear infinite;
+  transition: bottom 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes liquid-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* ─── Scrollbars & Utilities ────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.6);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(99, 102, 241, 0.35);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(99, 102, 241, 0.6);
+}
+
+.gradient-text {
+  background: linear-gradient(135deg, #ffffff 0%, #c7d2fe 50%, #818cf8 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.gradient-text-cyan {
+  background: linear-gradient(135deg, #67e8f9 0%, #38bdf8 50%, #818cf8 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.gradient-text-rose {
+  background: linear-gradient(135deg, #fda4af 0%, #fb7185 50%, #f43f5e 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}

@@ -1,0 +1,83 @@
+[
+  {
+    "scenario": "No Drift (Stationary)",
+    "drift_type": "stationary",
+    "configured_magnitude": 0.0,
+    "detected": false,
+    "time_to_detect_spans": "N/A",
+    "final_asi": 100.0,
+    "final_centroid_dist": 0.0
+  },
+  {
+    "scenario": "Small Sudden Drift",
+    "drift_type": "sudden",
+    "configured_magnitude": 0.25,
+    "detected": true,
+    "time_to_detect_spans": 1,
+    "final_asi": 97.4,
+    "final_centroid_dist": 0.076
+  },
+  {
+    "scenario": "Moderate Sudden Drift",
+    "drift_type": "sudden",
+    "configured_magnitude": 0.45,
+    "detected": true,
+    "time_to_detect_spans": 1,
+    "final_asi": 97.4,
+    "final_centroid_dist": 0.076
+  },
+  {
+    "scenario": "Large Sudden Drift",
+    "drift_type": "sudden",
+    "configured_magnitude": 0.85,
+    "detected": true,
+    "time_to_detect_spans": 1,
+    "final_asi": 97.4,
+    "final_centroid_dist": 0.076
+  },
+  {
+    "scenario": "Gradual Drift",
+    "drift_type": "gradual",
+    "configured_magnitude": 0.6,
+    "detected": true,
+    "time_to_detect_spans": 18,
+    "final_asi": 91.3,
+    "final_centroid_dist": 0.249
+  },
+  {
+    "scenario": "Tool-Use Distribution Drift",
+    "drift_type": "tool_entropy",
+    "configured_magnitude": 0.5,
+    "detected": true,
+    "time_to_detect_spans": 1,
+    "final_asi": 82.4,
+    "final_centroid_dist": 0.076
+  },
+  {
+    "scenario": "Error-Rate Surge Drift",
+    "drift_type": "error_rate",
+    "configured_magnitude": 0.7,
+    "detected": true,
+    "time_to_detect_spans": 1,
+    "final_asi": 97.4,
+    "final_centroid_dist": 0.076
+  },
+  {
+    "scenario": "Quality Regression Drift",
+    "drift_type": "quality",
+    "configured_magnitude": 0.65,
+    "detected": true,
+    "time_to_detect_spans": 1,
+    "final_asi": 97.4,
+    "final_centroid_dist": 0.076
+  },
+  {
+    "scenario": "Legitimate Domain Expansion",
+    "drift_type": "domain_shift",
+    "configured_magnitude": 0.3,
+    "detected": true,
+    "time_to_detect_spans": 1,
+    "final_asi": 94.9,
+    "final_centroid_dist": 0.145
+  }
+]
