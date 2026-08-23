@@ -14,6 +14,7 @@ Existing LLM observability tools trace tokens, latency, and cost well, but treat
 
 - [PROJECT_REPORT.md](PROJECT_REPORT.md) — architecture and mathematical formulation
 - [THRESHOLD_ANALYSIS.md](THRESHOLD_ANALYSIS.md) — ablation study and threshold sweep, with dev/test separation
+- [GROUNDING_SCORE_CALIBRATION_REPORT.md](GROUNDING_SCORE_CALIBRATION_REPORT.md) — neutral-vs-contradiction weighting fix for the grounding-score formula
 - [REASONING_STRATEGY_EVALUATION_REPORT.md](REASONING_STRATEGY_EVALUATION_REPORT.md) — Direct vs CoT vs AoT, measured on real model inference
 - [DRIFT_EXPERIMENT_REPORT.md](DRIFT_EXPERIMENT_REPORT.md) — graded drift detection with negative controls
 - [LABEL_AGREEMENT_REPORT.md](LABEL_AGREEMENT_REPORT.md) — labeling protocol and inter-evaluator agreement

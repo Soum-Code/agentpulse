@@ -146,18 +146,19 @@ def run_compounding_error_experiment() -> Dict[str, Any]:
     condition_b_summary = _propagation_summary(condition_b_risks)
 
     known_limitation_note = (
-        "Node_A (baseline, no fault) reads as high_risk (~0.99) in both conditions above, "
+        "Node_A (baseline, no fault) reads as medium_risk (~0.50) in both conditions above, "
         "despite near-zero contradiction_prob (~0.002). Root cause verified directly: DeBERTa "
         "NLI classifies a premise compared against itself as 'neutral' (~98.7%), not "
         "'entailment' (~1%) -- verbatim self-repetition is out-of-distribution for a model "
-        "trained on genuine premise/hypothesis pairs. Since grounding_score = 1 - entailment_prob, "
-        "a neutral classification is scored almost as risky as genuine uncertainty, even though "
-        "'neutral' is not 'contradicted'. This is a limitation of the current grounding_score "
-        "formula (over-penalizes neutral relative to contradiction), not specific to this "
-        "experiment -- see EMPIRICAL_AUDIT.md / THRESHOLD_ANALYSIS.md Part 12-13 discussion. "
-        "Treat Node_A's risk score as unreliable evidence of a clean baseline in this experiment; "
-        "the propagation comparison (fault node onward) is unaffected since it's a relative "
-        "before/after difference, not an absolute risk magnitude."
+        "trained on genuine premise/hypothesis pairs. grounding_score used to be "
+        "1 - entailment_prob, which scored this neutral classification almost as risky as a "
+        "genuine contradiction (~0.99, high_risk); it is now "
+        "contradiction_prob + 0.5 * neutral_prob (see GROUNDING_SCORE_CALIBRATION_REPORT.md), "
+        "which roughly halves the penalty (~0.50, medium_risk) but does not eliminate it, since "
+        "neutral still contributes some risk by design. Treat Node_A's risk score as an "
+        "improved-but-still-imperfect estimate of a clean baseline in this experiment; the "
+        "propagation comparison (fault node onward) is unaffected either way since it's a "
+        "relative before/after difference, not an absolute risk magnitude."
     )
     print(f"\n[Known limitation] {known_limitation_note}")
 

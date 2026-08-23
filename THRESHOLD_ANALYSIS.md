@@ -1,6 +1,6 @@
 # Component Ablation & Threshold Sensitivity Analysis
 
-**Date:** 2026-08-23 11:28:51 UTC
+**Date:** 2026-08-23 17:56:09 UTC
 
 ## Methodology
 
@@ -32,19 +32,19 @@ point was overfitted to the development split.
 
 | Configuration | Description | Precision | Recall | F1 | FPR | FNR | TP/FP/FN/TN | Latency (ms) |
 | :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| A MiniLM Only | MiniLM embedding cosine only | 0.733 | 0.846 | 0.786 | 0.235 | 0.154 | 11/4/2/13 | 48.53 |
-| B DeBERTa Only | DeBERTa-v3 NLI only | 0.929 | 1.0 | 0.963 | 0.059 | 0.0 | 13/1/0/16 | 300.48 |
-| C Cascade | MiniLM + DeBERTa cascade | 0.929 | 1.0 | 0.963 | 0.059 | 0.0 | 13/1/0/16 | 349.02 |
-| D NLI Plus Tool | NLI + deterministic tool-claim validation | 0.929 | 1.0 | 0.963 | 0.059 | 0.0 | 13/1/0/16 | 300.54 |
-| E NLI Plus Disagreement | NLI + inter-agent disagreement | 0.929 | 1.0 | 0.963 | 0.059 | 0.0 | 13/1/0/16 | 598.03 |
-| F NLI Plus Drift | NLI + drift signal | 0.448 | 1.0 | 0.619 | 0.941 | 0.0 | 13/16/0/1 | 329.93 |
-| G Full AgentPulse | Full AgentPulse pipeline (grounding + tool + disagreement + drift + risk aggregation) | 0.542 | 1.0 | 0.703 | 0.647 | 0.0 | 13/11/0/6 | 359.33 |
+| A MiniLM Only | MiniLM embedding cosine only | 0.733 | 0.846 | 0.786 | 0.235 | 0.154 | 11/4/2/13 | 27.83 |
+| B DeBERTa Only | DeBERTa-v3 NLI only | 0.929 | 1.0 | 0.963 | 0.059 | 0.0 | 13/1/0/16 | 188.07 |
+| C Cascade | MiniLM + DeBERTa cascade | 0.929 | 1.0 | 0.963 | 0.059 | 0.0 | 13/1/0/16 | 215.9 |
+| D NLI Plus Tool | NLI + deterministic tool-claim validation | 0.929 | 1.0 | 0.963 | 0.059 | 0.0 | 13/1/0/16 | 188.11 |
+| E NLI Plus Disagreement | NLI + inter-agent disagreement | 0.929 | 1.0 | 0.963 | 0.059 | 0.0 | 13/1/0/16 | 373.47 |
+| F NLI Plus Drift | NLI + drift signal | 0.448 | 1.0 | 0.619 | 0.941 | 0.0 | 13/16/0/1 | 207.65 |
+| G Full AgentPulse | Full AgentPulse pipeline (grounding + tool + disagreement + drift + risk aggregation) | 0.929 | 1.0 | 0.963 | 0.059 | 0.0 | 13/1/0/16 | 241.64 |
 
 **Observations (derived from the table, not pre-assumed):**
 
-1. 4 configurations tie at the highest F1 (0.963): B_DeBERTa_Only, C_Cascade, D_NLI_Plus_Tool, E_NLI_Plus_Disagreement. On this test split they are not distinguishable by F1.
+1. 5 configurations tie at the highest F1 (0.963): B_DeBERTa_Only, C_Cascade, D_NLI_Plus_Tool, E_NLI_Plus_Disagreement, G_Full_AgentPulse. On this test split they are not distinguishable by F1.
 2. E_NLI_Plus_Disagreement produced metrics identical to Config B (NLI only), i.e. the additional signal never changed a decision on this dataset. See limitations.
-3. **3 configuration(s) scored below the plain NLI-only baseline (Config B, F1=0.963, FPR=0.059) on this test split: A_MiniLM_Only (F1=0.786, FPR=0.235); F_NLI_Plus_Drift (F1=0.619, FPR=0.941); G_Full_AgentPulse (F1=0.703, FPR=0.647).** This is not hidden: adding more signals to the composite score did not uniformly help, and in these cases made false-positive rate substantially worse. See Section 4 for why (drift cold-start behaviour on non-temporal data).
+3. **2 configuration(s) scored below the plain NLI-only baseline (Config B, F1=0.963, FPR=0.059) on this test split: A_MiniLM_Only (F1=0.786, FPR=0.235); F_NLI_Plus_Drift (F1=0.619, FPR=0.941).** This is not hidden: adding more signals to the composite score did not uniformly help, and in these cases made false-positive rate substantially worse. See Section 4 for why (drift cold-start behaviour on non-temporal data).
 
 ---
 
@@ -93,5 +93,6 @@ Selection rule: highest F1, ties broken by higher recall.
 - **Latency figures** are per-case means of the components each configuration uses, measured on
   CPU. They are not end-to-end request latencies.
 - Ground truth is the dataset's `is_failure` label. For the original 50 cases this comes from dual LLM-as-judge evaluation, not human review; for the 23 cases added later it's correct by construction. See `LABEL_AGREEMENT_REPORT.md`.
+- Config G's `overall_risk_score` incorporates `grounding_score`, which was recalibrated (neutral-vs-contradiction weighting) after an earlier version of this ablation was run; see `GROUNDING_SCORE_CALIBRATION_REPORT.md`. Configs A-F use `contradiction_prob` directly, not `grounding_score`, and are unaffected by that change.
 
 *Data source:* `experiments/results/ablation_results.json`

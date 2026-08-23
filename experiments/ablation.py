@@ -506,6 +506,7 @@ Selection rule: highest F1, ties broken by higher recall.
 - **Latency figures** are per-case means of the components each configuration uses, measured on
   CPU. They are not end-to-end request latencies.
 - Ground truth is the dataset's `is_failure` label. For the original 50 cases this comes from dual LLM-as-judge evaluation, not human review; for the 23 cases added later it's correct by construction. See `LABEL_AGREEMENT_REPORT.md`.
+- Config G's `overall_risk_score` incorporates `grounding_score`, which was recalibrated (neutral-vs-contradiction weighting) after an earlier version of this ablation was run; see `GROUNDING_SCORE_CALIBRATION_REPORT.md`. Configs A-F use `contradiction_prob` directly, not `grounding_score`, and are unaffected by that change.
 
 *Data source:* `experiments/results/ablation_results.json`
 """
