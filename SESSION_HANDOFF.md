@@ -1,6 +1,6 @@
 # Session Handoff — AgentPulse Work Log
 
-**Written:** 2026-08-23 ~19:50 IST. **Last updated:** 2026-08-23 ~23:10 IST.
+**Written:** 2026-08-23 ~19:50 IST. **Last updated:** 2026-08-24 ~00:30 IST.
 **Project:** AgentPulse — self-hostable observability SDK for grounding-risk and drift monitoring in multi-agent LLM systems. M.Tech project. Working directory: `C:\MLOPs\3rd sem project\project one agent`.
 **User context:** Prefers Hinglish, direct/terse communication, wants things actually done not just discussed, dislikes overclaiming — the whole session has been about replacing fake/inflated numbers with real measured ones.
 
@@ -10,8 +10,10 @@
 - The Kaggle GPU run (Section 2's "Run 2") is **still `RUNNING`** as of this update (~23:10 IST, ~6h+ elapsed since the v7 push that fixed the CUDA build). The user has decided NOT to race the two anymore — decision: **`Chalne do, GPU-vs-CPU compare karenge`** (let it keep running, we'll do a GPU-vs-CPU comparison once it finishes, on top of the already-committed local CPU numbers, not instead of them). Check status with `./.venv/Scripts/python.exe -m kaggle kernels status somnath26/agentpulse-reasoning-benchmark`.
 - Docker containers were stopped (`docker compose down`) — the earlier background Docker-rebuild attempts were stale/dead (backend container had crashed hours earlier; dashboard was unhealthy) and got cleaned up. Nothing is running in Docker right now. Docker itself was already verified working end-to-end earlier in the session (see Section 1A) — this cleanup does not undo that verification, it just tore down leftover stopped/crashed containers from repeated manual test runs.
 - A system-triggered PR-creation flow asked for a PR from `main` — **not possible as-is**: this whole repo has only ever had a `main` branch, everything was committed directly to it, so there's no second branch to diff against. This is explained to the user but **not yet decided** — they have not said whether to start using feature branches going forward or keep committing straight to `main`.
-- **The grounding-score formula bug is now FIXED** (was previously deferred — see the old Section 3 wording below, now stale). `backend/app/services/grounding.py`'s `grounding_score` changed from `1 - entailment_prob` to `contradiction_prob + 0.5 * neutral_prob` (constant `NEUTRAL_RISK_WEIGHT`). The 0.5 weight came from the same dev/test discipline as the ablation study, via a new script `experiments/grounding_score_calibration.py` → `GROUNDING_SCORE_CALIBRATION_REPORT.md`: the dev-split sweep couldn't discriminate between candidate weights (every weight 0.0-0.9 tied at F1=1.0, same failure mode as the ablation study's own dev sweep), so 0.5 is reported honestly as a principled default, not a data-fitted value — but the held-out test-split result is a real, measured improvement: F1 0.703→0.963, FPR 0.647→0.059. The documented self-comparison case (Node_A in `experiments/compounding_error.py`) moved from risk 0.989 (high_risk) to 0.495 (medium_risk) — improved, not eliminated, since neutral still carries some weight by design. `experiments/ablation.py` and `experiments/compounding_error.py` were re-run and their outputs (`ablation_results.json`, `THRESHOLD_ANALYSIS.md`, `compounding_error_results.json`) regenerated; `PROJECT_REPORT.md` Sections 3, 5, and 6 updated to match. `pytest tests/ -q` still 99/99 passing (no test pinned the old grounding_score values). Not yet committed as of this update — see git status before assuming it's pushed.
-- Repo state: everything through commit `393dd69` is pushed. The grounding-score fix above is present in the working tree but its commit status should be checked (`git status`/`git log`) rather than assumed from this doc.
+- **The grounding-score formula bug is now FIXED** (was previously deferred — see the old Section 3 wording below, now stale). `backend/app/services/grounding.py`'s `grounding_score` changed from `1 - entailment_prob` to `contradiction_prob + 0.5 * neutral_prob` (constant `NEUTRAL_RISK_WEIGHT`). The 0.5 weight came from the same dev/test discipline as the ablation study, via a new script `experiments/grounding_score_calibration.py` → `GROUNDING_SCORE_CALIBRATION_REPORT.md`: the dev-split sweep couldn't discriminate between candidate weights (every weight 0.0-0.9 tied at F1=1.0, same failure mode as the ablation study's own dev sweep), so 0.5 is reported honestly as a principled default, not a data-fitted value — but the held-out test-split result is a real, measured improvement: F1 0.703→0.963, FPR 0.647→0.059. The documented self-comparison case (Node_A in `experiments/compounding_error.py`) moved from risk 0.989 (high_risk) to 0.495 (medium_risk) — improved, not eliminated, since neutral still carries some weight by design. `experiments/ablation.py` and `experiments/compounding_error.py` were re-run and their outputs (`ablation_results.json`, `THRESHOLD_ANALYSIS.md`, `compounding_error_results.json`) regenerated; `PROJECT_REPORT.md` Sections 3, 5, and 6 updated to match. `pytest tests/ -q` still 99/99 passing (no test pinned the old grounding_score values). Committed and pushed as `73b533f`.
+- **The dashboard was rewritten** with a new design system ("Signal Deck") and, more importantly, **was found to be displaying fabricated numbers** that contradicted the corrected reports. See Section 8 below.
+- **Claude Code plugins installed** (user request): `frontend-design`, `modern-web-guidance`, `playwright`, all from `claude-plugins-official`. A fourth, `ui-theme-designer`, was installed then removed after inspection — despite the name it is SAP Fiori/UI5-only and irrelevant here. Plugins load at session start, so `frontend-design` was NOT available during the redesign; a fresh session would let it inform further polish. Note the marketplace has no literal `taste`, `vercel web design`, `awesome design`, or a working `image to code` — those are community-marketplace names; add via `claude plugin marketplace add <repo>` if wanted.
+- Repo state: pushed through commit `a44c859`. Working tree clean. Commits this stretch: `73b533f` (grounding-score fix), `240b313` (dashboard redesign), `a44c859` (remaining views + fabricated-number corrections).
 
 ---
 
@@ -140,3 +142,54 @@ This was explained to the user, who has not yet said which they want going forwa
 - User's actual identity/email for attribution: `p.somnathreddy26@gmail.com`.
 - User strongly prefers: real measurements over assumptions, negative findings reported not hidden, terse Hinglish communication, minimal but not zero comments in code.
 - Repo state as of this update: clean working tree, `main` at commit `393dd69`, 99/99 tests passing.
+
+## 8. Dashboard redesign and the fabricated numbers it uncovered
+
+**Why it was rewritten.** `dashboard/src/index.css` and `tailwind.config.js` still described an
+abandoned "liquid glass + hand-drawn" direction (~250 lines of CSS, `Caveat` cursive font, ambient
+blobs). `App.tsx` referenced **zero** of those classes, so the UI had silently fallen back to a
+generic dark-slate/indigo admin-template look. That dead layer was replaced rather than patched.
+
+**The design system** (`dashboard/src/index.css`, `dashboard/src/components/ui.tsx`,
+`dashboard/src/components/SideRail.tsx`):
+- Colour rule with a defensible rationale: brand cyan is used *only* for identity and interaction;
+  emerald/amber/rose *only* for risk state. In a monitoring tool severity must be readable from
+  colour alone, so the palettes are kept strictly disjoint. Risk thresholds now have a single
+  definition (`riskTone()` in `ui.tsx`) mirroring `EvaluationPipeline._classify_risk`.
+- Space Grotesk (UI) + JetBrains Mono (data), tabular numerals on every live readout.
+- `Tile` primitive with HUD corner brackets, a pulse sweep rail, staggered entrance, animated
+  count-ups, and a full `prefers-reduced-motion` path.
+- Navigation moved from eight crammed top tabs to a left rail grouped Monitor / Investigate /
+  Research.
+
+**Real bugs found by verifying against the running backend** (this is why it was worth doing
+end-to-end rather than eyeballing):
+1. **Real-time updates never worked.** The dashboard connected to `/v1/ws`, but the backend route
+   is `/v1/ws/live` (`backend/app/routers/websocket.py`). Fixed; now reports STREAM LIVE.
+2. Vite proxy lacked `ws: true`, so the upgrade was proxied as plain HTTP.
+3. The command palette rendered an `ESC` hint but never handled Escape. Both modals now close on
+   Escape and backdrop click and carry `role="dialog"`.
+4. Emoji used as structural icons; icon-only playback controls had no accessible names.
+
+**Fabricated numbers that were hardcoded into the views.** These contradicted the already-corrected
+reports, so anyone clicking through the UI would have seen different figures than the PDF:
+- Experiments showed reasoning-strategy latencies of **0.05-0.15 ms** labelled **"Qwen 2.5 7B"** --
+  those were the deterministic-fallback numbers. Replaced with the measured Qwen3-8B Q4_K_M run
+  (11.6s / 45.4s / 85.2s; risk .424/.283/.233), the real seven-config ablation table including
+  Config F's FPR 0.941, and the same "inconclusive on grounding risk" caveat the report carries.
+- Datasets claimed **"HUMAN ANNOTATION RELIABILITY · Cohen's kappa = 1.00 · GOLD STANDARD"** -- the
+  exact false claim already corrected in `LABEL_AGREEMENT_REPORT.md`. Now states two independent
+  LLM-as-judge passes at kappa 0.922 with the 23 constructed cases excluded. Case counts were
+  5/5/8, corrected to the actual 21/22/30.
+- Compounding-error nodes updated to post-recalibration values (Node A 0.495, not 0.335) and now
+  show control vs intervention side by side.
+
+**Worth checking if more of this exists.** The audit only covered what the redesign touched. Other
+hardcoded constants in `App.tsx` (e.g. `SAMPLE_WATERFALL_SPANS`, `SAMPLE_REPLAY_STEPS`,
+`driftTimelineData`) are illustrative demo fixtures rather than claimed measurements, but they are
+not labelled as such everywhere. A pass to either wire them to real API data or label them
+"illustrative" would close the remaining gap.
+
+**Dev servers**: `.claude/launch.json` defines `agentpulse-backend` (uvicorn, port 8000) and
+`agentpulse-dashboard` (vite, port 5173). `scripts/e2e_dashboard_demo.py` pushes a realistic
+mixed-risk trace through the real SDK for verification.
