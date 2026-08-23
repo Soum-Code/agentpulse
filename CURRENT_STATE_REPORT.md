@@ -1,99 +1,84 @@
-# AgentPulse: Current State Audit Report (Phase 0)
+# AgentPulse: Current State Audit (Phase 0)
 
-**Date:** August 18, 2026  
-**Auditor:** Lead Systems Architect & AI Observability Engineer  
-**Objective:** Honest, rigorous pre-implementation audit of the AgentPulse codebase against all master engineering requirements.
+**Date:** August 18, 2026
+**Scope:** Pre-implementation audit of the codebase against the master engineering requirements, before the work described in later reports in this repository.
 
----
+## 1. Classification key
 
-## 1. Classification Methodology
+- `VERIFIED` — proven by automated end-to-end tests or live execution logs.
+- `IMPLEMENTED` — code is written and present.
+- `TESTED` — covered by automated unit or service tests.
+- `MEASURED` — recorded from an actual benchmark run.
+- `PROPOSED` — planned, not yet built.
+- `EXPERIMENTAL` — a heuristic that has not been calibrated.
+- `UNSUPPORTED` — out of scope for the MVP.
+- `UNKNOWN` — untested or unmeasured behavior.
 
-Every component and feature is classified using strict evidential criteria:
-- **`VERIFIED`**: Proven by automated end-to-end tests or live execution logs.
-- **`IMPLEMENTED`**: Code is written and present in repository.
-- **`TESTED`**: Covered by automated unit/service test cases.
-- **`MEASURED`**: Empirical numerical benchmarks recorded from execution.
-- **`PROPOSED`**: Planned architecture or interface stub not yet fully implemented.
-- **`EXPERIMENTAL`**: Heuristic algorithm requiring domain calibration.
-- **`UNSUPPORTED`**: Out of MVP scope or not yet built.
-- **`UNKNOWN`**: Unmeasured or untested behavior.
+## 2. Component audit
 
----
+### SDK (`sdk/src/agentpulse/`)
 
-## 2. Component-by-Component Audit
-
-### A. Python SDK (`sdk/src/agentpulse/`)
-
-| Sub-Component | Status | Evidence / Notes |
+| Component | Status | Notes |
 | :--- | :--- | :--- |
-| `@monitor` Decorator | **`TESTED`** | Wraps sync/async functions, captures start/end, extracts tokens, measures latency. Covered in `tests/test_sdk.py`. |
-| Async Transport (`transport.py`) | **`TESTED`** | Background flush loop with aiohttp session, queue batching, and exponential backoff retry. |
-| Local Fallback (`transport.py`) | **`TESTED`** | Appends spans to local JSONL file when HTTP transport fails. |
-| TraceContext (`context.py`) | **`TESTED`** | Generates 64-char trace IDs, 32-char span IDs, supports parent-child links and state dict storage. |
-| Privacy Filter (`privacy.py`) | **`TESTED`** | Regex redaction of email, phone, API keys (`sk-...`), field exclusions, and max length truncation. |
-| Explicit LangGraph Adapter | **`IMPLEMENTED`** | Helper function exists in `integrations/__init__.py`. Needs formal `integrations/langgraph.py` adapter class conforming to `BaseIntegration`. |
-| LangChain Adapter | **`PROPOSED`** | Planned adapter for post-MVP. |
-| CrewAI Adapter | **`PROPOSED`** | Planned adapter for post-MVP. |
+| `@monitor` decorator | TESTED | Wraps sync/async functions, captures timing and tokens. `tests/test_sdk.py`. |
+| Async transport | TESTED | Background flush loop, queue batching, exponential backoff retry. |
+| Local fallback | TESTED | Appends spans to a local JSONL file when HTTP transport fails. |
+| Trace context | TESTED | Trace/span IDs, parent-child links, state storage. |
+| Privacy filter | TESTED | Regex redaction of emails, phone numbers, API keys, field exclusions. |
+| LangGraph adapter | IMPLEMENTED | A helper function exists; needs a formal adapter class conforming to `BaseIntegration`. |
+| LangChain adapter | PROPOSED | Not built. |
+| CrewAI adapter | PROPOSED | Not built. |
 
----
+### Backend services (`backend/app/services/`)
 
-### B. Backend Services & Intelligence (`backend/app/services/`)
-
-| Sub-Component | Status | Evidence / Notes |
+| Component | Status | Notes |
 | :--- | :--- | :--- |
-| SQLModel Database Schema | **`IMPLEMENTED`** | 7 tables in `models.py` (`traces`, `spans`, `evaluations`, `drift_records`, `baselines`, `alerts`, `agent_records`). |
-| SQLite WAL Storage | **`VERIFIED`** | Initialized with WAL mode and foreign key constraints enabled. |
-| MiniLM Semantic Similarity | **`VERIFIED`** | `sentence-transformers/all-MiniLM-L6-v2` cosine similarity filter. |
-| DeBERTa-v3 NLI Evaluator | **`VERIFIED`** | `cross-encoder/nli-deberta-v3-small` probability distribution over entailment/neutral/contradiction. |
-| Tool-Claim Validator | **`TESTED`** | Regex extraction of claim numbers and tool names; mismatch scoring. |
-| Inter-Agent Disagreement | **`IMPLEMENTED`** | Disagreement score slot present in `Evaluation` model; needs dedicated trace-level cross-agent evaluator. |
-| Drift Detector (4 signals) | **`TESTED`** | Centroid distance, quality regression trend, tool entropy, and error-rate delta. |
-| Agent Stability Index (ASI) | **`EXPERIMENTAL`** | Composite heuristic score $\in [0, 100]$. Requires calibration documentation. |
-| Baseline Management | **`IMPLEMENTED`** | Rolling centroid via EMA. Needs explicit baseline freeze and reset mechanisms. |
-| Alert Engine | **`TESTED`** | Threshold rules with 15-min cooldown deduplication and hourly storm suppression. |
-| WebSocket Live Broadcast | **`VERIFIED`** | `/v1/ws/live` broadcasts live events to connected React clients. |
+| SQLModel schema | IMPLEMENTED | 7 tables: traces, spans, evaluations, drift_records, baselines, alerts, agent_records. |
+| SQLite WAL storage | VERIFIED | WAL mode and foreign keys enabled. |
+| MiniLM semantic similarity | VERIFIED | `all-MiniLM-L6-v2` cosine similarity. |
+| DeBERTa NLI evaluator | VERIFIED | `nli-deberta-v3-small`, entailment/neutral/contradiction distribution. |
+| Tool-claim validator | TESTED | Regex extraction of counts and tool names; mismatch scoring. |
+| Inter-agent disagreement | IMPLEMENTED | A `disagreement_score` slot exists; cross-agent comparison within a trace not yet orchestrated. |
+| Drift detector (4 signals) | TESTED | Centroid distance, quality trend, tool entropy, error-rate delta. |
+| Agent Stability Index | EXPERIMENTAL | Composite heuristic score in [0, 100]. Not calibrated. |
+| Baseline management | IMPLEMENTED | Rolling EMA centroid; no explicit freeze/reset yet. |
+| Alert engine | TESTED | Threshold rules, cooldown deduplication, storm suppression. |
+| WebSocket broadcast | VERIFIED | `/v1/ws/live` broadcasts events to connected clients. |
 
----
+### Dashboard (`dashboard/`)
 
-### C. Dashboard & User Interface (`dashboard/`)
-
-| Sub-Component | Status | Evidence / Notes |
+| Component | Status | Notes |
 | :--- | :--- | :--- |
-| React 18 + Vite + TS Build | **`VERIFIED`** | Compiles with 0 TypeScript errors. |
-| Agent Topology DAG | **`IMPLEMENTED`** | Visual node graph tracking active agent states. |
-| Interactive Simulation Studio | **`VERIFIED`** | 1-click in-dashboard scenario runner (`clean`, `hallucination`, `tool_mismatch`, `drift`). |
-| Trace Investigation View | **`IMPLEMENTED`** | Area chart for risk progression, root cause badge, step inspection. |
-| Liquid Wave ASI Gauges | **`IMPLEMENTED`** | Animated liquid wave canvas bubbles reflecting stability. |
-| Incident Replay Scrubber | **`PROPOSED`** | Interactive timeline playback needed in Command Center. |
-| Failure Radar | **`PROPOSED`** | Radial multi-signal filter needed in Command Center. |
-| Command Palette (`Ctrl+K`) | **`PROPOSED`** | Keyboard navigation needed in Command Center. |
+| React + Vite + TS build | VERIFIED | Compiles with no type errors. |
+| Agent topology graph | IMPLEMENTED | Visual node graph of active agent state. |
+| Simulation studio | VERIFIED | In-dashboard scenario runner (clean, hallucination, tool_mismatch, drift). |
+| Trace investigation view | IMPLEMENTED | Risk progression chart, root-cause badge, step inspection. |
+| ASI gauges | IMPLEMENTED | Animated stability indicators. |
+| Incident replay scrubber | PROPOSED | Not built. |
+| Failure radar | PROPOSED | Not built. |
+| Command palette | PROPOSED | Not built. |
 
----
+## 3. Findings at this stage
 
-## 3. Top 12 Audit Findings & Weaknesses
+1. Documentation used the imprecise term "hallucination detection" where "grounding-risk estimation" would be accurate.
+2. `integrations/__init__.py` had a helper function but no formal `BaseIntegration`/`LangGraphAdapter` classes.
+3. `disagreement_score` existed in the schema, but nothing computed it — cross-agent comparison within a trace wasn't wired up.
+4. The rolling EMA baseline had no freeze/reset mechanism, so it could slowly absorb degraded behavior as if it were normal.
+5. The evaluation table lacked `model_name`, `model_version`, `config_version`, `threshold_version` fields.
+6. No tests existed for transport resilience (backend down, HTTP 500 retry, JSONL recovery).
+7. No tests existed for API key auth or rate limiting.
+8. Performance figures were estimated, not measured by an automated benchmark script.
+9. The dashboard had trace inspection but no step-by-step incident replay.
+10. No compact multi-signal triage view existed.
+11. No keyboard-driven navigation existed.
+12. `docker-compose.yml` was scaffolded but volumes and environment variables weren't fully wired.
 
-1. **Overclaimed Hallucination Terminology**: Previous documentation used "hallucination detection" instead of precise terminology: *"grounding-risk estimation"* and *"hallucination-risk detection"*.
-2. **Missing Formal Integration Class**: `integrations/__init__.py` had a helper function, but lacked formal `BaseIntegration` and `LangGraphAdapter` classes.
-3. **Inter-Agent Disagreement Implementation Gap**: Evaluation model included `disagreement_score`, but cross-agent claim comparison within a trace was not formally orchestrated.
-4. **Baseline Contamination Risk**: Rolling EMA could slowly absorb degraded behavior without an explicit baseline freeze / reset mechanism.
-5. **Missing Evaluation Metadata**: `Evaluation` table needed explicit fields for `model_name`, `model_version`, `config_version`, and `threshold_version`.
-6. **No Formal Transport Resilience Tests**: Automated tests existed for SDK and services, but lacked explicit tests for backend down / HTTP 500 retry / JSONL recovery.
-7. **No Formal Authentication / Rate Limit Tests**: API Key and RateLimit middlewares were implemented but lacked dedicated negative test cases.
-8. **Lack of Empirical Benchmark Suite**: Performance metrics (P50/P95/P99 latency, throughput, detection F1) were estimated rather than systematically benchmarked by an automated script.
-9. **UI Incident Replay Gap**: The dashboard had trace inspection but lacked a step-by-step T+0.0 incident replay scrubber.
-10. **UI Failure Radar Gap**: Lacked a compact radial filter for multi-signal triage.
-11. **Command Palette Gap**: Lacked a `Ctrl+K` engineer navigation bar.
-12. **Docker Self-Contained Deployment**: `docker-compose.yml` was scaffolded but required complete volume and environment wiring.
+## 4. Remediation plan at this stage
 
----
-
-## 4. Planned Remediation Plan
-
-We will now implement:
-1. `sdk/src/agentpulse/integrations/base.py` & `langgraph.py` (with LangChain & CrewAI marked as `PROPOSED`).
-2. Cross-agent contradiction & disagreement detection service (`backend/app/services/disagreement.py`).
-3. Baseline freeze, reset, and versioning in `backend/app/services/drift.py`.
-4. Enriched evaluation metadata in `backend/app/models.py`.
-5. Resilience, authentication, and integration test suites in `tests/`.
-6. Empirical benchmark suite `benchmarks/run_benchmarks.py` generating measured data.
-7. Full **AgentPulse Failure Intelligence Command Center** in `dashboard/` (with Live Graph, Incident Replay, Failure Radar, Health Strip, Command Palette, and Evidence Inspector).
+1. Build `sdk/src/agentpulse/integrations/base.py` and `langgraph.py` (LangChain and CrewAI stay marked PROPOSED).
+2. Build the cross-agent disagreement service (`backend/app/services/disagreement.py`).
+3. Add baseline freeze, reset, and versioning to `backend/app/services/drift.py`.
+4. Add the missing evaluation metadata fields to `backend/app/models.py`.
+5. Add resilience, auth, and integration test suites.
+6. Build `benchmarks/run_benchmarks.py` to produce measured, not estimated, figures.
+7. Build out the dashboard's remaining views (replay, failure radar, command palette, evidence inspector).

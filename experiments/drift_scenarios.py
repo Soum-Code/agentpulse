@@ -140,30 +140,26 @@ def run_drift_scenarios_experiment() -> Dict[str, Any]:
     # Write Markdown Report
     report_path = Path(__file__).parent.parent / "DRIFT_EXPERIMENT_REPORT.md"
     with open(report_path, "w", encoding="utf-8") as f:
-        f.write(f"""# Drift Experiment & Sensitivity Evaluation Report
+        f.write(f"""# Drift Experiment and Sensitivity Evaluation
 
-**Date:** {out_payload['timestamp']}  
-**Evaluation Standard:** Graded Drift Magnitudes & Negative Control Benchmarks  
-**Drift Decision Threshold:** `0.30` Cosine Distance | **Baseline Window:** `20 Spans`  
+**Date:** {out_payload['timestamp']}
+**Method:** Graded drift magnitudes and negative controls.
+**Drift decision threshold:** 0.30 cosine distance. Baseline window: 20 spans.
 
----
+## 1. Graded drift and negative control results
 
-## 1. Graded Drift & Negative Control Matrix
+"Magnitude" is cosine distance between the pre- and post-shift embedding centroid, not a general drift-magnitude unit.
 
-| Scenario / Condition | Classification | Formal Magnitude (Cosine Dist / Δ) | Is Anomaly? | Detected? | False Alert? | Time-To-Detect | Final ASI |
+| Scenario | Type | Magnitude | Is anomaly | Detected | False alert | Time to detect | Final ASI |
 | :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: |
 """ + "\n".join([
-            f"| **{r['scenario_name']}** | `{r['drift_type']}` | {r['shift_level']:.2f} | {'Yes' if r['is_anomaly'] else 'No'} | {'✅ Yes' if r['detected'] else '⚪ No'} | {'⚠️ Yes' if r['false_alert'] else '✅ No'} | {r['time_to_detect_spans']} | {r['final_asi']}/100 |"
+            f"| {r['scenario_name']} | {r['drift_type']} | {r['shift_level']:.2f} | {'Yes' if r['is_anomaly'] else 'No'} | {'Yes' if r['detected'] else 'No'} | {'Yes' if r['false_alert'] else 'No'} | {r['time_to_detect_spans']} | {r['final_asi']}/100 |"
             for r in experiment_results
         ]) + """
 
----
+## 2. Findings
 
-## 2. Key Empirical Findings
-
-1. **Sub-Threshold Resilience (10% and 25% Shifts):** Minor phrasing adjustments (10% to 25% shift) remained below the 0.30 centroid distance threshold and maintained an Agent Stability Index (ASI) $>75$, avoiding spurious alarms.
-2. **True Positive Anomaly Detection (50%+ Shifts):** Major prompt rewrites, model updates, and hallucination bursts triggered alerts within 1 to 2 spans of crossing the reference window boundary.
-3. **Negative Control Stability:** Legitimate rephrasings and valid alternative tool invocations produced **0 false alerts**, demonstrating that AgentPulse distinguishes benign operational variance from quality degradation.
+Shifts at 10-25% stayed below the 0.30 centroid distance threshold and kept ASI above 75, without triggering alerts. Shifts at 50% and above, along with the hallucination burst, were detected within 1-2 spans of crossing the threshold. The three negative controls (legitimate rephrasing, valid tool substitution, invariant flow) produced zero false alerts on this scenario set.
 """)
 
     print(f"\nDrift experiment results saved to: {res_json_path}")

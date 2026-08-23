@@ -1,40 +1,36 @@
-# AgentPulse Empirical Benchmark Report
+# AgentPulse Benchmark Report
 
-**Evaluation Date:** 2026-08-18 16:16:01 UTC  
-**Hardware Environment:** Windows 11 (AMD64 / 16 CPU cores)  
-**Python Runtime:** 3.13.7
+**Hardware:** Windows 11, AMD64, 16 logical CPU cores, no GPU.
+**Python:** 3.13.7
+**Source:** `benchmarks/run_benchmarks.py`, `benchmarks/benchmark_results.json`
 
----
+## 1. Throughput
 
-## 1. Throughput Measurements (Uncombined Categories)
-
-| Metric | Measured Value | Measurement Definition |
+| Metric | Value | What it measures |
 | :--- | :--- | :--- |
-| **SDK Enqueue Capacity** | **5,396,828.8 spans / sec** | In-memory deque append capacity under synthetic benchmark loop. |
-| **HTTP Ingestion Throughput** | *Async HTTP Batch Transport* | Non-blocking background worker batching spans over HTTP. |
-| **Database Persistence** | *SQLite WAL Persistence* | Single-node atomic transaction flush with WAL journaling. |
+| SDK enqueue capacity | 5,396,828.8 spans/sec | In-memory deque append rate under a synthetic loop. This is not network or persistence throughput. |
+| HTTP ingestion | non-blocking background worker | Batches spans over HTTP; not separately benchmarked here. |
+| Database persistence | SQLite WAL | Single-node transaction flush; not separately benchmarked here. |
 
----
+## 2. Latency percentiles
 
-## 2. Latency Percentiles Breakdown
+| Component | P50 (ms) | P95 (ms) | P99 (ms) | Model / mode |
+| :--- | :---: | :---: | :---: | :--- |
+| SDK wrapper overhead | 0.005 | 0.009 | 0.012 | Decorator dispatch, in-process |
+| MiniLM embedding inference | 15.13 | 18.50 | 20.18 | `all-MiniLM-L6-v2`, ~128 tokens, CPU |
+| DeBERTa NLI inference | 88.51 | 140.48 | 186.52 | `nli-deberta-v3-small`, ~256 tokens, CPU |
+| Full evaluator cascade | 122.33 | 172.17 | 192.68 | Grounding + tool + disagreement, background task |
 
-| Component | P50 (ms) | P95 (ms) | P99 (ms) | Hardware / Model Specs | Execution Mode |
-| :--- | :---: | :---: | :---: | :--- | :--- |
-| **SDK Wrapper Overhead** | **0.005** | **0.009** | **0.012** | LangGraph Node Wrapper / Deque Append | In-Process Synch |
-| **MiniLM Embedding Inference** | **15.13** | **18.50** | **20.18** | `all-MiniLM-L6-v2` (Seq: ~128 tokens) | Local CPU PyTorch |
-| **DeBERTa NLI Inference** | **88.51** | **140.48** | **186.52** | `nli-deberta-v3-small` (Seq: ~256 tokens) | Local CPU PyTorch |
-| **Full Evaluator Cascade** | **122.33** | **172.17** | **192.68** | Two-stage Grounding + Tool + Disagreement | Background Task |
+## 3. Threshold sweep on the development split (early version, superseded)
 
----
+This sweep predates the dev/test-separated ablation in `THRESHOLD_ANALYSIS.md`, which is the current reference for threshold selection. It's kept here as a historical record.
 
-## 3. Threshold Analysis on Development Dataset
-
-| Evaluator Threshold | Precision | Recall | F1-Score | False Positive Rate | False Negative Rate |
+| Threshold | Precision | Recall | F1 | FPR | FNR |
 | :---: | :---: | :---: | :---: | :---: | :---: |
-| **0.70** | 1.0 | 0.5 | 0.667 | 0.0 | 0.5 |
-| **0.75** | 1.0 | 0.5 | 0.667 | 0.0 | 0.5 |
-| **0.80** | 1.0 | 0.5 | 0.667 | 0.0 | 0.5 |
-| **0.85 (Selected)** | **1.0** | **0.5** | **0.667** | **0.0** | **0.5** |
-| **0.90** | 1.0 | 0.5 | 0.667 | 0.0 | 0.5 |
+| 0.70 | 1.0 | 0.5 | 0.667 | 0.0 | 0.5 |
+| 0.75 | 1.0 | 0.5 | 0.667 | 0.0 | 0.5 |
+| 0.80 | 1.0 | 0.5 | 0.667 | 0.0 | 0.5 |
+| 0.85 (selected at the time) | 1.0 | 0.5 | 0.667 | 0.0 | 0.5 |
+| 0.90 | 1.0 | 0.5 | 0.667 | 0.0 | 0.5 |
 
-*Selected Prototype Threshold:* `0.85` is the selected prototype threshold under the development benchmark.
+Every threshold in this sweep produced identical metrics — on the small sample used here, the sweep did not discriminate between thresholds. See `THRESHOLD_ANALYSIS.md` for the current sweep, run on a larger split with the operating point selected on dev and reported on held-out test.

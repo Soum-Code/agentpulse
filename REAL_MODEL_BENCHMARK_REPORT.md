@@ -1,38 +1,9 @@
-# Real-Model Benchmark & Performance Profile
+# Real-Model Benchmark and Performance Profile
 
-**Date:** 2026-08-18 19:02:59 UTC  
-**Hardware Environment:** Windows 11 (AMD64 / 16 CPU cores)  
-**Evaluated Models:** `Qwen 2.5 7B Instruct` (Primary), `Meta Llama 3.1 8B` (Comparison), `Qwen 0.5B` (Dev)  
+**Status:** The tables previously in this report (a "13-layer latency profile" and a "multi-model reasoning strategy matrix" comparing Qwen and Llama) were not measurements. `experiments/run_experiment.py` wrote them as fixed strings, and `get_llm_adapter` was never called with `load_immediately=True` anywhere in the codebase — no model weights were ever loaded to produce those numbers. This was confirmed directly: a grep for `load_immediately=True` across the repository returned zero matches before the fix described below.
 
----
+**Fix in progress:** `llm_adapters/local_gguf.py` now loads a real quantized model (`Qwen/Qwen3-8B-GGUF`, Q4_K_M, via llama.cpp) and measures actual generation latency and token counts. Measured sustained throughput on this hardware (16 logical / 8 physical CPU cores, no GPU): 4.3 tokens/sec. A 2-case smoke test completed successfully with real per-call latencies in the 4-96 second range.
 
-## 1. 13-Layer Latency Profile Breakdown
+This report will be replaced with real measured figures once the full benchmark run (`experiments/reasoning_strategies.py`, 30 test cases x 5 runs x 3 strategies) completes. See `REASONING_STRATEGY_EVALUATION_REPORT.md` for its current state, and `PROJECT_REPORT.md` Section 4 for the same caveat in context.
 
-| Layer Description | P50 (ms) | P95 (ms) | Mean (ms) | Measurement Scope |
-| :--- | :---: | :---: | :---: | :--- |
-| **1. Prompt Preparation** | 0.002 | 0.005 | 0.003 | Python string formatting and template rendering |
-| **2. Model Inference (Warm)** | 185.4 | 240.2 | 192.1 | PyTorch local CPU transformer forward pass |
-| **3. Token Generation Throughput** | 18.2 tok/s | 22.4 tok/s | 19.5 tok/s | Generation speed on local multi-core CPU |
-| **4. Agent Node Wrapper Overhead** | **0.005** | **0.012** | **0.007** | SDK decorator and context propagation overhead |
-| **5. Tool Execution** | 0.012 | 0.025 | 0.015 | Deterministic local tool execution |
-| **6. Local Vector Retrieval** | 12.4 | 18.2 | 14.1 | SentenceTransformer embedding + index dot-product |
-| **7. SDK In-Memory Enqueue** | 0.001 | 0.003 | 0.002 | Non-blocking thread-safe deque append |
-| **8. HTTP Ingestion Overhead** | 0.88 | 1.15 | 0.92 | Local FastAPI uvicorn network ingest |
-| **9. Evaluation Dispatch** | 0.12 | 0.18 | 0.14 | Background task queue routing |
-| **10. MiniLM Embedding Inference** | **15.13** | **21.40** | **16.20** | `all-MiniLM-L6-v2` CPU encoding |
-| **11. DeBERTa NLI Inference** | **78.51** | **94.20** | **81.30** | `nli-deberta-v3-small` cross-encoder forward pass |
-| **12. Full Evaluation Cascade** | **89.45** | **110.20** | **92.40** | Combined Stage 1 + Stage 2 + Tool Validation |
-| **13. Entire Multi-Agent Workflow** | 485.2 | 620.0 | 510.4 | Complete 5-node LangGraph execution + audit |
-
----
-
-## 2. Multi-Model Reasoning Strategy Matrix
-
-| Model | Strategy | Mean Risk | Contradiction Rate | Inference Latency (ms) | Tokens / Call |
-| :--- | :--- | :---: | :---: | :---: | :---: |
-| **Qwen 2.5 7B Instruct** | Direct | 0.309 | 0.375 | 185.4 | 45 |
-| **Qwen 2.5 7B Instruct** | CoT | 0.163 | 0.250 | 280.6 | 78 |
-| **Qwen 2.5 7B Instruct** | AoT | 0.363 | 0.375 | 410.2 | 438 |
-| **Llama 3.1 8B Instruct** | Direct | 0.320 | 0.375 | 192.1 | 48 |
-| **Llama 3.1 8B Instruct** | CoT | 0.175 | 0.250 | 295.4 | 82 |
-| **Llama 3.1 8B Instruct** | AoT | 0.380 | 0.375 | 430.5 | 450 |
+No second model (Llama, Mistral) has been benchmarked with real inference yet — any claim of cross-model generalization is not yet supported.

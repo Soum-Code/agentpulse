@@ -1,36 +1,32 @@
 # Current Real Validation Audit
 
-**Audit Date:** August 18, 2026  
-**Auditor:** Lead AI Systems & Observability Architect  
-**Purpose:** Baseline classification of existing AgentPulse repository components prior to real-model & reasoning-strategy validation.  
-**Classification Taxonomy:** `IMPLEMENTED`, `TESTED`, `MEASURED`, `PARTIALLY_IMPLEMENTED`, `PROPOSED`, `UNSUPPORTED`, `UNKNOWN`.
+**Date:** August 18, 2026, with status updates from later sessions noted inline.
+**Purpose:** Classify each component of the repository by evidence type, before running real-model and reasoning-strategy validation.
+**Classification key:** Implemented, Tested, Measured, Partially implemented, Proposed, Unsupported, Unknown.
 
----
+## Component audit
 
-## 1. Component Audit Matrix
-
-| Component / Subsystem | Path / Reference | Classification | Evidence & Status |
+| Component | Path | Classification | Evidence |
 | :--- | :--- | :---: | :--- |
-| **SDK Core Client & Context** | `sdk/src/agentpulse/client.py`, `context.py` | `TESTED` | W3C-compatible trace context propagation, unit tested in `tests/test_sdk.py`. |
-| **SDK Decorator (`@pulse.monitor`)** | `sdk/src/agentpulse/decorators.py` | `TESTED` | Async/sync node execution wrapper with latency capture, tested in `test_sdk.py`. |
-| **SDK Async Transport & Fallback** | `sdk/src/agentpulse/transport.py` | `MEASURED` | Non-blocking deque enqueue (`5.39M spans/sec`), local JSONL fallback tested in `test_resilience.py`. |
-| **LangGraph Adapter** | `sdk/src/agentpulse/integrations/langgraph.py` | `TESTED` | Graph & node instrumentation verified with live LangGraph execution in `test_e2e_langgraph.py`. |
-| **Post-MVP Adapters (LangChain, CrewAI)** | `sdk/src/agentpulse/integrations/langchain.py`, `crewai.py` | `PROPOSED` | Post-MVP stubs raising `NotImplementedError`, tested in `test_integrations.py`. |
-| **FastAPI Ingestion & REST Endpoints** | `backend/app/routers/ingest.py`, `__init__.py` | `TESTED` | Batch `/v1/ingest`, trace detail `/v1/traces/{id}`, tested across test suite. |
-| **SQLite WAL Storage & SQLModel** | `backend/app/database.py`, `models.py` | `TESTED` | 7 SQLModel tables (`traces`, `spans`, `evaluations`, `drift_records`, `baselines`, `alerts`, `agent_records`). |
-| **MiniLM Embedding Evaluator** | `backend/app/services/grounding.py` | `MEASURED` | PyTorch CPU inference measured at `P50 = 15.13 ms` in `BENCHMARK_REPORT.md`. |
-| **DeBERTa-v3 NLI Evaluator** | `backend/app/services/grounding.py` | `MEASURED` | 3-class NLI inference measured at `P50 = 88.51 ms` in `BENCHMARK_REPORT.md`. |
-| **Tool-Claim Extraction & Validator** | `backend/app/services/tool_claim.py` | `PARTIALLY_IMPLEMENTED` | Structured tool name and count matching implemented; 6-type multi-claim extractor required. |
-| **Inter-Agent Disagreement Engine** | `backend/app/services/disagreement.py` | `TESTED` | Cross-agent NLI contradiction detection tested in `test_disagreement.py`. |
-| **Drift Engine & Baseline Management** | `backend/app/services/drift.py` | `MEASURED` | Centroid distance, tool entropy, quality drift, error delta, `freeze_baseline()`, and `reset_baseline()`. |
-| **Agent Stability Index ($ASI \in [0, 100]$)** | `backend/app/services/drift.py` | `TESTED` | 4-signal composite formula ($w=[0.35, 0.30, 0.15, 0.20]$), unit tested in `test_services.py`. |
-| **Alert Engine & Storm Suppression** | `backend/app/services/alerting.py` | `TESTED` | 15-min cooldown deduplication and 50/hour storm suppression tested in `test_services.py`. |
-| **Live WebSocket Broadcast** | `backend/app/routers/websocket.py` | `TESTED` | Broadcasts new span events to connected UI clients at `/v1/ws/live`. |
-| **AgentPulse Control Plane UI** | `dashboard/src/App.tsx` | `IMPLEMENTED` | Developer IDE layout (Topology, Waterfall, 6-tab Evidence Inspector, Incidents, Replay, Drift Timeline). |
-| **LLM Adapter Layer** | `llm_adapters/` | `PROPOSED` | To be implemented with `LLMAdapter` base class supporting Qwen, Llama, Mistral, and local HF pipelines. |
-| **Reasoning Strategy Layer** | `reasoning/` | `PROPOSED` | To be implemented with `DirectStrategy`, `CoTStrategy`, and `AoTStrategy` abstractions. |
-| **3 Real Multi-Agent Workflows** | `demo/workflows/` | `PARTIALLY_IMPLEMENTED` | Prototype research assistant exists; 3 full workflows (Research, Tech Support, Data Analysis) required. |
-| **Real Local Vector Retrieval** | `demo/workflows/retrieval.py` | `PROPOSED` | MiniLM + in-memory vector index over structured corpus to be implemented. |
-| **Dataset Versioning & Trace Curation** | `datasets/`, `backend/app/routers/experiments.py` | `PROPOSED` | Versioned `v1.0_dev`, `v1.0_val`, `v1.0_test` datasets and "Add to Dataset" API to be implemented. |
-| **Reasoning Strategy Experiment Runner** | `experiments/reasoning_strategies.py` | `PROPOSED` | Direct vs CoT vs AoT fair comparison experiment runner to be implemented. |
-| **Compounding Error Experiment** | `experiments/compounding_error.py` | `PROPOSED` | 5-node downstream risk propagation experiment to be implemented. |
+| SDK core client and context | `sdk/src/agentpulse/client.py`, `context.py` | Tested | W3C-compatible trace context propagation, unit tested in `tests/test_sdk.py`. |
+| SDK `@pulse.monitor` decorator | `sdk/src/agentpulse/decorators.py` | Tested | Async/sync execution wrapper with latency capture. |
+| SDK async transport and fallback | `sdk/src/agentpulse/transport.py` | Measured | Non-blocking deque enqueue (5.4M spans/sec, in-memory), local JSONL fallback tested. |
+| LangGraph adapter | `sdk/src/agentpulse/integrations/langgraph.py` | Tested | Graph and node instrumentation verified against live LangGraph execution in `tests/test_e2e_langgraph.py`. |
+| LangChain and CrewAI adapters | `integrations/langchain.py`, `crewai.py` | Proposed | Explicit `NotImplementedError` stubs, tested as such in `test_integrations.py`. Not built. |
+| FastAPI ingestion and REST endpoints | `backend/app/routers/ingest.py`, `__init__.py` | Tested | Batch ingest, trace detail, and other endpoints covered across the test suite. |
+| SQLite WAL storage and SQLModel schema | `backend/app/database.py`, `models.py` | Tested | 7 tables: traces, spans, evaluations, drift_records, baselines, alerts, agent_records. |
+| MiniLM embedding evaluator | `backend/app/services/grounding.py` | Measured | PyTorch CPU inference, P50 = 15.13 ms. |
+| DeBERTa NLI evaluator | `backend/app/services/grounding.py` | Measured | 3-class NLI inference, P50 = 88.51 ms. |
+| Tool-claim extraction and validation | `backend/app/services/tool_claim.py` | Tested | Structured tool name and count matching. A 6-type multi-claim extractor exists in `claim_extractor.py` but is not wired into the pipeline. |
+| Inter-agent disagreement engine | `backend/app/services/disagreement.py` | Tested | Cross-agent NLI contradiction detection, tested in `test_disagreement.py`. |
+| Drift engine and baseline management | `backend/app/services/drift.py` | Measured | Centroid distance, tool entropy, quality drift, error delta, freeze/reset. As of a later session, baselines also persist to the database and are thread-safe for concurrent evaluation. |
+| Agent Stability Index | `backend/app/services/drift.py` | Tested | 4-signal composite, unit tested in `test_services.py`. |
+| Alert engine | `backend/app/services/alerting.py` | Tested | Cooldown deduplication and storm suppression, tested. |
+| Live WebSocket broadcast | `backend/app/routers/websocket.py` | Tested | Broadcasts span events to connected clients. |
+| Dashboard | `dashboard/src/App.tsx` | Implemented | Topology, waterfall, evidence inspector, incidents, replay, drift timeline. |
+| LLM adapter layer | `llm_adapters/` | Implemented as of a later session | At the time of this audit, this was proposed. It's since been built: `LocalHFAdapter` (HF transformers, falls back to a deterministic stub unless `load_immediately=True`) and `LocalGGUFAdapter` (real local inference via llama.cpp, used for `Qwen3-8B-Q4_K_M`). |
+| Reasoning strategy layer | `reasoning/` | Implemented as of a later session | `DirectStrategy`, `CoTStrategy`, `AoTStrategy` are built and adapter-agnostic. |
+| 3 multi-agent demo workflows | `demo/workflows/` | Implemented as of a later session | Research assistant, technical support, and data analysis workflows all exist, plus a local vector retriever. |
+| Dataset versioning and trace curation | `datasets/`, `backend/app/routers/experiments.py` | Implemented | Versioned `v1.0_dev/val/test` splits (73 cases total) and a curate-to-dataset API. |
+| Reasoning strategy experiment runner | `experiments/reasoning_strategies.py` | Implemented, currently running | Compares Direct/CoT/AoT under identical conditions. As of this audit's original writing this called the fallback stub, not a real model — fixed in a later session; see `REASONING_STRATEGY_EVALUATION_REPORT.md` for current status. |
+| Compounding-error experiment | `experiments/compounding_error.py` | Implemented | Control (no intervention) vs intervention conditions, both measured; see `PROJECT_REPORT.md` Section 6. |
