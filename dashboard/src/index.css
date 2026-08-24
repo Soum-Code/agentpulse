@@ -70,21 +70,11 @@ body {
 }
 
 /* ─── Ambient field ──────────────────────────────────────────────────
-   A faint engineering grid + a single cool wash. Deliberately restrained:
-   the data is the only thing allowed to be bright.                     */
-
-.deck-field {
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  background-image:
-    linear-gradient(rgba(148, 163, 184, 0.035) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(148, 163, 184, 0.035) 1px, transparent 1px);
-  background-size: 46px 46px;
-  mask-image: radial-gradient(ellipse 90% 65% at 50% 0%, #000 35%, transparent 100%);
-  -webkit-mask-image: radial-gradient(ellipse 90% 65% at 50% 0%, #000 35%, transparent 100%);
-}
+   A single cool wash, and nothing else. There was also a page-wide
+   hairline grid here; it was removed deliberately. A tiled grid belongs
+   on a surface that actually measures something -- the waveform panel
+   has its own, and that one is earned. Spread across the whole page it
+   was decoration competing with the one element meant to hold the eye.  */
 
 .deck-wash {
   position: fixed;
