@@ -95,27 +95,74 @@ async def list_experiments(
         }
 
 
+def _case_to_dict(case: DatasetCase) -> Dict[str, Any]:
+    return {
+        "id": case.case_id,
+        "domain": case.domain,
+        "input_query": case.input_query,
+        "evidence": case.evidence,
+        "agent_claim": case.agent_claim,
+        "expected_classification": case.expected_classification,
+        "expected_failure_type": case.expected_failure_type,
+        "is_failure": case.is_failure,
+        "trace_id": case.trace_id,
+        "span_id": case.span_id,
+        "operator_notes": case.operator_notes,
+    }
+
+
 @router.get("/datasets")
 async def list_datasets() -> Dict[str, Any]:
-    """List available versioned datasets."""
+    """List available versioned datasets.
+
+    Two sources, since curation writes to the DB but the original
+    dev/val/test splits ship as static files: file-based datasets under
+    datasets/*.json, plus any dataset_version present in the dataset_cases
+    table (e.g. "v1.0_curated", written by POST /datasets/{name}/cases) that
+    doesn't already correspond to a file.
+    """
     datasets_dir = Path(__file__).parent.parent.parent.parent / "datasets"
     available_datasets = []
+    file_versions: set[str] = set()
 
     if datasets_dir.exists():
         for p in datasets_dir.glob("*.json"):
             try:
                 with open(p, "r", encoding="utf-8") as f:
                     data = json.load(f)
+                    version = data.get("dataset_version")
+                    if version:
+                        file_versions.add(version)
                     available_datasets.append({
                         "filename": p.name,
                         "dataset_name": data.get("dataset_name"),
-                        "dataset_version": data.get("dataset_version"),
+                        "dataset_version": version,
                         "split": data.get("split"),
                         "total_cases": len(data.get("cases", [])),
                         "description": data.get("description"),
                     })
             except Exception as e:
                 logger.warning("Error reading dataset %s: %s", p, e)
+
+    async with get_session() as session:
+        result = await session.execute(select(DatasetCase))
+        db_cases = result.scalars().all()
+
+    by_version: Dict[str, list[DatasetCase]] = {}
+    for case in db_cases:
+        by_version.setdefault(case.dataset_version, []).append(case)
+
+    for version, cases in by_version.items():
+        if version in file_versions:
+            continue
+        available_datasets.append({
+            "filename": None,
+            "dataset_name": cases[0].dataset_name,
+            "dataset_version": version,
+            "split": "curated",
+            "total_cases": len(cases),
+            "description": "Curated from live incidents via the dashboard.",
+        })
 
     return {"datasets": available_datasets}
 
@@ -124,13 +171,29 @@ async def list_datasets() -> Dict[str, Any]:
 async def get_dataset_cases(
     name: str,
 ) -> Dict[str, Any]:
-    """Get all cases in a specific dataset."""
+    """Get all cases in a specific dataset (file-based, falling back to DB-curated)."""
     datasets_dir = (Path(__file__).parent.parent.parent.parent / "datasets").resolve()
     filename = name if name.endswith(".json") else f"{name}.json"
     target_path = (datasets_dir / filename).resolve()
 
     if not target_path.is_relative_to(datasets_dir) or not target_path.exists():
-        raise HTTPException(status_code=404, detail=f"Dataset '{name}' not found.")
+        async with get_session() as session:
+            result = await session.execute(
+                select(DatasetCase).where(DatasetCase.dataset_version == name)
+            )
+            db_cases = result.scalars().all()
+
+        if not db_cases:
+            raise HTTPException(status_code=404, detail=f"Dataset '{name}' not found.")
+
+        return {
+            "dataset_name": db_cases[0].dataset_name,
+            "dataset_version": name,
+            "split": "curated",
+            "total_cases": len(db_cases),
+            "description": "Curated from live incidents via the dashboard.",
+            "cases": [_case_to_dict(c) for c in db_cases],
+        }
 
     with open(target_path, "r", encoding="utf-8") as f:
         data = json.load(f)

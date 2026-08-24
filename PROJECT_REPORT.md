@@ -56,6 +56,8 @@ Design constraints:
 - The SDK is a pure observer. Reasoning strategy (Direct/CoT/AoT) is a property of the workload it watches, not something AgentPulse depends on internally.
 - All inference runs locally (CPU or GPU) on open-source models. No data leaves the host by default.
 
+The dashboard's operator loop (`CP[React dashboard]` above) was verified end-to-end with a real trace this session, not just loaded and eyeballed: ingest, an alert firing, curating that alert into a dataset via the UI, and reading the curated case back out. That surfaced and fixed four real bugs — a monitoring-critical one where the headline stat tiles read as permanently 0 in any background browser tab, a CORS/auth middleware ordering bug that broke every cross-origin request, an undocumented required env var that made dashboard writes fail silently, and a curation loop that wrote successfully but couldn't be read back. See `DASHBOARD_E2E_VERIFICATION_REPORT.md` for detail, including one confirmed-but-not-yet-fixed gap: the Overview page's topology and waterfall visualizations are still 100% static fixtures, unrelated to whatever trace is actually live.
+
 ## 3. Risk aggregation
 
 For a span with input context $C_{in}$, output $O_{out}$, and tool records $T$, the overall risk score is:
