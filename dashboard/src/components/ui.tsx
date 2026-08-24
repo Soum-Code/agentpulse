@@ -72,11 +72,27 @@ export function riskTone(score: number): RiskTone {
   return 'ok';
 }
 
+/** Agent Stability Index runs 0-100 and reads the opposite way to risk:
+ *  high is healthy. Separate scale, separate thresholds -- the boundaries
+ *  below are the ones the topology legend states on screen. */
+export function asiTone(asi: number): RiskTone {
+  if (asi < 50) return 'bad';
+  if (asi < 70) return 'warn';
+  return 'ok';
+}
+
 const TONE: Record<RiskTone, { text: string; bg: string; border: string; dot: string }> = {
   ok:   { text: 'text-state-ok',   bg: 'bg-state-ok/10',   border: 'border-state-ok/25',   dot: 'bg-state-ok' },
   warn: { text: 'text-state-warn', bg: 'bg-state-warn/10', border: 'border-state-warn/25', dot: 'bg-state-warn' },
   bad:  { text: 'text-state-bad',  bg: 'bg-state-bad/10',  border: 'border-state-bad/25',  dot: 'bg-state-bad' },
 };
+
+/** Text colour for a tone. Exported so callers rendering a bare number
+ *  still resolve their colour from the same table every other component
+ *  uses, rather than re-deriving thresholds inline. */
+export function toneText(tone: RiskTone): string {
+  return TONE[tone].text;
+}
 
 /* ─── Surface ─────────────────────────────────────────────────────────── */
 
