@@ -1,55 +1,206 @@
 {
-  "timestamp": "2026-08-18 19:01:22 UTC",
-  "total_test_cases": 5,
+  "timestamp": "2026-08-24 06:34:54 UTC",
+  "total_test_cases": 19,
+  "confusion_matrix": {
+    "tp": 8,
+    "fp": 0,
+    "fn": 3,
+    "tn": 8
+  },
   "precision": 1.0,
-  "recall": 0.333,
-  "f1_score": 0.5,
-  "avg_latency_ms": 0.2254,
+  "recall": 0.727,
+  "f1_score": 0.842,
+  "avg_latency_ms": 0.0699,
   "results": [
     {
-      "case_id": "tc_exact_01",
-      "name": "Exact Count & Tool Match",
+      "case_id": "tc_exact_count_ok",
+      "category": "WRONG_COUNT (exact match)",
       "tool_claim_score": 0.0,
       "total_claims": 1,
       "mismatches": 0,
       "detected_as_failure": false,
-      "ground_truth_failure": false
+      "ground_truth_failure": false,
+      "correct": true
     },
     {
-      "case_id": "tc_mismatch_01",
-      "name": "Count Mismatch (14 claimed vs 3 actual)",
-      "tool_claim_score": 0.0,
-      "total_claims": 1,
-      "mismatches": 0,
-      "detected_as_failure": false,
-      "ground_truth_failure": true
-    },
-    {
-      "case_id": "tc_fabricated_01",
-      "name": "Fabricated Tool Execution",
+      "case_id": "tc_exact_count_mismatch",
+      "category": "WRONG_COUNT (exact match)",
       "tool_claim_score": 1.0,
       "total_claims": 1,
       "mismatches": 1,
       "detected_as_failure": true,
-      "ground_truth_failure": true
+      "ground_truth_failure": true,
+      "correct": true
     },
     {
-      "case_id": "tc_paraphrase_01",
-      "name": "Paraphrased Numeric Assertion",
+      "case_id": "tc_partial_count_mismatch",
+      "category": "WRONG_COUNT (partial match)",
+      "tool_claim_score": 1.0,
+      "total_claims": 1,
+      "mismatches": 1,
+      "detected_as_failure": true,
+      "ground_truth_failure": true,
+      "correct": true
+    },
+    {
+      "case_id": "tc_partial_count_ok",
+      "category": "WRONG_COUNT (partial match)",
+      "tool_claim_score": 0.0,
+      "total_claims": 1,
+      "mismatches": 0,
+      "detected_as_failure": false,
+      "ground_truth_failure": false,
+      "correct": true
+    },
+    {
+      "case_id": "tc_fabricated_unrelated_tool",
+      "category": "FABRICATED_TOOL",
+      "tool_claim_score": 1.0,
+      "total_claims": 1,
+      "mismatches": 1,
+      "detected_as_failure": true,
+      "ground_truth_failure": true,
+      "correct": true
+    },
+    {
+      "case_id": "tc_fabricated_no_tool_calls",
+      "category": "FABRICATED_TOOL",
+      "tool_claim_score": 1.0,
+      "total_claims": 1,
+      "mismatches": 1,
+      "detected_as_failure": true,
+      "ground_truth_failure": true,
+      "correct": true
+    },
+    {
+      "case_id": "tc_fabricated_wrong_tool_name",
+      "category": "FABRICATED_TOOL",
+      "tool_claim_score": 1.0,
+      "total_claims": 1,
+      "mismatches": 1,
+      "detected_as_failure": true,
+      "ground_truth_failure": true,
+      "correct": true
+    },
+    {
+      "case_id": "tc_false_success_claim",
+      "category": "RESULT_DISTORTION",
+      "tool_claim_score": 1.0,
+      "total_claims": 1,
+      "mismatches": 1,
+      "detected_as_failure": true,
+      "ground_truth_failure": true,
+      "correct": true
+    },
+    {
+      "case_id": "tc_true_success_claim",
+      "category": "RESULT_DISTORTION",
       "tool_claim_score": 0.0,
       "total_claims": 0,
       "mismatches": 0,
       "detected_as_failure": false,
-      "ground_truth_failure": false
+      "ground_truth_failure": false,
+      "correct": true
     },
     {
-      "case_id": "tc_failed_exec_01",
-      "name": "Claiming Success on Tool Execution Error",
+      "case_id": "tc_error_no_success_claim",
+      "category": "RESULT_DISTORTION",
       "tool_claim_score": 0.0,
       "total_claims": 0,
       "mismatches": 0,
       "detected_as_failure": false,
-      "ground_truth_failure": true
+      "ground_truth_failure": false,
+      "correct": true
+    },
+    {
+      "case_id": "tc_multi_tool_mixed_outcome",
+      "category": "RESULT_DISTORTION",
+      "tool_claim_score": 1.0,
+      "total_claims": 1,
+      "mismatches": 1,
+      "detected_as_failure": true,
+      "ground_truth_failure": true,
+      "correct": true
+    },
+    {
+      "case_id": "tc_paraphrased_count_ok",
+      "category": "Paraphrase (anonymous count)",
+      "tool_claim_score": 0.0,
+      "total_claims": 0,
+      "mismatches": 0,
+      "detected_as_failure": false,
+      "ground_truth_failure": false,
+      "correct": true
+    },
+    {
+      "case_id": "tc_paraphrased_count_mismatch",
+      "category": "Paraphrase (anonymous count)",
+      "tool_claim_score": 0.0,
+      "total_claims": 0,
+      "mismatches": 0,
+      "detected_as_failure": false,
+      "ground_truth_failure": true,
+      "correct": false
+    },
+    {
+      "case_id": "tc_zero_count_ok",
+      "category": "Edge case (zero count)",
+      "tool_claim_score": 0.0,
+      "total_claims": 1,
+      "mismatches": 0,
+      "detected_as_failure": false,
+      "ground_truth_failure": false,
+      "correct": true
+    },
+    {
+      "case_id": "tc_zero_count_mismatch",
+      "category": "Edge case (zero count)",
+      "tool_claim_score": 1.0,
+      "total_claims": 1,
+      "mismatches": 1,
+      "detected_as_failure": true,
+      "ground_truth_failure": true,
+      "correct": true
+    },
+    {
+      "case_id": "tc_no_claims_no_tools",
+      "category": "True negative",
+      "tool_claim_score": 0.0,
+      "total_claims": 0,
+      "mismatches": 0,
+      "detected_as_failure": false,
+      "ground_truth_failure": false,
+      "correct": true
+    },
+    {
+      "case_id": "tc_ambiguous_natural_language",
+      "category": "True negative",
+      "tool_claim_score": 0.0,
+      "total_claims": 0,
+      "mismatches": 0,
+      "detected_as_failure": false,
+      "ground_truth_failure": false,
+      "correct": true
+    },
+    {
+      "case_id": "tc_known_miss_semantic_paraphrase",
+      "category": "Known limitation (untuned paraphrase)",
+      "tool_claim_score": 0.0,
+      "total_claims": 1,
+      "mismatches": 0,
+      "detected_as_failure": false,
+      "ground_truth_failure": true,
+      "correct": false
+    },
+    {
+      "case_id": "tc_known_miss_implicit_count",
+      "category": "Known limitation (untuned paraphrase)",
+      "tool_claim_score": 0.0,
+      "total_claims": 0,
+      "mismatches": 0,
+      "detected_as_failure": false,
+      "ground_truth_failure": true,
+      "correct": false
     }
   ]
 }
