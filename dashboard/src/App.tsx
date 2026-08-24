@@ -1442,7 +1442,6 @@ export function App() {
 
   return (
     <div className="min-h-screen flex bg-void text-ink font-sans">
-      <div className="deck-field" aria-hidden="true" />
       <div className="deck-wash" aria-hidden="true" />
 
       <SideRail
