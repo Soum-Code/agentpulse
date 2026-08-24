@@ -15,7 +15,8 @@ import {
 import { SideRail, type NavPage } from './components/SideRail';
 import {
   cx, Tile, TileHead, Eyebrow, SectionHead, StatusBadge, RiskPill,
-  Meter, Stat, EmptyState, riskTone, Waveform,
+  Meter, Stat, EmptyState, riskTone, asiTone, toneText, Waveform,
+  type RiskTone,
 } from './components/ui';
 
 // ─── Types & Enums ─────────────────────────────────────────────────────
@@ -128,13 +129,25 @@ function Readout({ label, value, tone }: { label: string; value: string; tone?: 
 
 // ─── 2. Agent Topology (Aggregated & Expanded Views) ───────────────────
 
-const TOPOLOGY_NODES = [
-  { id: 'researcher', name: 'Researcher', role: 'Query Planner', description: 'Decomposes user queries into sub-searches' },
-  { id: 'retriever', name: 'Retriever', role: 'Paper Indexer', description: 'Simulates academic corpus retrieval' },
-  { id: 'verifier', name: 'Verifier', role: 'Claim Verifier', description: 'Checks claims against source premises' },
-  { id: 'analyst', name: 'Analyst', role: 'Synthesis Engine', description: 'Synthesizes reasoning over verified facts' },
-  { id: 'writer', name: 'Writer', role: 'Report Author', description: 'Drafts publication-ready summary document' },
-];
+/** An agent's headline status is the worse of its two independent signals.
+ *  ASI measures behavioural stability, grounding risk measures whether the
+ *  output is supported -- an agent can be perfectly stable at being wrong
+ *  (high ASI, high risk). Badging that "healthy" because stability is fine
+ *  would read as safe at a glance, which is exactly the failure this tool
+ *  exists to catch. Thresholds stay defined only in asiTone/riskTone. */
+function agentStatus(asi: number | null, risk: number | null): string {
+  const tones: RiskTone[] = [];
+  if (asi !== null) tones.push(asiTone(asi));
+  if (risk !== null) tones.push(riskTone(risk));
+  if (tones.includes('bad')) return 'critical';
+  if (tones.includes('warn')) return 'watch';
+  return 'healthy';
+}
+
+/** How many agents to show before collapsing the rest into a count.
+ *  Deployments can carry dozens of agents; a wall of them is unreadable
+ *  and buries the ones that need attention. */
+const TOPOLOGY_VISIBLE_LIMIT = 10;
 
 function AgentTopologySection({
   agents, selectedAgentId, onSelectAgent
@@ -143,90 +156,106 @@ function AgentTopologySection({
   selectedAgentId: string | null;
   onSelectAgent: (id: string) => void;
 }) {
-  const agentMap = useMemo(() => new Map(agents.map(a => [a.agent_id, a])), [agents]);
+  // Riskiest first: this panel exists to surface what needs attention, and
+  // the API returns no ordering guarantee. Agents with no score yet sort
+  // last rather than being treated as healthy.
+  const ranked = useMemo(
+    () => [...agents].sort((a, b) => (b.avg_risk_score ?? -1) - (a.avg_risk_score ?? -1)),
+    [agents],
+  );
+  const visible = ranked.slice(0, TOPOLOGY_VISIBLE_LIMIT);
+  const hiddenCount = ranked.length - visible.length;
 
   return (
     <Tile className="p-4" hover={false} index={4}>
       <div className="flex items-start justify-between gap-4 mb-3">
         <div>
-          <h2 className="text-sm font-semibold text-ink tracking-tight">Agent Execution Topology</h2>
+          <h2 className="text-sm font-semibold text-ink tracking-tight">Agent fleet</h2>
           <p className="text-xs text-ink-dim mt-0.5">
-            Live DAG pipeline with risk propagation and agent stability index
+            Every reporting agent, ordered by grounding risk
           </p>
         </div>
-        <div className="hidden md:flex items-center gap-3.5 shrink-0">
-          {[
-            { c: 'bg-state-ok', l: 'ASI ≥ 70' },
-            { c: 'bg-state-warn', l: 'ASI 50–69' },
-            { c: 'bg-state-bad', l: 'ASI < 50' },
-          ].map((k) => (
-            <span key={k.l} className="flex items-center gap-1.5">
-              <span className={cx('w-1.5 h-1.5 rounded-full', k.c)} aria-hidden="true" />
-              <Eyebrow>{k.l}</Eyebrow>
-            </span>
-          ))}
+        <div className="hidden md:block shrink-0 text-right">
+          <Eyebrow>Status = worse of stability and risk</Eyebrow>
         </div>
       </div>
 
-      {/* DAG flow. Chevrons between nodes convey execution direction, which a
-          plain grid of cards does not. */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-2.5">
-        {TOPOLOGY_NODES.map((node, index) => {
-          const liveAgent = agentMap.get(node.id);
-          const isSelected = selectedAgentId === node.id;
-          const asi = liveAgent?.current_asi ?? 98.4;
-          const risk = liveAgent?.avg_risk_score ?? 0.04;
-          const spansCount = liveAgent?.total_spans ?? 24;
-          const status = asi < 50 ? 'critical' : asi < 70 ? 'watch' : 'healthy';
+      {agents.length === 0 ? (
+        <EmptyState
+          icon={<Activity className="w-7 h-7" />}
+          title="No agents reporting"
+          hint="Agents appear here once the SDK sends its first span."
+        />
+      ) : (
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-2.5">
+            {visible.map((agent) => {
+              const isSelected = selectedAgentId === agent.agent_id;
+              const asi = agent.current_asi;
+              const risk = agent.avg_risk_score;
 
-          return (
-            <button
-              key={node.id}
-              onClick={() => onSelectAgent(node.id)}
-              aria-pressed={isSelected}
-              className={cx(
-                'relative tile bracket p-3 text-left cursor-pointer',
-                isSelected ? 'tile-active bracket-on' : 'tile-hover',
-              )}
-            >
-              <div className="flex items-center justify-between mb-2">
-                <Eyebrow>Node {String(index + 1).padStart(2, '0')}</Eyebrow>
-                <StatusBadge status={status} />
-              </div>
-
-              <div className="text-[13px] font-semibold text-ink leading-tight">{node.name}</div>
-              <div className="text-2xs font-mono text-ink-faint mt-0.5">{node.role}</div>
-
-              <div className="mt-3 pt-2.5 border-t border-line grid grid-cols-3 gap-1">
-                <div>
-                  <Eyebrow>ASI</Eyebrow>
-                  <div className={cx(
-                    'font-mono text-xs font-semibold tnum mt-0.5',
-                    asi >= 70 ? 'text-state-ok' : asi >= 50 ? 'text-state-warn' : 'text-state-bad',
-                  )}>
-                    {asi.toFixed(0)}
+              return (
+                <button
+                  key={agent.agent_id}
+                  onClick={() => onSelectAgent(agent.agent_id)}
+                  aria-pressed={isSelected}
+                  className={cx(
+                    'relative tile bracket p-3 text-left cursor-pointer',
+                    isSelected ? 'tile-active bracket-on' : 'tile-hover',
+                  )}
+                >
+                  <div className="flex items-center justify-between gap-2 mb-2">
+                    <Eyebrow>{agent.total_errors > 0 ? `${agent.total_errors} errors` : 'No errors'}</Eyebrow>
+                    <StatusBadge status={agentStatus(asi, risk)} />
                   </div>
-                </div>
-                <div>
-                  <Eyebrow>Risk</Eyebrow>
-                  <div className={cx(
-                    'font-mono text-xs font-semibold tnum mt-0.5',
-                    risk > 0.7 ? 'text-state-bad' : risk > 0.4 ? 'text-state-warn' : 'text-ink-dim',
-                  )}>
-                    {risk.toFixed(2)}
-                  </div>
-                </div>
-                <div>
-                  <Eyebrow>Spans</Eyebrow>
-                  <div className="font-mono text-xs font-semibold tnum mt-0.5 text-ink-dim">{spansCount}</div>
-                </div>
-              </div>
 
-              <Meter value={risk} className="mt-2.5" />
-            </button>
-          );
-        })}
-      </div>
+                  <div className="text-[13px] font-semibold text-ink leading-tight truncate">
+                    {agent.agent_id}
+                  </div>
+                  <div className="text-2xs font-mono text-ink-faint mt-0.5 truncate">
+                    {agent.agent_role ?? 'Role not reported'}
+                  </div>
+
+                  <div className="mt-3 pt-2.5 border-t border-line grid grid-cols-3 gap-1">
+                    <div>
+                      <Eyebrow>ASI</Eyebrow>
+                      <div className={cx(
+                        'font-mono text-xs font-semibold tnum mt-0.5',
+                        asi === null ? 'text-ink-faint' : toneText(asiTone(asi)),
+                      )}>
+                        {asi === null ? '—' : asi.toFixed(0)}
+                      </div>
+                    </div>
+                    <div>
+                      <Eyebrow>Risk</Eyebrow>
+                      <div className={cx(
+                        'font-mono text-xs font-semibold tnum mt-0.5',
+                        risk === null ? 'text-ink-faint' : toneText(riskTone(risk)),
+                      )}>
+                        {risk === null ? '—' : risk.toFixed(2)}
+                      </div>
+                    </div>
+                    <div>
+                      <Eyebrow>Spans</Eyebrow>
+                      <div className="font-mono text-xs font-semibold tnum mt-0.5 text-ink-dim">
+                        {agent.total_spans}
+                      </div>
+                    </div>
+                  </div>
+
+                  {risk !== null && <Meter value={risk} className="mt-2.5" />}
+                </button>
+              );
+            })}
+          </div>
+
+          {hiddenCount > 0 && (
+            <p className="text-2xs font-mono text-ink-faint mt-2.5">
+              {hiddenCount} more {hiddenCount === 1 ? 'agent' : 'agents'} with lower risk not shown
+            </p>
+          )}
+        </>
+      )}
     </Tile>
   );
 }
