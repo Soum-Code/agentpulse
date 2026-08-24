@@ -90,5 +90,6 @@ class Qwen3GGUFAdapter(LocalGGUFAdapter):
             seed=seed,
             n_ctx=n_ctx,
             load_immediately=load_immediately,
+            qwen_think_suffix=kwargs.pop("qwen_think_suffix", True),
             **kwargs,
         )

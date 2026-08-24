@@ -7,7 +7,9 @@ from llm_adapters import (
     LocalHFAdapter,
     QwenAdapter,
     FastDevQwenAdapter,
+    Qwen3GGUFAdapter,
     LlamaAdapter,
+    LlamaGGUFAdapter,
     MistralAdapter,
     GemmaAdapter,
     get_llm_adapter,
@@ -40,10 +42,25 @@ def test_adapter_factory_fast_dev():
     assert adapter.model_id == "Qwen/Qwen2.5-0.5B-Instruct"
 
 
+def test_adapter_factory_qwen3_gguf():
+    adapter = get_llm_adapter("qwen3-8b")
+    assert isinstance(adapter, Qwen3GGUFAdapter)
+    assert adapter.model_id == "Qwen/Qwen3-8B-GGUF:Q4_K_M"
+    # Qwen3 turns on the /no_think suffix by default; a non-Qwen adapter must not.
+    assert adapter.qwen_think_suffix is True
+
+
 def test_adapter_factory_llama():
     adapter = get_llm_adapter("llama-8b")
     assert isinstance(adapter, LlamaAdapter)
     assert adapter.model_id == "meta-llama/Llama-3.1-8B-Instruct"
+
+
+def test_adapter_factory_llama_gguf():
+    adapter = get_llm_adapter("llama3-gguf")
+    assert isinstance(adapter, LlamaGGUFAdapter)
+    assert adapter.model_id == "bartowski/Meta-Llama-3.1-8B-Instruct-GGUF:Q4_K_M"
+    assert adapter.qwen_think_suffix is False
 
 
 def test_adapter_factory_mistral():
