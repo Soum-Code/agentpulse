@@ -133,18 +133,24 @@ def create_app() -> FastAPI:
     )
 
     # ── Middleware ──
+    # Starlette wraps middleware in reverse registration order (last added =
+    # outermost = runs first on the way in), so CORSMiddleware must be added
+    # last. Otherwise APIKeyMiddleware intercepts and 401s the CORS preflight
+    # OPTIONS request -- which never carries the X-API-Key header by spec --
+    # before CORSMiddleware's own preflight short-circuit ever runs, breaking
+    # every cross-origin caller regardless of whether it has a valid key.
+    app.add_middleware(APIKeyMiddleware)
+    app.add_middleware(
+        RateLimitMiddleware,
+        max_requests=settings.rate_limit_max_requests,
+        window_seconds=settings.rate_limit_window_seconds,
+    )
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins or ["*"],
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
-    )
-    app.add_middleware(APIKeyMiddleware)
-    app.add_middleware(
-        RateLimitMiddleware,
-        max_requests=settings.rate_limit_max_requests,
-        window_seconds=settings.rate_limit_window_seconds,
     )
 
     # ── Routers ──

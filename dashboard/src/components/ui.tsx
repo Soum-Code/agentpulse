@@ -25,8 +25,16 @@ export function useCountUp(target: number | null | undefined, duration = 520) {
 
   useEffect(() => {
     if (target === null || target === undefined) return;
-    if (reduced) {
+
+    // requestAnimationFrame is suspended for hidden/background tabs in every
+    // major browser (to save resources), which would otherwise leave this
+    // readout frozen at its initial value for as long as the dashboard tab
+    // isn't focused -- a real problem for a monitoring tool commonly left
+    // open in a background tab. Skip the animation in that case too, same
+    // as the reduced-motion path.
+    if (reduced || document.visibilityState === 'hidden') {
       setDisplay(target);
+      fromRef.current = target;
       return;
     }
     const from = fromRef.current;
