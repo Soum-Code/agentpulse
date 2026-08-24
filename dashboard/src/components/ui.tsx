@@ -81,7 +81,7 @@ const TONE: Record<RiskTone, { text: string; bg: string; border: string; dot: st
 /* ─── Surface ─────────────────────────────────────────────────────────── */
 
 export function Tile({
-  children, className, active, hover = true, bracket = true, index,
+  children, className, active, hover = true, bracket = false, index,
 }: {
   children: ReactNode;
   className?: string;
@@ -215,14 +215,87 @@ export function Stat({
   return (
     <Tile className="p-4" index={index}>
       <Eyebrow>{label}</Eyebrow>
-      <div className="mt-2 flex items-baseline gap-1.5">
-        <span className={cx('font-mono text-2xl font-semibold tnum leading-none', toneCls)}>
+      <div className="mt-2.5 flex items-baseline gap-2">
+        <span className={cx('font-mono text-4xl font-bold tnum leading-none tracking-tight', toneCls)}>
           {animated === null ? '—' : animated.toFixed(decimals)}
         </span>
         {unit && <span className="text-xs text-ink-faint font-mono">{unit}</span>}
       </div>
-      {foot && <div className="mt-2.5">{foot}</div>}
+      {foot && <div className="mt-3">{foot}</div>}
     </Tile>
+  );
+}
+
+/* ─── Waveform ────────────────────────────────────────────────────────
+   The signature element: composite risk plotted as a live trace rather
+   than a static number, styled like an instrument readout (oscilloscope
+   / seismograph) rather than a decorative chart. This is the one place
+   in the interface that earns a heavier visual treatment (glow) — it is
+   the dashboard's actual vital-signs monitor. */
+
+export function Waveform({
+  points, height = 84, label = 'Composite risk',
+}: { points: number[]; height?: number; label?: string }) {
+  if (points.length < 2) {
+    return (
+      <div className="waveform-panel p-4" style={{ minHeight: height + 40 }}>
+        <Eyebrow>{label}</Eyebrow>
+        <div className="flex items-center justify-center text-xs text-ink-faint" style={{ height }}>
+          Awaiting data
+        </div>
+      </div>
+    );
+  }
+
+  const w = 400;
+  const pad = 6;
+  const plotH = height - pad * 2;
+  const latest = points[points.length - 1];
+  const tone = riskTone(latest);
+  const t = TONE[tone];
+  const strokeColor = { ok: '#34d399', warn: '#fbbf24', bad: '#fb7185' }[tone];
+  const gradId = `waveform-fade-${tone}`;
+  const areaId = `waveform-area-${tone}`;
+
+  const coords = points.map((p, i) => {
+    const x = (i / (points.length - 1)) * w;
+    const y = pad + plotH - Math.max(0, Math.min(1, p)) * plotH;
+    return [x, y] as const;
+  });
+  const linePath = coords.map(([x, y], i) => `${i === 0 ? 'M' : 'L'}${x.toFixed(2)},${y.toFixed(2)}`).join(' ');
+  const areaPath = `${linePath} L${w},${height} L0,${height} Z`;
+  const [lastX, lastY] = coords[coords.length - 1];
+
+  return (
+    <div className="waveform-panel p-4">
+      <div className="flex items-center justify-between mb-1.5">
+        <Eyebrow>{label}</Eyebrow>
+        <span className={cx('font-mono text-sm font-semibold tnum', t.text)}>{latest.toFixed(3)}</span>
+      </div>
+      <svg
+        viewBox={`0 0 ${w} ${height}`}
+        preserveAspectRatio="none"
+        className="w-full"
+        style={{ height }}
+        role="img"
+        aria-label={`${label} trend over recent spans, current value ${latest.toFixed(3)}, ${tone === 'bad' ? 'critical' : tone === 'warn' ? 'elevated' : 'healthy'}`}
+      >
+        <defs>
+          <linearGradient id={gradId} x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stopColor={strokeColor} stopOpacity="0" />
+            <stop offset="65%" stopColor={strokeColor} stopOpacity="0.55" />
+            <stop offset="100%" stopColor={strokeColor} stopOpacity="1" />
+          </linearGradient>
+          <linearGradient id={areaId} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={strokeColor} stopOpacity="0.16" />
+            <stop offset="100%" stopColor={strokeColor} stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        <path d={areaPath} fill={`url(#${areaId})`} stroke="none" />
+        <path d={linePath} fill="none" stroke={`url(#${gradId})`} strokeWidth="1.5" vectorEffect="non-scaling-stroke" />
+        <circle cx={lastX} cy={lastY} r="3" fill={strokeColor} stroke="var(--void)" strokeWidth="1.5" className="waveform-lead" style={{ color: strokeColor }} />
+      </svg>
+    </div>
   );
 }
 

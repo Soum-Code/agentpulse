@@ -15,7 +15,7 @@ import {
 import { SideRail, type NavPage } from './components/SideRail';
 import {
   cx, Tile, TileHead, Eyebrow, SectionHead, StatusBadge, RiskPill,
-  Meter, Stat, EmptyState, riskTone,
+  Meter, Stat, EmptyState, riskTone, Waveform,
 } from './components/ui';
 
 // ─── Types & Enums ─────────────────────────────────────────────────────
@@ -573,7 +573,7 @@ function CurateCaseModal({
         aria-modal="true"
         aria-label="Curate incident into dataset"
         onClick={(e) => e.stopPropagation()}
-        className="tile bracket-on max-w-lg w-full p-6 space-y-4 shadow-2xl"
+        className="glass max-w-lg w-full p-6 space-y-4"
       >
         <div className="flex items-center justify-between gap-3 pb-3 border-b border-line">
           <div className="flex items-center gap-2">
@@ -1255,7 +1255,7 @@ function CommandPalette({
         aria-modal="true"
         aria-label="Command palette"
         onClick={(e) => e.stopPropagation()}
-        className="tile bracket-on max-w-lg w-full p-3 space-y-2.5 shadow-2xl"
+        className="glass max-w-lg w-full p-3 space-y-2.5"
       >
         <div className="flex items-center gap-2.5 px-3 py-2 rounded border border-line bg-surface">
           <Search className="w-4 h-4 text-ink-faint shrink-0" aria-hidden="true" />
@@ -1311,6 +1311,10 @@ export function App() {
   const [agents, setAgents] = useState<Agent[]>([]);
   const [traces, setTraces] = useState<TraceListItem[]>([]);
   const [alerts, setAlerts] = useState<AlertItem[]>([]);
+  // Rolling buffer of real polled composite-risk values for the waveform
+  // readout -- capped so the trace covers a fixed recent window rather than
+  // growing unbounded over a long-lived session.
+  const [riskHistory, setRiskHistory] = useState<number[]>([]);
 
   // Must match the backend route in backend/app/routers/websocket.py
   // (@router.websocket("/v1/ws/live")) — a bare /v1/ws does not exist.
@@ -1333,6 +1337,12 @@ export function App() {
       setAgents(a.agents);
       setTraces(t.traces);
       setAlerts(al.alerts);
+      // Bound to a local so the null-narrowing survives into the updater
+      // closure -- TypeScript won't carry it through otherwise.
+      const risk = m.avg_risk_score;
+      if (typeof risk === 'number') {
+        setRiskHistory((prev) => [...prev, risk].slice(-60));
+      }
     } catch (err) {
       console.error(err);
     }
@@ -1429,31 +1439,25 @@ export function App() {
       <main className="flex-1 p-6 overflow-y-auto">
         {currentPage === 'overview' ? (
           <div className="space-y-5">
-            {/* Bento: headline signals sized by importance */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            {/* Signature readout: composite risk as a live trace, not a static number */}
+            <Waveform points={riskHistory} label="Composite risk" />
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <Stat
                 index={0}
-                label="Composite risk"
-                value={metrics?.avg_risk_score ?? 0}
-                decimals={3}
-                tone={riskTone(metrics?.avg_risk_score ?? 0)}
-                foot={<Meter value={metrics?.avg_risk_score ?? 0} />}
-              />
-              <Stat
-                index={1}
                 label="Total traces"
                 value={metrics?.total_traces ?? 0}
                 foot={<Eyebrow>{metrics?.total_spans ?? 0} spans evaluated</Eyebrow>}
               />
               <Stat
-                index={2}
+                index={1}
                 label="Open incidents"
                 value={openIncidentsCount}
                 tone={openIncidentsCount > 0 ? 'bad' : 'ok'}
                 foot={<Eyebrow>{alerts.length} total alerts</Eyebrow>}
               />
               <Stat
-                index={3}
+                index={2}
                 label="Active agents"
                 value={agents.length}
                 foot={<Eyebrow>{traces.length} recent traces</Eyebrow>}

@@ -128,6 +128,39 @@ body {
   box-shadow: 0 0 0 1px rgba(34, 211, 238, 0.16), 0 0 26px -10px var(--signal-glow);
 }
 
+/* ─── Glass ──────────────────────────────────────────────────────────
+   Reserved for floating overlays only (command palette, modals) — never
+   the base tile surface, which stays flat per the restraint principle:
+   depth is spent in one place, not spread across every panel. */
+
+.glass {
+  background: rgba(15, 18, 28, 0.72);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 24px 60px -20px rgba(0, 0, 0, 0.85);
+}
+
+@supports not (backdrop-filter: blur(1px)) {
+  .glass {
+    background: rgba(12, 15, 24, 0.94);
+  }
+}
+
+/* ─── Wordmark ───────────────────────────────────────────────────────
+   The one deliberate gradient moment in the whole interface. Brand
+   family only (cyan) — never crosses into the risk-state palette. */
+
+.wordmark-gradient {
+  background: linear-gradient(120deg, var(--text) 0%, var(--signal) 55%, var(--signal-dim) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
 /* HUD corner brackets — the signature motif. Viewfinder marks that frame
    a tile without adding another filled surface. */
 .bracket::before,
@@ -164,10 +197,31 @@ body {
   opacity: 1;
 }
 
+/* ─── Waveform ───────────────────────────────────────────────────────
+   The signature element: composite risk plotted as a live trace, not a
+   static number. This is the one place a heavier treatment (glow,
+   brackets) is earned — it is the dashboard's actual vital-signs
+   readout, so it is allowed to look like an instrument. */
+
+.waveform-panel {
+  position: relative;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.03) 0%, transparent 30%),
+    repeating-linear-gradient(180deg, rgba(255, 255, 255, 0.025) 0 1px, transparent 1px 24px),
+    var(--void);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.waveform-lead {
+  filter: drop-shadow(0 0 3px currentColor) drop-shadow(0 0 8px currentColor);
+}
+
 /* ─── Pulse sweep ────────────────────────────────────────────────────
-   One thin travelling highlight under the header. It is the only
-   always-on motion in the interface and it maps to the product's core
-   idea: a continuous heartbeat over the agent fleet.                    */
+   One thin travelling highlight under the header, echoing the same
+   idea as the waveform at a smaller scale: a continuous heartbeat
+   over the agent fleet.                                               */
 
 .pulse-rail {
   position: relative;
@@ -278,3 +332,4 @@ body {
     display: none;
   }
 }
+

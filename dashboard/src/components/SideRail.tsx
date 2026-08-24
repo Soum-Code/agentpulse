@@ -56,7 +56,7 @@ export function SideRail({
           <Radio className="w-3.5 h-3.5 text-signal" aria-hidden="true" />
         </div>
         <div className="leading-tight">
-          <div className="text-[13px] font-semibold tracking-tight text-ink">AgentPulse</div>
+          <div className="text-[13px] font-semibold tracking-tight wordmark-gradient">AgentPulse</div>
           <div className="text-2xs font-mono text-ink-faint">CONTROL PLANE</div>
         </div>
       </div>
