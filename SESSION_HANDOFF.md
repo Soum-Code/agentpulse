@@ -1,6 +1,61 @@
 # Session Handoff — AgentPulse Work Log
 
-**Written:** 2026-08-23 ~19:50 IST. **Last updated:** 2026-08-24, continued (Kaggle GPU run closed out, then Section 3's deferred items 1/2/4 done — tool-claim validator, dashboard e2e + trace-to-dataset loop, Claude Code skills. See the new Section 0-B below; everything from "Repo state: pushed through commit a44c859" onward in the old Section 0 is superseded, not just the GPU parts).
+**Written:** 2026-08-23 ~19:50 IST. **Last updated:** 2026-08-25 (Llama benchmark launched on Kaggle after 4 dependency fixes, dashboard design system established, agent topology wired to real data). **Read Section 0-C first — it is the most recent state.** Sections 0-B and below are older and partly superseded.
+
+## 0-C. Most recent session (2026-08-25)
+
+Two threads ran in parallel: the second-model (Llama) benchmark on Kaggle, and a dashboard design/truth overhaul.
+
+### Thread 1 — Llama 3.1 8B benchmark on Kaggle (STILL RUNNING, do not restart)
+
+The last deferred research item. User chose Kaggle GPU over local CPU. Status at time of writing: **`RUNNING`**, kernel version 12.
+
+- **New adapter**: `LlamaGGUFAdapter` in `llm_adapters/llama.py`, using `bartowski/Meta-Llama-3.1-8B-Instruct-GGUF` (Q4_K_M). Meta ships no official GGUF, and bartowski is the widely-trusted community quantizer of the official weights — the filename was verified against the HF API before the run rather than guessed. Factory routes `llama3-gguf` / `llama-3.1-gguf` to it. The pre-existing `LlamaAdapter` was the same fake-fallback path Qwen had before `Qwen3GGUFAdapter` fixed it.
+- **Bug found while wiring it**: `LocalGGUFAdapter` unconditionally appended Qwen3's `/no_think` suffix to *every* prompt regardless of model family — harmless for Qwen3, but it would have silently polluted every Llama prompt. Now opt-in via `qwen_think_suffix`, on for Qwen3, off by default. Tests added: 101/101 passing.
+- **Four rounds of Kaggle dependency fixes** before it would run. Each failed in ~6-8 minutes rather than wasting 9 hours, because the `grounding.models_loaded()` assertion added to the notebook makes a broken evaluation pipeline abort loudly instead of silently producing fake `0.0` scores (which is exactly what ruined the earlier Qwen3 GPU run):
+  1. `cannot import name 'GenerationMixin'` — `pip install -e backend` resolved its loose `transformers>=4.40,<5.0` pin to a release newer than the already-installed `sentence-transformers` expected.
+  2. Pinning both backward required `numpy<2`, which fought Kaggle's base image (~15 preinstalled packages need `numpy>=2.0`) and left a half-downgraded, broken numpy (`No module named 'numpy.rec'`).
+  3. Upgrading `transformers`+`sentence-transformers` together without touching numpy hit the *same* `_center` numpy-internals error — because llama-cpp-python's build step has an unpinned `numpy>=1.20.0` that floats numpy from the image's shipped 2.0.2 up to 2.5.2, and some preinstalled compiled package was built against 2.0.2's private `_core` layout specifically.
+  4. **Current fix**: pin `numpy==2.0.2` exactly (the base image's own version, not "any 2.x") alongside the transformers upgrade.
+- **How to read Kaggle logs — important, the old method silently fails.** Use the Python API `KaggleApi().kernels_logs('somnath26/agentpulse-reasoning-benchmark')`, which returns real content. `kaggle kernels output --file-pattern ".*\.log$"` (used in earlier sessions) reliably returns an **empty** file and should not be trusted. Mid-run logs are empty by design; only completed/errored runs have them. Also: `kaggle kernels output` without a file filter can hang for a long time trying to download the ~5GB model weights.
+- **When it completes**: download `reasoning_strategy_results.json`, save as something like `experiments/results/reasoning_strategy_results_llama.json` (do **not** overwrite the committed Qwen3 CPU results), sanity-check `evaluation_models_confirmed_loaded` and that risk scores are not all-zero, then write the cross-model comparison. `kaggle/kernel-metadata.json` is now committed so `kaggle kernels push -p kaggle/` works.
+
+### Thread 2 — Dashboard: design system + real-data truth pass
+
+**Design documents created** (all committed, all written against verified codebase values rather than assumptions):
+
+- `AGENTPULSE_DESIGN_SYSTEM.md` — "Instrument Deck". Synthesises three references for three different reasons: MLflow (the closest *functional* peer — its trace-tree information architecture is real evidence), Apple liquid glass (overlays only), and premium motion craft (not spectacle — explicitly no 3D/WebGL/particles in operational views). Documents the disjoint colour law, the three elevation languages (flat tile / signature glow / glass), and the "one gradient, one place" rule.
+- `IMPLEMENTATION_MAP.md` — codebase inspection before touching anything.
+- `MASTER_PROMPT_CORRECTIONS.md` — overrides for an externally-generated master prompt that contained real errors (it wanted cyan to mean "healthy", violating the disjoint colour law, and wanted to swap the fonts to Inter/Geist).
+- `TRACE_WATERFALL_REBUILD_PROMPT.md`, `DASHBOARD_REDESIGN_PROMPT.md` — component specs with exact real API shapes.
+
+**Key insight from the inspection — components fall into THREE categories, not two.** This matters because treating category B as a bug would be wrong:
+
+- **A. Genuinely live**: Overview stats, the waveform, Incidents, Drift, Telemetry Lab (its scenario buttons fire the real `simulatePipeline` endpoint), the curate-case flow.
+- **B. Real numbers, static snapshot, honestly labelled — NOT bugs**: `ExperimentsView` and `DatasetsView`. Their values genuinely match `experiments/results/*.json` and `datasets/v1.0_*.json`, and the UI says "Snapshot of last recorded run" on screen. Leave them.
+- **C. Fabricated data presented as real — these are the bugs**: trace waterfall, evidence inspector, replay debugger steps, and (now fixed) topology node identities.
+
+**Shipped this session:**
+
+- `Waveform` component — the signature element. Replaces the static "Composite Risk" number with a live oscilloscope-style trace of real polled `avg_risk_score`, phosphor-glow leading point, colour from `riskTone()`. Fed by a rolling 60-value buffer in `App.tsx`.
+- `.glass` (liquid glass) applied to the two overlays only (`CurateCaseModal`, `CommandPalette`), `.wordmark-gradient` on the logotype only, hero stat numbers pushed to `text-4xl font-bold`, HUD brackets pulled back from a default treatment to selected-state only.
+- **Agent topology wired to real data** (commit `e7d174b`). It had rendered five invented agents and ignored all 47 real ones. Four fabrications removed: the invented node list; the fallbacks `?? 98.4 / ?? 0.04 / ?? 24` that made a data-less agent look healthy (now `—`); the header's "Live DAG pipeline with risk propagation" claim (**the API returns a flat agent list with no edge data at all** — retitled "Agent fleet", and the "Node 01/02/03" numbering implying an execution order was removed); and a status badge driven by ASI alone, which showed a green `HEALTHY` beside `RISK 1.00` — verified live before fixing. ASI measures stability, risk measures grounding, and an agent can be *stably wrong*, so status is now the worse of the two. New `asiTone()`/`toneText()` helpers keep thresholds defined in exactly one place.
+
+**A `shadcn init` broke the build and was reverted.** It injected Tailwind **v4** CSS (`@import "shadcn/tailwind.css"`, `@apply border-border`) into a **v3** project — the dashboard rendered nothing but a PostCSS error. Reverted, then its leftovers were removed too: `components.json`, `src/lib/utils.ts`, `src/components/ui/button.tsx`, plus 7 unused dependencies (`shadcn`, `clsx`, `tailwind-merge`, `tw-animate-css`, `@base-ui/react`, `class-variance-authority`, `@fontsource-variable/geist`). None were imported. **Do not run `shadcn init` in this project.** Note the near-collision that remains: `src/components/ui.tsx` is the real primitives file; there is no `components/ui/` directory.
+
+### Open items (dashboard)
+
+1. **Trace waterfall + evidence inspector** — the largest remaining fabricated surface. Spec is ready in `TRACE_WATERFALL_REBUILD_PROMPT.md`, including the real `SpanDetail`/`TraceListItem` shapes and the honest-empty-state rule (`SpanDetail` has **no raw input/output text field** — the backend defaults to `CAPTURE_INPUTS=false`, so the fake "Zhang et al." claim text has no real equivalent for many spans; render an honest unavailable state rather than inventing placeholder text). `api.getTrace(traceId)` exists and works but is called by nothing.
+2. **Replay Debugger** — `SAMPLE_REPLAY_STEPS` is fully fabricated, no API call anywhere in the component.
+3. **`DatasetsView` stale count** — hardcodes `v1.0_curated: 1 case`; the real DB held **13** when last checked. It is now a live endpoint, so this should be wired rather than hardcoded.
+4. **`impeccable` design-hook findings, unresolved:**
+   - `gradient-text` on `.wordmark-gradient` — **left standing deliberately**; user explicitly asked for a Stripe-style gradient and it is scoped to the logotype only (not headings or metrics, which is the rule's actual concern). The `ignore-value` command to silence it was blocked by a permission prompt, so it will keep re-flagging on every CSS edit until the user allows it.
+   - `overused-font` on **Space Grotesk** — a fair hit; it is genuinely one of the faces AI-generated UIs converge on. Changing it is a brand decision the user hasn't made. Note the externally-generated master prompt wanted to replace it with Inter/Geist, which are on the *same* overused list.
+   - `codex-grid-background` on `.deck-field` — assessed as a **real problem, fix not yet applied** (user redirected mid-edit). It is a page-wide decorative hairline grid (46px cells) — exactly the generated-UI signature the rule describes. The `.waveform-panel` has its own grid which *is* justified (an actual measurement surface). Removing `.deck-field` while keeping the waveform's grid is consistent with the design system's own "spend the visual budget in one place" rule. `.deck-wash` (a single soft cyan radial) was not flagged and can stay.
+
+### Repo state
+
+Clean working tree. `main` at `e7d174b`. **2 commits unpushed** (`5313231`, `e7d174b`) — push when ready. Dashboard typecheck clean (`npx tsc --noEmit`), verified rendering against the live backend with 48 real agents.
 
 ## 0-B. This update's work (2026-08-24, continued session)
 
