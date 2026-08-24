@@ -87,7 +87,7 @@ These are **not bugs.** The values are true measured results committed in the re
 
 - **Tailwind v3 syntax only.** A prior `shadcn init` injected v4 CSS and broke the build entirely; it was reverted and its leftover files (`components.json`, `src/lib/utils.ts`, `src/components/ui/button.tsx`) have now been deleted. There is no `components/ui/` directory — `src/components/ui.tsx` is the real primitives file.
 - **Disjoint colour law.** Cyan = identity/interaction only. `state-*` = risk only, always via `riskTone()`. Cyan must never mean "healthy".
-- **Fonts stay** Space Grotesk (sans) + JetBrains Mono (all numerics, with `.tnum`).
+- **Fonts** are IBM Plex Sans (sans) + JetBrains Mono (all numerics, with `.tnum`). Declared in `tailwind.config.js`, `index.css`, and `index.html` — all three must agree.
 - **Motion:** honour `prefers-reduced-motion` and `document.visibilityState === 'hidden'` (the rAF-freeze fix in `useCountUp` must survive any rework).
 - **Anime.js is not installed** — adding it is a real dependency decision, not a silent import.
 - Keep the build green between phases. Do not batch a rewrite across all eight pages at once.

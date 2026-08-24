@@ -86,7 +86,7 @@ export function riskTone(score: number): RiskTone {
 
 ### Typography
 
-- **UI / headings:** Space Grotesk (`font-sans`) — already in use, keep it. If a more distinctive display cut is introduced for hero moments (e.g. the Overview page's waveform header), it must be used with restraint — one weight, one place — not swapped in globally.
+- **UI / headings:** IBM Plex Sans (`font-sans`). Chosen deliberately: it was drawn for IBM's technical products, which suits the instrument-panel concept, and it sits outside the small set of faces (Inter, Geist, Space Grotesk, Plus Jakarta Sans…) that AI-generated interfaces keep converging on. It replaced Space Grotesk for exactly that reason. If a more distinctive display cut is ever introduced for hero moments, it must be used with restraint — one weight, one place — not swapped in globally.
 - **Data / numeric readouts:** JetBrains Mono (`font-mono`), always with `.tnum` (`font-variant-numeric: tabular-nums`) so live-updating numbers never jitter in width. This is the instrument-panel voice — every risk score, every latency figure, every count uses it. Never render a number in the sans face.
 - **Scale:** hero stat numbers are `text-4xl font-bold tracking-tight` (recently pushed up from `text-2xl font-semibold` specifically to read with more confidence at a glance — keep this weight, don't regress it). Section titles `text-sm font-semibold tracking-tight`. Eyebrows/labels `text-2xs font-mono uppercase tracking-[0.14em]` on `--text-faint`.
 - **Case:** uppercase reserved for eyebrows, badges, and status labels only (mirroring the existing `Eyebrow`/`StatusBadge` components) — never uppercase a heading or body sentence.

@@ -22,7 +22,7 @@ Explicitly avoid the generic "AI-generated dashboard" look: near-black backgroun
 
 The reasoning: in a monitoring tool, severity must be readable from color alone, at a glance, without reading the number. Mixing brand color into risk states (e.g. making a healthy state cyan sometimes and green other times) breaks that. Keep this split absolute.
 
-**Typography base**: JetBrains Mono for all data/numeric readouts (tabular numerals) — this is a legitimate, intentional choice for an instrument-panel feel, keep it for anything that is a live number. Space Grotesk is currently used for UI/headings — open to replacing this specifically with something more distinctive (see below), but the mono-for-data / sans-for-chrome split itself should stay.
+**Typography base**: JetBrains Mono for all data/numeric readouts (tabular numerals) — this is a legitimate, intentional choice for an instrument-panel feel, keep it for anything that is a live number. IBM Plex Sans is used for UI/headings (it replaced Space Grotesk, which a design-lint check flagged as one of the faces AI-generated UIs converge on — note Inter and Geist are on that same list, so they are not upgrades). The mono-for-data / sans-for-chrome split itself should stay.
 
 ## What to change
 
