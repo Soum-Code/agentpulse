@@ -31,12 +31,12 @@ This mirrors the backend's real `EvaluationPipeline._classify_risk`. Do not intr
 
 ## OVERRIDE 2 — §19 Typography: the real stack is already chosen
 
-The master prompt §19 proposes *"Inter, Geist, SF Pro style fallback."* **Do not swap the fonts.** The real, already-loaded stack is:
+The master prompt §19 proposes *"Inter, Geist, SF Pro style fallback."* **Do not use those.** Inter and Geist are on the same overused-face list the prompt is trying to avoid. The real, already-loaded stack is:
 
-- **`font-sans` — Space Grotesk** (UI, headings, labels)
+- **`font-sans` — IBM Plex Sans** (UI, headings, labels)
 - **`font-mono` — JetBrains Mono** (all numeric/data readouts)
 
-Both are declared in `dashboard/tailwind.config.js` and actually loaded via a Google Fonts `<link>` in `dashboard/index.html`. Swapping them means editing both files and losing a deliberate identity choice.
+Both are declared in `dashboard/tailwind.config.js`, set on `body` in `dashboard/src/index.css`, and loaded via a Google Fonts `<link>` in `dashboard/index.html` — a swap means editing all three. IBM Plex Sans was picked deliberately (drawn for IBM's technical products, fits the instrument-panel concept, and is outside the saturated set), replacing Space Grotesk after a design-lint check flagged that face as overused.
 
 The master prompt's §19 rule *"do not use monospace for the entire interface"* is correct and already how the codebase works: mono is for **every live number** (risk scores, latencies, counts, IDs, timestamps) always paired with `.tnum` (`font-variant-numeric: tabular-nums`) so live-updating values never jitter in width. Sans is for everything else. Keep that split exactly.
 
