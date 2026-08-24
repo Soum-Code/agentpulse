@@ -60,6 +60,7 @@ class LocalGGUFAdapter(LLMAdapter):
         n_threads: Optional[int] = None,
         n_gpu_layers: int = 0,
         enable_thinking: bool = False,
+        qwen_think_suffix: bool = False,
         load_immediately: bool = False,
     ):
         super().__init__(
@@ -81,6 +82,11 @@ class LocalGGUFAdapter(LLMAdapter):
         # offload every layer to GPU, or a positive count for partial offload.
         self.n_gpu_layers = n_gpu_layers
         self.enable_thinking = enable_thinking
+        # /no_think is Qwen3-specific soft-switch syntax -- appending it to a
+        # non-Qwen model's prompt would just be irrelevant noise the model
+        # has to ignore, not a real "disable thinking" instruction. Off by
+        # default; Qwen3GGUFAdapter turns it on.
+        self.qwen_think_suffix = qwen_think_suffix
         self._llm = None
         self._is_loaded = False
 
@@ -137,8 +143,10 @@ class LocalGGUFAdapter(LLMAdapter):
         # <think>...</think> preamble before the answer. For benchmarking that
         # would spend the entire token budget on reasoning the strategy layer
         # never sees, so it's disabled unless explicitly requested. `/no_think`
-        # is Qwen3's documented soft switch for this.
-        user_content = prompt if self.enable_thinking else f"{prompt} /no_think"
+        # is Qwen3's documented soft switch for this -- only applied for
+        # adapters that actually opt into qwen_think_suffix.
+        add_suffix = self.qwen_think_suffix and not self.enable_thinking
+        user_content = f"{prompt} /no_think" if add_suffix else prompt
 
         # create_chat_completion (not the raw completion API) applies the
         # GGUF's embedded chat template, so an instruct model is prompted the

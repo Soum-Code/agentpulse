@@ -11,7 +11,7 @@ from llm_adapters.base import GenerationResult, LLMAdapter
 from llm_adapters.local_hf import LocalHFAdapter
 from llm_adapters.local_gguf import LocalGGUFAdapter
 from llm_adapters.qwen import FastDevQwenAdapter, Qwen3GGUFAdapter, QwenAdapter
-from llm_adapters.llama import LlamaAdapter
+from llm_adapters.llama import LlamaAdapter, LlamaGGUFAdapter
 from llm_adapters.mistral import MistralAdapter
 from llm_adapters.gemma import GemmaAdapter
 
@@ -32,6 +32,8 @@ def get_llm_adapter(
         return Qwen3GGUFAdapter(device=device, quantization=quantization, load_immediately=load_immediately, **kwargs)
     elif "qwen" in m_lower:
         return QwenAdapter(device=device, quantization=quantization, load_immediately=load_immediately, **kwargs)
+    elif "llama3-gguf" in m_lower or "llama-3.1-gguf" in m_lower:
+        return LlamaGGUFAdapter(device=device, quantization=quantization, load_immediately=load_immediately, **kwargs)
     elif "llama" in m_lower:
         return LlamaAdapter(device=device, quantization=quantization, load_immediately=load_immediately, **kwargs)
     elif "mistral" in m_lower:
@@ -51,6 +53,7 @@ __all__ = [
     "FastDevQwenAdapter",
     "Qwen3GGUFAdapter",
     "LlamaAdapter",
+    "LlamaGGUFAdapter",
     "MistralAdapter",
     "GemmaAdapter",
     "get_llm_adapter",
