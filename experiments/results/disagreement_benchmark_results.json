@@ -1,0 +1,1237 @@
+{
+  "timestamp": "2026-08-26 16:51:57 UTC",
+  "engine_state": "headline configuration = nway_gated (current engine default)",
+  "dataset": "v1.0_multiagent (constructed benchmark, not production-collected)",
+  "total_cases": 22,
+  "threshold": 0.6,
+  "relevance_floor": 0.4,
+  "evaluation_models_confirmed_loaded": {
+    "nli_model": true,
+    "nli_tokenizer": true,
+    "embedding_model": true
+  },
+  "configuration_comparison": {
+    "baseline": {
+      "precision": 0.769,
+      "recall": 0.833,
+      "f1_score": 0.8,
+      "fpr": 0.3,
+      "fnr": 0.167,
+      "tp": 10,
+      "fp": 3,
+      "fn": 2,
+      "tn": 7,
+      "mean_latency_ms": 264.46,
+      "median_latency_ms": 210.9,
+      "total_pairs_compared": 29,
+      "total_pairs_gated": 0
+    },
+    "gate_only": {
+      "precision": 0.889,
+      "recall": 0.667,
+      "f1_score": 0.762,
+      "fpr": 0.1,
+      "fnr": 0.333,
+      "tp": 8,
+      "fp": 1,
+      "fn": 4,
+      "tn": 9,
+      "mean_latency_ms": 262.61,
+      "median_latency_ms": 209.73,
+      "total_pairs_compared": 29,
+      "total_pairs_gated": 9
+    },
+    "nway_gated": {
+      "precision": 0.923,
+      "recall": 1.0,
+      "f1_score": 0.96,
+      "fpr": 0.1,
+      "fnr": 0.0,
+      "tp": 12,
+      "fp": 1,
+      "fn": 0,
+      "tn": 9,
+      "mean_latency_ms": 341.47,
+      "median_latency_ms": 201.92,
+      "total_pairs_compared": 38,
+      "total_pairs_gated": 12
+    }
+  },
+  "headline_current_wiring": {
+    "precision": 0.923,
+    "recall": 1.0,
+    "f1_score": 0.96,
+    "fpr": 0.1,
+    "fnr": 0.0,
+    "tp": 12,
+    "fp": 1,
+    "fn": 0,
+    "tn": 9
+  },
+  "latency_ms_per_case": {
+    "mean": 341.47,
+    "median": 201.92,
+    "min": 176.1,
+    "max": 1240.54
+  },
+  "total_wall_time_seconds": 23.9,
+  "diagnostics": {
+    "labeled_pairs_scored": 12,
+    "forward_detected": 12,
+    "reverse_detected": 11,
+    "detected_only_in_reverse": 0,
+    "mean_directional_gap": 0.0804,
+    "architectural_miss_case_ids": [],
+    "directional_miss_case_ids": [],
+    "model_miss_case_ids": [],
+    "wrong_pair_true_positives": [],
+    "strict_tp": 12,
+    "strict_fn": 0,
+    "strict_recall": 1.0
+  },
+  "results": [
+    {
+      "case_id": "ma_01",
+      "category": "Adjacent contradiction",
+      "domain": "research",
+      "n_agents": 2,
+      "adjacent": true,
+      "ground_truth_disagreement": true,
+      "current_wiring": {
+        "pairs_compared": [
+          {
+            "pair": [
+              "retriever",
+              "analyst"
+            ],
+            "score": 0.9995,
+            "similarity": 0.91,
+            "gated": false,
+            "flagged": true
+          }
+        ],
+        "n_pairs_compared": 1,
+        "n_gated": 0,
+        "max_disagreement_score": 0.9995,
+        "flagged": true
+      },
+      "labeled_pair_diagnostic": {
+        "pair": [
+          "retriever",
+          "analyst"
+        ],
+        "forward_score": 0.9995,
+        "forward_flagged": true,
+        "reverse_score": 0.9958,
+        "reverse_flagged": true,
+        "directional_gap": 0.0037
+      },
+      "predicted_disagreement": true,
+      "correct": true,
+      "miss_type": null,
+      "attribution": "correct_pair",
+      "all_configurations": {
+        "baseline": {
+          "flagged": true,
+          "max_disagreement_score": 0.9995,
+          "n_pairs_compared": 1,
+          "n_gated": 0
+        },
+        "gate_only": {
+          "flagged": true,
+          "max_disagreement_score": 0.9995,
+          "n_pairs_compared": 1,
+          "n_gated": 0
+        },
+        "nway_gated": {
+          "flagged": true,
+          "max_disagreement_score": 0.9995,
+          "n_pairs_compared": 1,
+          "n_gated": 0
+        }
+      }
+    },
+    {
+      "case_id": "ma_02",
+      "category": "Adjacent contradiction",
+      "domain": "research",
+      "n_agents": 2,
+      "adjacent": true,
+      "ground_truth_disagreement": true,
+      "current_wiring": {
+        "pairs_compared": [
+          {
+            "pair": [
+              "verifier",
+              "writer"
+            ],
+            "score": 0.999,
+            "similarity": 0.845,
+            "gated": false,
+            "flagged": true
+          }
+        ],
+        "n_pairs_compared": 1,
+        "n_gated": 0,
+        "max_disagreement_score": 0.999,
+        "flagged": true
+      },
+      "labeled_pair_diagnostic": {
+        "pair": [
+          "verifier",
+          "writer"
+        ],
+        "forward_score": 0.999,
+        "forward_flagged": true,
+        "reverse_score": 0.9998,
+        "reverse_flagged": true,
+        "directional_gap": 0.0008
+      },
+      "predicted_disagreement": true,
+      "correct": true,
+      "miss_type": null,
+      "attribution": "correct_pair",
+      "all_configurations": {
+        "baseline": {
+          "flagged": true,
+          "max_disagreement_score": 0.999,
+          "n_pairs_compared": 1,
+          "n_gated": 0
+        },
+        "gate_only": {
+          "flagged": true,
+          "max_disagreement_score": 0.999,
+          "n_pairs_compared": 1,
+          "n_gated": 0
+        },
+        "nway_gated": {
+          "flagged": true,
+          "max_disagreement_score": 0.999,
+          "n_pairs_compared": 1,
+          "n_gated": 0
+        }
+      }
+    },
+    {
+      "case_id": "ma_03",
+      "category": "Adjacent contradiction",
+      "domain": "support",
+      "n_agents": 2,
+      "adjacent": true,
+      "ground_truth_disagreement": true,
+      "current_wiring": {
+        "pairs_compared": [
+          {
+            "pair": [
+              "diagnoser",
+              "responder"
+            ],
+            "score": 0.9998,
+            "similarity": 0.7337,
+            "gated": false,
+            "flagged": true
+          }
+        ],
+        "n_pairs_compared": 1,
+        "n_gated": 0,
+        "max_disagreement_score": 0.9998,
+        "flagged": true
+      },
+      "labeled_pair_diagnostic": {
+        "pair": [
+          "diagnoser",
+          "responder"
+        ],
+        "forward_score": 0.9998,
+        "forward_flagged": true,
+        "reverse_score": 0.9998,
+        "reverse_flagged": true,
+        "directional_gap": 0.0
+      },
+      "predicted_disagreement": true,
+      "correct": true,
+      "miss_type": null,
+      "attribution": "correct_pair",
+      "all_configurations": {
+        "baseline": {
+          "flagged": true,
+          "max_disagreement_score": 0.9998,
+          "n_pairs_compared": 1,
+          "n_gated": 0
+        },
+        "gate_only": {
+          "flagged": true,
+          "max_disagreement_score": 0.9998,
+          "n_pairs_compared": 1,
+          "n_gated": 0
+        },
+        "nway_gated": {
+          "flagged": true,
+          "max_disagreement_score": 0.9998,
+          "n_pairs_compared": 1,
+          "n_gated": 0
+        }
+      }
+    },
+    {
+      "case_id": "ma_04",
+      "category": "Non-adjacent contradiction",
+      "domain": "analytics",
+      "n_agents": 3,
+      "adjacent": false,
+      "ground_truth_disagreement": true,
+      "current_wiring": {
+        "pairs_compared": [
+          {
+            "pair": [
+              "loader",
+              "reporter"
+            ],
+            "score": 0.9994,
+            "similarity": 0.9568,
+            "gated": false,
+            "flagged": true
+          }
+        ],
+        "n_pairs_compared": 3,
+        "n_gated": 2,
+        "max_disagreement_score": 0.9994,
+        "flagged": true
+      },
+      "labeled_pair_diagnostic": {
+        "pair": [
+          "loader",
+          "reporter"
+        ],
+        "forward_score": 0.9994,
+        "forward_flagged": true,
+        "reverse_score": 0.9993,
+        "reverse_flagged": true,
+        "directional_gap": 0.0001
+      },
+      "predicted_disagreement": true,
+      "correct": true,
+      "miss_type": null,
+      "attribution": "correct_pair",
+      "all_configurations": {
+        "baseline": {
+          "flagged": true,
+          "max_disagreement_score": 0.9849,
+          "n_pairs_compared": 2,
+          "n_gated": 0
+        },
+        "gate_only": {
+          "flagged": false,
+          "max_disagreement_score": 0.0,
+          "n_pairs_compared": 2,
+          "n_gated": 2
+        },
+        "nway_gated": {
+          "flagged": true,
+          "max_disagreement_score": 0.9994,
+          "n_pairs_compared": 3,
+          "n_gated": 2
+        }
+      }
+    },
+    {
+      "case_id": "ma_05",
+      "category": "Non-adjacent contradiction",
+      "domain": "research",
+      "n_agents": 4,
+      "adjacent": false,
+      "ground_truth_disagreement": true,
+      "current_wiring": {
+        "pairs_compared": [
+          {
+            "pair": [
+              "planner",
+              "writer"
+            ],
+            "score": 0.9999,
+            "similarity": 0.8577,
+            "gated": false,
+            "flagged": true
+          }
+        ],
+        "n_pairs_compared": 6,
+        "n_gated": 5,
+        "max_disagreement_score": 0.9999,
+        "flagged": true
+      },
+      "labeled_pair_diagnostic": {
+        "pair": [
+          "planner",
+          "writer"
+        ],
+        "forward_score": 0.9999,
+        "forward_flagged": true,
+        "reverse_score": 0.9998,
+        "reverse_flagged": true,
+        "directional_gap": 0.0001
+      },
+      "predicted_disagreement": true,
+      "correct": true,
+      "miss_type": null,
+      "attribution": "correct_pair",
+      "all_configurations": {
+        "baseline": {
+          "flagged": true,
+          "max_disagreement_score": 0.9988,
+          "n_pairs_compared": 3,
+          "n_gated": 0
+        },
+        "gate_only": {
+          "flagged": false,
+          "max_disagreement_score": 0.0,
+          "n_pairs_compared": 3,
+          "n_gated": 3
+        },
+        "nway_gated": {
+          "flagged": true,
+          "max_disagreement_score": 0.9999,
+          "n_pairs_compared": 6,
+          "n_gated": 5
+        }
+      }
+    },
+    {
+      "case_id": "ma_06",
+      "category": "Non-adjacent contradiction",
+      "domain": "support",
+      "n_agents": 3,
+      "adjacent": false,
+      "ground_truth_disagreement": true,
+      "current_wiring": {
+        "pairs_compared": [
+          {
+            "pair": [
+              "triager",
+              "escalator"
+            ],
+            "score": 0.9999,
+            "similarity": 0.5506,
+            "gated": false,
+            "flagged": true
+          }
+        ],
+        "n_pairs_compared": 3,
+        "n_gated": 2,
+        "max_disagreement_score": 0.9999,
+        "flagged": true
+      },
+      "labeled_pair_diagnostic": {
+        "pair": [
+          "triager",
+          "escalator"
+        ],
+        "forward_score": 0.9999,
+        "forward_flagged": true,
+        "reverse_score": 0.9998,
+        "reverse_flagged": true,
+        "directional_gap": 0.0001
+      },
+      "predicted_disagreement": true,
+      "correct": true,
+      "miss_type": null,
+      "attribution": "correct_pair",
+      "all_configurations": {
+        "baseline": {
+          "flagged": false,
+          "max_disagreement_score": 0.0059,
+          "n_pairs_compared": 2,
+          "n_gated": 0
+        },
+        "gate_only": {
+          "flagged": false,
+          "max_disagreement_score": 0.0,
+          "n_pairs_compared": 2,
+          "n_gated": 2
+        },
+        "nway_gated": {
+          "flagged": true,
+          "max_disagreement_score": 0.9999,
+          "n_pairs_compared": 3,
+          "n_gated": 2
+        }
+      }
+    },
+    {
+      "case_id": "ma_07",
+      "category": "Non-adjacent contradiction",
+      "domain": "analytics",
+      "n_agents": 4,
+      "adjacent": false,
+      "ground_truth_disagreement": true,
+      "current_wiring": {
+        "pairs_compared": [
+          {
+            "pair": [
+              "collector",
+              "summarizer"
+            ],
+            "score": 0.9997,
+            "similarity": 0.8532,
+            "gated": false,
+            "flagged": true
+          }
+        ],
+        "n_pairs_compared": 6,
+        "n_gated": 1,
+        "max_disagreement_score": 0.9997,
+        "flagged": true
+      },
+      "labeled_pair_diagnostic": {
+        "pair": [
+          "collector",
+          "summarizer"
+        ],
+        "forward_score": 0.9997,
+        "forward_flagged": true,
+        "reverse_score": 0.9995,
+        "reverse_flagged": true,
+        "directional_gap": 0.0002
+      },
+      "predicted_disagreement": true,
+      "correct": true,
+      "miss_type": null,
+      "attribution": "correct_pair",
+      "all_configurations": {
+        "baseline": {
+          "flagged": false,
+          "max_disagreement_score": 0.0015,
+          "n_pairs_compared": 3,
+          "n_gated": 0
+        },
+        "gate_only": {
+          "flagged": false,
+          "max_disagreement_score": 0.0015,
+          "n_pairs_compared": 3,
+          "n_gated": 0
+        },
+        "nway_gated": {
+          "flagged": true,
+          "max_disagreement_score": 0.9997,
+          "n_pairs_compared": 6,
+          "n_gated": 1
+        }
+      }
+    },
+    {
+      "case_id": "ma_08",
+      "category": "Agreement (true negative)",
+      "domain": "research",
+      "n_agents": 2,
+      "adjacent": null,
+      "ground_truth_disagreement": false,
+      "current_wiring": {
+        "pairs_compared": [],
+        "n_pairs_compared": 1,
+        "n_gated": 0,
+        "max_disagreement_score": 0.0004,
+        "flagged": false
+      },
+      "labeled_pair_diagnostic": null,
+      "predicted_disagreement": false,
+      "correct": true,
+      "miss_type": null,
+      "attribution": null,
+      "all_configurations": {
+        "baseline": {
+          "flagged": false,
+          "max_disagreement_score": 0.0004,
+          "n_pairs_compared": 1,
+          "n_gated": 0
+        },
+        "gate_only": {
+          "flagged": false,
+          "max_disagreement_score": 0.0004,
+          "n_pairs_compared": 1,
+          "n_gated": 0
+        },
+        "nway_gated": {
+          "flagged": false,
+          "max_disagreement_score": 0.0004,
+          "n_pairs_compared": 1,
+          "n_gated": 0
+        }
+      }
+    },
+    {
+      "case_id": "ma_09",
+      "category": "Agreement (true negative)",
+      "domain": "research",
+      "n_agents": 2,
+      "adjacent": null,
+      "ground_truth_disagreement": false,
+      "current_wiring": {
+        "pairs_compared": [],
+        "n_pairs_compared": 1,
+        "n_gated": 0,
+        "max_disagreement_score": 0.0082,
+        "flagged": false
+      },
+      "labeled_pair_diagnostic": null,
+      "predicted_disagreement": false,
+      "correct": true,
+      "miss_type": null,
+      "attribution": null,
+      "all_configurations": {
+        "baseline": {
+          "flagged": false,
+          "max_disagreement_score": 0.0082,
+          "n_pairs_compared": 1,
+          "n_gated": 0
+        },
+        "gate_only": {
+          "flagged": false,
+          "max_disagreement_score": 0.0082,
+          "n_pairs_compared": 1,
+          "n_gated": 0
+        },
+        "nway_gated": {
+          "flagged": false,
+          "max_disagreement_score": 0.0082,
+          "n_pairs_compared": 1,
+          "n_gated": 0
+        }
+      }
+    },
+    {
+      "case_id": "ma_10",
+      "category": "Agreement (true negative)",
+      "domain": "support",
+      "n_agents": 2,
+      "adjacent": null,
+      "ground_truth_disagreement": false,
+      "current_wiring": {
+        "pairs_compared": [],
+        "n_pairs_compared": 1,
+        "n_gated": 0,
+        "max_disagreement_score": 0.0013,
+        "flagged": false
+      },
+      "labeled_pair_diagnostic": null,
+      "predicted_disagreement": false,
+      "correct": true,
+      "miss_type": null,
+      "attribution": null,
+      "all_configurations": {
+        "baseline": {
+          "flagged": false,
+          "max_disagreement_score": 0.0013,
+          "n_pairs_compared": 1,
+          "n_gated": 0
+        },
+        "gate_only": {
+          "flagged": false,
+          "max_disagreement_score": 0.0013,
+          "n_pairs_compared": 1,
+          "n_gated": 0
+        },
+        "nway_gated": {
+          "flagged": false,
+          "max_disagreement_score": 0.0013,
+          "n_pairs_compared": 1,
+          "n_gated": 0
+        }
+      }
+    },
+    {
+      "case_id": "ma_11",
+      "category": "Agreement (true negative)",
+      "domain": "analytics",
+      "n_agents": 3,
+      "adjacent": null,
+      "ground_truth_disagreement": false,
+      "current_wiring": {
+        "pairs_compared": [],
+        "n_pairs_compared": 3,
+        "n_gated": 0,
+        "max_disagreement_score": 0.0043,
+        "flagged": false
+      },
+      "labeled_pair_diagnostic": null,
+      "predicted_disagreement": false,
+      "correct": true,
+      "miss_type": null,
+      "attribution": null,
+      "all_configurations": {
+        "baseline": {
+          "flagged": false,
+          "max_disagreement_score": 0.0043,
+          "n_pairs_compared": 2,
+          "n_gated": 0
+        },
+        "gate_only": {
+          "flagged": false,
+          "max_disagreement_score": 0.0043,
+          "n_pairs_compared": 2,
+          "n_gated": 0
+        },
+        "nway_gated": {
+          "flagged": false,
+          "max_disagreement_score": 0.0043,
+          "n_pairs_compared": 3,
+          "n_gated": 0
+        }
+      }
+    },
+    {
+      "case_id": "ma_12",
+      "category": "Paraphrased agreement (over-trigger control)",
+      "domain": "research",
+      "n_agents": 2,
+      "adjacent": null,
+      "ground_truth_disagreement": false,
+      "current_wiring": {
+        "pairs_compared": [],
+        "n_pairs_compared": 1,
+        "n_gated": 0,
+        "max_disagreement_score": 0.0048,
+        "flagged": false
+      },
+      "labeled_pair_diagnostic": null,
+      "predicted_disagreement": false,
+      "correct": true,
+      "miss_type": null,
+      "attribution": null,
+      "all_configurations": {
+        "baseline": {
+          "flagged": false,
+          "max_disagreement_score": 0.0048,
+          "n_pairs_compared": 1,
+          "n_gated": 0
+        },
+        "gate_only": {
+          "flagged": false,
+          "max_disagreement_score": 0.0048,
+          "n_pairs_compared": 1,
+          "n_gated": 0
+        },
+        "nway_gated": {
+          "flagged": false,
+          "max_disagreement_score": 0.0048,
+          "n_pairs_compared": 1,
+          "n_gated": 0
+        }
+      }
+    },
+    {
+      "case_id": "ma_13",
+      "category": "Paraphrased agreement (over-trigger control)",
+      "domain": "support",
+      "n_agents": 2,
+      "adjacent": null,
+      "ground_truth_disagreement": false,
+      "current_wiring": {
+        "pairs_compared": [
+          {
+            "pair": [
+              "triager",
+              "investigator"
+            ],
+            "score": 0.984,
+            "similarity": 0.6471,
+            "gated": false,
+            "flagged": true
+          }
+        ],
+        "n_pairs_compared": 1,
+        "n_gated": 0,
+        "max_disagreement_score": 0.984,
+        "flagged": true
+      },
+      "labeled_pair_diagnostic": null,
+      "predicted_disagreement": true,
+      "correct": false,
+      "miss_type": null,
+      "attribution": null,
+      "all_configurations": {
+        "baseline": {
+          "flagged": true,
+          "max_disagreement_score": 0.984,
+          "n_pairs_compared": 1,
+          "n_gated": 0
+        },
+        "gate_only": {
+          "flagged": true,
+          "max_disagreement_score": 0.984,
+          "n_pairs_compared": 1,
+          "n_gated": 0
+        },
+        "nway_gated": {
+          "flagged": true,
+          "max_disagreement_score": 0.984,
+          "n_pairs_compared": 1,
+          "n_gated": 0
+        }
+      }
+    },
+    {
+      "case_id": "ma_14",
+      "category": "Paraphrased agreement (over-trigger control)",
+      "domain": "analytics",
+      "n_agents": 2,
+      "adjacent": null,
+      "ground_truth_disagreement": false,
+      "current_wiring": {
+        "pairs_compared": [],
+        "n_pairs_compared": 1,
+        "n_gated": 0,
+        "max_disagreement_score": 0.0001,
+        "flagged": false
+      },
+      "labeled_pair_diagnostic": null,
+      "predicted_disagreement": false,
+      "correct": true,
+      "miss_type": null,
+      "attribution": null,
+      "all_configurations": {
+        "baseline": {
+          "flagged": false,
+          "max_disagreement_score": 0.0001,
+          "n_pairs_compared": 1,
+          "n_gated": 0
+        },
+        "gate_only": {
+          "flagged": false,
+          "max_disagreement_score": 0.0001,
+          "n_pairs_compared": 1,
+          "n_gated": 0
+        },
+        "nway_gated": {
+          "flagged": false,
+          "max_disagreement_score": 0.0001,
+          "n_pairs_compared": 1,
+          "n_gated": 0
+        }
+      }
+    },
+    {
+      "case_id": "ma_15",
+      "category": "Different topic, not contradiction (over-trigger control)",
+      "domain": "research",
+      "n_agents": 2,
+      "adjacent": null,
+      "ground_truth_disagreement": false,
+      "current_wiring": {
+        "pairs_compared": [],
+        "n_pairs_compared": 1,
+        "n_gated": 1,
+        "max_disagreement_score": 0.0,
+        "flagged": false
+      },
+      "labeled_pair_diagnostic": null,
+      "predicted_disagreement": false,
+      "correct": true,
+      "miss_type": null,
+      "attribution": null,
+      "all_configurations": {
+        "baseline": {
+          "flagged": true,
+          "max_disagreement_score": 0.999,
+          "n_pairs_compared": 1,
+          "n_gated": 0
+        },
+        "gate_only": {
+          "flagged": false,
+          "max_disagreement_score": 0.0,
+          "n_pairs_compared": 1,
+          "n_gated": 1
+        },
+        "nway_gated": {
+          "flagged": false,
+          "max_disagreement_score": 0.0,
+          "n_pairs_compared": 1,
+          "n_gated": 1
+        }
+      }
+    },
+    {
+      "case_id": "ma_16",
+      "category": "Different topic, not contradiction (over-trigger control)",
+      "domain": "support",
+      "n_agents": 2,
+      "adjacent": null,
+      "ground_truth_disagreement": false,
+      "current_wiring": {
+        "pairs_compared": [],
+        "n_pairs_compared": 1,
+        "n_gated": 1,
+        "max_disagreement_score": 0.0,
+        "flagged": false
+      },
+      "labeled_pair_diagnostic": null,
+      "predicted_disagreement": false,
+      "correct": true,
+      "miss_type": null,
+      "attribution": null,
+      "all_configurations": {
+        "baseline": {
+          "flagged": true,
+          "max_disagreement_score": 0.9749,
+          "n_pairs_compared": 1,
+          "n_gated": 0
+        },
+        "gate_only": {
+          "flagged": false,
+          "max_disagreement_score": 0.0,
+          "n_pairs_compared": 1,
+          "n_gated": 1
+        },
+        "nway_gated": {
+          "flagged": false,
+          "max_disagreement_score": 0.0,
+          "n_pairs_compared": 1,
+          "n_gated": 1
+        }
+      }
+    },
+    {
+      "case_id": "ma_17",
+      "category": "Partial refinement, not contradiction (over-trigger control)",
+      "domain": "analytics",
+      "n_agents": 2,
+      "adjacent": null,
+      "ground_truth_disagreement": false,
+      "current_wiring": {
+        "pairs_compared": [],
+        "n_pairs_compared": 1,
+        "n_gated": 0,
+        "max_disagreement_score": 0.0489,
+        "flagged": false
+      },
+      "labeled_pair_diagnostic": null,
+      "predicted_disagreement": false,
+      "correct": true,
+      "miss_type": null,
+      "attribution": null,
+      "all_configurations": {
+        "baseline": {
+          "flagged": false,
+          "max_disagreement_score": 0.0489,
+          "n_pairs_compared": 1,
+          "n_gated": 0
+        },
+        "gate_only": {
+          "flagged": false,
+          "max_disagreement_score": 0.0489,
+          "n_pairs_compared": 1,
+          "n_gated": 0
+        },
+        "nway_gated": {
+          "flagged": false,
+          "max_disagreement_score": 0.0489,
+          "n_pairs_compared": 1,
+          "n_gated": 0
+        }
+      }
+    },
+    {
+      "case_id": "ma_18",
+      "category": "Negation contradiction",
+      "domain": "research",
+      "n_agents": 2,
+      "adjacent": true,
+      "ground_truth_disagreement": true,
+      "current_wiring": {
+        "pairs_compared": [
+          {
+            "pair": [
+              "verifier",
+              "writer"
+            ],
+            "score": 0.9999,
+            "similarity": 0.6716,
+            "gated": false,
+            "flagged": true
+          }
+        ],
+        "n_pairs_compared": 1,
+        "n_gated": 0,
+        "max_disagreement_score": 0.9999,
+        "flagged": true
+      },
+      "labeled_pair_diagnostic": {
+        "pair": [
+          "verifier",
+          "writer"
+        ],
+        "forward_score": 0.9999,
+        "forward_flagged": true,
+        "reverse_score": 0.9995,
+        "reverse_flagged": true,
+        "directional_gap": 0.0004
+      },
+      "predicted_disagreement": true,
+      "correct": true,
+      "miss_type": null,
+      "attribution": "correct_pair",
+      "all_configurations": {
+        "baseline": {
+          "flagged": true,
+          "max_disagreement_score": 0.9999,
+          "n_pairs_compared": 1,
+          "n_gated": 0
+        },
+        "gate_only": {
+          "flagged": true,
+          "max_disagreement_score": 0.9999,
+          "n_pairs_compared": 1,
+          "n_gated": 0
+        },
+        "nway_gated": {
+          "flagged": true,
+          "max_disagreement_score": 0.9999,
+          "n_pairs_compared": 1,
+          "n_gated": 0
+        }
+      }
+    },
+    {
+      "case_id": "ma_19",
+      "category": "Negation contradiction",
+      "domain": "support",
+      "n_agents": 2,
+      "adjacent": true,
+      "ground_truth_disagreement": true,
+      "current_wiring": {
+        "pairs_compared": [
+          {
+            "pair": [
+              "diagnoser",
+              "responder"
+            ],
+            "score": 0.9998,
+            "similarity": 0.6607,
+            "gated": false,
+            "flagged": true
+          }
+        ],
+        "n_pairs_compared": 1,
+        "n_gated": 0,
+        "max_disagreement_score": 0.9998,
+        "flagged": true
+      },
+      "labeled_pair_diagnostic": {
+        "pair": [
+          "diagnoser",
+          "responder"
+        ],
+        "forward_score": 0.9998,
+        "forward_flagged": true,
+        "reverse_score": 0.0877,
+        "reverse_flagged": false,
+        "directional_gap": 0.9121
+      },
+      "predicted_disagreement": true,
+      "correct": true,
+      "miss_type": null,
+      "attribution": "correct_pair",
+      "all_configurations": {
+        "baseline": {
+          "flagged": true,
+          "max_disagreement_score": 0.9998,
+          "n_pairs_compared": 1,
+          "n_gated": 0
+        },
+        "gate_only": {
+          "flagged": true,
+          "max_disagreement_score": 0.9998,
+          "n_pairs_compared": 1,
+          "n_gated": 0
+        },
+        "nway_gated": {
+          "flagged": true,
+          "max_disagreement_score": 0.9998,
+          "n_pairs_compared": 1,
+          "n_gated": 0
+        }
+      }
+    },
+    {
+      "case_id": "ma_20",
+      "category": "Known limitation (untuned implicit contradiction)",
+      "domain": "research",
+      "n_agents": 2,
+      "adjacent": true,
+      "ground_truth_disagreement": true,
+      "current_wiring": {
+        "pairs_compared": [
+          {
+            "pair": [
+              "analyst",
+              "writer"
+            ],
+            "score": 0.9697,
+            "similarity": 0.7402,
+            "gated": false,
+            "flagged": true
+          }
+        ],
+        "n_pairs_compared": 1,
+        "n_gated": 0,
+        "max_disagreement_score": 0.9697,
+        "flagged": true
+      },
+      "labeled_pair_diagnostic": {
+        "pair": [
+          "analyst",
+          "writer"
+        ],
+        "forward_score": 0.9697,
+        "forward_flagged": true,
+        "reverse_score": 0.9996,
+        "reverse_flagged": true,
+        "directional_gap": 0.0299
+      },
+      "predicted_disagreement": true,
+      "correct": true,
+      "miss_type": null,
+      "attribution": "correct_pair",
+      "all_configurations": {
+        "baseline": {
+          "flagged": true,
+          "max_disagreement_score": 0.9697,
+          "n_pairs_compared": 1,
+          "n_gated": 0
+        },
+        "gate_only": {
+          "flagged": true,
+          "max_disagreement_score": 0.9697,
+          "n_pairs_compared": 1,
+          "n_gated": 0
+        },
+        "nway_gated": {
+          "flagged": true,
+          "max_disagreement_score": 0.9697,
+          "n_pairs_compared": 1,
+          "n_gated": 0
+        }
+      }
+    },
+    {
+      "case_id": "ma_21",
+      "category": "Known limitation (untuned implicit contradiction)",
+      "domain": "analytics",
+      "n_agents": 2,
+      "adjacent": true,
+      "ground_truth_disagreement": true,
+      "current_wiring": {
+        "pairs_compared": [
+          {
+            "pair": [
+              "cleaner",
+              "reporter"
+            ],
+            "score": 0.9942,
+            "similarity": 0.4334,
+            "gated": false,
+            "flagged": true
+          }
+        ],
+        "n_pairs_compared": 1,
+        "n_gated": 0,
+        "max_disagreement_score": 0.9942,
+        "flagged": true
+      },
+      "labeled_pair_diagnostic": {
+        "pair": [
+          "cleaner",
+          "reporter"
+        ],
+        "forward_score": 0.9942,
+        "forward_flagged": true,
+        "reverse_score": 0.9994,
+        "reverse_flagged": true,
+        "directional_gap": 0.0052
+      },
+      "predicted_disagreement": true,
+      "correct": true,
+      "miss_type": null,
+      "attribution": "correct_pair",
+      "all_configurations": {
+        "baseline": {
+          "flagged": true,
+          "max_disagreement_score": 0.9942,
+          "n_pairs_compared": 1,
+          "n_gated": 0
+        },
+        "gate_only": {
+          "flagged": true,
+          "max_disagreement_score": 0.9942,
+          "n_pairs_compared": 1,
+          "n_gated": 0
+        },
+        "nway_gated": {
+          "flagged": true,
+          "max_disagreement_score": 0.9942,
+          "n_pairs_compared": 1,
+          "n_gated": 0
+        }
+      }
+    },
+    {
+      "case_id": "ma_22",
+      "category": "Known limitation (untuned implicit contradiction)",
+      "domain": "support",
+      "n_agents": 2,
+      "adjacent": true,
+      "ground_truth_disagreement": true,
+      "current_wiring": {
+        "pairs_compared": [
+          {
+            "pair": [
+              "triager",
+              "investigator"
+            ],
+            "score": 0.9872,
+            "similarity": 0.4567,
+            "gated": false,
+            "flagged": true
+          }
+        ],
+        "n_pairs_compared": 1,
+        "n_gated": 0,
+        "max_disagreement_score": 0.9872,
+        "flagged": true
+      },
+      "labeled_pair_diagnostic": {
+        "pair": [
+          "triager",
+          "investigator"
+        ],
+        "forward_score": 0.9872,
+        "forward_flagged": true,
+        "reverse_score": 0.9996,
+        "reverse_flagged": true,
+        "directional_gap": 0.0124
+      },
+      "predicted_disagreement": true,
+      "correct": true,
+      "miss_type": null,
+      "attribution": "correct_pair",
+      "all_configurations": {
+        "baseline": {
+          "flagged": true,
+          "max_disagreement_score": 0.9872,
+          "n_pairs_compared": 1,
+          "n_gated": 0
+        },
+        "gate_only": {
+          "flagged": true,
+          "max_disagreement_score": 0.9872,
+          "n_pairs_compared": 1,
+          "n_gated": 0
+        },
+        "nway_gated": {
+          "flagged": true,
+          "max_disagreement_score": 0.9872,
+          "n_pairs_compared": 1,
+          "n_gated": 0
+        }
+      }
+    }
+  ]
+}

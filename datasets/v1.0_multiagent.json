@@ -1,0 +1,302 @@
+{
+  "dataset_name": "agentpulse_multiagent_disagreement",
+  "dataset_version": "v1.0_multiagent",
+  "split": "multiagent",
+  "total_cases": 22,
+  "description": "Labeled multi-agent traces for benchmarking the inter-agent disagreement engine. Each case is a sequence of agent outputs within one trace. Unlike v1.0_dev/val/test (single-agent: evidence + one claim), these cases contain 2-5 agent outputs so cross-agent contradiction detection can actually be exercised — THRESHOLD_ANALYSIS.md notes ablation Config E was untestable on the single-agent splits. Cases are hand-constructed. 'contradicting_pair' names the two agents that genuinely conflict (null when the trace is internally consistent); 'adjacent' records whether that pair is consecutive in the trace, since the engine as wired in evaluator.py only ever compares an agent against its immediate upstream.",
+  "cases": [
+    {
+      "id": "ma_01",
+      "domain": "research",
+      "category": "Adjacent contradiction",
+      "agent_outputs": [
+        {"agent_id": "retriever", "output": "The retrieved paper reports that the model achieved 71.2% accuracy on the benchmark."},
+        {"agent_id": "analyst", "output": "The paper reports the model achieved 92.5% accuracy on the benchmark."}
+      ],
+      "contradicting_pair": ["retriever", "analyst"],
+      "adjacent": true,
+      "expected_disagreement": true,
+      "is_failure": true
+    },
+    {
+      "id": "ma_02",
+      "domain": "research",
+      "category": "Adjacent contradiction",
+      "agent_outputs": [
+        {"agent_id": "verifier", "output": "The claim about quadratic attention scaling could not be verified in any retrieved source."},
+        {"agent_id": "writer", "output": "The claim about quadratic attention scaling was verified against the retrieved sources."}
+      ],
+      "contradicting_pair": ["verifier", "writer"],
+      "adjacent": true,
+      "expected_disagreement": true,
+      "is_failure": true
+    },
+    {
+      "id": "ma_03",
+      "domain": "support",
+      "category": "Adjacent contradiction",
+      "agent_outputs": [
+        {"agent_id": "diagnoser", "output": "The customer's account is currently active and in good standing."},
+        {"agent_id": "responder", "output": "The customer's account has been suspended and is not in good standing."}
+      ],
+      "contradicting_pair": ["diagnoser", "responder"],
+      "adjacent": true,
+      "expected_disagreement": true,
+      "is_failure": true
+    },
+    {
+      "id": "ma_04",
+      "domain": "analytics",
+      "category": "Non-adjacent contradiction",
+      "agent_outputs": [
+        {"agent_id": "loader", "output": "The dataset contains 4,200 rows after deduplication."},
+        {"agent_id": "transformer", "output": "Applied normalization and type coercion to every column in the dataset."},
+        {"agent_id": "reporter", "output": "The dataset contains 15,000 rows after deduplication."}
+      ],
+      "contradicting_pair": ["loader", "reporter"],
+      "adjacent": false,
+      "expected_disagreement": true,
+      "is_failure": true
+    },
+    {
+      "id": "ma_05",
+      "domain": "research",
+      "category": "Non-adjacent contradiction",
+      "agent_outputs": [
+        {"agent_id": "planner", "output": "This query requires no external retrieval; it can be answered from the provided context alone."},
+        {"agent_id": "retriever", "output": "Retrieved three candidate documents from the vector index."},
+        {"agent_id": "analyst", "output": "Synthesized the retrieved evidence into a structured comparison."},
+        {"agent_id": "writer", "output": "This query required extensive external retrieval and could not be answered from the provided context."}
+      ],
+      "contradicting_pair": ["planner", "writer"],
+      "adjacent": false,
+      "expected_disagreement": true,
+      "is_failure": true
+    },
+    {
+      "id": "ma_06",
+      "domain": "support",
+      "category": "Non-adjacent contradiction",
+      "agent_outputs": [
+        {"agent_id": "triager", "output": "This incident is a low-severity cosmetic issue affecting no production users."},
+        {"agent_id": "investigator", "output": "Traced the fault to a rendering path in the settings panel."},
+        {"agent_id": "escalator", "output": "This incident is a high-severity outage affecting all production users."}
+      ],
+      "contradicting_pair": ["triager", "escalator"],
+      "adjacent": false,
+      "expected_disagreement": true,
+      "is_failure": true
+    },
+    {
+      "id": "ma_07",
+      "domain": "analytics",
+      "category": "Non-adjacent contradiction",
+      "agent_outputs": [
+        {"agent_id": "collector", "output": "Revenue decreased by 12% quarter over quarter."},
+        {"agent_id": "cleaner", "output": "Removed 14 malformed records from the revenue series."},
+        {"agent_id": "modeler", "output": "Fitted a seasonal trend model to the cleaned revenue series."},
+        {"agent_id": "summarizer", "output": "Revenue increased by 12% quarter over quarter."}
+      ],
+      "contradicting_pair": ["collector", "summarizer"],
+      "adjacent": false,
+      "expected_disagreement": true,
+      "is_failure": true
+    },
+    {
+      "id": "ma_08",
+      "domain": "research",
+      "category": "Agreement (true negative)",
+      "agent_outputs": [
+        {"agent_id": "retriever", "output": "The retrieved paper reports 71.2% accuracy on the benchmark."},
+        {"agent_id": "analyst", "output": "The paper reports 71.2% accuracy on the benchmark."}
+      ],
+      "contradicting_pair": null,
+      "adjacent": null,
+      "expected_disagreement": false,
+      "is_failure": false
+    },
+    {
+      "id": "ma_09",
+      "domain": "research",
+      "category": "Agreement (true negative)",
+      "agent_outputs": [
+        {"agent_id": "verifier", "output": "All three citations in the draft were located in the source index."},
+        {"agent_id": "writer", "output": "Every citation in the draft was found in the source index."}
+      ],
+      "contradicting_pair": null,
+      "adjacent": null,
+      "expected_disagreement": false,
+      "is_failure": false
+    },
+    {
+      "id": "ma_10",
+      "domain": "support",
+      "category": "Agreement (true negative)",
+      "agent_outputs": [
+        {"agent_id": "diagnoser", "output": "The root cause is an expired TLS certificate on the API gateway."},
+        {"agent_id": "responder", "output": "An expired TLS certificate on the API gateway caused the failure."}
+      ],
+      "contradicting_pair": null,
+      "adjacent": null,
+      "expected_disagreement": false,
+      "is_failure": false
+    },
+    {
+      "id": "ma_11",
+      "domain": "analytics",
+      "category": "Agreement (true negative)",
+      "agent_outputs": [
+        {"agent_id": "loader", "output": "Loaded 4,200 rows from the source table."},
+        {"agent_id": "transformer", "output": "Normalized all columns across the 4,200 loaded rows."},
+        {"agent_id": "reporter", "output": "The final report covers 4,200 rows."}
+      ],
+      "contradicting_pair": null,
+      "adjacent": null,
+      "expected_disagreement": false,
+      "is_failure": false
+    },
+    {
+      "id": "ma_12",
+      "domain": "research",
+      "category": "Paraphrased agreement (over-trigger control)",
+      "agent_outputs": [
+        {"agent_id": "analyst", "output": "Attention cost grows with the square of the sequence length."},
+        {"agent_id": "writer", "output": "The computational cost of attention scales quadratically as sequence length increases."}
+      ],
+      "contradicting_pair": null,
+      "adjacent": null,
+      "expected_disagreement": false,
+      "is_failure": false
+    },
+    {
+      "id": "ma_13",
+      "domain": "support",
+      "category": "Paraphrased agreement (over-trigger control)",
+      "agent_outputs": [
+        {"agent_id": "triager", "output": "The service went down shortly after the 14:00 deployment."},
+        {"agent_id": "investigator", "output": "The outage began just following the deploy that shipped at 2 PM."}
+      ],
+      "contradicting_pair": null,
+      "adjacent": null,
+      "expected_disagreement": false,
+      "is_failure": false
+    },
+    {
+      "id": "ma_14",
+      "domain": "analytics",
+      "category": "Paraphrased agreement (over-trigger control)",
+      "agent_outputs": [
+        {"agent_id": "modeler", "output": "The model's error rate fell substantially after retraining."},
+        {"agent_id": "summarizer", "output": "Retraining produced a large reduction in the model's error rate."}
+      ],
+      "contradicting_pair": null,
+      "adjacent": null,
+      "expected_disagreement": false,
+      "is_failure": false
+    },
+    {
+      "id": "ma_15",
+      "domain": "research",
+      "category": "Different topic, not contradiction (over-trigger control)",
+      "agent_outputs": [
+        {"agent_id": "planner", "output": "The query should be decomposed into three sub-questions covering architecture, training, and evaluation."},
+        {"agent_id": "retriever", "output": "Retrieved four documents from the research index, ranked by cosine similarity."}
+      ],
+      "contradicting_pair": null,
+      "adjacent": null,
+      "expected_disagreement": false,
+      "is_failure": false
+    },
+    {
+      "id": "ma_16",
+      "domain": "support",
+      "category": "Different topic, not contradiction (over-trigger control)",
+      "agent_outputs": [
+        {"agent_id": "triager", "output": "Assigned this ticket to the platform team queue."},
+        {"agent_id": "investigator", "output": "Collected the last 500 lines of the gateway error log for analysis."}
+      ],
+      "contradicting_pair": null,
+      "adjacent": null,
+      "expected_disagreement": false,
+      "is_failure": false
+    },
+    {
+      "id": "ma_17",
+      "domain": "analytics",
+      "category": "Partial refinement, not contradiction (over-trigger control)",
+      "agent_outputs": [
+        {"agent_id": "loader", "output": "The source table contains roughly four thousand rows."},
+        {"agent_id": "reporter", "output": "The source table contains 4,187 rows."}
+      ],
+      "contradicting_pair": null,
+      "adjacent": null,
+      "expected_disagreement": false,
+      "is_failure": false
+    },
+    {
+      "id": "ma_18",
+      "domain": "research",
+      "category": "Negation contradiction",
+      "agent_outputs": [
+        {"agent_id": "verifier", "output": "The dataset used in this study was publicly released."},
+        {"agent_id": "writer", "output": "The dataset used in this study was never publicly released."}
+      ],
+      "contradicting_pair": ["verifier", "writer"],
+      "adjacent": true,
+      "expected_disagreement": true,
+      "is_failure": true
+    },
+    {
+      "id": "ma_19",
+      "domain": "support",
+      "category": "Negation contradiction",
+      "agent_outputs": [
+        {"agent_id": "diagnoser", "output": "A rollback was performed before the incident was closed."},
+        {"agent_id": "responder", "output": "No rollback was performed at any point during this incident."}
+      ],
+      "contradicting_pair": ["diagnoser", "responder"],
+      "adjacent": true,
+      "expected_disagreement": true,
+      "is_failure": true
+    },
+    {
+      "id": "ma_20",
+      "domain": "research",
+      "category": "Known limitation (untuned implicit contradiction)",
+      "agent_outputs": [
+        {"agent_id": "analyst", "output": "Every experiment in the paper was run on a single GPU."},
+        {"agent_id": "writer", "output": "The paper's largest experiment required a 64-GPU cluster to complete."}
+      ],
+      "contradicting_pair": ["analyst", "writer"],
+      "adjacent": true,
+      "expected_disagreement": true,
+      "is_failure": true
+    },
+    {
+      "id": "ma_21",
+      "domain": "analytics",
+      "category": "Known limitation (untuned implicit contradiction)",
+      "agent_outputs": [
+        {"agent_id": "cleaner", "output": "No records were dropped during preprocessing."},
+        {"agent_id": "reporter", "output": "Preprocessing reduced the working set from 5,000 rows down to 4,150."}
+      ],
+      "contradicting_pair": ["cleaner", "reporter"],
+      "adjacent": true,
+      "expected_disagreement": true,
+      "is_failure": true
+    },
+    {
+      "id": "ma_22",
+      "domain": "support",
+      "category": "Known limitation (untuned implicit contradiction)",
+      "agent_outputs": [
+        {"agent_id": "triager", "output": "This is the first time this fault has ever been reported."},
+        {"agent_id": "investigator", "output": "Found four prior tickets describing this same fault over the last six months."}
+      ],
+      "contradicting_pair": ["triager", "investigator"],
+      "adjacent": true,
+      "expected_disagreement": true,
+      "is_failure": true
+    }
+  ]
+}
