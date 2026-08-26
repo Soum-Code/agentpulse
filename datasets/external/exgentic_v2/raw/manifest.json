@@ -1,0 +1,3511 @@
+{
+  "dataset_id": "Exgentic/agent-llm-traces-v2",
+  "revision": "4b8ad4ab198438e5a170f9171c19c6a2cf7c1814",
+  "retrieved_at": "2026-08-26T20:03:05Z",
+  "target_cell": {
+    "benchmark": "browsecompplus",
+    "harness": "smolagents_code"
+  },
+  "source_sessions": [
+    {
+      "session_id": "0af085f1f0e5_0071f0f7",
+      "run_id": "0af085f1f0e5",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_Kimi-K2.5/config.json",
+      "model": "Kimi-K2.5",
+      "task_prompt_sha256": "7879fd658f30b474e6d1590f37068f9cdc4ac39089c8ea4022090b8ded3a4a4b"
+    },
+    {
+      "session_id": "0af085f1f0e5_011592d0",
+      "run_id": "0af085f1f0e5",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_Kimi-K2.5/config.json",
+      "model": "Kimi-K2.5",
+      "task_prompt_sha256": "34406ee837154816570dd0bfd7a2385a9e647e85e8d7d9f81e5ce8858328f8fe"
+    },
+    {
+      "session_id": "0af085f1f0e5_01af815d",
+      "run_id": "0af085f1f0e5",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_Kimi-K2.5/config.json",
+      "model": "Kimi-K2.5",
+      "task_prompt_sha256": "bd03f0761086aef858d8fdfb9d639b25aca77a2d2153452a310b025e2aed5f5c"
+    },
+    {
+      "session_id": "0af085f1f0e5_02191898",
+      "run_id": "0af085f1f0e5",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_Kimi-K2.5/config.json",
+      "model": "Kimi-K2.5",
+      "task_prompt_sha256": "24282d5440f4e8119134398c0bc810dce58c88cc4f0f422ed1208f94d470007e"
+    },
+    {
+      "session_id": "0af085f1f0e5_07fc1166",
+      "run_id": "0af085f1f0e5",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_Kimi-K2.5/config.json",
+      "model": "Kimi-K2.5",
+      "task_prompt_sha256": "ecd619d172fb36d56f38dfd1d334d9cffb4572be167f3baca03eeaf8dbb52aca"
+    },
+    {
+      "session_id": "0af085f1f0e5_090db654",
+      "run_id": "0af085f1f0e5",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_Kimi-K2.5/config.json",
+      "model": "Kimi-K2.5",
+      "task_prompt_sha256": "3a9c7ee94a4296fb75c44f7cd8af2e7971f1c2848deb2ab9a0700d7fe11dcd09"
+    },
+    {
+      "session_id": "0af085f1f0e5_10145b69",
+      "run_id": "0af085f1f0e5",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_Kimi-K2.5/config.json",
+      "model": "Kimi-K2.5",
+      "task_prompt_sha256": "0085b980dcdd17410507efa784ffdc91a68da80689da8c7742244e8b1f8c8312"
+    },
+    {
+      "session_id": "0af085f1f0e5_1172b8f8",
+      "run_id": "0af085f1f0e5",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_Kimi-K2.5/config.json",
+      "model": "Kimi-K2.5",
+      "task_prompt_sha256": "6da6799d6761914fdb1280c8a4fb65bba509ee4d0aeea288e0369461f22169f5"
+    },
+    {
+      "session_id": "0af085f1f0e5_11adfba5",
+      "run_id": "0af085f1f0e5",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_Kimi-K2.5/config.json",
+      "model": "Kimi-K2.5",
+      "task_prompt_sha256": "3a3ac0ceaa3ac498b6d77c2c6e5f9b80d73bd5c35d7054a65a03e7e83b00b269"
+    },
+    {
+      "session_id": "0af085f1f0e5_12a12181",
+      "run_id": "0af085f1f0e5",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_Kimi-K2.5/config.json",
+      "model": "Kimi-K2.5",
+      "task_prompt_sha256": "f0d82de467ba18eca828d04232c0c2c2f3bf21853019ab7d10d5a4a465fc523f"
+    },
+    {
+      "session_id": "0af085f1f0e5_1370c306",
+      "run_id": "0af085f1f0e5",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_Kimi-K2.5/config.json",
+      "model": "Kimi-K2.5",
+      "task_prompt_sha256": "cc808812459e4c39eb7e6a72e11d2aaebe5e9f7d91fbfab14568cedaec5dde2a"
+    },
+    {
+      "session_id": "0af085f1f0e5_1581cb7c",
+      "run_id": "0af085f1f0e5",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_Kimi-K2.5/config.json",
+      "model": "Kimi-K2.5",
+      "task_prompt_sha256": "58e73c5ddd83008e2e0a7ef414ccf76e01034c56eae7adad98ebb65d4442b880"
+    },
+    {
+      "session_id": "0af085f1f0e5_15b2807d",
+      "run_id": "0af085f1f0e5",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_Kimi-K2.5/config.json",
+      "model": "Kimi-K2.5",
+      "task_prompt_sha256": "dda8c5374e38b26b1c0b328aefffd8eedcfe6e8c405e718c99b211f57ea46cfe"
+    },
+    {
+      "session_id": "0af085f1f0e5_16d55187",
+      "run_id": "0af085f1f0e5",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_Kimi-K2.5/config.json",
+      "model": "Kimi-K2.5",
+      "task_prompt_sha256": "f89775b8338d3581ade0225a3c745451ca0fe449582d0f064dee80f333c8b312"
+    },
+    {
+      "session_id": "0af085f1f0e5_18eba684",
+      "run_id": "0af085f1f0e5",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_Kimi-K2.5/config.json",
+      "model": "Kimi-K2.5",
+      "task_prompt_sha256": "a59c5bd45737bf17f88d7d42ca1829a045dcc875ae522f19c9de2cc76edfa800"
+    },
+    {
+      "session_id": "0af085f1f0e5_1a9e2df8",
+      "run_id": "0af085f1f0e5",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_Kimi-K2.5/config.json",
+      "model": "Kimi-K2.5",
+      "task_prompt_sha256": "1ea91d38d8e22f349cc0d058477559e4b6fa83d790d0075bfa797ac1764de686"
+    },
+    {
+      "session_id": "0af085f1f0e5_1b70f9a1",
+      "run_id": "0af085f1f0e5",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_Kimi-K2.5/config.json",
+      "model": "Kimi-K2.5",
+      "task_prompt_sha256": "bc757f7a852418a4af776e68e8fb81835aa83bfc2896a4e229e041234e23ef2e"
+    },
+    {
+      "session_id": "0af085f1f0e5_1d3757f4",
+      "run_id": "0af085f1f0e5",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_Kimi-K2.5/config.json",
+      "model": "Kimi-K2.5",
+      "task_prompt_sha256": "6ec01be9d8151e39358e6db2318393f6f252d89d9b171e6dcc890f3cf3ac83d7"
+    },
+    {
+      "session_id": "0af085f1f0e5_20eade78",
+      "run_id": "0af085f1f0e5",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_Kimi-K2.5/config.json",
+      "model": "Kimi-K2.5",
+      "task_prompt_sha256": "b210294f6de44805d31fcedc2af865840b3ff74b8c0e5c5e6b0a873357031601"
+    },
+    {
+      "session_id": "0af085f1f0e5_234852ee",
+      "run_id": "0af085f1f0e5",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_Kimi-K2.5/config.json",
+      "model": "Kimi-K2.5",
+      "task_prompt_sha256": "a3be17fd1eb893447465dcf0b2b968f7738b0ea2dac06ca78e1525b18dbd7679"
+    },
+    {
+      "session_id": "0af085f1f0e5_238fca3c",
+      "run_id": "0af085f1f0e5",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_Kimi-K2.5/config.json",
+      "model": "Kimi-K2.5",
+      "task_prompt_sha256": "993b118043b96936e6150e69ed0a8948b4099c6e1be2795637b4a5e0636bf4b2"
+    },
+    {
+      "session_id": "0af085f1f0e5_29637307",
+      "run_id": "0af085f1f0e5",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_Kimi-K2.5/config.json",
+      "model": "Kimi-K2.5",
+      "task_prompt_sha256": "f9670af4938fab5102635493d174d3a087febf0726cee3908b93e71b71ed497a"
+    },
+    {
+      "session_id": "0af085f1f0e5_2a4f9cf1",
+      "run_id": "0af085f1f0e5",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_Kimi-K2.5/config.json",
+      "model": "Kimi-K2.5",
+      "task_prompt_sha256": "116329147015e823aa32f138c84ce01ca609b048c76f6a29b06b16d584058831"
+    },
+    {
+      "session_id": "0af085f1f0e5_2c991254",
+      "run_id": "0af085f1f0e5",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_Kimi-K2.5/config.json",
+      "model": "Kimi-K2.5",
+      "task_prompt_sha256": "a224e171380df4683825668e07130b8c8b82031c5c6bfa88fc50b423b7808a7b"
+    },
+    {
+      "session_id": "0af085f1f0e5_2dc8d4d1",
+      "run_id": "0af085f1f0e5",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_Kimi-K2.5/config.json",
+      "model": "Kimi-K2.5",
+      "task_prompt_sha256": "5d90aba68232d7d7318eb6f22afd87865954d0091a7ac6bfe855182a1dbef937"
+    },
+    {
+      "session_id": "0af085f1f0e5_331a9ad7",
+      "run_id": "0af085f1f0e5",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_Kimi-K2.5/config.json",
+      "model": "Kimi-K2.5",
+      "task_prompt_sha256": "f379bd70b58b809a779bf0883a940b4446f5c9128a8feb326959c3c8de09ac66"
+    },
+    {
+      "session_id": "0af085f1f0e5_37bf1f4f",
+      "run_id": "0af085f1f0e5",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_Kimi-K2.5/config.json",
+      "model": "Kimi-K2.5",
+      "task_prompt_sha256": "e5ef8bc3616ecf0594b95d3464445106ff6a3fc7d3f5e63f92f227771ece755b"
+    },
+    {
+      "session_id": "0af085f1f0e5_380f8155",
+      "run_id": "0af085f1f0e5",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_Kimi-K2.5/config.json",
+      "model": "Kimi-K2.5",
+      "task_prompt_sha256": "4ed5678f4ef0ea013b27da8ec68264a205ac8bee255c805587565b4444d89f11"
+    },
+    {
+      "session_id": "0af085f1f0e5_389e89c6",
+      "run_id": "0af085f1f0e5",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_Kimi-K2.5/config.json",
+      "model": "Kimi-K2.5",
+      "task_prompt_sha256": "1b5534ef5fb22041f6d3a5f45dd9cb75c49d554502ef97402a3635d982e1b384"
+    },
+    {
+      "session_id": "0af085f1f0e5_3a71fc8f",
+      "run_id": "0af085f1f0e5",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_Kimi-K2.5/config.json",
+      "model": "Kimi-K2.5",
+      "task_prompt_sha256": "2fb73fbc2b96a4def37430ae0df5a094dd01787756cf0293faa1a020044df3fb"
+    },
+    {
+      "session_id": "0af085f1f0e5_3d128dc8",
+      "run_id": "0af085f1f0e5",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_Kimi-K2.5/config.json",
+      "model": "Kimi-K2.5",
+      "task_prompt_sha256": "b49f675be1d9848f15c6e4d23b1798b3e83539c25a8b4c537e42f52940e31dc2"
+    },
+    {
+      "session_id": "0af085f1f0e5_3f563fbb",
+      "run_id": "0af085f1f0e5",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_Kimi-K2.5/config.json",
+      "model": "Kimi-K2.5",
+      "task_prompt_sha256": "2d9af2859272ac2783c55c08f382b2173270ec19826772c219a44d3be4b44403"
+    },
+    {
+      "session_id": "0af085f1f0e5_3f9f9587",
+      "run_id": "0af085f1f0e5",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_Kimi-K2.5/config.json",
+      "model": "Kimi-K2.5",
+      "task_prompt_sha256": "79996d47c58fd63ee96ef7290cd72172de25d561567f9a6ffaf3ade76a1c6fc9"
+    },
+    {
+      "session_id": "0af085f1f0e5_44bdac51",
+      "run_id": "0af085f1f0e5",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_Kimi-K2.5/config.json",
+      "model": "Kimi-K2.5",
+      "task_prompt_sha256": "bf3c5916a15316cd468b5a126649ef0fa3e423cf8f00c040d71ac3ce661f0b18"
+    },
+    {
+      "session_id": "0af085f1f0e5_48a4b882",
+      "run_id": "0af085f1f0e5",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_Kimi-K2.5/config.json",
+      "model": "Kimi-K2.5",
+      "task_prompt_sha256": "0332eb91cabcafef1f60e97417da9eed4038ec16032b9046631f914099135f30"
+    },
+    {
+      "session_id": "0af085f1f0e5_4ba080f2",
+      "run_id": "0af085f1f0e5",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_Kimi-K2.5/config.json",
+      "model": "Kimi-K2.5",
+      "task_prompt_sha256": "b8fc54ea35f92749e4aae415158862006565c327e95b26627e354d92a4bddb11"
+    },
+    {
+      "session_id": "0af085f1f0e5_4c549a8a",
+      "run_id": "0af085f1f0e5",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_Kimi-K2.5/config.json",
+      "model": "Kimi-K2.5",
+      "task_prompt_sha256": "35efc9d50bdd9467d970681619409c2170c97c3a97bcc5d25c0f754a4d146c94"
+    },
+    {
+      "session_id": "0af085f1f0e5_5312612a",
+      "run_id": "0af085f1f0e5",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_Kimi-K2.5/config.json",
+      "model": "Kimi-K2.5",
+      "task_prompt_sha256": "1bfa12f5577f3d6daaef01ecb878a7b3774ad56df3418018513ea8883920472d"
+    },
+    {
+      "session_id": "0af085f1f0e5_5386767b",
+      "run_id": "0af085f1f0e5",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_Kimi-K2.5/config.json",
+      "model": "Kimi-K2.5",
+      "task_prompt_sha256": "03faf548c0b92ce2ba87ed9ba027a9438c39ff9b5fb2afb925ea7fdf87e18601"
+    },
+    {
+      "session_id": "0af085f1f0e5_54befbca",
+      "run_id": "0af085f1f0e5",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_Kimi-K2.5/config.json",
+      "model": "Kimi-K2.5",
+      "task_prompt_sha256": "dcee13f6aa631fb41333b3de8768d950f195bd20ef34823b7414a0236c51e6a8"
+    },
+    {
+      "session_id": "0af085f1f0e5_55f3cbc0",
+      "run_id": "0af085f1f0e5",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_Kimi-K2.5/config.json",
+      "model": "Kimi-K2.5",
+      "task_prompt_sha256": "ef471b1fd2680ef8c9962ed0909e713fb14914a7e5aa76aa7dac0b200b3f45f5"
+    },
+    {
+      "session_id": "0af085f1f0e5_56473f69",
+      "run_id": "0af085f1f0e5",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_Kimi-K2.5/config.json",
+      "model": "Kimi-K2.5",
+      "task_prompt_sha256": "4df2da21e0f78626ea3246f1a7493fd23e62393086f5765bae77eaeb04dfc81b"
+    },
+    {
+      "session_id": "0af085f1f0e5_57a910dc",
+      "run_id": "0af085f1f0e5",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_Kimi-K2.5/config.json",
+      "model": "Kimi-K2.5",
+      "task_prompt_sha256": "95465dea2523a85723611269a48b359fe535a8c8ee6eb403fe2f01cd758bfb3d"
+    },
+    {
+      "session_id": "0af085f1f0e5_635295dd",
+      "run_id": "0af085f1f0e5",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_Kimi-K2.5/config.json",
+      "model": "Kimi-K2.5",
+      "task_prompt_sha256": "48d156954978cf526cc513dfadbe974bcec6245670c65b6782ea97dd58cc9411"
+    },
+    {
+      "session_id": "0af085f1f0e5_64235234",
+      "run_id": "0af085f1f0e5",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_Kimi-K2.5/config.json",
+      "model": "Kimi-K2.5",
+      "task_prompt_sha256": "58824160d464731959b99479f1e6ef3d8fa49e1985945c95b7698ab59f5b9041"
+    },
+    {
+      "session_id": "0af085f1f0e5_68d8d042",
+      "run_id": "0af085f1f0e5",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_Kimi-K2.5/config.json",
+      "model": "Kimi-K2.5",
+      "task_prompt_sha256": "4e3efbf905475c24fed8da7e5acb74e3b7e569f7e0ab9ad28747225c7f2d84be"
+    },
+    {
+      "session_id": "0af085f1f0e5_70293293",
+      "run_id": "0af085f1f0e5",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_Kimi-K2.5/config.json",
+      "model": "Kimi-K2.5",
+      "task_prompt_sha256": "f3204cec3a1e6b7a0fa7aece58fb0dfaea6dea96b8b2967516be8ebf49a60df4"
+    },
+    {
+      "session_id": "0af085f1f0e5_71762c39",
+      "run_id": "0af085f1f0e5",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_Kimi-K2.5/config.json",
+      "model": "Kimi-K2.5",
+      "task_prompt_sha256": "de94721d2e27ff098ec4e5fa407e7036dc4d3990ee4f7352186872cbe77b401f"
+    },
+    {
+      "session_id": "0af085f1f0e5_753b0d4f",
+      "run_id": "0af085f1f0e5",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_Kimi-K2.5/config.json",
+      "model": "Kimi-K2.5",
+      "task_prompt_sha256": "5b0620cb8a14e5a5ad14ccaaa995b573a61c1798167775e23e387a4162a0ab76"
+    },
+    {
+      "session_id": "0af085f1f0e5_78d0cdcd",
+      "run_id": "0af085f1f0e5",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_Kimi-K2.5/config.json",
+      "model": "Kimi-K2.5",
+      "task_prompt_sha256": "15b3cc46aa80038801eff7578c3ad6b12a7e1adc747600a9cb4518a46a000401"
+    },
+    {
+      "session_id": "0af085f1f0e5_79ee9189",
+      "run_id": "0af085f1f0e5",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_Kimi-K2.5/config.json",
+      "model": "Kimi-K2.5",
+      "task_prompt_sha256": "0e2d35ceec3cad9d0c0a3cfc9ad821148db58afc1ddd42a6cfc89fa274b74742"
+    },
+    {
+      "session_id": "0af085f1f0e5_7add5a6f",
+      "run_id": "0af085f1f0e5",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_Kimi-K2.5/config.json",
+      "model": "Kimi-K2.5",
+      "task_prompt_sha256": "e34c8d108ddab08298d6880e279e290b30d18148c8fab070020a34540f2905c8"
+    },
+    {
+      "session_id": "0af085f1f0e5_7e3b1ddc",
+      "run_id": "0af085f1f0e5",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_Kimi-K2.5/config.json",
+      "model": "Kimi-K2.5",
+      "task_prompt_sha256": "cfd2580b06f59937ebe0a6664caa8c520da81f36a21a78beb36d4f90ee95070d"
+    },
+    {
+      "session_id": "0af085f1f0e5_8109bdd6",
+      "run_id": "0af085f1f0e5",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_Kimi-K2.5/config.json",
+      "model": "Kimi-K2.5",
+      "task_prompt_sha256": "1280b4e02bf32cdee5b632c831046d31d5c8ad3e9a3b5d4e04798f6eceb6aaf7"
+    },
+    {
+      "session_id": "0af085f1f0e5_83f78370",
+      "run_id": "0af085f1f0e5",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_Kimi-K2.5/config.json",
+      "model": "Kimi-K2.5",
+      "task_prompt_sha256": "199bcf228bfc08e9aa586135c16d67a2dafc4cd6b2ff0d78d9c90cda3961a99c"
+    },
+    {
+      "session_id": "0af085f1f0e5_85190647",
+      "run_id": "0af085f1f0e5",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_Kimi-K2.5/config.json",
+      "model": "Kimi-K2.5",
+      "task_prompt_sha256": "f9f57dc819af75646eefdddc6067010005df507a485d4905eeb3dc0ee7a75ec5"
+    },
+    {
+      "session_id": "0af085f1f0e5_876f8666",
+      "run_id": "0af085f1f0e5",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_Kimi-K2.5/config.json",
+      "model": "Kimi-K2.5",
+      "task_prompt_sha256": "e1dcc8c3630462bdfc0271337587eca3d588b82f7a5c63050241adf7b41e9b1f"
+    },
+    {
+      "session_id": "0af085f1f0e5_8896d1c3",
+      "run_id": "0af085f1f0e5",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_Kimi-K2.5/config.json",
+      "model": "Kimi-K2.5",
+      "task_prompt_sha256": "5c6b93f7fc1e65992ced91aa2386cdebc86cc21801faa80a52fe1695efd89405"
+    },
+    {
+      "session_id": "0af085f1f0e5_8a84a050",
+      "run_id": "0af085f1f0e5",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_Kimi-K2.5/config.json",
+      "model": "Kimi-K2.5",
+      "task_prompt_sha256": "089d1b87de90422ed78b054db65152aa2172a443d35f108aeda9d9585e5467dc"
+    },
+    {
+      "session_id": "0af085f1f0e5_8b294045",
+      "run_id": "0af085f1f0e5",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_Kimi-K2.5/config.json",
+      "model": "Kimi-K2.5",
+      "task_prompt_sha256": "0f525807af71f88cbd61cf5b8e8b70198a231496a05bce2695312634295f10ba"
+    },
+    {
+      "session_id": "0af085f1f0e5_8d4fb665",
+      "run_id": "0af085f1f0e5",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_Kimi-K2.5/config.json",
+      "model": "Kimi-K2.5",
+      "task_prompt_sha256": "aa26ad9518f675477eab215a220015d56dd372b6ab1c01f3999c9c7cab2d1bf5"
+    },
+    {
+      "session_id": "0af085f1f0e5_8e60cdca",
+      "run_id": "0af085f1f0e5",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_Kimi-K2.5/config.json",
+      "model": "Kimi-K2.5",
+      "task_prompt_sha256": "c8aa462eceb235803c3ac1646ef969ca6536d16d1cdf0f7a040421fb16257267"
+    },
+    {
+      "session_id": "0af085f1f0e5_8ef065f5",
+      "run_id": "0af085f1f0e5",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_Kimi-K2.5/config.json",
+      "model": "Kimi-K2.5",
+      "task_prompt_sha256": "b100e43c92eba05dbf444b4cbb95c1b3376c052580e3f72dd3acb388c594e57e"
+    },
+    {
+      "session_id": "0af085f1f0e5_8f132900",
+      "run_id": "0af085f1f0e5",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_Kimi-K2.5/config.json",
+      "model": "Kimi-K2.5",
+      "task_prompt_sha256": "570b2251a03b70f91dfe35c4f88b3a6fdeea88e92bdc99009c0cd0b6d51b638a"
+    },
+    {
+      "session_id": "0af085f1f0e5_8f4aff67",
+      "run_id": "0af085f1f0e5",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_Kimi-K2.5/config.json",
+      "model": "Kimi-K2.5",
+      "task_prompt_sha256": "76489dcb9bb124edafe543f097f16170bd196733741f5ba89b2caa39dbc7e1a5"
+    },
+    {
+      "session_id": "0af085f1f0e5_91210ea7",
+      "run_id": "0af085f1f0e5",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_Kimi-K2.5/config.json",
+      "model": "Kimi-K2.5",
+      "task_prompt_sha256": "c669c61fba4da43879f078baefbfc08f4b0069eccb3bc683b88d16f260161e1a"
+    },
+    {
+      "session_id": "0af085f1f0e5_915c07ff",
+      "run_id": "0af085f1f0e5",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_Kimi-K2.5/config.json",
+      "model": "Kimi-K2.5",
+      "task_prompt_sha256": "ca6daded982f99a289e8d7d0858ad693a5897306937786da0dae07cd63222cc2"
+    },
+    {
+      "session_id": "0af085f1f0e5_932864e1",
+      "run_id": "0af085f1f0e5",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_Kimi-K2.5/config.json",
+      "model": "Kimi-K2.5",
+      "task_prompt_sha256": "e9da93d7981a0a8f1edbd3112819e159e530a734c5c7d4192ffc96bdecfad1e4"
+    },
+    {
+      "session_id": "0af085f1f0e5_9dffd09f",
+      "run_id": "0af085f1f0e5",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_Kimi-K2.5/config.json",
+      "model": "Kimi-K2.5",
+      "task_prompt_sha256": "1d9dc722d9e1c1ee12a1e0951d6d32ae7c80ef0c49710a50faf700e2edfa5ae1"
+    },
+    {
+      "session_id": "0af085f1f0e5_9e27c9c4",
+      "run_id": "0af085f1f0e5",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_Kimi-K2.5/config.json",
+      "model": "Kimi-K2.5",
+      "task_prompt_sha256": "b32a71dd911b286a9ab63621c9523b5113ea8404ae5fd14e495614bea230a14e"
+    },
+    {
+      "session_id": "0af085f1f0e5_a1ad7e06",
+      "run_id": "0af085f1f0e5",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_Kimi-K2.5/config.json",
+      "model": "Kimi-K2.5",
+      "task_prompt_sha256": "5031b421327b4e8cfcda2aa84eac6c3fded043f643c32987f85dfab586a10869"
+    },
+    {
+      "session_id": "0af085f1f0e5_a43b770e",
+      "run_id": "0af085f1f0e5",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_Kimi-K2.5/config.json",
+      "model": "Kimi-K2.5",
+      "task_prompt_sha256": "8a609514f81929791ba24e95a0b693281d08620cf5d56b605be8d33ba79a6863"
+    },
+    {
+      "session_id": "0af085f1f0e5_a6f058fc",
+      "run_id": "0af085f1f0e5",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_Kimi-K2.5/config.json",
+      "model": "Kimi-K2.5",
+      "task_prompt_sha256": "3a044fdecc35ec0c9b07f4336d79f99d5f3356c051722e2445db77cef58c4055"
+    },
+    {
+      "session_id": "0af085f1f0e5_a7b003d9",
+      "run_id": "0af085f1f0e5",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_Kimi-K2.5/config.json",
+      "model": "Kimi-K2.5",
+      "task_prompt_sha256": "cf21ddbad9200791073732a37c78cee9a1f67a5a939dd65cbc952e9d3ca0a1a9"
+    },
+    {
+      "session_id": "0af085f1f0e5_a9aaeff7",
+      "run_id": "0af085f1f0e5",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_Kimi-K2.5/config.json",
+      "model": "Kimi-K2.5",
+      "task_prompt_sha256": "bdae0c27de9690b232d068603cf350cf652b1e8f420c898eacfd441f1ee89eb9"
+    },
+    {
+      "session_id": "0af085f1f0e5_acf42aa1",
+      "run_id": "0af085f1f0e5",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_Kimi-K2.5/config.json",
+      "model": "Kimi-K2.5",
+      "task_prompt_sha256": "e2ddf83bf5805f86a2d559a6d5d57f98660e9dc0a12f3f44f50a8b8e0b741673"
+    },
+    {
+      "session_id": "0af085f1f0e5_b593380b",
+      "run_id": "0af085f1f0e5",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_Kimi-K2.5/config.json",
+      "model": "Kimi-K2.5",
+      "task_prompt_sha256": "35b1c8e9af1355c8dfcbb009aa711ab3c476e27795d4a4427972fadc3b3d6a9e"
+    },
+    {
+      "session_id": "0af085f1f0e5_b7be2eaa",
+      "run_id": "0af085f1f0e5",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_Kimi-K2.5/config.json",
+      "model": "Kimi-K2.5",
+      "task_prompt_sha256": "3288935bd0c79a85a3c48029c2e14ae5bbe1b9abddc57befb51d336886c923e3"
+    },
+    {
+      "session_id": "0af085f1f0e5_b7cf8f2a",
+      "run_id": "0af085f1f0e5",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_Kimi-K2.5/config.json",
+      "model": "Kimi-K2.5",
+      "task_prompt_sha256": "cd836462001f38d3f5383318fc28811e4c5080bebd78a951537c090d1fdafbea"
+    },
+    {
+      "session_id": "0af085f1f0e5_ba3e1276",
+      "run_id": "0af085f1f0e5",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_Kimi-K2.5/config.json",
+      "model": "Kimi-K2.5",
+      "task_prompt_sha256": "d2220d7b371b4ba95861f5fb92b11fed6a364934e8c8b336db0753d234d8576f"
+    },
+    {
+      "session_id": "0af085f1f0e5_ba60bda6",
+      "run_id": "0af085f1f0e5",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_Kimi-K2.5/config.json",
+      "model": "Kimi-K2.5",
+      "task_prompt_sha256": "b1ca0f18eb8b255a6049a631edfc8d54c7010e5fccf156470e8b2ace81f323de"
+    },
+    {
+      "session_id": "0af085f1f0e5_bb7310f5",
+      "run_id": "0af085f1f0e5",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_Kimi-K2.5/config.json",
+      "model": "Kimi-K2.5",
+      "task_prompt_sha256": "f223ec900e0014442e36e09d93e6800f0e40ebe0bc717e04c994c04513f38b1e"
+    },
+    {
+      "session_id": "0af085f1f0e5_bdcb3703",
+      "run_id": "0af085f1f0e5",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_Kimi-K2.5/config.json",
+      "model": "Kimi-K2.5",
+      "task_prompt_sha256": "7cb9e08ebed997ec04c20442d311785ad78066662be5f85cdb753c7727ed8fd6"
+    },
+    {
+      "session_id": "0af085f1f0e5_bf80645c",
+      "run_id": "0af085f1f0e5",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_Kimi-K2.5/config.json",
+      "model": "Kimi-K2.5",
+      "task_prompt_sha256": "95ef6fd3195b4a20e723de5413fc2a9acdf4eaeb186ed379157ce229d2d6d2f1"
+    },
+    {
+      "session_id": "0af085f1f0e5_c0484351",
+      "run_id": "0af085f1f0e5",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_Kimi-K2.5/config.json",
+      "model": "Kimi-K2.5",
+      "task_prompt_sha256": "0eae86f8f529990f8d155c9949d6d2ca3672e70cc3e30bfb1a85e3c39ff74547"
+    },
+    {
+      "session_id": "0af085f1f0e5_c1997e37",
+      "run_id": "0af085f1f0e5",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_Kimi-K2.5/config.json",
+      "model": "Kimi-K2.5",
+      "task_prompt_sha256": "e8f1a293484f9db5585d6d76cd401f72752be6d2573828a0b8673a437a97f806"
+    },
+    {
+      "session_id": "0af085f1f0e5_c4f096c8",
+      "run_id": "0af085f1f0e5",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_Kimi-K2.5/config.json",
+      "model": "Kimi-K2.5",
+      "task_prompt_sha256": "d248912e46eacb90848000b8ca57f7c268c6e3f5011add63022a90e76968e0ab"
+    },
+    {
+      "session_id": "0af085f1f0e5_c6980d20",
+      "run_id": "0af085f1f0e5",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_Kimi-K2.5/config.json",
+      "model": "Kimi-K2.5",
+      "task_prompt_sha256": "6f032fb61a0caaccaee9cbb0cbd523021258f37949158bd29a9b7300ca97ea03"
+    },
+    {
+      "session_id": "0af085f1f0e5_c9a8cfe6",
+      "run_id": "0af085f1f0e5",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_Kimi-K2.5/config.json",
+      "model": "Kimi-K2.5",
+      "task_prompt_sha256": "a213ce980149b28a7f256c1c95d4db57bc3b0b41679389f05f8a70f34790519d"
+    },
+    {
+      "session_id": "0af085f1f0e5_ce25f54a",
+      "run_id": "0af085f1f0e5",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_Kimi-K2.5/config.json",
+      "model": "Kimi-K2.5",
+      "task_prompt_sha256": "17240fb9ea58a0ee3c47b4be270a6690f37275db5443ed880c3dde68266ecfe7"
+    },
+    {
+      "session_id": "0af085f1f0e5_ce3d8141",
+      "run_id": "0af085f1f0e5",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_Kimi-K2.5/config.json",
+      "model": "Kimi-K2.5",
+      "task_prompt_sha256": "e139710f865aff9950283d056e729d517a5dc7694970b9ba792459ed25f61bb5"
+    },
+    {
+      "session_id": "0af085f1f0e5_d0b80667",
+      "run_id": "0af085f1f0e5",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_Kimi-K2.5/config.json",
+      "model": "Kimi-K2.5",
+      "task_prompt_sha256": "9c85d467758796f9089715b6022a44f220b59de89cedaadb3cc20ad09b1a8807"
+    },
+    {
+      "session_id": "0af085f1f0e5_d4eae4d4",
+      "run_id": "0af085f1f0e5",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_Kimi-K2.5/config.json",
+      "model": "Kimi-K2.5",
+      "task_prompt_sha256": "11518915bd164573094b098f668798ca1f585fb522d9b0f4dea36a8bcfec004d"
+    },
+    {
+      "session_id": "0af085f1f0e5_e6d4415e",
+      "run_id": "0af085f1f0e5",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_Kimi-K2.5/config.json",
+      "model": "Kimi-K2.5",
+      "task_prompt_sha256": "f9fe38e118facb54ec1580a601ca75f3064dd02db6687f088f751a452a21e888"
+    },
+    {
+      "session_id": "0af085f1f0e5_e9e1c27e",
+      "run_id": "0af085f1f0e5",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_Kimi-K2.5/config.json",
+      "model": "Kimi-K2.5",
+      "task_prompt_sha256": "605b30069de42e5d12f56fa5ee60650920cb9d9c082c51f2af5db18757462eba"
+    },
+    {
+      "session_id": "0af085f1f0e5_ed77b818",
+      "run_id": "0af085f1f0e5",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_Kimi-K2.5/config.json",
+      "model": "Kimi-K2.5",
+      "task_prompt_sha256": "397e45ea768c3246ca14ab07f1c1f66d275dbbbf7257c3161e2d9c5fdd878801"
+    },
+    {
+      "session_id": "0af085f1f0e5_edd2d7ab",
+      "run_id": "0af085f1f0e5",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_Kimi-K2.5/config.json",
+      "model": "Kimi-K2.5",
+      "task_prompt_sha256": "796dca6bc52a370a2c771926a7044fb901fe8522e1ba8dd2bfd0711282b3c274"
+    },
+    {
+      "session_id": "0af085f1f0e5_f23a9d0d",
+      "run_id": "0af085f1f0e5",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_Kimi-K2.5/config.json",
+      "model": "Kimi-K2.5",
+      "task_prompt_sha256": "d2fa4d3bc6ddc4a61617713ce91b458f340f9c7d16e6695df1bdb6ba0aea4365"
+    },
+    {
+      "session_id": "0af085f1f0e5_fa6b3397",
+      "run_id": "0af085f1f0e5",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_Kimi-K2.5/config.json",
+      "model": "Kimi-K2.5",
+      "task_prompt_sha256": "7c19234fefb7fecfcab471d315810db8856eb931f37237b6b46867cbb70487e9"
+    },
+    {
+      "session_id": "0af085f1f0e5_feabca54",
+      "run_id": "0af085f1f0e5",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_Kimi-K2.5/config.json",
+      "model": "Kimi-K2.5",
+      "task_prompt_sha256": "c4546bf5257d1c79f61ba706d40af27c3038dc08dcb9c034e46213288691a01c"
+    },
+    {
+      "session_id": "162ce43163fe_0123fcf5",
+      "run_id": "162ce43163fe",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_gcp_gemini-3-pro-preview/config.json",
+      "model": "gemini-3-pro-preview",
+      "task_prompt_sha256": "dafce0e19aa4231744fc4a63ce0aff5512447c5440dc86bf440701a17dbd711b"
+    },
+    {
+      "session_id": "162ce43163fe_04db001a",
+      "run_id": "162ce43163fe",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_gcp_gemini-3-pro-preview/config.json",
+      "model": "gemini-3-pro-preview",
+      "task_prompt_sha256": "db8e88aae64cdd60e0f734b83df16caf5d544b44788adfe3ec23410d2201561c"
+    },
+    {
+      "session_id": "162ce43163fe_0691799c",
+      "run_id": "162ce43163fe",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_gcp_gemini-3-pro-preview/config.json",
+      "model": "gemini-3-pro-preview",
+      "task_prompt_sha256": "f42c5b4c96eca231709c806f9c061daec17d9adcfb5df9259bc9d8bdce80a33b"
+    },
+    {
+      "session_id": "162ce43163fe_08baa5e2",
+      "run_id": "162ce43163fe",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_gcp_gemini-3-pro-preview/config.json",
+      "model": "gemini-3-pro-preview",
+      "task_prompt_sha256": "3b3cbc2d433cdf8f7b35c0efbf42eb9f4019521fc9fcb28b4ab69ba319dfaeb9"
+    },
+    {
+      "session_id": "162ce43163fe_0e30d1bd",
+      "run_id": "162ce43163fe",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_gcp_gemini-3-pro-preview/config.json",
+      "model": "gemini-3-pro-preview",
+      "task_prompt_sha256": "2f2f4563db00a838bdeb02787c3d737f736cefdf900d27cfeea5ed1997eda287"
+    },
+    {
+      "session_id": "162ce43163fe_116d089c",
+      "run_id": "162ce43163fe",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_gcp_gemini-3-pro-preview/config.json",
+      "model": "gemini-3-pro-preview",
+      "task_prompt_sha256": "ab6ac5281df47e2746c4bdeb1449ed407f4ea98bbcd99a8c87b5b0c7f00918b2"
+    },
+    {
+      "session_id": "162ce43163fe_1229fcfe",
+      "run_id": "162ce43163fe",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_gcp_gemini-3-pro-preview/config.json",
+      "model": "gemini-3-pro-preview",
+      "task_prompt_sha256": "f6697db80d4368d6933eaef646b6a6763f7e233e11126ab7274d126ef14b1a42"
+    },
+    {
+      "session_id": "162ce43163fe_1744aa68",
+      "run_id": "162ce43163fe",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_gcp_gemini-3-pro-preview/config.json",
+      "model": "gemini-3-pro-preview",
+      "task_prompt_sha256": "16fc855fa674ef54d1df74d7be418939661e469aa96e55f212ec9013109a9ec2"
+    },
+    {
+      "session_id": "162ce43163fe_1752a800",
+      "run_id": "162ce43163fe",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_gcp_gemini-3-pro-preview/config.json",
+      "model": "gemini-3-pro-preview",
+      "task_prompt_sha256": "e82a0fdfa65e4de20d0981f26ef95b4c7ebcf2b5eea9ec7b96926263ed66bc59"
+    },
+    {
+      "session_id": "162ce43163fe_1b2b97cc",
+      "run_id": "162ce43163fe",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_gcp_gemini-3-pro-preview/config.json",
+      "model": "gemini-3-pro-preview",
+      "task_prompt_sha256": "f9f504c58fdfaf1381b2e2c80aabd0cfe778d818dae726bef1634e9665591fbb"
+    },
+    {
+      "session_id": "162ce43163fe_1f39d518",
+      "run_id": "162ce43163fe",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_gcp_gemini-3-pro-preview/config.json",
+      "model": "gemini-3-pro-preview",
+      "task_prompt_sha256": "1164abebb55a7e62aef1ab87258498f403beb1c555b2985016eb8d30581d664e"
+    },
+    {
+      "session_id": "162ce43163fe_1fce477f",
+      "run_id": "162ce43163fe",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_gcp_gemini-3-pro-preview/config.json",
+      "model": "gemini-3-pro-preview",
+      "task_prompt_sha256": "7e8e6f657c328031e041b50c4d17624c3dcd7d42827c6e2059e796e7e2a4ec02"
+    },
+    {
+      "session_id": "162ce43163fe_216ec029",
+      "run_id": "162ce43163fe",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_gcp_gemini-3-pro-preview/config.json",
+      "model": "gemini-3-pro-preview",
+      "task_prompt_sha256": "12b182d2655d9851b304330672c521319a6917bb2b561533338a6fde26f880ad"
+    },
+    {
+      "session_id": "162ce43163fe_21898cca",
+      "run_id": "162ce43163fe",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_gcp_gemini-3-pro-preview/config.json",
+      "model": "gemini-3-pro-preview",
+      "task_prompt_sha256": "0cbdbfbe38feaac7eaebf3652f5400bc7fa454e5e0aa7b00ae4316c8a9f8c875"
+    },
+    {
+      "session_id": "162ce43163fe_25f942bc",
+      "run_id": "162ce43163fe",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_gcp_gemini-3-pro-preview/config.json",
+      "model": "gemini-3-pro-preview",
+      "task_prompt_sha256": "af5b0a65ceef32c073ff2f592a0ebd81695eef18aa0128c69260393cb502652a"
+    },
+    {
+      "session_id": "162ce43163fe_2a0cdac6",
+      "run_id": "162ce43163fe",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_gcp_gemini-3-pro-preview/config.json",
+      "model": "gemini-3-pro-preview",
+      "task_prompt_sha256": "41ce337a30c04c0ff5b427c0090696a7a67f378841965d25c95c0baa21867b73"
+    },
+    {
+      "session_id": "162ce43163fe_2c89afbc",
+      "run_id": "162ce43163fe",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_gcp_gemini-3-pro-preview/config.json",
+      "model": "gemini-3-pro-preview",
+      "task_prompt_sha256": "39715ed22eb259026aa37fbf64c0314bb4dd51d199acbe06d614e8bb9ae9794e"
+    },
+    {
+      "session_id": "162ce43163fe_2d1972eb",
+      "run_id": "162ce43163fe",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_gcp_gemini-3-pro-preview/config.json",
+      "model": "gemini-3-pro-preview",
+      "task_prompt_sha256": "890541202bb564063e5cb2a327f8ae8d994b738a3d0cc429b33da1489db899a7"
+    },
+    {
+      "session_id": "162ce43163fe_2e164a67",
+      "run_id": "162ce43163fe",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_gcp_gemini-3-pro-preview/config.json",
+      "model": "gemini-3-pro-preview",
+      "task_prompt_sha256": "b658d254578780625899b30ed7ebe0de749691214844b103600611f94f7a5511"
+    },
+    {
+      "session_id": "162ce43163fe_36a7264f",
+      "run_id": "162ce43163fe",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_gcp_gemini-3-pro-preview/config.json",
+      "model": "gemini-3-pro-preview",
+      "task_prompt_sha256": "265f32e698987503e1dbe63e19905c3b85220bae94978dc74a6b6b92eb3fbdf4"
+    },
+    {
+      "session_id": "162ce43163fe_3a0c2678",
+      "run_id": "162ce43163fe",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_gcp_gemini-3-pro-preview/config.json",
+      "model": "gemini-3-pro-preview",
+      "task_prompt_sha256": "c8dcf69acdb6d1b452c309c9f498dea1cfb5684701aa300592a031e190954036"
+    },
+    {
+      "session_id": "162ce43163fe_3afc074f",
+      "run_id": "162ce43163fe",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_gcp_gemini-3-pro-preview/config.json",
+      "model": "gemini-3-pro-preview",
+      "task_prompt_sha256": "3082b24b5ad3f9517d10c715953cb05245cd26f5fc1cb637c53745a3122f9c59"
+    },
+    {
+      "session_id": "162ce43163fe_401ad89a",
+      "run_id": "162ce43163fe",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_gcp_gemini-3-pro-preview/config.json",
+      "model": "gemini-3-pro-preview",
+      "task_prompt_sha256": "09b0eb07ef02009fcb94551b2e1c282b7f4fcf514a1d34061d01635cf4026bda"
+    },
+    {
+      "session_id": "162ce43163fe_469e0af5",
+      "run_id": "162ce43163fe",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_gcp_gemini-3-pro-preview/config.json",
+      "model": "gemini-3-pro-preview",
+      "task_prompt_sha256": "9456db17ba60cb377cf0bb1d08f81bcad8209789c774034c885befa39dcc9a0d"
+    },
+    {
+      "session_id": "162ce43163fe_46fb1d15",
+      "run_id": "162ce43163fe",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_gcp_gemini-3-pro-preview/config.json",
+      "model": "gemini-3-pro-preview",
+      "task_prompt_sha256": "21326b771d17f00239437acbfb88332299e5009d011b7f4aed6702086e1c9ca2"
+    },
+    {
+      "session_id": "162ce43163fe_4f33bdac",
+      "run_id": "162ce43163fe",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_gcp_gemini-3-pro-preview/config.json",
+      "model": "gemini-3-pro-preview",
+      "task_prompt_sha256": "c7aa858f72f10ae7bd6f3bda64aa2ff6d6ac8ad332d4f03d89728d3c33476e16"
+    },
+    {
+      "session_id": "162ce43163fe_52218da1",
+      "run_id": "162ce43163fe",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_gcp_gemini-3-pro-preview/config.json",
+      "model": "gemini-3-pro-preview",
+      "task_prompt_sha256": "ac4908f09966aa8ba74b9da93975f2e4e8e43a846989464e2505ababcfd3d740"
+    },
+    {
+      "session_id": "162ce43163fe_588ea18c",
+      "run_id": "162ce43163fe",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_gcp_gemini-3-pro-preview/config.json",
+      "model": "gemini-3-pro-preview",
+      "task_prompt_sha256": "f46e523e7827517dc4d4aa3e2134eebc458388264814bab9718e68480a2f46c9"
+    },
+    {
+      "session_id": "162ce43163fe_59041c7a",
+      "run_id": "162ce43163fe",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_gcp_gemini-3-pro-preview/config.json",
+      "model": "gemini-3-pro-preview",
+      "task_prompt_sha256": "18170b1c105f2b8700a140e36a1c174f1be12aef9af4e0afbaff6811ebb7f06e"
+    },
+    {
+      "session_id": "162ce43163fe_5c07121d",
+      "run_id": "162ce43163fe",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_gcp_gemini-3-pro-preview/config.json",
+      "model": "gemini-3-pro-preview",
+      "task_prompt_sha256": "f8e6992ff672489ebcf38083cc38a548f8d60272f5eb6fa4466dc743578a3b75"
+    },
+    {
+      "session_id": "162ce43163fe_63d0ff52",
+      "run_id": "162ce43163fe",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_gcp_gemini-3-pro-preview/config.json",
+      "model": "gemini-3-pro-preview",
+      "task_prompt_sha256": "d63e16352c96151f843a78de0b34a172ed7be086bdb78c8a5987853c4c93e902"
+    },
+    {
+      "session_id": "162ce43163fe_693b085e",
+      "run_id": "162ce43163fe",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_gcp_gemini-3-pro-preview/config.json",
+      "model": "gemini-3-pro-preview",
+      "task_prompt_sha256": "ca2d5827cf3e0aa3e211bd93dd0512dab13050f1ca6a1e6a683af1c6c4f4393e"
+    },
+    {
+      "session_id": "162ce43163fe_69f2def2",
+      "run_id": "162ce43163fe",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_gcp_gemini-3-pro-preview/config.json",
+      "model": "gemini-3-pro-preview",
+      "task_prompt_sha256": "6832231431b176a4042c885ba4d8b62d15686ece47e3ab750eb434773c32ae94"
+    },
+    {
+      "session_id": "162ce43163fe_6f60142b",
+      "run_id": "162ce43163fe",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_gcp_gemini-3-pro-preview/config.json",
+      "model": "gemini-3-pro-preview",
+      "task_prompt_sha256": "4cec50c4abeda403cad492e6264fdcb0724aa449f26f3b232d5a7fb6a6f54b77"
+    },
+    {
+      "session_id": "162ce43163fe_71540c03",
+      "run_id": "162ce43163fe",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_gcp_gemini-3-pro-preview/config.json",
+      "model": "gemini-3-pro-preview",
+      "task_prompt_sha256": "65662cfbf95e555f1f77b87d8a30d8efce0c007e159fdc10d548fa4e128099f8"
+    },
+    {
+      "session_id": "162ce43163fe_73b106e7",
+      "run_id": "162ce43163fe",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_gcp_gemini-3-pro-preview/config.json",
+      "model": "gemini-3-pro-preview",
+      "task_prompt_sha256": "eb1dbfa819f5c1baf06b60cc2de46632de8d516646649b4214f83179c4157f15"
+    },
+    {
+      "session_id": "162ce43163fe_74673070",
+      "run_id": "162ce43163fe",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_gcp_gemini-3-pro-preview/config.json",
+      "model": "gemini-3-pro-preview",
+      "task_prompt_sha256": "e844eaf101e5c948ca32c869beefbef5fd6db79cdc056d020f7c082c69a5e60a"
+    },
+    {
+      "session_id": "162ce43163fe_77a053c1",
+      "run_id": "162ce43163fe",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_gcp_gemini-3-pro-preview/config.json",
+      "model": "gemini-3-pro-preview",
+      "task_prompt_sha256": "5a9ccbfbf2eaeec8f6abc9cf532442544d73ac1ec0283b56970503061c73a6ee"
+    },
+    {
+      "session_id": "162ce43163fe_7d45e0d7",
+      "run_id": "162ce43163fe",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_gcp_gemini-3-pro-preview/config.json",
+      "model": "gemini-3-pro-preview",
+      "task_prompt_sha256": "14013a7fe99c68baefcdb51659e16283060973d0776ac87f60475b619a3115cd"
+    },
+    {
+      "session_id": "162ce43163fe_7eb7d14d",
+      "run_id": "162ce43163fe",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_gcp_gemini-3-pro-preview/config.json",
+      "model": "gemini-3-pro-preview",
+      "task_prompt_sha256": "995f68fba20186a97bce95b7959124b98c66d6653e8723f7ea36c470eedc17fb"
+    },
+    {
+      "session_id": "162ce43163fe_83e61ad0",
+      "run_id": "162ce43163fe",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_gcp_gemini-3-pro-preview/config.json",
+      "model": "gemini-3-pro-preview",
+      "task_prompt_sha256": "62062c399f211fe22ac0254e2681729e122fb4ab2916f786c50127f55d3a4acd"
+    },
+    {
+      "session_id": "162ce43163fe_8423e0a5",
+      "run_id": "162ce43163fe",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_gcp_gemini-3-pro-preview/config.json",
+      "model": "gemini-3-pro-preview",
+      "task_prompt_sha256": "d3450277599165b4b219647c8e73ae3e4137412695bc902ebc9850511bb4be74"
+    },
+    {
+      "session_id": "162ce43163fe_84ca3ba6",
+      "run_id": "162ce43163fe",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_gcp_gemini-3-pro-preview/config.json",
+      "model": "gemini-3-pro-preview",
+      "task_prompt_sha256": "79d870c3e22a13df7b3e8456478fb5c26ae87f2f2b42ee3678ceed3fa9d1cf77"
+    },
+    {
+      "session_id": "162ce43163fe_8565ea39",
+      "run_id": "162ce43163fe",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_gcp_gemini-3-pro-preview/config.json",
+      "model": "gemini-3-pro-preview",
+      "task_prompt_sha256": "1c66ff37c6e0e0ec8aa2a3ddaee9536de064984db2cc8e3b6dc9792a578185e6"
+    },
+    {
+      "session_id": "162ce43163fe_8655334c",
+      "run_id": "162ce43163fe",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_gcp_gemini-3-pro-preview/config.json",
+      "model": "gemini-3-pro-preview",
+      "task_prompt_sha256": "1363abc68426a246570788897f3f91d3b15736ea3bbb28463571cbe4a138f415"
+    },
+    {
+      "session_id": "162ce43163fe_8810543f",
+      "run_id": "162ce43163fe",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_gcp_gemini-3-pro-preview/config.json",
+      "model": "gemini-3-pro-preview",
+      "task_prompt_sha256": "40f80f63f649946805546d59fdef3d25d4d6162eac415b51b330e56792218b79"
+    },
+    {
+      "session_id": "162ce43163fe_8afb0445",
+      "run_id": "162ce43163fe",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_gcp_gemini-3-pro-preview/config.json",
+      "model": "gemini-3-pro-preview",
+      "task_prompt_sha256": "5b1b99fb4ea8468a800fad5057b241ce0380d772a8b402954e280094c769218b"
+    },
+    {
+      "session_id": "162ce43163fe_8b59a168",
+      "run_id": "162ce43163fe",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_gcp_gemini-3-pro-preview/config.json",
+      "model": "gemini-3-pro-preview",
+      "task_prompt_sha256": "276e0cfc2ec7d841aac6b1b82074477758780797a61571467ea35014baa30ad2"
+    },
+    {
+      "session_id": "162ce43163fe_8d344b38",
+      "run_id": "162ce43163fe",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_gcp_gemini-3-pro-preview/config.json",
+      "model": "gemini-3-pro-preview",
+      "task_prompt_sha256": "07c486b9fe0eebb265c4b04cd22132881d7224206c3247f569dda8d9a278f9cd"
+    },
+    {
+      "session_id": "162ce43163fe_8d7e107a",
+      "run_id": "162ce43163fe",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_gcp_gemini-3-pro-preview/config.json",
+      "model": "gemini-3-pro-preview",
+      "task_prompt_sha256": "beccc8e3212c748e828bdf28df03e404888dd614bd473c264147c4129d205eb6"
+    },
+    {
+      "session_id": "162ce43163fe_8ddf02ba",
+      "run_id": "162ce43163fe",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_gcp_gemini-3-pro-preview/config.json",
+      "model": "gemini-3-pro-preview",
+      "task_prompt_sha256": "8687a308dc5f6231258383eb61ee3f5b3a8c87f0a1933c4ed3d37acd051616c9"
+    },
+    {
+      "session_id": "162ce43163fe_8f7baeae",
+      "run_id": "162ce43163fe",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_gcp_gemini-3-pro-preview/config.json",
+      "model": "gemini-3-pro-preview",
+      "task_prompt_sha256": "64ad856862c8e43840cf936d1bf057eab2d15a204d45349e374a1981dc6c0828"
+    },
+    {
+      "session_id": "162ce43163fe_8faf7357",
+      "run_id": "162ce43163fe",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_gcp_gemini-3-pro-preview/config.json",
+      "model": "gemini-3-pro-preview",
+      "task_prompt_sha256": "3be5d32bfc2dfba218119bdad2d4ddf2018a9fddb14df506c165848165880b1a"
+    },
+    {
+      "session_id": "162ce43163fe_90886d7b",
+      "run_id": "162ce43163fe",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_gcp_gemini-3-pro-preview/config.json",
+      "model": "gemini-3-pro-preview",
+      "task_prompt_sha256": "9763802d2754d8b5c37ea99445edd76ba86fc1a830ae64a0b11153707b4f4774"
+    },
+    {
+      "session_id": "162ce43163fe_91a439bb",
+      "run_id": "162ce43163fe",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_gcp_gemini-3-pro-preview/config.json",
+      "model": "gemini-3-pro-preview",
+      "task_prompt_sha256": "28c873c368b5b3f13db1572f58dbbfb7181898f2ec3e60389f16dc29712ede08"
+    },
+    {
+      "session_id": "162ce43163fe_9253df96",
+      "run_id": "162ce43163fe",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_gcp_gemini-3-pro-preview/config.json",
+      "model": "gemini-3-pro-preview",
+      "task_prompt_sha256": "7518f5674197081fc80a662e1b583c11a403957fd3330f0d50ea5afce843db0c"
+    },
+    {
+      "session_id": "162ce43163fe_925f9d8b",
+      "run_id": "162ce43163fe",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_gcp_gemini-3-pro-preview/config.json",
+      "model": "gemini-3-pro-preview",
+      "task_prompt_sha256": "c76485cc26aadfdc139c996fdc683fae4ac6cb82e9060cc84d892a41197692a9"
+    },
+    {
+      "session_id": "162ce43163fe_93495483",
+      "run_id": "162ce43163fe",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_gcp_gemini-3-pro-preview/config.json",
+      "model": "gemini-3-pro-preview",
+      "task_prompt_sha256": "92c81a198d3973a827a63ede15a1cd4a959d8c73946e8d4b1d9d9609f13b00bf"
+    },
+    {
+      "session_id": "162ce43163fe_9550df49",
+      "run_id": "162ce43163fe",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_gcp_gemini-3-pro-preview/config.json",
+      "model": "gemini-3-pro-preview",
+      "task_prompt_sha256": "f72e8d93d79677d03a4de38f6780dbf9888b59024fe15d5e0abf7cb53259102f"
+    },
+    {
+      "session_id": "162ce43163fe_95e0fa4f",
+      "run_id": "162ce43163fe",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_gcp_gemini-3-pro-preview/config.json",
+      "model": "gemini-3-pro-preview",
+      "task_prompt_sha256": "87205427d3299e392d994b52e800c828a20a41eb315616ce24ab44da2f1e26ca"
+    },
+    {
+      "session_id": "162ce43163fe_9604b6c1",
+      "run_id": "162ce43163fe",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_gcp_gemini-3-pro-preview/config.json",
+      "model": "gemini-3-pro-preview",
+      "task_prompt_sha256": "fbbc441105072d14033588fa396c3f6e174492d576bbd85099bd8b8a190aaaaf"
+    },
+    {
+      "session_id": "162ce43163fe_9b3aab56",
+      "run_id": "162ce43163fe",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_gcp_gemini-3-pro-preview/config.json",
+      "model": "gemini-3-pro-preview",
+      "task_prompt_sha256": "649a9fda659455b890a53b0f19a4f1e148deecf0af5148b937bacad08508ba48"
+    },
+    {
+      "session_id": "162ce43163fe_9e133c7a",
+      "run_id": "162ce43163fe",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_gcp_gemini-3-pro-preview/config.json",
+      "model": "gemini-3-pro-preview",
+      "task_prompt_sha256": "234a2addbd791e797a16dc4650ad924745c5528a05bc666a2c17393d8bfda506"
+    },
+    {
+      "session_id": "162ce43163fe_9f24f8a3",
+      "run_id": "162ce43163fe",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_gcp_gemini-3-pro-preview/config.json",
+      "model": "gemini-3-pro-preview",
+      "task_prompt_sha256": "7babbb57f8a9b250b14b59fa717bf01c3f3f90d35b5321babd6f309c7130ffed"
+    },
+    {
+      "session_id": "162ce43163fe_a23ae64f",
+      "run_id": "162ce43163fe",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_gcp_gemini-3-pro-preview/config.json",
+      "model": "gemini-3-pro-preview",
+      "task_prompt_sha256": "2aa0e3ec5dab0d84625339d9f255a533f507d3db3da756ce23ef9341eda923b1"
+    },
+    {
+      "session_id": "162ce43163fe_a6e39884",
+      "run_id": "162ce43163fe",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_gcp_gemini-3-pro-preview/config.json",
+      "model": "gemini-3-pro-preview",
+      "task_prompt_sha256": "2803057a1bd117c38c8ecf8a8cd65ed89d33ec92d9ad5e43b286e1b72a84a540"
+    },
+    {
+      "session_id": "162ce43163fe_a9847d8e",
+      "run_id": "162ce43163fe",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_gcp_gemini-3-pro-preview/config.json",
+      "model": "gemini-3-pro-preview",
+      "task_prompt_sha256": "794d8c28dd8eeb215a575b18e64efc39b4cf5f7ca7211cb5a3dd0df8a05e8e14"
+    },
+    {
+      "session_id": "162ce43163fe_aec362c0",
+      "run_id": "162ce43163fe",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_gcp_gemini-3-pro-preview/config.json",
+      "model": "gemini-3-pro-preview",
+      "task_prompt_sha256": "993936b720f0985579e6c256ba5156a5eddbb825a76ed7c92499daec1bd4b915"
+    },
+    {
+      "session_id": "162ce43163fe_b1f4ce36",
+      "run_id": "162ce43163fe",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_gcp_gemini-3-pro-preview/config.json",
+      "model": "gemini-3-pro-preview",
+      "task_prompt_sha256": "8f44179bf022aabb42bdaa8753b8317fc2681d309e44ce9a03a0212c45c180f3"
+    },
+    {
+      "session_id": "162ce43163fe_b3992b8d",
+      "run_id": "162ce43163fe",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_gcp_gemini-3-pro-preview/config.json",
+      "model": "gemini-3-pro-preview",
+      "task_prompt_sha256": "0ea0001dc112db734f0f6ecc8bc468c3247e8f0480076db055d7a0f0a6ccd734"
+    },
+    {
+      "session_id": "162ce43163fe_b5499a43",
+      "run_id": "162ce43163fe",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_gcp_gemini-3-pro-preview/config.json",
+      "model": "gemini-3-pro-preview",
+      "task_prompt_sha256": "7b9c5f1e5f51658d64f26578ab764ce3a3d21941f7e6019a2f2bcaa10bb91d41"
+    },
+    {
+      "session_id": "162ce43163fe_b7f17d50",
+      "run_id": "162ce43163fe",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_gcp_gemini-3-pro-preview/config.json",
+      "model": "gemini-3-pro-preview",
+      "task_prompt_sha256": "c86ef9e4b8d9b035ff31e6a58cb3757dee1dcd4809ab68630acb6de6a4eef608"
+    },
+    {
+      "session_id": "162ce43163fe_b8a62929",
+      "run_id": "162ce43163fe",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_gcp_gemini-3-pro-preview/config.json",
+      "model": "gemini-3-pro-preview",
+      "task_prompt_sha256": "ca4875f4c16dd2d40a8ab7eb65e333b77c5ac83c9b3cf2bfcdf7587b24a31d55"
+    },
+    {
+      "session_id": "162ce43163fe_b9fd1ff1",
+      "run_id": "162ce43163fe",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_gcp_gemini-3-pro-preview/config.json",
+      "model": "gemini-3-pro-preview",
+      "task_prompt_sha256": "16021f0b5ab91fdb823b94ff9ab7e66c35a46b42700ca375ad64d5ac413454d0"
+    },
+    {
+      "session_id": "162ce43163fe_be3985ee",
+      "run_id": "162ce43163fe",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_gcp_gemini-3-pro-preview/config.json",
+      "model": "gemini-3-pro-preview",
+      "task_prompt_sha256": "4d47c55856a53763d7b67b9ed30e623bbe529fad351e291a130babeaabb44b0f"
+    },
+    {
+      "session_id": "162ce43163fe_c29d9991",
+      "run_id": "162ce43163fe",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_gcp_gemini-3-pro-preview/config.json",
+      "model": "gemini-3-pro-preview",
+      "task_prompt_sha256": "074f44135b761bbfb69a1ce3c408e44e924f7769466af667db6d14e37cce8140"
+    },
+    {
+      "session_id": "162ce43163fe_c4167702",
+      "run_id": "162ce43163fe",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_gcp_gemini-3-pro-preview/config.json",
+      "model": "gemini-3-pro-preview",
+      "task_prompt_sha256": "4816fb773f89063bb7a71954a110d0568df3a8c950b3806844d5d6fa565ca775"
+    },
+    {
+      "session_id": "162ce43163fe_c823bd00",
+      "run_id": "162ce43163fe",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_gcp_gemini-3-pro-preview/config.json",
+      "model": "gemini-3-pro-preview",
+      "task_prompt_sha256": "4283b34ce6c8aa023c2df1af23c0d2f1331633c97f9d27327c2f41ba6a4926d4"
+    },
+    {
+      "session_id": "162ce43163fe_c958c96a",
+      "run_id": "162ce43163fe",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_gcp_gemini-3-pro-preview/config.json",
+      "model": "gemini-3-pro-preview",
+      "task_prompt_sha256": "89046a9e5e4b6e280e16c0cc51dbdce3d3485d9c8b26d63aaf588cf057b9023a"
+    },
+    {
+      "session_id": "162ce43163fe_cfef12fb",
+      "run_id": "162ce43163fe",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_gcp_gemini-3-pro-preview/config.json",
+      "model": "gemini-3-pro-preview",
+      "task_prompt_sha256": "15a8767ea6c98bed9718ee8cd323420fb327d87f3b922596bb3f5676746ae29e"
+    },
+    {
+      "session_id": "162ce43163fe_d27a76ff",
+      "run_id": "162ce43163fe",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_gcp_gemini-3-pro-preview/config.json",
+      "model": "gemini-3-pro-preview",
+      "task_prompt_sha256": "45d0b8f8fab5bbc4ca1d4b5172519fd5a2cf0f4d579b9b916b79107e45ceac17"
+    },
+    {
+      "session_id": "162ce43163fe_d4577600",
+      "run_id": "162ce43163fe",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_gcp_gemini-3-pro-preview/config.json",
+      "model": "gemini-3-pro-preview",
+      "task_prompt_sha256": "042613276426dbee9e774d7a630686bfac0a919db4d03991c011a35f0c6c9b55"
+    },
+    {
+      "session_id": "162ce43163fe_d4a02ed1",
+      "run_id": "162ce43163fe",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_gcp_gemini-3-pro-preview/config.json",
+      "model": "gemini-3-pro-preview",
+      "task_prompt_sha256": "bbe2cfbee16e5f42b175b11db289fd71e9f398cb8df65dde690a1da4c709f785"
+    },
+    {
+      "session_id": "162ce43163fe_d67425dd",
+      "run_id": "162ce43163fe",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_gcp_gemini-3-pro-preview/config.json",
+      "model": "gemini-3-pro-preview",
+      "task_prompt_sha256": "f7730114474c409d784f1423745b2e3c9cfdd33f9ee30bd07d752a8b46b55177"
+    },
+    {
+      "session_id": "162ce43163fe_d7d4e4ac",
+      "run_id": "162ce43163fe",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_gcp_gemini-3-pro-preview/config.json",
+      "model": "gemini-3-pro-preview",
+      "task_prompt_sha256": "e93e8fa07395bfc609e8777c20262af3f3482238ad74e14b458e257c95670c60"
+    },
+    {
+      "session_id": "162ce43163fe_dbc694d1",
+      "run_id": "162ce43163fe",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_gcp_gemini-3-pro-preview/config.json",
+      "model": "gemini-3-pro-preview",
+      "task_prompt_sha256": "01d8cca5052fe2701497b91bd9a534e528fa851c49e868fb1dcb1a6385bc01f0"
+    },
+    {
+      "session_id": "162ce43163fe_e3d1083d",
+      "run_id": "162ce43163fe",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_gcp_gemini-3-pro-preview/config.json",
+      "model": "gemini-3-pro-preview",
+      "task_prompt_sha256": "f32b58e12ca686f36a5b9829e2ac9b953486faee9dbbe28fe49c571418d52a18"
+    },
+    {
+      "session_id": "162ce43163fe_e75a5af8",
+      "run_id": "162ce43163fe",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_gcp_gemini-3-pro-preview/config.json",
+      "model": "gemini-3-pro-preview",
+      "task_prompt_sha256": "e505a652cdd4d26f3d1ebb7a54ec122bca575d6d5cb8db11eb8f319c57dedf28"
+    },
+    {
+      "session_id": "162ce43163fe_e7fc8cd6",
+      "run_id": "162ce43163fe",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_gcp_gemini-3-pro-preview/config.json",
+      "model": "gemini-3-pro-preview",
+      "task_prompt_sha256": "60aaea88463fbaa88e94ca491faa60c9acd4334467cee616dc8681957ccd9384"
+    },
+    {
+      "session_id": "162ce43163fe_ebad9aab",
+      "run_id": "162ce43163fe",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_gcp_gemini-3-pro-preview/config.json",
+      "model": "gemini-3-pro-preview",
+      "task_prompt_sha256": "fe0e65c21dca0b35c21be8b386e0e4d7acac905a49fe38f6f1decb00c6869e7d"
+    },
+    {
+      "session_id": "162ce43163fe_ebd03b0c",
+      "run_id": "162ce43163fe",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_gcp_gemini-3-pro-preview/config.json",
+      "model": "gemini-3-pro-preview",
+      "task_prompt_sha256": "1a5ca221e73ad3b0a2abcbaa6c179c87cbe4069eb32987f004a66d9ceb9fd160"
+    },
+    {
+      "session_id": "162ce43163fe_ee4e69b0",
+      "run_id": "162ce43163fe",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_gcp_gemini-3-pro-preview/config.json",
+      "model": "gemini-3-pro-preview",
+      "task_prompt_sha256": "7e4035e5b6334f2dd943d2cbba08064b56254d6f52078d94e94554668c9a5d06"
+    },
+    {
+      "session_id": "162ce43163fe_f212601b",
+      "run_id": "162ce43163fe",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_gcp_gemini-3-pro-preview/config.json",
+      "model": "gemini-3-pro-preview",
+      "task_prompt_sha256": "dac7bc77dba7eec6cd5e9533709f8c9542950c8a19cda51eabd2cc3e06b69d3d"
+    },
+    {
+      "session_id": "162ce43163fe_f49ed38e",
+      "run_id": "162ce43163fe",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_gcp_gemini-3-pro-preview/config.json",
+      "model": "gemini-3-pro-preview",
+      "task_prompt_sha256": "bdd5334fa25e4147b296fe581eff2603711d69a4cdfbe0a791e0a07c78ad7c80"
+    },
+    {
+      "session_id": "162ce43163fe_f6d73f41",
+      "run_id": "162ce43163fe",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_gcp_gemini-3-pro-preview/config.json",
+      "model": "gemini-3-pro-preview",
+      "task_prompt_sha256": "d385b4f106aee9ceb2a6b40967f0ce4f629fe880611facea9694c2dae2894a4a"
+    },
+    {
+      "session_id": "162ce43163fe_f8abd585",
+      "run_id": "162ce43163fe",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_gcp_gemini-3-pro-preview/config.json",
+      "model": "gemini-3-pro-preview",
+      "task_prompt_sha256": "68258d72efa3650c7301a22c71d6b9a9586adb87028b3b690c77844a01dd7cc6"
+    },
+    {
+      "session_id": "162ce43163fe_f8e0d1fa",
+      "run_id": "162ce43163fe",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_gcp_gemini-3-pro-preview/config.json",
+      "model": "gemini-3-pro-preview",
+      "task_prompt_sha256": "aaaad3e7c85ef51066c2a318d1795e0d3e5910d63cce16241c91c10ff14b9198"
+    },
+    {
+      "session_id": "162ce43163fe_fe860ca5",
+      "run_id": "162ce43163fe",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_gcp_gemini-3-pro-preview/config.json",
+      "model": "gemini-3-pro-preview",
+      "task_prompt_sha256": "1064ba456458030ddec131338c5b934de6173863fed04b5beb5b94c95bb2a979"
+    },
+    {
+      "session_id": "162ce43163fe_fec62510",
+      "run_id": "162ce43163fe",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_gcp_gemini-3-pro-preview/config.json",
+      "model": "gemini-3-pro-preview",
+      "task_prompt_sha256": "073fbd3250c61b9d4ac6dbe105deec45738cb620abd74cb7850c84112b04a1c5"
+    },
+    {
+      "session_id": "162ce43163fe_ff06c1c2",
+      "run_id": "162ce43163fe",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_gcp_gemini-3-pro-preview/config.json",
+      "model": "gemini-3-pro-preview",
+      "task_prompt_sha256": "cf53dd6d66b1c6ca859769931cece30b6b43ce304696a98e1178d61a7db38fca"
+    },
+    {
+      "session_id": "90d4a81c49e3_06c157b8",
+      "run_id": "90d4a81c49e3",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_aws_claude-opus-4-5/config.json",
+      "model": "claude-opus-4-5",
+      "task_prompt_sha256": "bdd5334fa25e4147b296fe581eff2603711d69a4cdfbe0a791e0a07c78ad7c80"
+    },
+    {
+      "session_id": "90d4a81c49e3_07bcfa57",
+      "run_id": "90d4a81c49e3",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_aws_claude-opus-4-5/config.json",
+      "model": "claude-opus-4-5",
+      "task_prompt_sha256": "07c486b9fe0eebb265c4b04cd22132881d7224206c3247f569dda8d9a278f9cd"
+    },
+    {
+      "session_id": "90d4a81c49e3_09bc02a9",
+      "run_id": "90d4a81c49e3",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_aws_claude-opus-4-5/config.json",
+      "model": "claude-opus-4-5",
+      "task_prompt_sha256": "9763802d2754d8b5c37ea99445edd76ba86fc1a830ae64a0b11153707b4f4774"
+    },
+    {
+      "session_id": "90d4a81c49e3_0cd065b6",
+      "run_id": "90d4a81c49e3",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_aws_claude-opus-4-5/config.json",
+      "model": "claude-opus-4-5",
+      "task_prompt_sha256": "7b9c5f1e5f51658d64f26578ab764ce3a3d21941f7e6019a2f2bcaa10bb91d41"
+    },
+    {
+      "session_id": "90d4a81c49e3_0f04de50",
+      "run_id": "90d4a81c49e3",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_aws_claude-opus-4-5/config.json",
+      "model": "claude-opus-4-5",
+      "task_prompt_sha256": "d3450277599165b4b219647c8e73ae3e4137412695bc902ebc9850511bb4be74"
+    },
+    {
+      "session_id": "90d4a81c49e3_12a36b88",
+      "run_id": "90d4a81c49e3",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_aws_claude-opus-4-5/config.json",
+      "model": "claude-opus-4-5",
+      "task_prompt_sha256": "3b3cbc2d433cdf8f7b35c0efbf42eb9f4019521fc9fcb28b4ab69ba319dfaeb9"
+    },
+    {
+      "session_id": "90d4a81c49e3_178bcf08",
+      "run_id": "90d4a81c49e3",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_aws_claude-opus-4-5/config.json",
+      "model": "claude-opus-4-5",
+      "task_prompt_sha256": "bbe2cfbee16e5f42b175b11db289fd71e9f398cb8df65dde690a1da4c709f785"
+    },
+    {
+      "session_id": "90d4a81c49e3_1890777c",
+      "run_id": "90d4a81c49e3",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_aws_claude-opus-4-5/config.json",
+      "model": "claude-opus-4-5",
+      "task_prompt_sha256": "8687a308dc5f6231258383eb61ee3f5b3a8c87f0a1933c4ed3d37acd051616c9"
+    },
+    {
+      "session_id": "90d4a81c49e3_1c425e12",
+      "run_id": "90d4a81c49e3",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_aws_claude-opus-4-5/config.json",
+      "model": "claude-opus-4-5",
+      "task_prompt_sha256": "2803057a1bd117c38c8ecf8a8cd65ed89d33ec92d9ad5e43b286e1b72a84a540"
+    },
+    {
+      "session_id": "90d4a81c49e3_1cbefcfd",
+      "run_id": "90d4a81c49e3",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_aws_claude-opus-4-5/config.json",
+      "model": "claude-opus-4-5",
+      "task_prompt_sha256": "ca4875f4c16dd2d40a8ab7eb65e333b77c5ac83c9b3cf2bfcdf7587b24a31d55"
+    },
+    {
+      "session_id": "90d4a81c49e3_1cd5654c",
+      "run_id": "90d4a81c49e3",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_aws_claude-opus-4-5/config.json",
+      "model": "claude-opus-4-5",
+      "task_prompt_sha256": "01d8cca5052fe2701497b91bd9a534e528fa851c49e868fb1dcb1a6385bc01f0"
+    },
+    {
+      "session_id": "90d4a81c49e3_26ff773a",
+      "run_id": "90d4a81c49e3",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_aws_claude-opus-4-5/config.json",
+      "model": "claude-opus-4-5",
+      "task_prompt_sha256": "18170b1c105f2b8700a140e36a1c174f1be12aef9af4e0afbaff6811ebb7f06e"
+    },
+    {
+      "session_id": "90d4a81c49e3_2750c9c5",
+      "run_id": "90d4a81c49e3",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_aws_claude-opus-4-5/config.json",
+      "model": "claude-opus-4-5",
+      "task_prompt_sha256": "1363abc68426a246570788897f3f91d3b15736ea3bbb28463571cbe4a138f415"
+    },
+    {
+      "session_id": "90d4a81c49e3_2870ca36",
+      "run_id": "90d4a81c49e3",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_aws_claude-opus-4-5/config.json",
+      "model": "claude-opus-4-5",
+      "task_prompt_sha256": "68258d72efa3650c7301a22c71d6b9a9586adb87028b3b690c77844a01dd7cc6"
+    },
+    {
+      "session_id": "90d4a81c49e3_289ef94f",
+      "run_id": "90d4a81c49e3",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_aws_claude-opus-4-5/config.json",
+      "model": "claude-opus-4-5",
+      "task_prompt_sha256": "62062c399f211fe22ac0254e2681729e122fb4ab2916f786c50127f55d3a4acd"
+    },
+    {
+      "session_id": "90d4a81c49e3_29ea7254",
+      "run_id": "90d4a81c49e3",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_aws_claude-opus-4-5/config.json",
+      "model": "claude-opus-4-5",
+      "task_prompt_sha256": "794d8c28dd8eeb215a575b18e64efc39b4cf5f7ca7211cb5a3dd0df8a05e8e14"
+    },
+    {
+      "session_id": "90d4a81c49e3_2b2c02ef",
+      "run_id": "90d4a81c49e3",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_aws_claude-opus-4-5/config.json",
+      "model": "claude-opus-4-5",
+      "task_prompt_sha256": "64ad856862c8e43840cf936d1bf057eab2d15a204d45349e374a1981dc6c0828"
+    },
+    {
+      "session_id": "90d4a81c49e3_2ec1b449",
+      "run_id": "90d4a81c49e3",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_aws_claude-opus-4-5/config.json",
+      "model": "claude-opus-4-5",
+      "task_prompt_sha256": "1a5ca221e73ad3b0a2abcbaa6c179c87cbe4069eb32987f004a66d9ceb9fd160"
+    },
+    {
+      "session_id": "90d4a81c49e3_3241a260",
+      "run_id": "90d4a81c49e3",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_aws_claude-opus-4-5/config.json",
+      "model": "claude-opus-4-5",
+      "task_prompt_sha256": "d63e16352c96151f843a78de0b34a172ed7be086bdb78c8a5987853c4c93e902"
+    },
+    {
+      "session_id": "90d4a81c49e3_340fc474",
+      "run_id": "90d4a81c49e3",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_aws_claude-opus-4-5/config.json",
+      "model": "claude-opus-4-5",
+      "task_prompt_sha256": "f6697db80d4368d6933eaef646b6a6763f7e233e11126ab7274d126ef14b1a42"
+    },
+    {
+      "session_id": "90d4a81c49e3_384cd525",
+      "run_id": "90d4a81c49e3",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_aws_claude-opus-4-5/config.json",
+      "model": "claude-opus-4-5",
+      "task_prompt_sha256": "beccc8e3212c748e828bdf28df03e404888dd614bd473c264147c4129d205eb6"
+    },
+    {
+      "session_id": "90d4a81c49e3_3974e414",
+      "run_id": "90d4a81c49e3",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_aws_claude-opus-4-5/config.json",
+      "model": "claude-opus-4-5",
+      "task_prompt_sha256": "3082b24b5ad3f9517d10c715953cb05245cd26f5fc1cb637c53745a3122f9c59"
+    },
+    {
+      "session_id": "90d4a81c49e3_42460f2e",
+      "run_id": "90d4a81c49e3",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_aws_claude-opus-4-5/config.json",
+      "model": "claude-opus-4-5",
+      "task_prompt_sha256": "c86ef9e4b8d9b035ff31e6a58cb3757dee1dcd4809ab68630acb6de6a4eef608"
+    },
+    {
+      "session_id": "90d4a81c49e3_4854007e",
+      "run_id": "90d4a81c49e3",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_aws_claude-opus-4-5/config.json",
+      "model": "claude-opus-4-5",
+      "task_prompt_sha256": "1164abebb55a7e62aef1ab87258498f403beb1c555b2985016eb8d30581d664e"
+    },
+    {
+      "session_id": "90d4a81c49e3_48e865e0",
+      "run_id": "90d4a81c49e3",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_aws_claude-opus-4-5/config.json",
+      "model": "claude-opus-4-5",
+      "task_prompt_sha256": "21326b771d17f00239437acbfb88332299e5009d011b7f4aed6702086e1c9ca2"
+    },
+    {
+      "session_id": "90d4a81c49e3_4ecf7180",
+      "run_id": "90d4a81c49e3",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_aws_claude-opus-4-5/config.json",
+      "model": "claude-opus-4-5",
+      "task_prompt_sha256": "f42c5b4c96eca231709c806f9c061daec17d9adcfb5df9259bc9d8bdce80a33b"
+    },
+    {
+      "session_id": "90d4a81c49e3_502bda8c",
+      "run_id": "90d4a81c49e3",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_aws_claude-opus-4-5/config.json",
+      "model": "claude-opus-4-5",
+      "task_prompt_sha256": "3be5d32bfc2dfba218119bdad2d4ddf2018a9fddb14df506c165848165880b1a"
+    },
+    {
+      "session_id": "90d4a81c49e3_522bd540",
+      "run_id": "90d4a81c49e3",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_aws_claude-opus-4-5/config.json",
+      "model": "claude-opus-4-5",
+      "task_prompt_sha256": "890541202bb564063e5cb2a327f8ae8d994b738a3d0cc429b33da1489db899a7"
+    },
+    {
+      "session_id": "90d4a81c49e3_53d59fd6",
+      "run_id": "90d4a81c49e3",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_aws_claude-opus-4-5/config.json",
+      "model": "claude-opus-4-5",
+      "task_prompt_sha256": "92c81a198d3973a827a63ede15a1cd4a959d8c73946e8d4b1d9d9609f13b00bf"
+    },
+    {
+      "session_id": "90d4a81c49e3_54d95e3f",
+      "run_id": "90d4a81c49e3",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_aws_claude-opus-4-5/config.json",
+      "model": "claude-opus-4-5",
+      "task_prompt_sha256": "db8e88aae64cdd60e0f734b83df16caf5d544b44788adfe3ec23410d2201561c"
+    },
+    {
+      "session_id": "90d4a81c49e3_55ca664a",
+      "run_id": "90d4a81c49e3",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_aws_claude-opus-4-5/config.json",
+      "model": "claude-opus-4-5",
+      "task_prompt_sha256": "c7aa858f72f10ae7bd6f3bda64aa2ff6d6ac8ad332d4f03d89728d3c33476e16"
+    },
+    {
+      "session_id": "90d4a81c49e3_5a474e9b",
+      "run_id": "90d4a81c49e3",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_aws_claude-opus-4-5/config.json",
+      "model": "claude-opus-4-5",
+      "task_prompt_sha256": "87205427d3299e392d994b52e800c828a20a41eb315616ce24ab44da2f1e26ca"
+    },
+    {
+      "session_id": "90d4a81c49e3_615838e0",
+      "run_id": "90d4a81c49e3",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_aws_claude-opus-4-5/config.json",
+      "model": "claude-opus-4-5",
+      "task_prompt_sha256": "042613276426dbee9e774d7a630686bfac0a919db4d03991c011a35f0c6c9b55"
+    },
+    {
+      "session_id": "90d4a81c49e3_63df0dd5",
+      "run_id": "90d4a81c49e3",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_aws_claude-opus-4-5/config.json",
+      "model": "claude-opus-4-5",
+      "task_prompt_sha256": "ca2d5827cf3e0aa3e211bd93dd0512dab13050f1ca6a1e6a683af1c6c4f4393e"
+    },
+    {
+      "session_id": "90d4a81c49e3_6443991d",
+      "run_id": "90d4a81c49e3",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_aws_claude-opus-4-5/config.json",
+      "model": "claude-opus-4-5",
+      "task_prompt_sha256": "cf53dd6d66b1c6ca859769931cece30b6b43ce304696a98e1178d61a7db38fca"
+    },
+    {
+      "session_id": "90d4a81c49e3_647465a8",
+      "run_id": "90d4a81c49e3",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_aws_claude-opus-4-5/config.json",
+      "model": "claude-opus-4-5",
+      "task_prompt_sha256": "e82a0fdfa65e4de20d0981f26ef95b4c7ebcf2b5eea9ec7b96926263ed66bc59"
+    },
+    {
+      "session_id": "90d4a81c49e3_64f44755",
+      "run_id": "90d4a81c49e3",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_aws_claude-opus-4-5/config.json",
+      "model": "claude-opus-4-5",
+      "task_prompt_sha256": "fbbc441105072d14033588fa396c3f6e174492d576bbd85099bd8b8a190aaaaf"
+    },
+    {
+      "session_id": "90d4a81c49e3_66f1fbeb",
+      "run_id": "90d4a81c49e3",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_aws_claude-opus-4-5/config.json",
+      "model": "claude-opus-4-5",
+      "task_prompt_sha256": "6832231431b176a4042c885ba4d8b62d15686ece47e3ab750eb434773c32ae94"
+    },
+    {
+      "session_id": "90d4a81c49e3_6a42762e",
+      "run_id": "90d4a81c49e3",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_aws_claude-opus-4-5/config.json",
+      "model": "claude-opus-4-5",
+      "task_prompt_sha256": "f8e6992ff672489ebcf38083cc38a548f8d60272f5eb6fa4466dc743578a3b75"
+    },
+    {
+      "session_id": "90d4a81c49e3_765d819a",
+      "run_id": "90d4a81c49e3",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_aws_claude-opus-4-5/config.json",
+      "model": "claude-opus-4-5",
+      "task_prompt_sha256": "f72e8d93d79677d03a4de38f6780dbf9888b59024fe15d5e0abf7cb53259102f"
+    },
+    {
+      "session_id": "90d4a81c49e3_7851b9de",
+      "run_id": "90d4a81c49e3",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_aws_claude-opus-4-5/config.json",
+      "model": "claude-opus-4-5",
+      "task_prompt_sha256": "15a8767ea6c98bed9718ee8cd323420fb327d87f3b922596bb3f5676746ae29e"
+    },
+    {
+      "session_id": "90d4a81c49e3_78864df7",
+      "run_id": "90d4a81c49e3",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_aws_claude-opus-4-5/config.json",
+      "model": "claude-opus-4-5",
+      "task_prompt_sha256": "aaaad3e7c85ef51066c2a318d1795e0d3e5910d63cce16241c91c10ff14b9198"
+    },
+    {
+      "session_id": "90d4a81c49e3_79d39a29",
+      "run_id": "90d4a81c49e3",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_aws_claude-opus-4-5/config.json",
+      "model": "claude-opus-4-5",
+      "task_prompt_sha256": "074f44135b761bbfb69a1ce3c408e44e924f7769466af667db6d14e37cce8140"
+    },
+    {
+      "session_id": "90d4a81c49e3_7b127339",
+      "run_id": "90d4a81c49e3",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_aws_claude-opus-4-5/config.json",
+      "model": "claude-opus-4-5",
+      "task_prompt_sha256": "dafce0e19aa4231744fc4a63ce0aff5512447c5440dc86bf440701a17dbd711b"
+    },
+    {
+      "session_id": "90d4a81c49e3_7e7aea41",
+      "run_id": "90d4a81c49e3",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_aws_claude-opus-4-5/config.json",
+      "model": "claude-opus-4-5",
+      "task_prompt_sha256": "16fc855fa674ef54d1df74d7be418939661e469aa96e55f212ec9013109a9ec2"
+    },
+    {
+      "session_id": "90d4a81c49e3_81e481d2",
+      "run_id": "90d4a81c49e3",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_aws_claude-opus-4-5/config.json",
+      "model": "claude-opus-4-5",
+      "task_prompt_sha256": "39715ed22eb259026aa37fbf64c0314bb4dd51d199acbe06d614e8bb9ae9794e"
+    },
+    {
+      "session_id": "90d4a81c49e3_84d01d57",
+      "run_id": "90d4a81c49e3",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_aws_claude-opus-4-5/config.json",
+      "model": "claude-opus-4-5",
+      "task_prompt_sha256": "f46e523e7827517dc4d4aa3e2134eebc458388264814bab9718e68480a2f46c9"
+    },
+    {
+      "session_id": "90d4a81c49e3_86833fdc",
+      "run_id": "90d4a81c49e3",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_aws_claude-opus-4-5/config.json",
+      "model": "claude-opus-4-5",
+      "task_prompt_sha256": "f32b58e12ca686f36a5b9829e2ac9b953486faee9dbbe28fe49c571418d52a18"
+    },
+    {
+      "session_id": "90d4a81c49e3_8fcb27df",
+      "run_id": "90d4a81c49e3",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_aws_claude-opus-4-5/config.json",
+      "model": "claude-opus-4-5",
+      "task_prompt_sha256": "41ce337a30c04c0ff5b427c0090696a7a67f378841965d25c95c0baa21867b73"
+    },
+    {
+      "session_id": "90d4a81c49e3_8ff7d198",
+      "run_id": "90d4a81c49e3",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_aws_claude-opus-4-5/config.json",
+      "model": "claude-opus-4-5",
+      "task_prompt_sha256": "7e4035e5b6334f2dd943d2cbba08064b56254d6f52078d94e94554668c9a5d06"
+    },
+    {
+      "session_id": "90d4a81c49e3_905bf18c",
+      "run_id": "90d4a81c49e3",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_aws_claude-opus-4-5/config.json",
+      "model": "claude-opus-4-5",
+      "task_prompt_sha256": "7babbb57f8a9b250b14b59fa717bf01c3f3f90d35b5321babd6f309c7130ffed"
+    },
+    {
+      "session_id": "90d4a81c49e3_90f684ed",
+      "run_id": "90d4a81c49e3",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_aws_claude-opus-4-5/config.json",
+      "model": "claude-opus-4-5",
+      "task_prompt_sha256": "2aa0e3ec5dab0d84625339d9f255a533f507d3db3da756ce23ef9341eda923b1"
+    },
+    {
+      "session_id": "90d4a81c49e3_925a15db",
+      "run_id": "90d4a81c49e3",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_aws_claude-opus-4-5/config.json",
+      "model": "claude-opus-4-5",
+      "task_prompt_sha256": "eb1dbfa819f5c1baf06b60cc2de46632de8d516646649b4214f83179c4157f15"
+    },
+    {
+      "session_id": "90d4a81c49e3_93fa82e3",
+      "run_id": "90d4a81c49e3",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_aws_claude-opus-4-5/config.json",
+      "model": "claude-opus-4-5",
+      "task_prompt_sha256": "234a2addbd791e797a16dc4650ad924745c5528a05bc666a2c17393d8bfda506"
+    },
+    {
+      "session_id": "90d4a81c49e3_946bda4d",
+      "run_id": "90d4a81c49e3",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_aws_claude-opus-4-5/config.json",
+      "model": "claude-opus-4-5",
+      "task_prompt_sha256": "e505a652cdd4d26f3d1ebb7a54ec122bca575d6d5cb8db11eb8f319c57dedf28"
+    },
+    {
+      "session_id": "90d4a81c49e3_9893af06",
+      "run_id": "90d4a81c49e3",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_aws_claude-opus-4-5/config.json",
+      "model": "claude-opus-4-5",
+      "task_prompt_sha256": "12b182d2655d9851b304330672c521319a6917bb2b561533338a6fde26f880ad"
+    },
+    {
+      "session_id": "90d4a81c49e3_9faa05de",
+      "run_id": "90d4a81c49e3",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_aws_claude-opus-4-5/config.json",
+      "model": "claude-opus-4-5",
+      "task_prompt_sha256": "af5b0a65ceef32c073ff2f592a0ebd81695eef18aa0128c69260393cb502652a"
+    },
+    {
+      "session_id": "90d4a81c49e3_a1633bce",
+      "run_id": "90d4a81c49e3",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_aws_claude-opus-4-5/config.json",
+      "model": "claude-opus-4-5",
+      "task_prompt_sha256": "d385b4f106aee9ceb2a6b40967f0ce4f629fe880611facea9694c2dae2894a4a"
+    },
+    {
+      "session_id": "90d4a81c49e3_a21759c3",
+      "run_id": "90d4a81c49e3",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_aws_claude-opus-4-5/config.json",
+      "model": "claude-opus-4-5",
+      "task_prompt_sha256": "4d47c55856a53763d7b67b9ed30e623bbe529fad351e291a130babeaabb44b0f"
+    },
+    {
+      "session_id": "90d4a81c49e3_a2f2e627",
+      "run_id": "90d4a81c49e3",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_aws_claude-opus-4-5/config.json",
+      "model": "claude-opus-4-5",
+      "task_prompt_sha256": "0ea0001dc112db734f0f6ecc8bc468c3247e8f0480076db055d7a0f0a6ccd734"
+    },
+    {
+      "session_id": "90d4a81c49e3_a5b14ced",
+      "run_id": "90d4a81c49e3",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_aws_claude-opus-4-5/config.json",
+      "model": "claude-opus-4-5",
+      "task_prompt_sha256": "16021f0b5ab91fdb823b94ff9ab7e66c35a46b42700ca375ad64d5ac413454d0"
+    },
+    {
+      "session_id": "90d4a81c49e3_a60c0cdc",
+      "run_id": "90d4a81c49e3",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_aws_claude-opus-4-5/config.json",
+      "model": "claude-opus-4-5",
+      "task_prompt_sha256": "45d0b8f8fab5bbc4ca1d4b5172519fd5a2cf0f4d579b9b916b79107e45ceac17"
+    },
+    {
+      "session_id": "90d4a81c49e3_a84c8911",
+      "run_id": "90d4a81c49e3",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_aws_claude-opus-4-5/config.json",
+      "model": "claude-opus-4-5",
+      "task_prompt_sha256": "649a9fda659455b890a53b0f19a4f1e148deecf0af5148b937bacad08508ba48"
+    },
+    {
+      "session_id": "90d4a81c49e3_aafbf687",
+      "run_id": "90d4a81c49e3",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_aws_claude-opus-4-5/config.json",
+      "model": "claude-opus-4-5",
+      "task_prompt_sha256": "5b1b99fb4ea8468a800fad5057b241ce0380d772a8b402954e280094c769218b"
+    },
+    {
+      "session_id": "90d4a81c49e3_abd0ef2c",
+      "run_id": "90d4a81c49e3",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_aws_claude-opus-4-5/config.json",
+      "model": "claude-opus-4-5",
+      "task_prompt_sha256": "09b0eb07ef02009fcb94551b2e1c282b7f4fcf514a1d34061d01635cf4026bda"
+    },
+    {
+      "session_id": "90d4a81c49e3_af9aa48a",
+      "run_id": "90d4a81c49e3",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_aws_claude-opus-4-5/config.json",
+      "model": "claude-opus-4-5",
+      "task_prompt_sha256": "c8dcf69acdb6d1b452c309c9f498dea1cfb5684701aa300592a031e190954036"
+    },
+    {
+      "session_id": "90d4a81c49e3_afa618c6",
+      "run_id": "90d4a81c49e3",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_aws_claude-opus-4-5/config.json",
+      "model": "claude-opus-4-5",
+      "task_prompt_sha256": "4816fb773f89063bb7a71954a110d0568df3a8c950b3806844d5d6fa565ca775"
+    },
+    {
+      "session_id": "90d4a81c49e3_b27d2721",
+      "run_id": "90d4a81c49e3",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_aws_claude-opus-4-5/config.json",
+      "model": "claude-opus-4-5",
+      "task_prompt_sha256": "65662cfbf95e555f1f77b87d8a30d8efce0c007e159fdc10d548fa4e128099f8"
+    },
+    {
+      "session_id": "90d4a81c49e3_b477b259",
+      "run_id": "90d4a81c49e3",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_aws_claude-opus-4-5/config.json",
+      "model": "claude-opus-4-5",
+      "task_prompt_sha256": "2f2f4563db00a838bdeb02787c3d737f736cefdf900d27cfeea5ed1997eda287"
+    },
+    {
+      "session_id": "90d4a81c49e3_b8ab48c6",
+      "run_id": "90d4a81c49e3",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_aws_claude-opus-4-5/config.json",
+      "model": "claude-opus-4-5",
+      "task_prompt_sha256": "0cbdbfbe38feaac7eaebf3652f5400bc7fa454e5e0aa7b00ae4316c8a9f8c875"
+    },
+    {
+      "session_id": "90d4a81c49e3_b9065d96",
+      "run_id": "90d4a81c49e3",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_aws_claude-opus-4-5/config.json",
+      "model": "claude-opus-4-5",
+      "task_prompt_sha256": "89046a9e5e4b6e280e16c0cc51dbdce3d3485d9c8b26d63aaf588cf057b9023a"
+    },
+    {
+      "session_id": "90d4a81c49e3_bf45d34b",
+      "run_id": "90d4a81c49e3",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_aws_claude-opus-4-5/config.json",
+      "model": "claude-opus-4-5",
+      "task_prompt_sha256": "7e8e6f657c328031e041b50c4d17624c3dcd7d42827c6e2059e796e7e2a4ec02"
+    },
+    {
+      "session_id": "90d4a81c49e3_bfeec59a",
+      "run_id": "90d4a81c49e3",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_aws_claude-opus-4-5/config.json",
+      "model": "claude-opus-4-5",
+      "task_prompt_sha256": "60aaea88463fbaa88e94ca491faa60c9acd4334467cee616dc8681957ccd9384"
+    },
+    {
+      "session_id": "90d4a81c49e3_c33f84de",
+      "run_id": "90d4a81c49e3",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_aws_claude-opus-4-5/config.json",
+      "model": "claude-opus-4-5",
+      "task_prompt_sha256": "993936b720f0985579e6c256ba5156a5eddbb825a76ed7c92499daec1bd4b915"
+    },
+    {
+      "session_id": "90d4a81c49e3_c4ad655c",
+      "run_id": "90d4a81c49e3",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_aws_claude-opus-4-5/config.json",
+      "model": "claude-opus-4-5",
+      "task_prompt_sha256": "ab6ac5281df47e2746c4bdeb1449ed407f4ea98bbcd99a8c87b5b0c7f00918b2"
+    },
+    {
+      "session_id": "90d4a81c49e3_c8b74295",
+      "run_id": "90d4a81c49e3",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_aws_claude-opus-4-5/config.json",
+      "model": "claude-opus-4-5",
+      "task_prompt_sha256": "fe0e65c21dca0b35c21be8b386e0e4d7acac905a49fe38f6f1decb00c6869e7d"
+    },
+    {
+      "session_id": "90d4a81c49e3_ca4d696d",
+      "run_id": "90d4a81c49e3",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_aws_claude-opus-4-5/config.json",
+      "model": "claude-opus-4-5",
+      "task_prompt_sha256": "7518f5674197081fc80a662e1b583c11a403957fd3330f0d50ea5afce843db0c"
+    },
+    {
+      "session_id": "90d4a81c49e3_cb14eba5",
+      "run_id": "90d4a81c49e3",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_aws_claude-opus-4-5/config.json",
+      "model": "claude-opus-4-5",
+      "task_prompt_sha256": "f9f504c58fdfaf1381b2e2c80aabd0cfe778d818dae726bef1634e9665591fbb"
+    },
+    {
+      "session_id": "90d4a81c49e3_cd8c176f",
+      "run_id": "90d4a81c49e3",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_aws_claude-opus-4-5/config.json",
+      "model": "claude-opus-4-5",
+      "task_prompt_sha256": "ac4908f09966aa8ba74b9da93975f2e4e8e43a846989464e2505ababcfd3d740"
+    },
+    {
+      "session_id": "90d4a81c49e3_ce1bba5d",
+      "run_id": "90d4a81c49e3",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_aws_claude-opus-4-5/config.json",
+      "model": "claude-opus-4-5",
+      "task_prompt_sha256": "073fbd3250c61b9d4ac6dbe105deec45738cb620abd74cb7850c84112b04a1c5"
+    },
+    {
+      "session_id": "90d4a81c49e3_cf9b574c",
+      "run_id": "90d4a81c49e3",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_aws_claude-opus-4-5/config.json",
+      "model": "claude-opus-4-5",
+      "task_prompt_sha256": "4cec50c4abeda403cad492e6264fdcb0724aa449f26f3b232d5a7fb6a6f54b77"
+    },
+    {
+      "session_id": "90d4a81c49e3_d051653a",
+      "run_id": "90d4a81c49e3",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_aws_claude-opus-4-5/config.json",
+      "model": "claude-opus-4-5",
+      "task_prompt_sha256": "14013a7fe99c68baefcdb51659e16283060973d0776ac87f60475b619a3115cd"
+    },
+    {
+      "session_id": "90d4a81c49e3_d12db82d",
+      "run_id": "90d4a81c49e3",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_aws_claude-opus-4-5/config.json",
+      "model": "claude-opus-4-5",
+      "task_prompt_sha256": "79d870c3e22a13df7b3e8456478fb5c26ae87f2f2b42ee3678ceed3fa9d1cf77"
+    },
+    {
+      "session_id": "90d4a81c49e3_d6670247",
+      "run_id": "90d4a81c49e3",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_aws_claude-opus-4-5/config.json",
+      "model": "claude-opus-4-5",
+      "task_prompt_sha256": "4283b34ce6c8aa023c2df1af23c0d2f1331633c97f9d27327c2f41ba6a4926d4"
+    },
+    {
+      "session_id": "90d4a81c49e3_d7d6a5c2",
+      "run_id": "90d4a81c49e3",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_aws_claude-opus-4-5/config.json",
+      "model": "claude-opus-4-5",
+      "task_prompt_sha256": "265f32e698987503e1dbe63e19905c3b85220bae94978dc74a6b6b92eb3fbdf4"
+    },
+    {
+      "session_id": "90d4a81c49e3_da35fba1",
+      "run_id": "90d4a81c49e3",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_aws_claude-opus-4-5/config.json",
+      "model": "claude-opus-4-5",
+      "task_prompt_sha256": "e844eaf101e5c948ca32c869beefbef5fd6db79cdc056d020f7c082c69a5e60a"
+    },
+    {
+      "session_id": "90d4a81c49e3_db7a5156",
+      "run_id": "90d4a81c49e3",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_aws_claude-opus-4-5/config.json",
+      "model": "claude-opus-4-5",
+      "task_prompt_sha256": "28c873c368b5b3f13db1572f58dbbfb7181898f2ec3e60389f16dc29712ede08"
+    },
+    {
+      "session_id": "90d4a81c49e3_dbbb6d03",
+      "run_id": "90d4a81c49e3",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_aws_claude-opus-4-5/config.json",
+      "model": "claude-opus-4-5",
+      "task_prompt_sha256": "9456db17ba60cb377cf0bb1d08f81bcad8209789c774034c885befa39dcc9a0d"
+    },
+    {
+      "session_id": "90d4a81c49e3_dc5d269e",
+      "run_id": "90d4a81c49e3",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_aws_claude-opus-4-5/config.json",
+      "model": "claude-opus-4-5",
+      "task_prompt_sha256": "8f44179bf022aabb42bdaa8753b8317fc2681d309e44ce9a03a0212c45c180f3"
+    },
+    {
+      "session_id": "90d4a81c49e3_e23ea09a",
+      "run_id": "90d4a81c49e3",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_aws_claude-opus-4-5/config.json",
+      "model": "claude-opus-4-5",
+      "task_prompt_sha256": "276e0cfc2ec7d841aac6b1b82074477758780797a61571467ea35014baa30ad2"
+    },
+    {
+      "session_id": "90d4a81c49e3_e857083b",
+      "run_id": "90d4a81c49e3",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_aws_claude-opus-4-5/config.json",
+      "model": "claude-opus-4-5",
+      "task_prompt_sha256": "995f68fba20186a97bce95b7959124b98c66d6653e8723f7ea36c470eedc17fb"
+    },
+    {
+      "session_id": "90d4a81c49e3_e8defef8",
+      "run_id": "90d4a81c49e3",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_aws_claude-opus-4-5/config.json",
+      "model": "claude-opus-4-5",
+      "task_prompt_sha256": "b658d254578780625899b30ed7ebe0de749691214844b103600611f94f7a5511"
+    },
+    {
+      "session_id": "90d4a81c49e3_eb4a8a04",
+      "run_id": "90d4a81c49e3",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_aws_claude-opus-4-5/config.json",
+      "model": "claude-opus-4-5",
+      "task_prompt_sha256": "1064ba456458030ddec131338c5b934de6173863fed04b5beb5b94c95bb2a979"
+    },
+    {
+      "session_id": "90d4a81c49e3_ec3ce933",
+      "run_id": "90d4a81c49e3",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_aws_claude-opus-4-5/config.json",
+      "model": "claude-opus-4-5",
+      "task_prompt_sha256": "c76485cc26aadfdc139c996fdc683fae4ac6cb82e9060cc84d892a41197692a9"
+    },
+    {
+      "session_id": "90d4a81c49e3_ed8d7718",
+      "run_id": "90d4a81c49e3",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_aws_claude-opus-4-5/config.json",
+      "model": "claude-opus-4-5",
+      "task_prompt_sha256": "5a9ccbfbf2eaeec8f6abc9cf532442544d73ac1ec0283b56970503061c73a6ee"
+    },
+    {
+      "session_id": "90d4a81c49e3_f1546af0",
+      "run_id": "90d4a81c49e3",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_aws_claude-opus-4-5/config.json",
+      "model": "claude-opus-4-5",
+      "task_prompt_sha256": "f7730114474c409d784f1423745b2e3c9cfdd33f9ee30bd07d752a8b46b55177"
+    },
+    {
+      "session_id": "90d4a81c49e3_f15f8ffa",
+      "run_id": "90d4a81c49e3",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_aws_claude-opus-4-5/config.json",
+      "model": "claude-opus-4-5",
+      "task_prompt_sha256": "1c66ff37c6e0e0ec8aa2a3ddaee9536de064984db2cc8e3b6dc9792a578185e6"
+    },
+    {
+      "session_id": "90d4a81c49e3_fa1aece8",
+      "run_id": "90d4a81c49e3",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_aws_claude-opus-4-5/config.json",
+      "model": "claude-opus-4-5",
+      "task_prompt_sha256": "40f80f63f649946805546d59fdef3d25d4d6162eac415b51b330e56792218b79"
+    },
+    {
+      "session_id": "90d4a81c49e3_fbe78be8",
+      "run_id": "90d4a81c49e3",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_aws_claude-opus-4-5/config.json",
+      "model": "claude-opus-4-5",
+      "task_prompt_sha256": "e93e8fa07395bfc609e8777c20262af3f3482238ad74e14b458e257c95670c60"
+    },
+    {
+      "session_id": "90d4a81c49e3_fe790a70",
+      "run_id": "90d4a81c49e3",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_aws_claude-opus-4-5/config.json",
+      "model": "claude-opus-4-5",
+      "task_prompt_sha256": "dac7bc77dba7eec6cd5e9533709f8c9542950c8a19cda51eabd2cc3e06b69d3d"
+    },
+    {
+      "session_id": "b55caf5a4323_0003eb9d",
+      "run_id": "b55caf5a4323",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_DeepSeek-V3.2/config.json",
+      "model": "DeepSeek-V3.2",
+      "task_prompt_sha256": "c8aa462eceb235803c3ac1646ef969ca6536d16d1cdf0f7a040421fb16257267"
+    },
+    {
+      "session_id": "b55caf5a4323_010a1fa8",
+      "run_id": "b55caf5a4323",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_DeepSeek-V3.2/config.json",
+      "model": "DeepSeek-V3.2",
+      "task_prompt_sha256": "a213ce980149b28a7f256c1c95d4db57bc3b0b41679389f05f8a70f34790519d"
+    },
+    {
+      "session_id": "b55caf5a4323_02878df6",
+      "run_id": "b55caf5a4323",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_DeepSeek-V3.2/config.json",
+      "model": "DeepSeek-V3.2",
+      "task_prompt_sha256": "b8fc54ea35f92749e4aae415158862006565c327e95b26627e354d92a4bddb11"
+    },
+    {
+      "session_id": "b55caf5a4323_02a0a4bb",
+      "run_id": "b55caf5a4323",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_DeepSeek-V3.2/config.json",
+      "model": "DeepSeek-V3.2",
+      "task_prompt_sha256": "4ed5678f4ef0ea013b27da8ec68264a205ac8bee255c805587565b4444d89f11"
+    },
+    {
+      "session_id": "b55caf5a4323_064d6bb8",
+      "run_id": "b55caf5a4323",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_DeepSeek-V3.2/config.json",
+      "model": "DeepSeek-V3.2",
+      "task_prompt_sha256": "79996d47c58fd63ee96ef7290cd72172de25d561567f9a6ffaf3ade76a1c6fc9"
+    },
+    {
+      "session_id": "b55caf5a4323_0a78de49",
+      "run_id": "b55caf5a4323",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_DeepSeek-V3.2/config.json",
+      "model": "DeepSeek-V3.2",
+      "task_prompt_sha256": "3a3ac0ceaa3ac498b6d77c2c6e5f9b80d73bd5c35d7054a65a03e7e83b00b269"
+    },
+    {
+      "session_id": "b55caf5a4323_0b0c0dcc",
+      "run_id": "b55caf5a4323",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_DeepSeek-V3.2/config.json",
+      "model": "DeepSeek-V3.2",
+      "task_prompt_sha256": "0e2d35ceec3cad9d0c0a3cfc9ad821148db58afc1ddd42a6cfc89fa274b74742"
+    },
+    {
+      "session_id": "b55caf5a4323_0e19a422",
+      "run_id": "b55caf5a4323",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_DeepSeek-V3.2/config.json",
+      "model": "DeepSeek-V3.2",
+      "task_prompt_sha256": "48d156954978cf526cc513dfadbe974bcec6245670c65b6782ea97dd58cc9411"
+    },
+    {
+      "session_id": "b55caf5a4323_130ab5b9",
+      "run_id": "b55caf5a4323",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_DeepSeek-V3.2/config.json",
+      "model": "DeepSeek-V3.2",
+      "task_prompt_sha256": "116329147015e823aa32f138c84ce01ca609b048c76f6a29b06b16d584058831"
+    },
+    {
+      "session_id": "b55caf5a4323_19f350b4",
+      "run_id": "b55caf5a4323",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_DeepSeek-V3.2/config.json",
+      "model": "DeepSeek-V3.2",
+      "task_prompt_sha256": "4df2da21e0f78626ea3246f1a7493fd23e62393086f5765bae77eaeb04dfc81b"
+    },
+    {
+      "session_id": "b55caf5a4323_1a987f61",
+      "run_id": "b55caf5a4323",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_DeepSeek-V3.2/config.json",
+      "model": "DeepSeek-V3.2",
+      "task_prompt_sha256": "3a9c7ee94a4296fb75c44f7cd8af2e7971f1c2848deb2ab9a0700d7fe11dcd09"
+    },
+    {
+      "session_id": "b55caf5a4323_1f22c868",
+      "run_id": "b55caf5a4323",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_DeepSeek-V3.2/config.json",
+      "model": "DeepSeek-V3.2",
+      "task_prompt_sha256": "b49f675be1d9848f15c6e4d23b1798b3e83539c25a8b4c537e42f52940e31dc2"
+    },
+    {
+      "session_id": "b55caf5a4323_23bb8ac1",
+      "run_id": "b55caf5a4323",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_DeepSeek-V3.2/config.json",
+      "model": "DeepSeek-V3.2",
+      "task_prompt_sha256": "58824160d464731959b99479f1e6ef3d8fa49e1985945c95b7698ab59f5b9041"
+    },
+    {
+      "session_id": "b55caf5a4323_250ddbd8",
+      "run_id": "b55caf5a4323",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_DeepSeek-V3.2/config.json",
+      "model": "DeepSeek-V3.2",
+      "task_prompt_sha256": "e139710f865aff9950283d056e729d517a5dc7694970b9ba792459ed25f61bb5"
+    },
+    {
+      "session_id": "b55caf5a4323_2835c36c",
+      "run_id": "b55caf5a4323",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_DeepSeek-V3.2/config.json",
+      "model": "DeepSeek-V3.2",
+      "task_prompt_sha256": "e5ef8bc3616ecf0594b95d3464445106ff6a3fc7d3f5e63f92f227771ece755b"
+    },
+    {
+      "session_id": "b55caf5a4323_29b95de2",
+      "run_id": "b55caf5a4323",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_DeepSeek-V3.2/config.json",
+      "model": "DeepSeek-V3.2",
+      "task_prompt_sha256": "5d90aba68232d7d7318eb6f22afd87865954d0091a7ac6bfe855182a1dbef937"
+    },
+    {
+      "session_id": "b55caf5a4323_2d8b4c04",
+      "run_id": "b55caf5a4323",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_DeepSeek-V3.2/config.json",
+      "model": "DeepSeek-V3.2",
+      "task_prompt_sha256": "11518915bd164573094b098f668798ca1f585fb522d9b0f4dea36a8bcfec004d"
+    },
+    {
+      "session_id": "b55caf5a4323_2e070cbe",
+      "run_id": "b55caf5a4323",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_DeepSeek-V3.2/config.json",
+      "model": "DeepSeek-V3.2",
+      "task_prompt_sha256": "4e3efbf905475c24fed8da7e5acb74e3b7e569f7e0ab9ad28747225c7f2d84be"
+    },
+    {
+      "session_id": "b55caf5a4323_304f8c36",
+      "run_id": "b55caf5a4323",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_DeepSeek-V3.2/config.json",
+      "model": "DeepSeek-V3.2",
+      "task_prompt_sha256": "a224e171380df4683825668e07130b8c8b82031c5c6bfa88fc50b423b7808a7b"
+    },
+    {
+      "session_id": "b55caf5a4323_35ed4bbb",
+      "run_id": "b55caf5a4323",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_DeepSeek-V3.2/config.json",
+      "model": "DeepSeek-V3.2",
+      "task_prompt_sha256": "7cb9e08ebed997ec04c20442d311785ad78066662be5f85cdb753c7727ed8fd6"
+    },
+    {
+      "session_id": "b55caf5a4323_38d8ceba",
+      "run_id": "b55caf5a4323",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_DeepSeek-V3.2/config.json",
+      "model": "DeepSeek-V3.2",
+      "task_prompt_sha256": "089d1b87de90422ed78b054db65152aa2172a443d35f108aeda9d9585e5467dc"
+    },
+    {
+      "session_id": "b55caf5a4323_3a998006",
+      "run_id": "b55caf5a4323",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_DeepSeek-V3.2/config.json",
+      "model": "DeepSeek-V3.2",
+      "task_prompt_sha256": "15b3cc46aa80038801eff7578c3ad6b12a7e1adc747600a9cb4518a46a000401"
+    },
+    {
+      "session_id": "b55caf5a4323_3c5bc722",
+      "run_id": "b55caf5a4323",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_DeepSeek-V3.2/config.json",
+      "model": "DeepSeek-V3.2",
+      "task_prompt_sha256": "796dca6bc52a370a2c771926a7044fb901fe8522e1ba8dd2bfd0711282b3c274"
+    },
+    {
+      "session_id": "b55caf5a4323_3cbba3ed",
+      "run_id": "b55caf5a4323",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_DeepSeek-V3.2/config.json",
+      "model": "DeepSeek-V3.2",
+      "task_prompt_sha256": "5031b421327b4e8cfcda2aa84eac6c3fded043f643c32987f85dfab586a10869"
+    },
+    {
+      "session_id": "b55caf5a4323_3d003839",
+      "run_id": "b55caf5a4323",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_DeepSeek-V3.2/config.json",
+      "model": "DeepSeek-V3.2",
+      "task_prompt_sha256": "76489dcb9bb124edafe543f097f16170bd196733741f5ba89b2caa39dbc7e1a5"
+    },
+    {
+      "session_id": "b55caf5a4323_412c083e",
+      "run_id": "b55caf5a4323",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_DeepSeek-V3.2/config.json",
+      "model": "DeepSeek-V3.2",
+      "task_prompt_sha256": "95ef6fd3195b4a20e723de5413fc2a9acdf4eaeb186ed379157ce229d2d6d2f1"
+    },
+    {
+      "session_id": "b55caf5a4323_41f22680",
+      "run_id": "b55caf5a4323",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_DeepSeek-V3.2/config.json",
+      "model": "DeepSeek-V3.2",
+      "task_prompt_sha256": "1ea91d38d8e22f349cc0d058477559e4b6fa83d790d0075bfa797ac1764de686"
+    },
+    {
+      "session_id": "b55caf5a4323_4474baf2",
+      "run_id": "b55caf5a4323",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_DeepSeek-V3.2/config.json",
+      "model": "DeepSeek-V3.2",
+      "task_prompt_sha256": "1d9dc722d9e1c1ee12a1e0951d6d32ae7c80ef0c49710a50faf700e2edfa5ae1"
+    },
+    {
+      "session_id": "b55caf5a4323_48b04801",
+      "run_id": "b55caf5a4323",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_DeepSeek-V3.2/config.json",
+      "model": "DeepSeek-V3.2",
+      "task_prompt_sha256": "b32a71dd911b286a9ab63621c9523b5113ea8404ae5fd14e495614bea230a14e"
+    },
+    {
+      "session_id": "b55caf5a4323_4f149b84",
+      "run_id": "b55caf5a4323",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_DeepSeek-V3.2/config.json",
+      "model": "DeepSeek-V3.2",
+      "task_prompt_sha256": "dda8c5374e38b26b1c0b328aefffd8eedcfe6e8c405e718c99b211f57ea46cfe"
+    },
+    {
+      "session_id": "b55caf5a4323_53287aa5",
+      "run_id": "b55caf5a4323",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_DeepSeek-V3.2/config.json",
+      "model": "DeepSeek-V3.2",
+      "task_prompt_sha256": "03faf548c0b92ce2ba87ed9ba027a9438c39ff9b5fb2afb925ea7fdf87e18601"
+    },
+    {
+      "session_id": "b55caf5a4323_5c8b76af",
+      "run_id": "b55caf5a4323",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_DeepSeek-V3.2/config.json",
+      "model": "DeepSeek-V3.2",
+      "task_prompt_sha256": "0085b980dcdd17410507efa784ffdc91a68da80689da8c7742244e8b1f8c8312"
+    },
+    {
+      "session_id": "b55caf5a4323_5e2f54b0",
+      "run_id": "b55caf5a4323",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_DeepSeek-V3.2/config.json",
+      "model": "DeepSeek-V3.2",
+      "task_prompt_sha256": "35efc9d50bdd9467d970681619409c2170c97c3a97bcc5d25c0f754a4d146c94"
+    },
+    {
+      "session_id": "b55caf5a4323_5fd39321",
+      "run_id": "b55caf5a4323",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_DeepSeek-V3.2/config.json",
+      "model": "DeepSeek-V3.2",
+      "task_prompt_sha256": "397e45ea768c3246ca14ab07f1c1f66d275dbbbf7257c3161e2d9c5fdd878801"
+    },
+    {
+      "session_id": "b55caf5a4323_60b0e12e",
+      "run_id": "b55caf5a4323",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_DeepSeek-V3.2/config.json",
+      "model": "DeepSeek-V3.2",
+      "task_prompt_sha256": "de94721d2e27ff098ec4e5fa407e7036dc4d3990ee4f7352186872cbe77b401f"
+    },
+    {
+      "session_id": "b55caf5a4323_610efa27",
+      "run_id": "b55caf5a4323",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_DeepSeek-V3.2/config.json",
+      "model": "DeepSeek-V3.2",
+      "task_prompt_sha256": "cfd2580b06f59937ebe0a6664caa8c520da81f36a21a78beb36d4f90ee95070d"
+    },
+    {
+      "session_id": "b55caf5a4323_65b3535f",
+      "run_id": "b55caf5a4323",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_DeepSeek-V3.2/config.json",
+      "model": "DeepSeek-V3.2",
+      "task_prompt_sha256": "ca6daded982f99a289e8d7d0858ad693a5897306937786da0dae07cd63222cc2"
+    },
+    {
+      "session_id": "b55caf5a4323_6b297e80",
+      "run_id": "b55caf5a4323",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_DeepSeek-V3.2/config.json",
+      "model": "DeepSeek-V3.2",
+      "task_prompt_sha256": "aa26ad9518f675477eab215a220015d56dd372b6ab1c01f3999c9c7cab2d1bf5"
+    },
+    {
+      "session_id": "b55caf5a4323_6e045ebd",
+      "run_id": "b55caf5a4323",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_DeepSeek-V3.2/config.json",
+      "model": "DeepSeek-V3.2",
+      "task_prompt_sha256": "cc808812459e4c39eb7e6a72e11d2aaebe5e9f7d91fbfab14568cedaec5dde2a"
+    },
+    {
+      "session_id": "b55caf5a4323_6ec0a50f",
+      "run_id": "b55caf5a4323",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_DeepSeek-V3.2/config.json",
+      "model": "DeepSeek-V3.2",
+      "task_prompt_sha256": "34406ee837154816570dd0bfd7a2385a9e647e85e8d7d9f81e5ce8858328f8fe"
+    },
+    {
+      "session_id": "b55caf5a4323_75cf3a3f",
+      "run_id": "b55caf5a4323",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_DeepSeek-V3.2/config.json",
+      "model": "DeepSeek-V3.2",
+      "task_prompt_sha256": "b100e43c92eba05dbf444b4cbb95c1b3376c052580e3f72dd3acb388c594e57e"
+    },
+    {
+      "session_id": "b55caf5a4323_7705d1a5",
+      "run_id": "b55caf5a4323",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_DeepSeek-V3.2/config.json",
+      "model": "DeepSeek-V3.2",
+      "task_prompt_sha256": "a3be17fd1eb893447465dcf0b2b968f7738b0ea2dac06ca78e1525b18dbd7679"
+    },
+    {
+      "session_id": "b55caf5a4323_7877a5fb",
+      "run_id": "b55caf5a4323",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_DeepSeek-V3.2/config.json",
+      "model": "DeepSeek-V3.2",
+      "task_prompt_sha256": "6f032fb61a0caaccaee9cbb0cbd523021258f37949158bd29a9b7300ca97ea03"
+    },
+    {
+      "session_id": "b55caf5a4323_7c522990",
+      "run_id": "b55caf5a4323",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_DeepSeek-V3.2/config.json",
+      "model": "DeepSeek-V3.2",
+      "task_prompt_sha256": "5c6b93f7fc1e65992ced91aa2386cdebc86cc21801faa80a52fe1695efd89405"
+    },
+    {
+      "session_id": "b55caf5a4323_80528855",
+      "run_id": "b55caf5a4323",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_DeepSeek-V3.2/config.json",
+      "model": "DeepSeek-V3.2",
+      "task_prompt_sha256": "dcee13f6aa631fb41333b3de8768d950f195bd20ef34823b7414a0236c51e6a8"
+    },
+    {
+      "session_id": "b55caf5a4323_80ad4142",
+      "run_id": "b55caf5a4323",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_DeepSeek-V3.2/config.json",
+      "model": "DeepSeek-V3.2",
+      "task_prompt_sha256": "d248912e46eacb90848000b8ca57f7c268c6e3f5011add63022a90e76968e0ab"
+    },
+    {
+      "session_id": "b55caf5a4323_8218c095",
+      "run_id": "b55caf5a4323",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_DeepSeek-V3.2/config.json",
+      "model": "DeepSeek-V3.2",
+      "task_prompt_sha256": "2fb73fbc2b96a4def37430ae0df5a094dd01787756cf0293faa1a020044df3fb"
+    },
+    {
+      "session_id": "b55caf5a4323_85852d18",
+      "run_id": "b55caf5a4323",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_DeepSeek-V3.2/config.json",
+      "model": "DeepSeek-V3.2",
+      "task_prompt_sha256": "2d9af2859272ac2783c55c08f382b2173270ec19826772c219a44d3be4b44403"
+    },
+    {
+      "session_id": "b55caf5a4323_883d5e14",
+      "run_id": "b55caf5a4323",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_DeepSeek-V3.2/config.json",
+      "model": "DeepSeek-V3.2",
+      "task_prompt_sha256": "35b1c8e9af1355c8dfcbb009aa711ab3c476e27795d4a4427972fadc3b3d6a9e"
+    },
+    {
+      "session_id": "b55caf5a4323_8c6dc818",
+      "run_id": "b55caf5a4323",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_DeepSeek-V3.2/config.json",
+      "model": "DeepSeek-V3.2",
+      "task_prompt_sha256": "0eae86f8f529990f8d155c9949d6d2ca3672e70cc3e30bfb1a85e3c39ff74547"
+    },
+    {
+      "session_id": "b55caf5a4323_8fb3bef5",
+      "run_id": "b55caf5a4323",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_DeepSeek-V3.2/config.json",
+      "model": "DeepSeek-V3.2",
+      "task_prompt_sha256": "f9f57dc819af75646eefdddc6067010005df507a485d4905eeb3dc0ee7a75ec5"
+    },
+    {
+      "session_id": "b55caf5a4323_930f069f",
+      "run_id": "b55caf5a4323",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_DeepSeek-V3.2/config.json",
+      "model": "DeepSeek-V3.2",
+      "task_prompt_sha256": "9c85d467758796f9089715b6022a44f220b59de89cedaadb3cc20ad09b1a8807"
+    },
+    {
+      "session_id": "b55caf5a4323_95d64ff3",
+      "run_id": "b55caf5a4323",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_DeepSeek-V3.2/config.json",
+      "model": "DeepSeek-V3.2",
+      "task_prompt_sha256": "58e73c5ddd83008e2e0a7ef414ccf76e01034c56eae7adad98ebb65d4442b880"
+    },
+    {
+      "session_id": "b55caf5a4323_96af8468",
+      "run_id": "b55caf5a4323",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_DeepSeek-V3.2/config.json",
+      "model": "DeepSeek-V3.2",
+      "task_prompt_sha256": "e9da93d7981a0a8f1edbd3112819e159e530a734c5c7d4192ffc96bdecfad1e4"
+    },
+    {
+      "session_id": "b55caf5a4323_97f5c7a9",
+      "run_id": "b55caf5a4323",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_DeepSeek-V3.2/config.json",
+      "model": "DeepSeek-V3.2",
+      "task_prompt_sha256": "cf21ddbad9200791073732a37c78cee9a1f67a5a939dd65cbc952e9d3ca0a1a9"
+    },
+    {
+      "session_id": "b55caf5a4323_9ce2ead7",
+      "run_id": "b55caf5a4323",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_DeepSeek-V3.2/config.json",
+      "model": "DeepSeek-V3.2",
+      "task_prompt_sha256": "a59c5bd45737bf17f88d7d42ca1829a045dcc875ae522f19c9de2cc76edfa800"
+    },
+    {
+      "session_id": "b55caf5a4323_9e39df87",
+      "run_id": "b55caf5a4323",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_DeepSeek-V3.2/config.json",
+      "model": "DeepSeek-V3.2",
+      "task_prompt_sha256": "e1dcc8c3630462bdfc0271337587eca3d588b82f7a5c63050241adf7b41e9b1f"
+    },
+    {
+      "session_id": "b55caf5a4323_9e878b0b",
+      "run_id": "b55caf5a4323",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_DeepSeek-V3.2/config.json",
+      "model": "DeepSeek-V3.2",
+      "task_prompt_sha256": "605b30069de42e5d12f56fa5ee60650920cb9d9c082c51f2af5db18757462eba"
+    },
+    {
+      "session_id": "b55caf5a4323_a2bc9297",
+      "run_id": "b55caf5a4323",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_DeepSeek-V3.2/config.json",
+      "model": "DeepSeek-V3.2",
+      "task_prompt_sha256": "7c19234fefb7fecfcab471d315810db8856eb931f37237b6b46867cbb70487e9"
+    },
+    {
+      "session_id": "b55caf5a4323_a367fc92",
+      "run_id": "b55caf5a4323",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_DeepSeek-V3.2/config.json",
+      "model": "DeepSeek-V3.2",
+      "task_prompt_sha256": "d2220d7b371b4ba95861f5fb92b11fed6a364934e8c8b336db0753d234d8576f"
+    },
+    {
+      "session_id": "b55caf5a4323_a6f0d33c",
+      "run_id": "b55caf5a4323",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_DeepSeek-V3.2/config.json",
+      "model": "DeepSeek-V3.2",
+      "task_prompt_sha256": "d2fa4d3bc6ddc4a61617713ce91b458f340f9c7d16e6695df1bdb6ba0aea4365"
+    },
+    {
+      "session_id": "b55caf5a4323_a86af73b",
+      "run_id": "b55caf5a4323",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_DeepSeek-V3.2/config.json",
+      "model": "DeepSeek-V3.2",
+      "task_prompt_sha256": "1bfa12f5577f3d6daaef01ecb878a7b3774ad56df3418018513ea8883920472d"
+    },
+    {
+      "session_id": "b55caf5a4323_a9a8aa26",
+      "run_id": "b55caf5a4323",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_DeepSeek-V3.2/config.json",
+      "model": "DeepSeek-V3.2",
+      "task_prompt_sha256": "17240fb9ea58a0ee3c47b4be270a6690f37275db5443ed880c3dde68266ecfe7"
+    },
+    {
+      "session_id": "b55caf5a4323_acbd1b33",
+      "run_id": "b55caf5a4323",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_DeepSeek-V3.2/config.json",
+      "model": "DeepSeek-V3.2",
+      "task_prompt_sha256": "6ec01be9d8151e39358e6db2318393f6f252d89d9b171e6dcc890f3cf3ac83d7"
+    },
+    {
+      "session_id": "b55caf5a4323_ba5d069c",
+      "run_id": "b55caf5a4323",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_DeepSeek-V3.2/config.json",
+      "model": "DeepSeek-V3.2",
+      "task_prompt_sha256": "ef471b1fd2680ef8c9962ed0909e713fb14914a7e5aa76aa7dac0b200b3f45f5"
+    },
+    {
+      "session_id": "b55caf5a4323_ba94b480",
+      "run_id": "b55caf5a4323",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_DeepSeek-V3.2/config.json",
+      "model": "DeepSeek-V3.2",
+      "task_prompt_sha256": "5b0620cb8a14e5a5ad14ccaaa995b573a61c1798167775e23e387a4162a0ab76"
+    },
+    {
+      "session_id": "b55caf5a4323_baab351b",
+      "run_id": "b55caf5a4323",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_DeepSeek-V3.2/config.json",
+      "model": "DeepSeek-V3.2",
+      "task_prompt_sha256": "f379bd70b58b809a779bf0883a940b4446f5c9128a8feb326959c3c8de09ac66"
+    },
+    {
+      "session_id": "b55caf5a4323_bd6d238c",
+      "run_id": "b55caf5a4323",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_DeepSeek-V3.2/config.json",
+      "model": "DeepSeek-V3.2",
+      "task_prompt_sha256": "7879fd658f30b474e6d1590f37068f9cdc4ac39089c8ea4022090b8ded3a4a4b"
+    },
+    {
+      "session_id": "b55caf5a4323_bdc1e3aa",
+      "run_id": "b55caf5a4323",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_DeepSeek-V3.2/config.json",
+      "model": "DeepSeek-V3.2",
+      "task_prompt_sha256": "570b2251a03b70f91dfe35c4f88b3a6fdeea88e92bdc99009c0cd0b6d51b638a"
+    },
+    {
+      "session_id": "b55caf5a4323_be2c673f",
+      "run_id": "b55caf5a4323",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_DeepSeek-V3.2/config.json",
+      "model": "DeepSeek-V3.2",
+      "task_prompt_sha256": "c4546bf5257d1c79f61ba706d40af27c3038dc08dcb9c034e46213288691a01c"
+    },
+    {
+      "session_id": "b55caf5a4323_c2e4d84f",
+      "run_id": "b55caf5a4323",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_DeepSeek-V3.2/config.json",
+      "model": "DeepSeek-V3.2",
+      "task_prompt_sha256": "3a044fdecc35ec0c9b07f4336d79f99d5f3356c051722e2445db77cef58c4055"
+    },
+    {
+      "session_id": "b55caf5a4323_c340e2c8",
+      "run_id": "b55caf5a4323",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_DeepSeek-V3.2/config.json",
+      "model": "DeepSeek-V3.2",
+      "task_prompt_sha256": "1280b4e02bf32cdee5b632c831046d31d5c8ad3e9a3b5d4e04798f6eceb6aaf7"
+    },
+    {
+      "session_id": "b55caf5a4323_c454cefe",
+      "run_id": "b55caf5a4323",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_DeepSeek-V3.2/config.json",
+      "model": "DeepSeek-V3.2",
+      "task_prompt_sha256": "f0d82de467ba18eca828d04232c0c2c2f3bf21853019ab7d10d5a4a465fc523f"
+    },
+    {
+      "session_id": "b55caf5a4323_c48cc337",
+      "run_id": "b55caf5a4323",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_DeepSeek-V3.2/config.json",
+      "model": "DeepSeek-V3.2",
+      "task_prompt_sha256": "e34c8d108ddab08298d6880e279e290b30d18148c8fab070020a34540f2905c8"
+    },
+    {
+      "session_id": "b55caf5a4323_c9128cfe",
+      "run_id": "b55caf5a4323",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_DeepSeek-V3.2/config.json",
+      "model": "DeepSeek-V3.2",
+      "task_prompt_sha256": "f9670af4938fab5102635493d174d3a087febf0726cee3908b93e71b71ed497a"
+    },
+    {
+      "session_id": "b55caf5a4323_ca40ecc4",
+      "run_id": "b55caf5a4323",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_DeepSeek-V3.2/config.json",
+      "model": "DeepSeek-V3.2",
+      "task_prompt_sha256": "1b5534ef5fb22041f6d3a5f45dd9cb75c49d554502ef97402a3635d982e1b384"
+    },
+    {
+      "session_id": "b55caf5a4323_ccaef02b",
+      "run_id": "b55caf5a4323",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_DeepSeek-V3.2/config.json",
+      "model": "DeepSeek-V3.2",
+      "task_prompt_sha256": "6da6799d6761914fdb1280c8a4fb65bba509ee4d0aeea288e0369461f22169f5"
+    },
+    {
+      "session_id": "b55caf5a4323_d22f6c52",
+      "run_id": "b55caf5a4323",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_DeepSeek-V3.2/config.json",
+      "model": "DeepSeek-V3.2",
+      "task_prompt_sha256": "95465dea2523a85723611269a48b359fe535a8c8ee6eb403fe2f01cd758bfb3d"
+    },
+    {
+      "session_id": "b55caf5a4323_d2891637",
+      "run_id": "b55caf5a4323",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_DeepSeek-V3.2/config.json",
+      "model": "DeepSeek-V3.2",
+      "task_prompt_sha256": "0332eb91cabcafef1f60e97417da9eed4038ec16032b9046631f914099135f30"
+    },
+    {
+      "session_id": "b55caf5a4323_d34f160c",
+      "run_id": "b55caf5a4323",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_DeepSeek-V3.2/config.json",
+      "model": "DeepSeek-V3.2",
+      "task_prompt_sha256": "f89775b8338d3581ade0225a3c745451ca0fe449582d0f064dee80f333c8b312"
+    },
+    {
+      "session_id": "b55caf5a4323_d52c07c6",
+      "run_id": "b55caf5a4323",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_DeepSeek-V3.2/config.json",
+      "model": "DeepSeek-V3.2",
+      "task_prompt_sha256": "bf3c5916a15316cd468b5a126649ef0fa3e423cf8f00c040d71ac3ce661f0b18"
+    },
+    {
+      "session_id": "b55caf5a4323_d5bc99a2",
+      "run_id": "b55caf5a4323",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_DeepSeek-V3.2/config.json",
+      "model": "DeepSeek-V3.2",
+      "task_prompt_sha256": "993b118043b96936e6150e69ed0a8948b4099c6e1be2795637b4a5e0636bf4b2"
+    },
+    {
+      "session_id": "b55caf5a4323_d64ae36f",
+      "run_id": "b55caf5a4323",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_DeepSeek-V3.2/config.json",
+      "model": "DeepSeek-V3.2",
+      "task_prompt_sha256": "0f525807af71f88cbd61cf5b8e8b70198a231496a05bce2695312634295f10ba"
+    },
+    {
+      "session_id": "b55caf5a4323_d66d5dfb",
+      "run_id": "b55caf5a4323",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_DeepSeek-V3.2/config.json",
+      "model": "DeepSeek-V3.2",
+      "task_prompt_sha256": "bc757f7a852418a4af776e68e8fb81835aa83bfc2896a4e229e041234e23ef2e"
+    },
+    {
+      "session_id": "b55caf5a4323_da41d8a5",
+      "run_id": "b55caf5a4323",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_DeepSeek-V3.2/config.json",
+      "model": "DeepSeek-V3.2",
+      "task_prompt_sha256": "b210294f6de44805d31fcedc2af865840b3ff74b8c0e5c5e6b0a873357031601"
+    },
+    {
+      "session_id": "b55caf5a4323_e04b03da",
+      "run_id": "b55caf5a4323",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_DeepSeek-V3.2/config.json",
+      "model": "DeepSeek-V3.2",
+      "task_prompt_sha256": "e2ddf83bf5805f86a2d559a6d5d57f98660e9dc0a12f3f44f50a8b8e0b741673"
+    },
+    {
+      "session_id": "b55caf5a4323_e35866b0",
+      "run_id": "b55caf5a4323",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_DeepSeek-V3.2/config.json",
+      "model": "DeepSeek-V3.2",
+      "task_prompt_sha256": "8a609514f81929791ba24e95a0b693281d08620cf5d56b605be8d33ba79a6863"
+    },
+    {
+      "session_id": "b55caf5a4323_e3d72abb",
+      "run_id": "b55caf5a4323",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_DeepSeek-V3.2/config.json",
+      "model": "DeepSeek-V3.2",
+      "task_prompt_sha256": "e8f1a293484f9db5585d6d76cd401f72752be6d2573828a0b8673a437a97f806"
+    },
+    {
+      "session_id": "b55caf5a4323_e5ab313d",
+      "run_id": "b55caf5a4323",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_DeepSeek-V3.2/config.json",
+      "model": "DeepSeek-V3.2",
+      "task_prompt_sha256": "24282d5440f4e8119134398c0bc810dce58c88cc4f0f422ed1208f94d470007e"
+    },
+    {
+      "session_id": "b55caf5a4323_e75136df",
+      "run_id": "b55caf5a4323",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_DeepSeek-V3.2/config.json",
+      "model": "DeepSeek-V3.2",
+      "task_prompt_sha256": "f3204cec3a1e6b7a0fa7aece58fb0dfaea6dea96b8b2967516be8ebf49a60df4"
+    },
+    {
+      "session_id": "b55caf5a4323_ed5d80a8",
+      "run_id": "b55caf5a4323",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_DeepSeek-V3.2/config.json",
+      "model": "DeepSeek-V3.2",
+      "task_prompt_sha256": "c669c61fba4da43879f078baefbfc08f4b0069eccb3bc683b88d16f260161e1a"
+    },
+    {
+      "session_id": "b55caf5a4323_ef99f125",
+      "run_id": "b55caf5a4323",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_DeepSeek-V3.2/config.json",
+      "model": "DeepSeek-V3.2",
+      "task_prompt_sha256": "bd03f0761086aef858d8fdfb9d639b25aca77a2d2153452a310b025e2aed5f5c"
+    },
+    {
+      "session_id": "b55caf5a4323_f181bc3e",
+      "run_id": "b55caf5a4323",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_DeepSeek-V3.2/config.json",
+      "model": "DeepSeek-V3.2",
+      "task_prompt_sha256": "f223ec900e0014442e36e09d93e6800f0e40ebe0bc717e04c994c04513f38b1e"
+    },
+    {
+      "session_id": "b55caf5a4323_f21304aa",
+      "run_id": "b55caf5a4323",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_DeepSeek-V3.2/config.json",
+      "model": "DeepSeek-V3.2",
+      "task_prompt_sha256": "bdae0c27de9690b232d068603cf350cf652b1e8f420c898eacfd441f1ee89eb9"
+    },
+    {
+      "session_id": "b55caf5a4323_f3635ce3",
+      "run_id": "b55caf5a4323",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_DeepSeek-V3.2/config.json",
+      "model": "DeepSeek-V3.2",
+      "task_prompt_sha256": "3288935bd0c79a85a3c48029c2e14ae5bbe1b9abddc57befb51d336886c923e3"
+    },
+    {
+      "session_id": "b55caf5a4323_f823cb9d",
+      "run_id": "b55caf5a4323",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_DeepSeek-V3.2/config.json",
+      "model": "DeepSeek-V3.2",
+      "task_prompt_sha256": "f9fe38e118facb54ec1580a601ca75f3064dd02db6687f088f751a452a21e888"
+    },
+    {
+      "session_id": "b55caf5a4323_f9f3de83",
+      "run_id": "b55caf5a4323",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_DeepSeek-V3.2/config.json",
+      "model": "DeepSeek-V3.2",
+      "task_prompt_sha256": "cd836462001f38d3f5383318fc28811e4c5080bebd78a951537c090d1fdafbea"
+    },
+    {
+      "session_id": "b55caf5a4323_fa6638fe",
+      "run_id": "b55caf5a4323",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_DeepSeek-V3.2/config.json",
+      "model": "DeepSeek-V3.2",
+      "task_prompt_sha256": "199bcf228bfc08e9aa586135c16d67a2dafc4cd6b2ff0d78d9c90cda3961a99c"
+    },
+    {
+      "session_id": "b55caf5a4323_fc489d59",
+      "run_id": "b55caf5a4323",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_DeepSeek-V3.2/config.json",
+      "model": "DeepSeek-V3.2",
+      "task_prompt_sha256": "b1ca0f18eb8b255a6049a631edfc8d54c7010e5fccf156470e8b2ace81f323de"
+    },
+    {
+      "session_id": "b55caf5a4323_fd779548",
+      "run_id": "b55caf5a4323",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_DeepSeek-V3.2/config.json",
+      "model": "DeepSeek-V3.2",
+      "task_prompt_sha256": "ecd619d172fb36d56f38dfd1d334d9cffb4572be167f3baca03eeaf8dbb52aca"
+    },
+    {
+      "session_id": "c840b0976e15_029c4baf",
+      "run_id": "c840b0976e15",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_gpt-5.2-2025-12-11/config.json",
+      "model": "gpt-5.2-2025-12-11",
+      "task_prompt_sha256": "073fbd3250c61b9d4ac6dbe105deec45738cb620abd74cb7850c84112b04a1c5"
+    },
+    {
+      "session_id": "c840b0976e15_06483a09",
+      "run_id": "c840b0976e15",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_gpt-5.2-2025-12-11/config.json",
+      "model": "gpt-5.2-2025-12-11",
+      "task_prompt_sha256": "649a9fda659455b890a53b0f19a4f1e148deecf0af5148b937bacad08508ba48"
+    },
+    {
+      "session_id": "c840b0976e15_08e2d872",
+      "run_id": "c840b0976e15",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_gpt-5.2-2025-12-11/config.json",
+      "model": "gpt-5.2-2025-12-11",
+      "task_prompt_sha256": "f72e8d93d79677d03a4de38f6780dbf9888b59024fe15d5e0abf7cb53259102f"
+    },
+    {
+      "session_id": "c840b0976e15_095ab6be",
+      "run_id": "c840b0976e15",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_gpt-5.2-2025-12-11/config.json",
+      "model": "gpt-5.2-2025-12-11",
+      "task_prompt_sha256": "e844eaf101e5c948ca32c869beefbef5fd6db79cdc056d020f7c082c69a5e60a"
+    },
+    {
+      "session_id": "c840b0976e15_0b0fc56b",
+      "run_id": "c840b0976e15",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_gpt-5.2-2025-12-11/config.json",
+      "model": "gpt-5.2-2025-12-11",
+      "task_prompt_sha256": "f7730114474c409d784f1423745b2e3c9cfdd33f9ee30bd07d752a8b46b55177"
+    },
+    {
+      "session_id": "c840b0976e15_0e60f988",
+      "run_id": "c840b0976e15",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_gpt-5.2-2025-12-11/config.json",
+      "model": "gpt-5.2-2025-12-11",
+      "task_prompt_sha256": "b658d254578780625899b30ed7ebe0de749691214844b103600611f94f7a5511"
+    },
+    {
+      "session_id": "c840b0976e15_16d0237c",
+      "run_id": "c840b0976e15",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_gpt-5.2-2025-12-11/config.json",
+      "model": "gpt-5.2-2025-12-11",
+      "task_prompt_sha256": "1064ba456458030ddec131338c5b934de6173863fed04b5beb5b94c95bb2a979"
+    },
+    {
+      "session_id": "c840b0976e15_1b300eef",
+      "run_id": "c840b0976e15",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_gpt-5.2-2025-12-11/config.json",
+      "model": "gpt-5.2-2025-12-11",
+      "task_prompt_sha256": "1c66ff37c6e0e0ec8aa2a3ddaee9536de064984db2cc8e3b6dc9792a578185e6"
+    },
+    {
+      "session_id": "c840b0976e15_1f442e2a",
+      "run_id": "c840b0976e15",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_gpt-5.2-2025-12-11/config.json",
+      "model": "gpt-5.2-2025-12-11",
+      "task_prompt_sha256": "d385b4f106aee9ceb2a6b40967f0ce4f629fe880611facea9694c2dae2894a4a"
+    },
+    {
+      "session_id": "c840b0976e15_26ca0796",
+      "run_id": "c840b0976e15",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_gpt-5.2-2025-12-11/config.json",
+      "model": "gpt-5.2-2025-12-11",
+      "task_prompt_sha256": "dafce0e19aa4231744fc4a63ce0aff5512447c5440dc86bf440701a17dbd711b"
+    },
+    {
+      "session_id": "c840b0976e15_3160657c",
+      "run_id": "c840b0976e15",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_gpt-5.2-2025-12-11/config.json",
+      "model": "gpt-5.2-2025-12-11",
+      "task_prompt_sha256": "0ea0001dc112db734f0f6ecc8bc468c3247e8f0480076db055d7a0f0a6ccd734"
+    },
+    {
+      "session_id": "c840b0976e15_32c44adb",
+      "run_id": "c840b0976e15",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_gpt-5.2-2025-12-11/config.json",
+      "model": "gpt-5.2-2025-12-11",
+      "task_prompt_sha256": "e93e8fa07395bfc609e8777c20262af3f3482238ad74e14b458e257c95670c60"
+    },
+    {
+      "session_id": "c840b0976e15_34009edc",
+      "run_id": "c840b0976e15",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_gpt-5.2-2025-12-11/config.json",
+      "model": "gpt-5.2-2025-12-11",
+      "task_prompt_sha256": "042613276426dbee9e774d7a630686bfac0a919db4d03991c011a35f0c6c9b55"
+    },
+    {
+      "session_id": "c840b0976e15_346e0934",
+      "run_id": "c840b0976e15",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_gpt-5.2-2025-12-11/config.json",
+      "model": "gpt-5.2-2025-12-11",
+      "task_prompt_sha256": "79d870c3e22a13df7b3e8456478fb5c26ae87f2f2b42ee3678ceed3fa9d1cf77"
+    },
+    {
+      "session_id": "c840b0976e15_35c364ff",
+      "run_id": "c840b0976e15",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_gpt-5.2-2025-12-11/config.json",
+      "model": "gpt-5.2-2025-12-11",
+      "task_prompt_sha256": "15a8767ea6c98bed9718ee8cd323420fb327d87f3b922596bb3f5676746ae29e"
+    },
+    {
+      "session_id": "c840b0976e15_37ae8ba9",
+      "run_id": "c840b0976e15",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_gpt-5.2-2025-12-11/config.json",
+      "model": "gpt-5.2-2025-12-11",
+      "task_prompt_sha256": "f6697db80d4368d6933eaef646b6a6763f7e233e11126ab7274d126ef14b1a42"
+    },
+    {
+      "session_id": "c840b0976e15_37cc87f2",
+      "run_id": "c840b0976e15",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_gpt-5.2-2025-12-11/config.json",
+      "model": "gpt-5.2-2025-12-11",
+      "task_prompt_sha256": "89046a9e5e4b6e280e16c0cc51dbdce3d3485d9c8b26d63aaf588cf057b9023a"
+    },
+    {
+      "session_id": "c840b0976e15_3bc00266",
+      "run_id": "c840b0976e15",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_gpt-5.2-2025-12-11/config.json",
+      "model": "gpt-5.2-2025-12-11",
+      "task_prompt_sha256": "dac7bc77dba7eec6cd5e9533709f8c9542950c8a19cda51eabd2cc3e06b69d3d"
+    },
+    {
+      "session_id": "c840b0976e15_3cb1958d",
+      "run_id": "c840b0976e15",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_gpt-5.2-2025-12-11/config.json",
+      "model": "gpt-5.2-2025-12-11",
+      "task_prompt_sha256": "1a5ca221e73ad3b0a2abcbaa6c179c87cbe4069eb32987f004a66d9ceb9fd160"
+    },
+    {
+      "session_id": "c840b0976e15_3fd03350",
+      "run_id": "c840b0976e15",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_gpt-5.2-2025-12-11/config.json",
+      "model": "gpt-5.2-2025-12-11",
+      "task_prompt_sha256": "14013a7fe99c68baefcdb51659e16283060973d0776ac87f60475b619a3115cd"
+    },
+    {
+      "session_id": "c840b0976e15_401aa639",
+      "run_id": "c840b0976e15",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_gpt-5.2-2025-12-11/config.json",
+      "model": "gpt-5.2-2025-12-11",
+      "task_prompt_sha256": "f46e523e7827517dc4d4aa3e2134eebc458388264814bab9718e68480a2f46c9"
+    },
+    {
+      "session_id": "c840b0976e15_482f45a4",
+      "run_id": "c840b0976e15",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_gpt-5.2-2025-12-11/config.json",
+      "model": "gpt-5.2-2025-12-11",
+      "task_prompt_sha256": "4283b34ce6c8aa023c2df1af23c0d2f1331633c97f9d27327c2f41ba6a4926d4"
+    },
+    {
+      "session_id": "c840b0976e15_4c055684",
+      "run_id": "c840b0976e15",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_gpt-5.2-2025-12-11/config.json",
+      "model": "gpt-5.2-2025-12-11",
+      "task_prompt_sha256": "e505a652cdd4d26f3d1ebb7a54ec122bca575d6d5cb8db11eb8f319c57dedf28"
+    },
+    {
+      "session_id": "c840b0976e15_4ca7bff0",
+      "run_id": "c840b0976e15",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_gpt-5.2-2025-12-11/config.json",
+      "model": "gpt-5.2-2025-12-11",
+      "task_prompt_sha256": "c76485cc26aadfdc139c996fdc683fae4ac6cb82e9060cc84d892a41197692a9"
+    },
+    {
+      "session_id": "c840b0976e15_513dc038",
+      "run_id": "c840b0976e15",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_gpt-5.2-2025-12-11/config.json",
+      "model": "gpt-5.2-2025-12-11",
+      "task_prompt_sha256": "074f44135b761bbfb69a1ce3c408e44e924f7769466af667db6d14e37cce8140"
+    },
+    {
+      "session_id": "c840b0976e15_51b69067",
+      "run_id": "c840b0976e15",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_gpt-5.2-2025-12-11/config.json",
+      "model": "gpt-5.2-2025-12-11",
+      "task_prompt_sha256": "21326b771d17f00239437acbfb88332299e5009d011b7f4aed6702086e1c9ca2"
+    },
+    {
+      "session_id": "c840b0976e15_5204e00b",
+      "run_id": "c840b0976e15",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_gpt-5.2-2025-12-11/config.json",
+      "model": "gpt-5.2-2025-12-11",
+      "task_prompt_sha256": "5b1b99fb4ea8468a800fad5057b241ce0380d772a8b402954e280094c769218b"
+    },
+    {
+      "session_id": "c840b0976e15_5ba43808",
+      "run_id": "c840b0976e15",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_gpt-5.2-2025-12-11/config.json",
+      "model": "gpt-5.2-2025-12-11",
+      "task_prompt_sha256": "01d8cca5052fe2701497b91bd9a534e528fa851c49e868fb1dcb1a6385bc01f0"
+    },
+    {
+      "session_id": "c840b0976e15_62399fb8",
+      "run_id": "c840b0976e15",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_gpt-5.2-2025-12-11/config.json",
+      "model": "gpt-5.2-2025-12-11",
+      "task_prompt_sha256": "4d47c55856a53763d7b67b9ed30e623bbe529fad351e291a130babeaabb44b0f"
+    },
+    {
+      "session_id": "c840b0976e15_6540cf52",
+      "run_id": "c840b0976e15",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_gpt-5.2-2025-12-11/config.json",
+      "model": "gpt-5.2-2025-12-11",
+      "task_prompt_sha256": "7e8e6f657c328031e041b50c4d17624c3dcd7d42827c6e2059e796e7e2a4ec02"
+    },
+    {
+      "session_id": "c840b0976e15_66c47cb7",
+      "run_id": "c840b0976e15",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_gpt-5.2-2025-12-11/config.json",
+      "model": "gpt-5.2-2025-12-11",
+      "task_prompt_sha256": "45d0b8f8fab5bbc4ca1d4b5172519fd5a2cf0f4d579b9b916b79107e45ceac17"
+    },
+    {
+      "session_id": "c840b0976e15_679cb9e6",
+      "run_id": "c840b0976e15",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_gpt-5.2-2025-12-11/config.json",
+      "model": "gpt-5.2-2025-12-11",
+      "task_prompt_sha256": "60aaea88463fbaa88e94ca491faa60c9acd4334467cee616dc8681957ccd9384"
+    },
+    {
+      "session_id": "c840b0976e15_68c4c144",
+      "run_id": "c840b0976e15",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_gpt-5.2-2025-12-11/config.json",
+      "model": "gpt-5.2-2025-12-11",
+      "task_prompt_sha256": "39715ed22eb259026aa37fbf64c0314bb4dd51d199acbe06d614e8bb9ae9794e"
+    },
+    {
+      "session_id": "c840b0976e15_69396ef1",
+      "run_id": "c840b0976e15",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_gpt-5.2-2025-12-11/config.json",
+      "model": "gpt-5.2-2025-12-11",
+      "task_prompt_sha256": "db8e88aae64cdd60e0f734b83df16caf5d544b44788adfe3ec23410d2201561c"
+    },
+    {
+      "session_id": "c840b0976e15_6ab6b355",
+      "run_id": "c840b0976e15",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_gpt-5.2-2025-12-11/config.json",
+      "model": "gpt-5.2-2025-12-11",
+      "task_prompt_sha256": "07c486b9fe0eebb265c4b04cd22132881d7224206c3247f569dda8d9a278f9cd"
+    },
+    {
+      "session_id": "c840b0976e15_6b0acb3f",
+      "run_id": "c840b0976e15",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_gpt-5.2-2025-12-11/config.json",
+      "model": "gpt-5.2-2025-12-11",
+      "task_prompt_sha256": "aaaad3e7c85ef51066c2a318d1795e0d3e5910d63cce16241c91c10ff14b9198"
+    },
+    {
+      "session_id": "c840b0976e15_6b39d05d",
+      "run_id": "c840b0976e15",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_gpt-5.2-2025-12-11/config.json",
+      "model": "gpt-5.2-2025-12-11",
+      "task_prompt_sha256": "1363abc68426a246570788897f3f91d3b15736ea3bbb28463571cbe4a138f415"
+    },
+    {
+      "session_id": "c840b0976e15_6bb78c55",
+      "run_id": "c840b0976e15",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_gpt-5.2-2025-12-11/config.json",
+      "model": "gpt-5.2-2025-12-11",
+      "task_prompt_sha256": "265f32e698987503e1dbe63e19905c3b85220bae94978dc74a6b6b92eb3fbdf4"
+    },
+    {
+      "session_id": "c840b0976e15_6c5c02b9",
+      "run_id": "c840b0976e15",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_gpt-5.2-2025-12-11/config.json",
+      "model": "gpt-5.2-2025-12-11",
+      "task_prompt_sha256": "fbbc441105072d14033588fa396c3f6e174492d576bbd85099bd8b8a190aaaaf"
+    },
+    {
+      "session_id": "c840b0976e15_6dfeef6d",
+      "run_id": "c840b0976e15",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_gpt-5.2-2025-12-11/config.json",
+      "model": "gpt-5.2-2025-12-11",
+      "task_prompt_sha256": "f32b58e12ca686f36a5b9829e2ac9b953486faee9dbbe28fe49c571418d52a18"
+    },
+    {
+      "session_id": "c840b0976e15_6ef2aa75",
+      "run_id": "c840b0976e15",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_gpt-5.2-2025-12-11/config.json",
+      "model": "gpt-5.2-2025-12-11",
+      "task_prompt_sha256": "8687a308dc5f6231258383eb61ee3f5b3a8c87f0a1933c4ed3d37acd051616c9"
+    },
+    {
+      "session_id": "c840b0976e15_6fabb7ca",
+      "run_id": "c840b0976e15",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_gpt-5.2-2025-12-11/config.json",
+      "model": "gpt-5.2-2025-12-11",
+      "task_prompt_sha256": "2f2f4563db00a838bdeb02787c3d737f736cefdf900d27cfeea5ed1997eda287"
+    },
+    {
+      "session_id": "c840b0976e15_75ebc941",
+      "run_id": "c840b0976e15",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_gpt-5.2-2025-12-11/config.json",
+      "model": "gpt-5.2-2025-12-11",
+      "task_prompt_sha256": "2803057a1bd117c38c8ecf8a8cd65ed89d33ec92d9ad5e43b286e1b72a84a540"
+    },
+    {
+      "session_id": "c840b0976e15_786b95ca",
+      "run_id": "c840b0976e15",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_gpt-5.2-2025-12-11/config.json",
+      "model": "gpt-5.2-2025-12-11",
+      "task_prompt_sha256": "4816fb773f89063bb7a71954a110d0568df3a8c950b3806844d5d6fa565ca775"
+    },
+    {
+      "session_id": "c840b0976e15_79381879",
+      "run_id": "c840b0976e15",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_gpt-5.2-2025-12-11/config.json",
+      "model": "gpt-5.2-2025-12-11",
+      "task_prompt_sha256": "92c81a198d3973a827a63ede15a1cd4a959d8c73946e8d4b1d9d9609f13b00bf"
+    },
+    {
+      "session_id": "c840b0976e15_7ac664ae",
+      "run_id": "c840b0976e15",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_gpt-5.2-2025-12-11/config.json",
+      "model": "gpt-5.2-2025-12-11",
+      "task_prompt_sha256": "fe0e65c21dca0b35c21be8b386e0e4d7acac905a49fe38f6f1decb00c6869e7d"
+    },
+    {
+      "session_id": "c840b0976e15_7b81a891",
+      "run_id": "c840b0976e15",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_gpt-5.2-2025-12-11/config.json",
+      "model": "gpt-5.2-2025-12-11",
+      "task_prompt_sha256": "18170b1c105f2b8700a140e36a1c174f1be12aef9af4e0afbaff6811ebb7f06e"
+    },
+    {
+      "session_id": "c840b0976e15_7c803888",
+      "run_id": "c840b0976e15",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_gpt-5.2-2025-12-11/config.json",
+      "model": "gpt-5.2-2025-12-11",
+      "task_prompt_sha256": "2aa0e3ec5dab0d84625339d9f255a533f507d3db3da756ce23ef9341eda923b1"
+    },
+    {
+      "session_id": "c840b0976e15_7dac53ae",
+      "run_id": "c840b0976e15",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_gpt-5.2-2025-12-11/config.json",
+      "model": "gpt-5.2-2025-12-11",
+      "task_prompt_sha256": "28c873c368b5b3f13db1572f58dbbfb7181898f2ec3e60389f16dc29712ede08"
+    },
+    {
+      "session_id": "c840b0976e15_7e52ed1d",
+      "run_id": "c840b0976e15",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_gpt-5.2-2025-12-11/config.json",
+      "model": "gpt-5.2-2025-12-11",
+      "task_prompt_sha256": "40f80f63f649946805546d59fdef3d25d4d6162eac415b51b330e56792218b79"
+    },
+    {
+      "session_id": "c840b0976e15_84ae9f6e",
+      "run_id": "c840b0976e15",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_gpt-5.2-2025-12-11/config.json",
+      "model": "gpt-5.2-2025-12-11",
+      "task_prompt_sha256": "16fc855fa674ef54d1df74d7be418939661e469aa96e55f212ec9013109a9ec2"
+    },
+    {
+      "session_id": "c840b0976e15_85d12148",
+      "run_id": "c840b0976e15",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_gpt-5.2-2025-12-11/config.json",
+      "model": "gpt-5.2-2025-12-11",
+      "task_prompt_sha256": "794d8c28dd8eeb215a575b18e64efc39b4cf5f7ca7211cb5a3dd0df8a05e8e14"
+    },
+    {
+      "session_id": "c840b0976e15_86e3a692",
+      "run_id": "c840b0976e15",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_gpt-5.2-2025-12-11/config.json",
+      "model": "gpt-5.2-2025-12-11",
+      "task_prompt_sha256": "f8e6992ff672489ebcf38083cc38a548f8d60272f5eb6fa4466dc743578a3b75"
+    },
+    {
+      "session_id": "c840b0976e15_8d23c28a",
+      "run_id": "c840b0976e15",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_gpt-5.2-2025-12-11/config.json",
+      "model": "gpt-5.2-2025-12-11",
+      "task_prompt_sha256": "c7aa858f72f10ae7bd6f3bda64aa2ff6d6ac8ad332d4f03d89728d3c33476e16"
+    },
+    {
+      "session_id": "c840b0976e15_922be9b5",
+      "run_id": "c840b0976e15",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_gpt-5.2-2025-12-11/config.json",
+      "model": "gpt-5.2-2025-12-11",
+      "task_prompt_sha256": "234a2addbd791e797a16dc4650ad924745c5528a05bc666a2c17393d8bfda506"
+    },
+    {
+      "session_id": "c840b0976e15_94104590",
+      "run_id": "c840b0976e15",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_gpt-5.2-2025-12-11/config.json",
+      "model": "gpt-5.2-2025-12-11",
+      "task_prompt_sha256": "9763802d2754d8b5c37ea99445edd76ba86fc1a830ae64a0b11153707b4f4774"
+    },
+    {
+      "session_id": "c840b0976e15_9775c532",
+      "run_id": "c840b0976e15",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_gpt-5.2-2025-12-11/config.json",
+      "model": "gpt-5.2-2025-12-11",
+      "task_prompt_sha256": "3b3cbc2d433cdf8f7b35c0efbf42eb9f4019521fc9fcb28b4ab69ba319dfaeb9"
+    },
+    {
+      "session_id": "c840b0976e15_9c56156c",
+      "run_id": "c840b0976e15",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_gpt-5.2-2025-12-11/config.json",
+      "model": "gpt-5.2-2025-12-11",
+      "task_prompt_sha256": "5a9ccbfbf2eaeec8f6abc9cf532442544d73ac1ec0283b56970503061c73a6ee"
+    },
+    {
+      "session_id": "c840b0976e15_9daaf4dd",
+      "run_id": "c840b0976e15",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_gpt-5.2-2025-12-11/config.json",
+      "model": "gpt-5.2-2025-12-11",
+      "task_prompt_sha256": "eb1dbfa819f5c1baf06b60cc2de46632de8d516646649b4214f83179c4157f15"
+    },
+    {
+      "session_id": "c840b0976e15_a084f258",
+      "run_id": "c840b0976e15",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_gpt-5.2-2025-12-11/config.json",
+      "model": "gpt-5.2-2025-12-11",
+      "task_prompt_sha256": "7babbb57f8a9b250b14b59fa717bf01c3f3f90d35b5321babd6f309c7130ffed"
+    },
+    {
+      "session_id": "c840b0976e15_a155f061",
+      "run_id": "c840b0976e15",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_gpt-5.2-2025-12-11/config.json",
+      "model": "gpt-5.2-2025-12-11",
+      "task_prompt_sha256": "ab6ac5281df47e2746c4bdeb1449ed407f4ea98bbcd99a8c87b5b0c7f00918b2"
+    },
+    {
+      "session_id": "c840b0976e15_a18088a1",
+      "run_id": "c840b0976e15",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_gpt-5.2-2025-12-11/config.json",
+      "model": "gpt-5.2-2025-12-11",
+      "task_prompt_sha256": "ca4875f4c16dd2d40a8ab7eb65e333b77c5ac83c9b3cf2bfcdf7587b24a31d55"
+    },
+    {
+      "session_id": "c840b0976e15_a44e0787",
+      "run_id": "c840b0976e15",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_gpt-5.2-2025-12-11/config.json",
+      "model": "gpt-5.2-2025-12-11",
+      "task_prompt_sha256": "12b182d2655d9851b304330672c521319a6917bb2b561533338a6fde26f880ad"
+    },
+    {
+      "session_id": "c840b0976e15_a5435483",
+      "run_id": "c840b0976e15",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_gpt-5.2-2025-12-11/config.json",
+      "model": "gpt-5.2-2025-12-11",
+      "task_prompt_sha256": "f9f504c58fdfaf1381b2e2c80aabd0cfe778d818dae726bef1634e9665591fbb"
+    },
+    {
+      "session_id": "c840b0976e15_a5e38ab3",
+      "run_id": "c840b0976e15",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_gpt-5.2-2025-12-11/config.json",
+      "model": "gpt-5.2-2025-12-11",
+      "task_prompt_sha256": "87205427d3299e392d994b52e800c828a20a41eb315616ce24ab44da2f1e26ca"
+    },
+    {
+      "session_id": "c840b0976e15_a808d8c8",
+      "run_id": "c840b0976e15",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_gpt-5.2-2025-12-11/config.json",
+      "model": "gpt-5.2-2025-12-11",
+      "task_prompt_sha256": "68258d72efa3650c7301a22c71d6b9a9586adb87028b3b690c77844a01dd7cc6"
+    },
+    {
+      "session_id": "c840b0976e15_ab149348",
+      "run_id": "c840b0976e15",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_gpt-5.2-2025-12-11/config.json",
+      "model": "gpt-5.2-2025-12-11",
+      "task_prompt_sha256": "1164abebb55a7e62aef1ab87258498f403beb1c555b2985016eb8d30581d664e"
+    },
+    {
+      "session_id": "c840b0976e15_ab93afa2",
+      "run_id": "c840b0976e15",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_gpt-5.2-2025-12-11/config.json",
+      "model": "gpt-5.2-2025-12-11",
+      "task_prompt_sha256": "cf53dd6d66b1c6ca859769931cece30b6b43ce304696a98e1178d61a7db38fca"
+    },
+    {
+      "session_id": "c840b0976e15_ac5fd7e5",
+      "run_id": "c840b0976e15",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_gpt-5.2-2025-12-11/config.json",
+      "model": "gpt-5.2-2025-12-11",
+      "task_prompt_sha256": "64ad856862c8e43840cf936d1bf057eab2d15a204d45349e374a1981dc6c0828"
+    },
+    {
+      "session_id": "c840b0976e15_b4e5cf63",
+      "run_id": "c840b0976e15",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_gpt-5.2-2025-12-11/config.json",
+      "model": "gpt-5.2-2025-12-11",
+      "task_prompt_sha256": "9456db17ba60cb377cf0bb1d08f81bcad8209789c774034c885befa39dcc9a0d"
+    },
+    {
+      "session_id": "c840b0976e15_b837c573",
+      "run_id": "c840b0976e15",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_gpt-5.2-2025-12-11/config.json",
+      "model": "gpt-5.2-2025-12-11",
+      "task_prompt_sha256": "beccc8e3212c748e828bdf28df03e404888dd614bd473c264147c4129d205eb6"
+    },
+    {
+      "session_id": "c840b0976e15_bb6cf415",
+      "run_id": "c840b0976e15",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_gpt-5.2-2025-12-11/config.json",
+      "model": "gpt-5.2-2025-12-11",
+      "task_prompt_sha256": "0cbdbfbe38feaac7eaebf3652f5400bc7fa454e5e0aa7b00ae4316c8a9f8c875"
+    },
+    {
+      "session_id": "c840b0976e15_bcdb4730",
+      "run_id": "c840b0976e15",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_gpt-5.2-2025-12-11/config.json",
+      "model": "gpt-5.2-2025-12-11",
+      "task_prompt_sha256": "d63e16352c96151f843a78de0b34a172ed7be086bdb78c8a5987853c4c93e902"
+    },
+    {
+      "session_id": "c840b0976e15_bd98329b",
+      "run_id": "c840b0976e15",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_gpt-5.2-2025-12-11/config.json",
+      "model": "gpt-5.2-2025-12-11",
+      "task_prompt_sha256": "7e4035e5b6334f2dd943d2cbba08064b56254d6f52078d94e94554668c9a5d06"
+    },
+    {
+      "session_id": "c840b0976e15_be7ad721",
+      "run_id": "c840b0976e15",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_gpt-5.2-2025-12-11/config.json",
+      "model": "gpt-5.2-2025-12-11",
+      "task_prompt_sha256": "3be5d32bfc2dfba218119bdad2d4ddf2018a9fddb14df506c165848165880b1a"
+    },
+    {
+      "session_id": "c840b0976e15_bedd83ea",
+      "run_id": "c840b0976e15",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_gpt-5.2-2025-12-11/config.json",
+      "model": "gpt-5.2-2025-12-11",
+      "task_prompt_sha256": "41ce337a30c04c0ff5b427c0090696a7a67f378841965d25c95c0baa21867b73"
+    },
+    {
+      "session_id": "c840b0976e15_c06f896a",
+      "run_id": "c840b0976e15",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_gpt-5.2-2025-12-11/config.json",
+      "model": "gpt-5.2-2025-12-11",
+      "task_prompt_sha256": "6832231431b176a4042c885ba4d8b62d15686ece47e3ab750eb434773c32ae94"
+    },
+    {
+      "session_id": "c840b0976e15_c2a433e1",
+      "run_id": "c840b0976e15",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_gpt-5.2-2025-12-11/config.json",
+      "model": "gpt-5.2-2025-12-11",
+      "task_prompt_sha256": "09b0eb07ef02009fcb94551b2e1c282b7f4fcf514a1d34061d01635cf4026bda"
+    },
+    {
+      "session_id": "c840b0976e15_c3a83e1f",
+      "run_id": "c840b0976e15",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_gpt-5.2-2025-12-11/config.json",
+      "model": "gpt-5.2-2025-12-11",
+      "task_prompt_sha256": "ac4908f09966aa8ba74b9da93975f2e4e8e43a846989464e2505ababcfd3d740"
+    },
+    {
+      "session_id": "c840b0976e15_c3c59029",
+      "run_id": "c840b0976e15",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_gpt-5.2-2025-12-11/config.json",
+      "model": "gpt-5.2-2025-12-11",
+      "task_prompt_sha256": "bdd5334fa25e4147b296fe581eff2603711d69a4cdfbe0a791e0a07c78ad7c80"
+    },
+    {
+      "session_id": "c840b0976e15_c8fb8034",
+      "run_id": "c840b0976e15",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_gpt-5.2-2025-12-11/config.json",
+      "model": "gpt-5.2-2025-12-11",
+      "task_prompt_sha256": "65662cfbf95e555f1f77b87d8a30d8efce0c007e159fdc10d548fa4e128099f8"
+    },
+    {
+      "session_id": "c840b0976e15_c9ab1b86",
+      "run_id": "c840b0976e15",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_gpt-5.2-2025-12-11/config.json",
+      "model": "gpt-5.2-2025-12-11",
+      "task_prompt_sha256": "c86ef9e4b8d9b035ff31e6a58cb3757dee1dcd4809ab68630acb6de6a4eef608"
+    },
+    {
+      "session_id": "c840b0976e15_d161b63e",
+      "run_id": "c840b0976e15",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_gpt-5.2-2025-12-11/config.json",
+      "model": "gpt-5.2-2025-12-11",
+      "task_prompt_sha256": "ca2d5827cf3e0aa3e211bd93dd0512dab13050f1ca6a1e6a683af1c6c4f4393e"
+    },
+    {
+      "session_id": "c840b0976e15_d31ca032",
+      "run_id": "c840b0976e15",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_gpt-5.2-2025-12-11/config.json",
+      "model": "gpt-5.2-2025-12-11",
+      "task_prompt_sha256": "993936b720f0985579e6c256ba5156a5eddbb825a76ed7c92499daec1bd4b915"
+    },
+    {
+      "session_id": "c840b0976e15_d3d0690a",
+      "run_id": "c840b0976e15",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_gpt-5.2-2025-12-11/config.json",
+      "model": "gpt-5.2-2025-12-11",
+      "task_prompt_sha256": "8f44179bf022aabb42bdaa8753b8317fc2681d309e44ce9a03a0212c45c180f3"
+    },
+    {
+      "session_id": "c840b0976e15_d43ccfe6",
+      "run_id": "c840b0976e15",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_gpt-5.2-2025-12-11/config.json",
+      "model": "gpt-5.2-2025-12-11",
+      "task_prompt_sha256": "995f68fba20186a97bce95b7959124b98c66d6653e8723f7ea36c470eedc17fb"
+    },
+    {
+      "session_id": "c840b0976e15_d83da79f",
+      "run_id": "c840b0976e15",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_gpt-5.2-2025-12-11/config.json",
+      "model": "gpt-5.2-2025-12-11",
+      "task_prompt_sha256": "e82a0fdfa65e4de20d0981f26ef95b4c7ebcf2b5eea9ec7b96926263ed66bc59"
+    },
+    {
+      "session_id": "c840b0976e15_d8df55de",
+      "run_id": "c840b0976e15",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_gpt-5.2-2025-12-11/config.json",
+      "model": "gpt-5.2-2025-12-11",
+      "task_prompt_sha256": "62062c399f211fe22ac0254e2681729e122fb4ab2916f786c50127f55d3a4acd"
+    },
+    {
+      "session_id": "c840b0976e15_d9a052be",
+      "run_id": "c840b0976e15",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_gpt-5.2-2025-12-11/config.json",
+      "model": "gpt-5.2-2025-12-11",
+      "task_prompt_sha256": "af5b0a65ceef32c073ff2f592a0ebd81695eef18aa0128c69260393cb502652a"
+    },
+    {
+      "session_id": "c840b0976e15_dd69c911",
+      "run_id": "c840b0976e15",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_gpt-5.2-2025-12-11/config.json",
+      "model": "gpt-5.2-2025-12-11",
+      "task_prompt_sha256": "bbe2cfbee16e5f42b175b11db289fd71e9f398cb8df65dde690a1da4c709f785"
+    },
+    {
+      "session_id": "c840b0976e15_de014d58",
+      "run_id": "c840b0976e15",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_gpt-5.2-2025-12-11/config.json",
+      "model": "gpt-5.2-2025-12-11",
+      "task_prompt_sha256": "16021f0b5ab91fdb823b94ff9ab7e66c35a46b42700ca375ad64d5ac413454d0"
+    },
+    {
+      "session_id": "c840b0976e15_dfb609d1",
+      "run_id": "c840b0976e15",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_gpt-5.2-2025-12-11/config.json",
+      "model": "gpt-5.2-2025-12-11",
+      "task_prompt_sha256": "7518f5674197081fc80a662e1b583c11a403957fd3330f0d50ea5afce843db0c"
+    },
+    {
+      "session_id": "c840b0976e15_e3355851",
+      "run_id": "c840b0976e15",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_gpt-5.2-2025-12-11/config.json",
+      "model": "gpt-5.2-2025-12-11",
+      "task_prompt_sha256": "890541202bb564063e5cb2a327f8ae8d994b738a3d0cc429b33da1489db899a7"
+    },
+    {
+      "session_id": "c840b0976e15_e66d073f",
+      "run_id": "c840b0976e15",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_gpt-5.2-2025-12-11/config.json",
+      "model": "gpt-5.2-2025-12-11",
+      "task_prompt_sha256": "f42c5b4c96eca231709c806f9c061daec17d9adcfb5df9259bc9d8bdce80a33b"
+    },
+    {
+      "session_id": "c840b0976e15_e8515a91",
+      "run_id": "c840b0976e15",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_gpt-5.2-2025-12-11/config.json",
+      "model": "gpt-5.2-2025-12-11",
+      "task_prompt_sha256": "d3450277599165b4b219647c8e73ae3e4137412695bc902ebc9850511bb4be74"
+    },
+    {
+      "session_id": "c840b0976e15_edb913d2",
+      "run_id": "c840b0976e15",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_gpt-5.2-2025-12-11/config.json",
+      "model": "gpt-5.2-2025-12-11",
+      "task_prompt_sha256": "3082b24b5ad3f9517d10c715953cb05245cd26f5fc1cb637c53745a3122f9c59"
+    },
+    {
+      "session_id": "c840b0976e15_ef89a376",
+      "run_id": "c840b0976e15",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_gpt-5.2-2025-12-11/config.json",
+      "model": "gpt-5.2-2025-12-11",
+      "task_prompt_sha256": "276e0cfc2ec7d841aac6b1b82074477758780797a61571467ea35014baa30ad2"
+    },
+    {
+      "session_id": "c840b0976e15_f621b296",
+      "run_id": "c840b0976e15",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_gpt-5.2-2025-12-11/config.json",
+      "model": "gpt-5.2-2025-12-11",
+      "task_prompt_sha256": "c8dcf69acdb6d1b452c309c9f498dea1cfb5684701aa300592a031e190954036"
+    },
+    {
+      "session_id": "c840b0976e15_fc888f54",
+      "run_id": "c840b0976e15",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_gpt-5.2-2025-12-11/config.json",
+      "model": "gpt-5.2-2025-12-11",
+      "task_prompt_sha256": "7b9c5f1e5f51658d64f26578ab764ce3a3d21941f7e6019a2f2bcaa10bb91d41"
+    },
+    {
+      "session_id": "c840b0976e15_fd16acc0",
+      "run_id": "c840b0976e15",
+      "config_path": "experiments/browsecompplus/smolagents_code/openai_Azure_gpt-5.2-2025-12-11/config.json",
+      "model": "gpt-5.2-2025-12-11",
+      "task_prompt_sha256": "4cec50c4abeda403cad492e6264fdcb0724aa449f26f3b232d5a7fb6a6f54b77"
+    }
+  ]
+}

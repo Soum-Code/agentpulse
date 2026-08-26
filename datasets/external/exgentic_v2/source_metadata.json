@@ -1,0 +1,61 @@
+{
+  "dataset_id": "Exgentic/agent-llm-traces-v2",
+  "dataset_url": "https://huggingface.co/datasets/Exgentic/agent-llm-traces-v2",
+  "revision": "4b8ad4ab198438e5a170f9171c19c6a2cf7c1814",
+  "retrieved_at": "2026-08-26T20:03:05Z",
+  "retrieval_method": "huggingface_hub.HfFileSystem + pyarrow column projection",
+  "raw_corpus_mirrored": false,
+  "raw_corpus_note": "The full corpus (~231 MB, dominated by the spans column) is NOT mirrored into this repository. Reproducibility is via this script plus the pinned revision above; raw/manifest.json lists every source session consumed.",
+  "scope": "drift diagnosis only",
+  "target_cell": {
+    "benchmark": "browsecompplus",
+    "harness": "smolagents_code"
+  },
+  "transformation_steps": [
+    "1. Enumerate parquet shards via HfFileSystem.",
+    "2. Project (benchmark, harness) from every shard to locate the target cell.",
+    "3. Read RUN_COLS + spans from only the shards containing the target cell.",
+    "4. Filter rows to the target benchmark/harness.",
+    "5. Task prompt = first user text part of the first span's input messages.",
+    "6. Outputs = per-span assistant text parts, in span order; tool_call parts excluded.",
+    "7. Group sessions by task_prompt_sha256; keep groups covering >= min_models models."
+  ],
+  "fields_not_mapped": {
+    "spans[].attributes.gen_ai.tool.definitions": "tool schemas, not needed for output-drift; very large (~400KB/span)",
+    "spans[].attributes.gen_ai.system_instructions": "not required for output centroid drift",
+    "spans[].events": "not required for output centroid drift",
+    "spans[].resource_attributes": "constant across the corpus (service.name=exgentic)",
+    "agent_cost / benchmark_cost / max_tokens": "cost fields, not part of the drift question",
+    "tool_call / tool_call_response parts": "present in the corpus but out of scope for drift; relevant to a future tool-claim study"
+  },
+  "known_corpus_caveats": {
+    "row_count": "10056 rows measured, dataset card states ~10057 runs",
+    "rows_are_sessions": "each row is one task session; 115 run_ids group them",
+    "status_unknown_share": "~49% of corpus sessions have status='unknown'",
+    "single_agent": "one model and one agent identity per session; no multi-agent structure"
+  },
+  "verification": {
+    "shards_read_for_spans": [
+      5
+    ],
+    "shards_available": 9,
+    "rows_scanned_in_read_shards": 1736,
+    "sessions_extracted": 500,
+    "sessions_skipped": {},
+    "unique_session_ids": 500,
+    "unique_run_ids": 5,
+    "distinct_models": [
+      "DeepSeek-V3.2",
+      "Kimi-K2.5",
+      "claude-opus-4-5",
+      "gemini-3-pro-preview",
+      "gpt-5.2-2025-12-11"
+    ],
+    "distinct_tasks": 200,
+    "paired_task_groups": 200,
+    "sessions_in_paired_groups": 500,
+    "all_sessions_have_outputs": true,
+    "corpus_non_empty": true,
+    "no_duplicate_session_ids": true
+  }
+}
