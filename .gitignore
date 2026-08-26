@@ -60,3 +60,6 @@ omniroute_claude_code_guide.md
 # at the pinned revision in datasets/external/exgentic_v2/source_metadata.json.
 # Provenance (source_metadata.json, raw/manifest.json, README.md) stays tracked.
 datasets/external/*/derived/
+
+# Embedding cache — regenerable, large, derived from gitignored external data
+experiments/results/.drift_embedding_cache.npz

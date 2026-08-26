@@ -207,3 +207,77 @@ Only what this result supports:
    no-shift floor cannot be measured cleanly.
 
 No production drift code was modified by this work. Test suite unchanged at 121/121.
+
+---
+
+## 10. Follow-up: the two hypotheses tested (2026-08-27)
+
+§9 named two reformulations and labelled both untested. They were then tested against the
+current metric on identical data and identical embeddings, so any difference is
+attributable to the representation alone.
+
+**Script:** `experiments/drift_representation_test.py`
+**Results:** `experiments/results/drift_representation_test.json`
+
+### 10.1 The missing positive control
+
+The first version of this follow-up compared only `shift` against `no_shift`, and no
+metric separated them. That result was **uninterpretable**: it is equally consistent with
+"the metric is blind" and with "neither condition is a real semantic change".
+
+A positive control was added — **same model, different task** — a difference known to
+exist, since different tasks are different subject matter. It is an upper bound, not an
+operational estimate: real production drift is subtler than swapping the task entirely.
+
+### 10.2 Results
+
+Median pooled distance by condition, and separation from normal operation:
+
+| Metric | no_shift | model shift | content change | AUC (shift) | **AUC (content)** | det @0.30 | **FA @0.30** |
+| :--- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `ema_within_run` (shipped) | 0.4816 | 0.4618 | 0.6374 | 0.4393 | 0.7917 | 0.999 | **0.917** |
+| `pooled_session` (H1) | 0.1326 | 0.1402 | 0.4254 | 0.5379 | **0.9532** | 0.825 | **0.068** |
+| `stepwise_aligned` (H2) | 0.3636 | 0.3574 | 0.5796 | 0.5013 | 0.8891 | 0.984 | 0.696 |
+
+### 10.3 What this establishes
+
+**1. Hypothesis 1 is validated. Hypothesis 2 is rejected.**
+Pooling a run into one vector before comparing gives **AUC 0.9532** against real content
+change. Step-aligned comparison reaches 0.8891 but still false-alarms on 69.6% of normal
+operation — not viable. The shipped within-run EMA construction is the worst of the three:
+it detects 99.9% of real change while also firing on **91.7% of unchanged operation**,
+which is indistinguishable from always alerting.
+
+**2. The 0.30 threshold was never the problem.** With the pooled representation it is
+close to optimal — the best fitted cut point is 0.27 (88.5% balanced accuracy) against
+0.30's 82.5% detection / 6.8% false alarms. §7 concluded the threshold "is not merely
+mis-set", and that stands, but the reason is now sharper: **the aggregation was wrong, not
+the threshold and not the underlying signal.** Embedding cosine distance is a perfectly
+serviceable drift signal; comparing each individual output against a slowly-updating EMA
+centroid *within* one run is what destroyed it.
+
+**3. Model swap is not detectable by any of the three, and that is not a detector
+failure.** Every metric scores near chance on `shift` (AUC 0.44–0.54) while the same
+metrics score 0.79–0.95 on `content_change`. Two competent models solving an identical
+task produce genuinely similar content — pooled distance 0.1402 against normal
+operation's 0.1326. §7's framing of `shift` as "a controlled change the detector should
+catch" was too strong: it is a controlled change, but not a semantic one.
+
+### 10.4 Architectural implication
+
+The validated metric compares one completed run's pooled vector against another's. The
+shipped detector is per-span and streaming — it never holds a completed run. Adopting the
+pooled representation therefore means run-level aggregation and a stored baseline run to
+compare against, which is a structural change to `DriftDetector`, not a parameter change.
+That work is **not** attempted here; this report establishes the evidence for it.
+
+### 10.5 Limitations specific to this follow-up
+
+- `content_change` (different task) is an **upper bound** on detectability. It says nothing
+  about gradual degradation, prompt-template edits, or quality regression — the drift
+  types operators actually care about.
+- The 0.27 "best" threshold is **fitted to this data** and is not a recommendation. The
+  deterministic 89/111 dev/held-out task split from ingestion remains unconsumed and would
+  be the honest basis for any calibration.
+- Still one benchmark, one harness, one embedding model.
+- The `no_shift` control remains imperfect for the reason given in §8.
