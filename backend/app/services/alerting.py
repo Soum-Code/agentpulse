@@ -262,4 +262,26 @@ class AlertEngine:
                 comparison="gt",
                 message_template="Error rate spike for agent '{agent_id}': delta={value} (threshold={threshold})",
             ),
+            # `disagreement_score` was already being passed into evaluate()'s
+            # metrics dict but no rule referenced it, so a cross-agent
+            # contradiction could never raise an alert on its own. It also
+            # cannot reach an operator through HIGH_HALLUCINATION_RISK:
+            # disagreement carries weight 0.20 in the composite against
+            # grounding's 0.40, so a near-certain contradiction alongside a
+            # clean grounding score aggregates to ~0.33 — under both the 0.4
+            # medium-risk band and that rule's 0.7 threshold. Observed on a real
+            # trace: a 0.9999 disagreement produced label="low_risk", no alert.
+            #
+            # The threshold matches the disagreement engine's own flagging
+            # threshold (disagreement.py's default 0.6), so this alerts exactly
+            # when the engine says a disagreement occurred, rather than
+            # introducing a second, independently-drifting cutoff.
+            AlertRule(
+                alert_type="AGENT_DISAGREEMENT",
+                severity="HIGH",
+                condition_field="disagreement_score",
+                threshold=0.6,
+                comparison="gt",
+                message_template="Agents disagree within trace for '{agent_id}': contradiction={value} (threshold={threshold})",
+            ),
         ]
