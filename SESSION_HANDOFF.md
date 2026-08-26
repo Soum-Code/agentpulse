@@ -11,14 +11,14 @@
 ## 0. TL;DR
 
 - **Backend + evaluation pipeline: real, tested, working.** 101/101 tests passing (`pytest tests/ -q`). Security audit complete. Real model inference (Qwen3-8B via llama.cpp), not stub fallbacks.
-- **Both reasoning-strategy benchmarks are now DONE and real**: local CPU (Qwen3-8B) and Kaggle GPU (Llama 3.1 8B, Tesla P100). The Llama run just completed successfully — see Section 1. **The one remaining research task is writing up the CPU-vs-GPU / Qwen-vs-Llama comparison** — data is saved and verified, analysis not yet written.
+- **Both reasoning-strategy benchmarks are now DONE and real**: local CPU (Qwen3-8B) and Kaggle GPU (Llama 3.1 8B, Tesla P100). **The CPU-vs-GPU / Qwen-vs-Llama comparison is now written up too** — see Section 1 and `GPU_VS_CPU_BENCHMARK_REPORT.md`.
 - **Dashboard: mid-redesign, real design system in place, real bugs found and fixed, real bugs still open.** See Section 2 for the exact current split between what's live, what's real-but-static, and what's still fabricated.
-- Repo is clean and pushed as of commit `2a46046`. **One new uncommitted file**: `experiments/results/reasoning_strategy_results_llama_gpu.json` (just saved, not yet committed — see Section 1).
+- Repo is clean and pushed as of commit `3cef217`. `experiments/results/reasoning_strategy_results_llama_gpu.json` is committed; `GPU_VS_CPU_BENCHMARK_REPORT.md` and a `PROJECT_REPORT.md` Section 4 update are new and not yet committed as of this writing.
 - Docker, GitHub, and dev-server setup are all previously verified working — see Section 4 for exact commands, not re-derived here.
 
 ---
 
-## 1. Reasoning-strategy benchmark — both runs complete, comparison not yet written
+## 1. Reasoning-strategy benchmark — both runs complete, comparison written up
 
 Two models, same benchmark (30 test cases × 5 stochastic runs × 3 strategies: Direct / CoT / AoT), same evaluation pipeline, run on different hardware.
 
@@ -34,9 +34,9 @@ Two models, same benchmark (30 test cases × 5 stochastic runs × 3 strategies: 
 
 Grounding-risk spread was found **inconclusive** on this sample (spread smaller than within-strategy stdev) — reported honestly as such, not forced into a false "AoT wins" narrative. Real, defensible finding: AoT costs ~8.5x DIRECT's tokens for a risk difference that isn't statistically distinguishable here.
 
-### Llama 3.1 8B — Kaggle GPU (just completed, NOT yet analyzed)
+### Llama 3.1 8B — Kaggle GPU (complete, committed, analyzed)
 
-**Just downloaded and saved to `experiments/results/reasoning_strategy_results_llama_gpu.json`** (not yet committed as of this writing). Tesla P100-PCIE-16GB, full GPU offload, `bartowski/Meta-Llama-3.1-8B-Instruct-GGUF` Q4_K_M.
+Saved to `experiments/results/reasoning_strategy_results_llama_gpu.json` (committed in `3cef217`). Tesla P100-PCIE-16GB, full GPU offload, `bartowski/Meta-Llama-3.1-8B-Instruct-GGUF` Q4_K_M.
 
 | Strategy | Mean latency (ms) | Mean tokens out | Mean grounding risk | Contradiction rate |
 | :--- | ---: | ---: | ---: | ---: |
@@ -49,12 +49,12 @@ Grounding-risk spread was found **inconclusive** on this sample (spread smaller 
 - 435/450 raw risk scores are non-zero, spanning the full 0.0–1.0 range — not the flat-zero pattern that invalidated the earlier discarded Qwen3 GPU attempt.
 - `total_wall_time_minutes: 631.0` (~10.5h), same order of magnitude as the CPU run and the discarded GPU attempt — plausible.
 
-**Not yet done — the actual next research task**: write the comparison. A few things already visible worth investigating honestly (not yet confirmed as real findings, just first-look observations):
-- Llama's per-strategy latencies are all higher than Qwen3's *despite* running on GPU vs Qwen3's CPU run — same surprising direction as the discarded Qwen3 GPU attempt. Worth checking whether this is genuinely "Llama 3.1 8B is slower at this task" or whether something about GPU utilization is off (check `hardware`/`n_gpu_layers` fields, maybe compare tokens/sec rather than raw latency since token counts differ between the two runs).
-- Llama's grounding-risk numbers (0.328/0.228/0.213) are close to Qwen3's (0.424/0.283/0.233) — same ordering (DIRECT highest risk, AoT lowest), which is at least a plausible cross-model consistency signal, not proof of anything yet.
-- Don't force a "clean" narrative if the data doesn't support one — this project's whole credibility rests on that discipline.
+**Done — the comparison is written up in `GPU_VS_CPU_BENCHMARK_REPORT.md`.** Findings, reported honestly rather than forced into a clean narrative:
+- Llama's per-strategy latencies and tokens/sec are all worse than Qwen3's *despite* running on GPU vs Qwen3's CPU run (checked tokens/sec specifically, since token counts differ between the two runs — the GPU run is still slower on that basis too). Same surprising direction as the discarded Qwen3 GPU attempt, but this run passed the fail-loud model-load assertion and produced valid, varied risk scores, so it reads as a genuine property of this setup rather than a repeat of that broken run. Root cause (GPU offload efficiency, build differences, etc.) not diagnosed further.
+- Llama's grounding-risk numbers (0.328/0.228/0.213) are close to Qwen3's (0.424/0.283/0.233) with the same ordering (DIRECT highest risk, AoT lowest) — a plausible cross-model consistency signal, not proof of anything.
+- Contradiction rate did *not* replicate the same pattern across models (Qwen's AoT had zero; Llama's COT was highest) — reported as-is.
 
-Suggested next steps in order: (1) commit `reasoning_strategy_results_llama_gpu.json`, (2) write `GPU_VS_CPU_BENCHMARK_REPORT.md` or similar with real numbers side by side, explicit about the hardware difference so it reads as a hardware+model comparison not a controlled ablation, (3) update `PROJECT_REPORT.md` Section 4 with a pointer, (4) commit and push.
+`PROJECT_REPORT.md` Section 4 now has a pointer paragraph to the new report. Remaining: commit these three files (`GPU_VS_CPU_BENCHMARK_REPORT.md`, the `PROJECT_REPORT.md` edit, this file) and push.
 
 ---
 
@@ -135,7 +135,7 @@ This repo has only ever had a `main` branch; every commit across every session h
 
 ## 6. Immediate next steps, in likely priority order
 
-1. Commit `experiments/results/reasoning_strategy_results_llama_gpu.json` (currently untracked) and write the GPU-vs-CPU / Llama-vs-Qwen comparison (Section 1).
+1. ~~Commit `reasoning_strategy_results_llama_gpu.json` and write the GPU-vs-CPU / Llama-vs-Qwen comparison~~ — done (Section 1, `GPU_VS_CPU_BENCHMARK_REPORT.md`). Only remaining piece: commit `GPU_VS_CPU_BENCHMARK_REPORT.md`, the `PROJECT_REPORT.md` edit, and this file, then push.
 2. Trace waterfall + evidence inspector rebuild (Section 2, item 1) — the largest remaining fabricated surface, spec already written.
 3. Replay Debugger real data source, or an honest empty state if no real equivalent exists yet (Section 2, item 2).
 4. `DatasetsView` stale curated-count fix (Section 2, item 3) — small, mechanical, a live endpoint already exists.
