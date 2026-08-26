@@ -1,0 +1,188 @@
+{
+  "timestamp": "2026-08-26 20:52:34 UTC",
+  "data_class": "EXTERNAL_REAL_DATA",
+  "source": {
+    "dataset_id": "Exgentic/agent-llm-traces-v2",
+    "dataset_url": "https://huggingface.co/datasets/Exgentic/agent-llm-traces-v2",
+    "revision": "4b8ad4ab198438e5a170f9171c19c6a2cf7c1814",
+    "retrieved_at": "2026-08-26T20:03:05Z",
+    "data_class": "EXTERNAL_REAL_DATA",
+    "labels": "NONE \u2014 this corpus provides no drift ground truth; model identity is the controlled variable, not a drift label"
+  },
+  "target_cell": {
+    "benchmark": "browsecompplus",
+    "harness": "smolagents_code"
+  },
+  "labels": "NONE \u2014 condition membership is structural, not a drift annotation",
+  "production_code_modified": false,
+  "metrics": {
+    "ema_within_run": {
+      "shift": {
+        "n": 800,
+        "mean": 0.46,
+        "median": 0.4618,
+        "stdev": 0.1202,
+        "p05": 0.2641,
+        "p25": 0.3746,
+        "p75": 0.536,
+        "p95": 0.6626,
+        "min": 0.1567,
+        "max": 0.9242
+      },
+      "no_shift": {
+        "n": 484,
+        "mean": 0.488,
+        "median": 0.4816,
+        "stdev": 0.1352,
+        "p05": 0.2707,
+        "p25": 0.3996,
+        "p75": 0.577,
+        "p95": 0.7121,
+        "min": 0.1134,
+        "max": 0.9689
+      },
+      "content_change": {
+        "n": 1000,
+        "mean": 0.638,
+        "median": 0.6374,
+        "stdev": 0.1276,
+        "p05": 0.4311,
+        "p25": 0.5463,
+        "p75": 0.7282,
+        "p95": 0.8576,
+        "min": 0.2731,
+        "max": 0.9828
+      },
+      "separation_shift_vs_no_shift": {
+        "median_gap": -0.0198,
+        "auc": 0.4393,
+        "best_balanced_accuracy": 0.5049,
+        "threshold_at_best": 0.189,
+        "note": "threshold fitted on this data; not validated, not a recommendation"
+      },
+      "separation_content_change_vs_no_shift": {
+        "median_gap": 0.1557,
+        "auc": 0.7917,
+        "best_balanced_accuracy": 0.7226,
+        "threshold_at_best": 0.563,
+        "note": "threshold fitted on this data; not validated, not a recommendation"
+      },
+      "at_production_threshold_0_30": {
+        "detection_rate_on_content_change": 0.999,
+        "false_alarm_rate_on_no_shift": 0.9174
+      }
+    },
+    "pooled_session": {
+      "shift": {
+        "n": 800,
+        "mean": 0.1512,
+        "median": 0.1402,
+        "stdev": 0.0632,
+        "p05": 0.074,
+        "p25": 0.1064,
+        "p75": 0.1779,
+        "p95": 0.2877,
+        "min": 0.051,
+        "max": 0.4469
+      },
+      "no_shift": {
+        "n": 484,
+        "mean": 0.1491,
+        "median": 0.1326,
+        "stdev": 0.0915,
+        "p05": 0.0336,
+        "p25": 0.0773,
+        "p75": 0.2032,
+        "p95": 0.3173,
+        "min": 0.0129,
+        "max": 0.503
+      },
+      "content_change": {
+        "n": 1000,
+        "mean": 0.4286,
+        "median": 0.4254,
+        "stdev": 0.1377,
+        "p05": 0.1999,
+        "p25": 0.3353,
+        "p75": 0.5186,
+        "p95": 0.6644,
+        "min": 0.1013,
+        "max": 0.8681
+      },
+      "separation_shift_vs_no_shift": {
+        "median_gap": 0.0075,
+        "auc": 0.5379,
+        "best_balanced_accuracy": 0.5968,
+        "threshold_at_best": 0.081,
+        "note": "threshold fitted on this data; not validated, not a recommendation"
+      },
+      "separation_content_change_vs_no_shift": {
+        "median_gap": 0.2927,
+        "auc": 0.9532,
+        "best_balanced_accuracy": 0.8869,
+        "threshold_at_best": 0.273,
+        "note": "threshold fitted on this data; not validated, not a recommendation"
+      },
+      "at_production_threshold_0_30": {
+        "detection_rate_on_content_change": 0.825,
+        "false_alarm_rate_on_no_shift": 0.0682
+      }
+    },
+    "stepwise_aligned": {
+      "shift": {
+        "n": 800,
+        "mean": 0.3682,
+        "median": 0.3574,
+        "stdev": 0.095,
+        "p05": 0.2391,
+        "p25": 0.3006,
+        "p75": 0.4264,
+        "p95": 0.5435,
+        "min": 0.1377,
+        "max": 0.7706
+      },
+      "no_shift": {
+        "n": 484,
+        "mean": 0.3639,
+        "median": 0.3636,
+        "stdev": 0.1151,
+        "p05": 0.1687,
+        "p25": 0.2847,
+        "p75": 0.4396,
+        "p95": 0.5547,
+        "min": 0.0888,
+        "max": 0.6913
+      },
+      "content_change": {
+        "n": 1000,
+        "mean": 0.5793,
+        "median": 0.5796,
+        "stdev": 0.1302,
+        "p05": 0.3546,
+        "p25": 0.4862,
+        "p75": 0.6752,
+        "p95": 0.7957,
+        "min": 0.243,
+        "max": 0.8961
+      },
+      "separation_shift_vs_no_shift": {
+        "median_gap": -0.0062,
+        "auc": 0.5013,
+        "best_balanced_accuracy": 0.5451,
+        "threshold_at_best": 0.236,
+        "note": "threshold fitted on this data; not validated, not a recommendation"
+      },
+      "separation_content_change_vs_no_shift": {
+        "median_gap": 0.216,
+        "auc": 0.8891,
+        "best_balanced_accuracy": 0.8076,
+        "threshold_at_best": 0.497,
+        "note": "threshold fitted on this data; not validated, not a recommendation"
+      },
+      "at_production_threshold_0_30": {
+        "detection_rate_on_content_change": 0.984,
+        "false_alarm_rate_on_no_shift": 0.6963
+      }
+    }
+  }
+}
