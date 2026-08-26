@@ -10,6 +10,7 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
+from sqlalchemy import literal_column
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
@@ -368,26 +369,37 @@ async def _fetch_prior_agent_outputs(
       also return later spans and each pair would be evaluated twice — once
       from each side.
 
-    Ordering is (start_time, span_id): start_time is the trace's real order, and
-    span_id breaks ties deterministically when spans share a timestamp.
+    Ordering is (start_time, rowid). start_time is the trace's real order, but
+    it can tie: clock granularity groups fast spans into the same timestamp,
+    and some producers stamp a whole trace once (scripts/e2e_dashboard_demo.py
+    does exactly that). `span_id` is a random hex string, so using it as the
+    tiebreak would order tied spans alphabetically — arbitrary, and unrelated
+    to execution order. SQLite's rowid is insertion order, which for a trace is
+    the order the SDK emitted its spans, so it breaks ties meaningfully.
+
+    Coverage is unaffected either way: any consistent total order evaluates each
+    pair exactly once. The tiebreak only decides which agent is the premise.
     """
     async with get_session() as session:
         rows = await session.execute(
-            select(Span.agent_id, Span.output_summary, Span.start_time, Span.span_id)
+            select(Span.span_id, Span.agent_id, Span.output_summary)
             .where(Span.trace_id == span.trace_id)
-            .where(Span.span_id != span.span_id)
-            .where(Span.output_summary.is_not(None))
-            .order_by(Span.start_time, Span.span_id)
+            .order_by(Span.start_time, literal_column("rowid"))
         )
-        candidates = rows.all()
+        ordered = rows.all()
 
-    span_start = span.start_time.replace(tzinfo=None) if span.start_time else None
-    priors: list[tuple[str, str]] = []
-    for agent_id, output_summary, start_time, span_id in candidates:
-        if span_start is not None and start_time is not None:
-            if (start_time, span_id) >= (span_start, span.span_id):
-                continue
-        priors.append((agent_id, output_summary))
+    # Everything ahead of this span in trace order. Locating the span by id
+    # rather than comparing timestamps keeps this correct when they tie.
+    position = next(
+        (i for i, (span_id, _, _) in enumerate(ordered) if span_id == span.span_id),
+        len(ordered),
+    )
+
+    priors = [
+        (agent_id, output_summary)
+        for _, agent_id, output_summary in ordered[:position]
+        if output_summary
+    ]
 
     # Keep the most recent within budget; evaluate_against_prior_agents applies
     # its own cap too, but trimming here also bounds the rows carried around.
