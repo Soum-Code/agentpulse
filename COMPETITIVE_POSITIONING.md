@@ -191,24 +191,31 @@ honest caveat is the one in §5.1 of that report: these are 22 hand-constructed 
 Four signals (embedding centroid distance, tool-use entropy, quality trend, error-rate
 delta) composited into a 0–100 index.
 
-**Measured** (`DRIFT_EXPERIMENT_REPORT.md`, 10 scenarios): of 5 scenarios labelled as
-genuine anomalies, **2 were detected** — the 60% tool-frequency shift and the
-hallucination burst. The 50% prompt-template rewrite, the model-version change, and the
-temperature shift were **not** detected. Across all 10 scenarios there were **zero false
-alerts**, including all three negative controls.
+**Measured** (`DRIFT_EXPERIMENT_REPORT.md`, 11 scenarios): of 5 labelled as genuine
+anomalies, **2 were detected** — the 60% tool-frequency shift and the hallucination
+burst, giving recall **0.400**. The 50% prompt-template rewrite, the model-version
+change, and the temperature shift were **not** detected. Across all 11 scenarios there
+were **zero false alerts**, including all three negative controls.
 
-So on that scenario set the detector is highly conservative: no false alarms, but it
-misses most embedding-space anomalies. ASI itself is explicitly not validated —
-`drift.py`'s own docstring states it "is NOT a scientifically validated ground-truth
-metric," and `AUDIT_HISTORY.md` classifies it `EXPERIMENTAL — not calibrated.`
+So on that scenario set the detector is conservative rather than accurate: no false
+alarms, but it misses most of what it should catch. Worse for the positioning argument,
+**both detections came from the tool-entropy and quality-regression signals, not the
+embedding centroid** — no scenario's measured centroid distance exceeded 0.099 against a
+0.30 threshold, so the signal that most distinguishes this feature never fired at all,
+and the three misses are exactly the semantic output drift it exists to catch. Whether
+that reflects the detector or the synthetic scenario construction is not determined by
+that data. ASI itself is explicitly not validated — `drift.py`'s own docstring states it
+"is NOT a scientifically validated ground-truth metric," and `AUDIT_HISTORY.md`
+classifies it `EXPERIMENTAL — not calibrated.`
 
-> **Documentation discrepancy found while writing this.** `DRIFT_EXPERIMENT_REPORT.md`
-> §2 states "Shifts at 50% and above, along with the hallucination burst, were detected
-> within 1-2 spans," but its own §1 table marks the 50% prompt rewrite, the model-version
-> update, and the temperature shift as `Detected: No`. The prose contradicts the table.
-> The figures above follow the table, since that is the measurement. This has not been
-> corrected here — fixing another report is out of scope for this document — but it
-> should be.
+> **Documentation discrepancy found while writing this — since corrected.**
+> `DRIFT_EXPERIMENT_REPORT.md` §2 claimed shifts at 50% and above were detected, while
+> its own §1 table marked them `Detected: No`. Root cause: its "Magnitude" column was
+> labelled as measured cosine distance but actually held the configured shift level, so
+> values of 0.50 appeared to clear the 0.30 threshold when the real distance was 0.042.
+> The same three errors had propagated into `PROJECT_REPORT.md` §7. Both were corrected
+> on 2026-08-27 against the source JSON, and that report now carries a correction notice
+> (§4). The figures above always followed the table, since that was the measurement.
 
 ### 5.4 The synthesis
 

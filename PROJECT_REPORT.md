@@ -135,21 +135,25 @@ Node A's risk score (0.495, medium_risk) in a case with near-zero contradiction 
 
 Eleven scenarios covering graded positive shifts (10%, 25%, 50%) and negative controls (`experiments/drift_scenarios.py`):
 
-| Scenario | Type | Magnitude (cosine distance) | Is anomaly | Detected | False alert | Time to detect | Final ASI |
-| :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: |
-| Prompt formatting change | prompt_drift | 0.10 | No | No | No | — | 100.0 |
-| Prompt tone shift | prompt_drift | 0.25 | No | No | No | — | 99.7 |
-| Prompt template rewrite | prompt_drift | 0.50 | Yes | No | No | — | 98.5 |
-| Model version update | model_drift | 0.50 | Yes | No | No | — | 98.5 |
-| Temperature shift (0.1 to 0.9) | hyperparam_drift | 0.35 | Yes | No | No | — | 99.4 |
-| Tool frequency fluctuation | tool_entropy | 0.25 | No | No | No | — | 99.7 |
-| Uncalibrated external tool | tool_entropy | 0.60 | Yes | Yes | No | 1 span | 82.7 |
-| Hallucination burst | quality_regression | 0.75 | Yes | Yes | No | 1 span | 96.5 |
-| Negative control: paraphrasing | negative_control | 0.12 | No | No | No | — | 100.0 |
-| Negative control: valid tool substitution | negative_control | 0.15 | No | No | No | — | 99.9 |
-| Negative control: invariant flow | negative_control | 0.00 | No | No | No | — | 100.0 |
+Two distinct quantities: **shift level** is the configured magnitude of each synthetic scenario, a parameter rather than a measurement; **centroid distance** is the measured cosine distance from the agent's baseline, which is what the 0.30 threshold applies to. Detection fires when `centroid_distance >= 0.30` **or** `stability_index < 70`.
 
-Sub-threshold shifts (10-25%) stayed below the 0.30 decision threshold and produced no alerts; large shifts (50%+) and the hallucination burst were both detected within 1-2 spans of crossing the threshold. All three negative controls produced zero false alerts. "Magnitude" here is cosine distance between the pre- and post-shift embedding centroid, not a general drift-magnitude unit — see `THRESHOLD_ANALYSIS.md` for how other configurations define their own signals.
+| Scenario | Type | Shift level | Centroid distance (measured) | Is anomaly | Detected | False alert | Time to detect | Final ASI |
+| :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| Prompt formatting change | prompt_drift | 0.10 | 0.001 | No | No | No | — | 100.0 |
+| Prompt tone shift | prompt_drift | 0.25 | 0.007 | No | No | No | — | 99.7 |
+| Prompt template rewrite | prompt_drift | 0.50 | 0.042 | **Yes** | **No** | No | — | 98.5 |
+| Model version update | model_drift | 0.50 | 0.042 | **Yes** | **No** | No | — | 98.5 |
+| Temperature shift (0.1 to 0.9) | hyperparam_drift | 0.35 | 0.017 | **Yes** | **No** | No | — | 99.4 |
+| Tool frequency fluctuation | tool_entropy | 0.25 | 0.007 | No | No | No | — | 99.7 |
+| Uncalibrated external tool | tool_entropy | 0.60 | 0.064 | Yes | Yes | No | 1 span | 82.7 |
+| Hallucination burst | quality_regression | 0.75 | 0.099 | Yes | Yes | No | 1 span | 96.5 |
+| Negative control: paraphrasing | negative_control | 0.12 | 0.001 | No | No | No | — | 100.0 |
+| Negative control: valid tool substitution | negative_control | 0.15 | 0.002 | No | No | No | — | 99.9 |
+| Negative control: invariant flow | negative_control | 0.00 | 0.000 | No | No | No | — | 100.0 |
+
+**Detection recall on anomalies is 0.400 — 2 of 5 were detected**, both on the first shifted span. The three misses are the 50% prompt-template rewrite, the model-version change, and the temperature shift. Across all 11 scenarios there were **zero false alerts**, including the three negative controls: on this set the detector is conservative rather than accurate.
+
+Both detections came from the tool-entropy and quality-regression signals, not the embedding centroid. **No scenario's measured centroid distance exceeded 0.099**, so the 0.30 threshold was never reachable here and remains untested by this experiment — and the three missed anomalies are exactly the semantic output drift that signal exists to catch. Whether the gap lies in the detector or in scenario construction (`experiments/drift_scenarios.py` builds vectors directly rather than embedding real drifted text) is not determined by this data. Full detail, limitations, and a correction notice covering earlier inaccuracies in this section are in `DRIFT_EXPERIMENT_REPORT.md`.
 
 ## 8. Dataset and label agreement
 
