@@ -55,3 +55,8 @@ htmlcov/
 *.log
 logs/
 omniroute_claude_code_guide.md
+
+# External derived data — regenerable from experiments/external_exgentic_ingest.py
+# at the pinned revision in datasets/external/exgentic_v2/source_metadata.json.
+# Provenance (source_metadata.json, raw/manifest.json, README.md) stays tracked.
+datasets/external/*/derived/
