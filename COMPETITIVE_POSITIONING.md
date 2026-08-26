@@ -214,9 +214,24 @@ The credible pitch is **not** "better than MLflow." It is narrower and defensibl
 
 The evaluation approach is the strongest structural argument. Where the three platforms
 default to LLM judges (which cost a model call per evaluation and vary between runs),
-AgentPulse uses a fixed NLI cascade: no judge API cost, no judge drift. **This is a
-hypothesis, not yet a result** — the head-to-head that would substantiate it is Part B
-of the current work (§7).
+AgentPulse uses a fixed NLI cascade: no judge API cost, no judge drift.
+
+**This has now been tested, and the result is split** (`LLM_JUDGE_COMPARISON_REPORT.md`,
+30 cases against a local Qwen3-8B judge):
+
+- **The cost argument holds decisively** — 12.9× lower mean latency, 15.6× lower median,
+  and **zero generation tokens** against the judge's 219.
+- **The quality argument does not hold as stated.** The judge scored F1 1.000 against the
+  cascade's 0.963. The two disagree on exactly one case — a numeric rounding paraphrase
+  ("7.61 billion" vs "approximately 7.6 billion") that the cascade scored as 0.922 risk.
+  On the 10 deterministically-labelled cases the two are tied at 1.000; the judge's entire
+  measured advantage falls inside the subset whose labels LLM judges produced, which is
+  where circularity is expected to flatter it.
+
+So the defensible version of this argument is narrower than the original phrasing: **an
+order-of-magnitude cheaper evaluation that is deterministic and reproducible, at quality
+that is indistinguishable on cleanly-labelled cases** — not "as good or better." The
+rounding-paraphrase failure is a real defect and is tracked as such.
 
 ## 6. The change-list: what would actually have to change
 
@@ -302,7 +317,10 @@ benchmark rather than an assertion.
 - **Open, and the most important item:** wiring N-way comparison into `evaluator.py`
   (§5.2). Until done, the shipped pipeline has the half of the fix that measures worse
   in isolation.
-- **Pending:** the NLI-cascade vs LLM-judge benchmark (§7 item 4).
+- **NLI-cascade vs LLM-judge benchmark: complete.** See `LLM_JUDGE_COMPARISON_REPORT.md`
+  and §5.4 above. Cost claim confirmed; quality claim narrowed. A new NLI defect
+  (numeric rounding paraphrase) was identified and deliberately not fixed from a single
+  observation.
 - **Not started:** every item in §6.1 and §6.2.
 
 ## 9. What would invalidate this analysis
