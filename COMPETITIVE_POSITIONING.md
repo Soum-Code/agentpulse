@@ -170,13 +170,21 @@ Detects contradictions between agents within one trace using NLI.
 session from F1 **0.800** to **0.960** (precision 0.923, recall 1.000), with false-positive
 rate cut from 0.300 to 0.100.
 
-**The caveat that must travel with that number:** per that report's §8, `evaluator.py`
-never calls the N-way comparison path — the live pipeline evaluates one span at a time and
-never holds a complete trace. **The 0.960 describes a configuration production does not
-run.** What production actually gained is the relevance gate alone, which that same report
-measures at F1 **0.762** — *worse* than the 0.800 baseline in isolation. Wiring N-way into
-the pipeline requires a trace-completion hook that does not exist yet, and until then this
-is the largest gap between claim and shipped capability in the project.
+**This was, until 2026-08-26, the largest gap between claim and shipped capability in
+the project:** `evaluator.py` never called the N-way path, so the 0.960 described a
+configuration production did not run — production had only the relevance gate, which that
+same report measures at F1 **0.762**, *worse* than the 0.800 baseline in isolation.
+
+**Now closed** (`DISAGREEMENT_BENCHMARK_REPORT.md` §9). Rather than a trace-completion
+hook — impossible without inventing a signal the SDK does not send — the pipeline compares
+each arriving span against the earlier agents of its own trace, reaching the same coverage
+incrementally. Verified against the real database and real model weights: a contradiction
+three agents back scores 0.9999 and is flagged, where the previous adjacent-only path
+scored 0.0042 and missed it. The same change fixed a separate bug in which spans were
+compared against agents from a *different trace*, because batches are not trace-grouped.
+
+So the benchmarked configuration and the shipped configuration now match. The remaining
+honest caveat is the one in §5.1 of that report: these are 22 hand-constructed cases.
 
 ### 5.3 Drift and Agent Stability Index — weakest of the three
 
@@ -314,9 +322,11 @@ benchmark rather than an assertion.
 - **Disagreement engine rebuild: complete.** Baseline → fixes → tests → report. Details
   and numbers in `DISAGREEMENT_BENCHMARK_REPORT.md`, not duplicated here so the two
   cannot drift apart. Test suite 113 passing.
-- **Open, and the most important item:** wiring N-way comparison into `evaluator.py`
-  (§5.2). Until done, the shipped pipeline has the half of the fix that measures worse
-  in isolation.
+- **N-way comparison wired into the live pipeline: complete** (§5.2,
+  `DISAGREEMENT_BENCHMARK_REPORT.md` §9). The benchmarked and shipped configurations now
+  match, and a cross-trace comparison bug was fixed alongside it. Alert volume on
+  multi-agent traces should be watched — disagreement can now fire where it previously
+  could not.
 - **NLI-cascade vs LLM-judge benchmark: complete.** See `LLM_JUDGE_COMPARISON_REPORT.md`
   and §5.4 above. Cost claim confirmed; quality claim narrowed. A new NLI defect
   (numeric rounding paraphrase) was identified and deliberately not fixed from a single

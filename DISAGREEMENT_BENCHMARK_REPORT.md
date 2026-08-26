@@ -209,7 +209,8 @@ documented in `PROJECT_REPORT.md` §4.
 
 New `evaluate_trace_disagreements()` compares every agent pair in a trace rather than
 only consecutive ones, and aggregates. The per-span function is unchanged and still used
-by `evaluator.py`; N-way is for callers holding a whole trace.
+by `evaluator.py`; N-way is for callers holding a whole trace. (The live pipeline reaches
+the same coverage a different way — incrementally, per arriving span — see §9.)
 
 Cost is O(N²): 5 agents is 10 comparisons, 10 agents is 45, each running one NLI plus one
 embedding forward pass. A `max_pairs` budget (default 45) caps this; traces exceeding it
@@ -306,15 +307,56 @@ Full suite after these changes: **113 passed** (from 101), 2.37 s, no regression
 
 ## 8. Scope not covered here
 
-- **`evaluator.py` still uses the per-span pairwise path.** N-way comparison is available
-  but not yet wired into the live evaluation pipeline, because the pipeline evaluates one
-  span at a time and does not hold a whole trace. Wiring it requires a trace-completion
-  hook that does not currently exist. **The production behaviour of the shipped pipeline
-  is therefore improved only by the relevance gate, not by N-way comparison** — and per
-  §5.1, the gate alone is an F1 regression on this benchmark. This is the most important
-  open item arising from this work.
+- ~~**`evaluator.py` still uses the per-span pairwise path.**~~ **Resolved 2026-08-26 —
+  see §9.** This was recorded here as the most important open item arising from this
+  work: N-way comparison existed but nothing called it, so production ran the relevance
+  gate alone, which §5.1 measures as an F1 regression against the untouched baseline.
 - The ablation study (`THRESHOLD_ANALYSIS.md`, Config E) has **not** been re-run against
   this dataset, so the claim that disagreement adds value to the full risk-aggregation
   pipeline remains untested.
 - No real LLM-generated agent output was used. All 22 cases are hand-written.
 - The relevance floor and `max_pairs` budget are both unvalidated defaults.
+
+## 9. Follow-up: N-way wired into the live pipeline (2026-08-26)
+
+The §8 open item is closed. The pipeline now compares each arriving span against the
+earlier agents of **its own trace**, so a contradiction between non-adjacent agents is
+detected in production, not only in this benchmark.
+
+**Design.** A trace-completion hook was considered and rejected — nothing in the system
+signals trace completion (`Trace.status` defaults to `"running"` and `ingest.py` never
+sets it otherwise), so it would have meant inventing a protocol the SDK does not send.
+Instead the comparison is incremental: `evaluate_against_prior_agents()`
+(`backend/app/services/disagreement.py`) compares one span against the agents preceding
+it, which adds exactly the N−1 pairs that span introduces. Cumulatively a trace still
+reaches full N(N−1)/2 coverage, whereas calling `evaluate_trace_disagreements()` per span
+would re-compare every prior pair and cost O(N³).
+
+`result.disagreement` remains a single `DisagreementResult` — the worst contradicting
+pair — so risk aggregation, the `Evaluation` row, and alerting were not changed.
+
+**A separate real bug was fixed by the same change.** `_evaluate_spans_background`
+tracked `prev_span` as "the previous span in the batch" with no `trace_id` check, while
+the SDK batches a flat buffer with no trace grouping. A batch carrying two interleaved
+traces therefore compared an agent against an agent **from a different trace**. The
+replacement query is scoped to `trace_id` and restricted to spans ordering before the
+current one — the latter because every batch span is already committed when evaluation
+runs, so an unrestricted query would evaluate each pair twice.
+
+**Verified against the real database and real model weights** (not the monkeypatched
+stubs the unit tests use), on a 4-agent trace whose conflict is between agents 1 and 4,
+with a second interleaved trace present to test scoping:
+
+| | Result |
+| :--- | :--- |
+| Prior lookup per span | Exactly the preceding agents, in order; zero leakage from the interleaved trace |
+| N-way path | `triager → escalator`, score **0.9999**, flagged |
+| Adjacent-only path (previous behaviour) | `analyst → escalator`, score **0.0042**, not flagged |
+
+That is the `ma_06` failure shape reproduced end-to-end and shown fixed.
+
+**Consequences to watch.** The disagreement score is now the maximum over all prior
+pairs rather than one upstream pair, so it can only increase — composite risk and
+therefore alert volume will rise on multi-agent traces. Cost is O(N²) per trace in a
+background thread pool, bounded by a 12-prior-per-span budget, plus one database query
+per span. Tests: 113 → 121.

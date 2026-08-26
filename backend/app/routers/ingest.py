@@ -349,6 +349,51 @@ async def _update_agent_record(
                 agent.avg_latency_ms = span.latency_ms
 
 
+async def _fetch_prior_agent_outputs(
+    span: SpanInput,
+    limit: int = 12,
+) -> list[tuple[str, str]]:
+    """Load earlier agents of this span's trace, for cross-agent comparison.
+
+    Scoped to `span.trace_id` and restricted to spans that order *before* this
+    one. Both constraints matter:
+
+    - Trace scoping is what makes the comparison meaningful. The previous
+      implementation used "the previous span in the batch", but the SDK batches
+      a flat buffer with no trace grouping (sdk/transport.py), so a batch
+      carrying two interleaved traces compared an agent against an agent from a
+      different trace entirely.
+    - The before-only restriction prevents double work. Every span in the batch
+      is already committed by the time this runs, so an unscoped query would
+      also return later spans and each pair would be evaluated twice — once
+      from each side.
+
+    Ordering is (start_time, span_id): start_time is the trace's real order, and
+    span_id breaks ties deterministically when spans share a timestamp.
+    """
+    async with get_session() as session:
+        rows = await session.execute(
+            select(Span.agent_id, Span.output_summary, Span.start_time, Span.span_id)
+            .where(Span.trace_id == span.trace_id)
+            .where(Span.span_id != span.span_id)
+            .where(Span.output_summary.is_not(None))
+            .order_by(Span.start_time, Span.span_id)
+        )
+        candidates = rows.all()
+
+    span_start = span.start_time.replace(tzinfo=None) if span.start_time else None
+    priors: list[tuple[str, str]] = []
+    for agent_id, output_summary, start_time, span_id in candidates:
+        if span_start is not None and start_time is not None:
+            if (start_time, span_id) >= (span_start, span.span_id):
+                continue
+        priors.append((agent_id, output_summary))
+
+    # Keep the most recent within budget; evaluate_against_prior_agents applies
+    # its own cap too, but trimming here also bounds the rows carried around.
+    return priors[-limit:]
+
+
 async def _evaluate_spans_background(
     spans: list[SpanInput],
     evaluator,
@@ -360,12 +405,17 @@ async def _evaluate_spans_background(
     called directly on the event loop — otherwise a single evaluation would
     stall every other request this worker is serving for its full duration.
     """
-    prev_span: SpanInput | None = None
     loop = asyncio.get_running_loop()
     touched_agent_ids: set[str] = set()
 
     for span in spans:
         try:
+            # Earlier agents in this span's own trace. Supplying these switches
+            # the disagreement step from immediate-upstream-only to comparing
+            # against every prior agent, which is what allows a contradiction
+            # between non-adjacent agents to be detected at all.
+            prior_agent_outputs = await _fetch_prior_agent_outputs(span)
+
             result = await loop.run_in_executor(
                 _eval_executor,
                 functools.partial(
@@ -375,8 +425,13 @@ async def _evaluate_spans_background(
                     agent_id=span.agent_id,
                     input_text=span.input_summary,
                     output_text=span.output_summary,
-                    upstream_agent_id=prev_span.agent_id if prev_span else None,
-                    upstream_output=prev_span.output_summary if prev_span else None,
+                    upstream_agent_id=(
+                        prior_agent_outputs[-1][0] if prior_agent_outputs else None
+                    ),
+                    upstream_output=(
+                        prior_agent_outputs[-1][1] if prior_agent_outputs else None
+                    ),
+                    prior_agent_outputs=prior_agent_outputs or None,
                     tool_calls=(
                         [{"tool_name": span.tool_name, "result_summary": span.tool_result_summary}]
                         if span.tool_name
@@ -385,7 +440,6 @@ async def _evaluate_spans_background(
                     status=span.status,
                 ),
             )
-            prev_span = span
             touched_agent_ids.add(span.agent_id)
 
             # Persist evaluation

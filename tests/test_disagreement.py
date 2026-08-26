@@ -5,6 +5,7 @@ import numpy as np
 from app.services import disagreement as disagreement_module
 from app.services.disagreement import (
     RELEVANCE_FLOOR,
+    evaluate_against_prior_agents,
     evaluate_inter_agent_disagreement,
     evaluate_trace_disagreements,
 )
@@ -202,3 +203,66 @@ class TestTraceDisagreements:
         res = evaluate_trace_disagreements([("a", "x"), ("b", "y")])
         assert res.max_disagreement_score == pytest.approx(0.75)
         assert res.is_disagreement is True
+
+
+class TestAgainstPriorAgents:
+    """Incremental per-span form used by the live evaluation pipeline."""
+
+    def test_no_priors_returns_none(self, stub_models):
+        stub_models(contra=0.99, sim=0.9)
+        assert evaluate_against_prior_agents("b", "y", []) is None
+
+    def test_empty_current_output_returns_none(self, stub_models):
+        stub_models(contra=0.99, sim=0.9)
+        assert evaluate_against_prior_agents("b", "", [("a", "x")]) is None
+
+    def test_priors_with_no_text_are_skipped(self, stub_models):
+        stub_models(contra=0.99, sim=0.9)
+        assert evaluate_against_prior_agents("b", "y", [("a", "")]) is None
+
+    def test_self_comparison_excluded(self, stub_models):
+        """A retry of the same agent must not be compared against itself."""
+        stub_models(contra=0.99, sim=0.9)
+        assert evaluate_against_prior_agents("a", "y", [("a", "x")]) is None
+
+    def test_detects_contradiction_with_non_adjacent_prior(self, stub_models):
+        """The capability the benchmark showed missing: comparing past the immediate upstream.
+
+        The escalator's conflict is with the triager two steps back, not with
+        the investigator directly before it (benchmark cases ma_06/ma_07).
+        """
+        stub_models(contra=0.99, sim=0.9)
+        res = evaluate_against_prior_agents(
+            "escalator", "high severity",
+            [("triager", "low severity"), ("investigator", "traced fault")],
+        )
+        assert res is not None
+        assert res.pairs_evaluated == 2
+        assert res.is_disagreement is True
+        sources = {p.source_agent_id for p in res.flagged_pairs}
+        assert "triager" in sources
+
+    def test_off_topic_priors_are_gated(self, stub_models):
+        stub_models(contra=0.99, sim=0.10)
+        res = evaluate_against_prior_agents("c", "z", [("a", "x"), ("b", "y")])
+        assert res.is_disagreement is False
+        assert res.pairs_gated_low_relevance == 2
+        assert res.max_disagreement_score == 0.0
+
+    def test_comparison_budget_keeps_most_recent(self, stub_models):
+        """Per-span cost must stay bounded on a long trace."""
+        stub_models(contra=0.99, sim=0.9)
+        priors = [(f"agent_{i}", f"output {i}") for i in range(20)]
+        res = evaluate_against_prior_agents("current", "z", priors, max_comparisons=5)
+        assert res.pairs_evaluated == 5
+        sources = {p.source_agent_id for p in res.flagged_pairs}
+        assert sources == {f"agent_{i}" for i in range(15, 20)}
+        assert "budget reached" in res.explanation
+
+    def test_current_is_always_the_hypothesis(self, stub_models):
+        """Priors are the premise; the arriving span is the claim being checked."""
+        stub_models(contra=0.99, sim=0.9)
+        res = evaluate_against_prior_agents("writer", "z", [("planner", "x")])
+        pair = res.flagged_pairs[0]
+        assert pair.source_agent_id == "planner"
+        assert pair.target_agent_id == "writer"

@@ -19,6 +19,7 @@ from app.services.tool_claim import (
 )
 from app.services.disagreement import (
     DisagreementResult,
+    evaluate_against_prior_agents,
     evaluate_inter_agent_disagreement,
 )
 from app.services.drift import DriftDetector, DriftResult
@@ -85,18 +86,28 @@ class EvaluationPipeline:
         output_text: Optional[str] = None,
         upstream_agent_id: Optional[str] = None,
         upstream_output: Optional[str] = None,
+        prior_agent_outputs: Optional[list[tuple[str, str]]] = None,
         tool_calls: Optional[list[dict]] = None,
         status: str = "success",
     ) -> EvaluationResult:
         """Run the full evaluation pipeline on a span.
-        
+
         Steps:
         1. Grounding check (NLI: input vs. output claim)
         2. Tool-claim validation (claims vs. actual tool executions)
-        3. Inter-agent disagreement check (upstream agent vs. current agent)
+        3. Inter-agent disagreement check
         4. Drift analysis (embedding centroid, tool entropy, quality trend)
         5. Risk aggregation (weighted ensemble)
         6. Alert evaluation (threshold checks + deduplication)
+
+        Args:
+            prior_agent_outputs: (agent_id, output_text) for agents earlier in
+                this trace, in trace order. When supplied, step 3 compares this
+                span against all of them rather than only its immediate
+                upstream, which is what lets a contradiction between
+                non-adjacent agents be detected at all. Callers must pass only
+                agents that precede this span, and must scope them to this
+                trace. When omitted, the single-upstream path runs unchanged.
         """
         result = EvaluationResult()
 
@@ -118,8 +129,36 @@ class EvaluationPipeline:
             ]
             result.tool_claim = evaluate_tool_claims(output_text, tool_records)
 
-        # 3. Inter-agent disagreement check
-        if upstream_output and output_text and upstream_agent_id:
+        # 3. Inter-agent disagreement check.
+        #
+        # Trace-wide when the caller supplies earlier agents, otherwise the
+        # original immediate-upstream comparison. `result.disagreement` stays a
+        # single DisagreementResult in both cases -- the worst contradicting
+        # pair -- so risk aggregation, persistence and alerting keep reading
+        # one `disagreement_score` and need no changes.
+        if prior_agent_outputs and output_text:
+            trace_res = evaluate_against_prior_agents(
+                current_agent_id=agent_id,
+                current_output=output_text,
+                prior_outputs=prior_agent_outputs,
+            )
+            if trace_res and trace_res.flagged_pairs:
+                result.disagreement = max(
+                    trace_res.flagged_pairs, key=lambda r: r.disagreement_score
+                )
+            elif trace_res:
+                # Nothing flagged: report the closest comparison made, so a
+                # clean check is still recorded rather than looking like the
+                # step was skipped entirely.
+                result.disagreement = DisagreementResult(
+                    disagreement_score=trace_res.max_disagreement_score,
+                    source_agent_id=upstream_agent_id or "trace",
+                    target_agent_id=agent_id,
+                    is_disagreement=False,
+                    explanation=trace_res.explanation,
+                    contradiction_prob=trace_res.max_disagreement_score,
+                )
+        elif upstream_output and output_text and upstream_agent_id:
             result.disagreement = evaluate_inter_agent_disagreement(
                 source_agent_id=upstream_agent_id,
                 source_output=upstream_output,

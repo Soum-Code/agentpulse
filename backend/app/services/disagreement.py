@@ -255,3 +255,104 @@ def evaluate_trace_disagreements(
         flagged_pairs=flagged,
         explanation=explanation,
     )
+
+
+def evaluate_against_prior_agents(
+    current_agent_id: str,
+    current_output: str,
+    prior_outputs: Sequence[tuple[str, str]],
+    threshold: float = 0.6,
+    relevance_floor: float = RELEVANCE_FLOOR,
+    max_comparisons: int = 12,
+) -> Optional[TraceDisagreementResult]:
+    """Compare one agent's output against every earlier agent in the same trace.
+
+    This is the incremental form of `evaluate_trace_disagreements`, for the
+    per-span evaluation path, which never holds a whole trace at once.
+
+    Calling `evaluate_trace_disagreements` on each arriving span would instead
+    re-compare every already-compared pair, costing O(N^3) NLI calls across a
+    trace of N spans. Comparing only against *earlier* agents adds exactly the
+    N-1 pairs that span introduces, so the trace still reaches full N(N-1)/2
+    all-pairs coverage with no repeated work.
+
+    `prior_outputs` must therefore contain only agents that precede
+    `current_agent_id` in trace order; passing later ones would double-evaluate
+    each pair. The caller owns that ordering because it owns the trace query.
+
+    Args:
+        current_agent_id: Agent being evaluated.
+        current_output: Its output text.
+        prior_outputs: (agent_id, output_text) for earlier agents in this trace.
+        threshold: Contradiction probability threshold for flagging.
+        relevance_floor: See RELEVANCE_FLOOR.
+        max_comparisons: Budget per span. Beyond it, the most recent
+            `max_comparisons` priors are used -- an arbitrary bound to keep a
+            long trace's per-span cost finite, not a measured optimum.
+
+    Returns:
+        TraceDisagreementResult, or None if there is nothing to compare.
+    """
+    if not current_output:
+        return None
+
+    usable = [(aid, out) for aid, out in prior_outputs if out and aid != current_agent_id]
+    if not usable:
+        return None
+
+    truncated = len(usable) > max_comparisons
+    if truncated:
+        usable = usable[-max_comparisons:]
+
+    evaluated = 0
+    gated_count = 0
+    flagged: list[DisagreementResult] = []
+    max_score = 0.0
+
+    for prior_id, prior_out in usable:
+        res = evaluate_inter_agent_disagreement(
+            source_agent_id=prior_id,
+            source_output=prior_out,
+            target_agent_id=current_agent_id,
+            target_output=current_output,
+            threshold=threshold,
+            relevance_floor=relevance_floor,
+        )
+        if res is None:
+            continue
+
+        evaluated += 1
+        if res.gated_low_relevance:
+            gated_count += 1
+            continue
+
+        max_score = max(max_score, res.disagreement_score)
+        if res.is_disagreement:
+            flagged.append(res)
+
+    if evaluated == 0:
+        return None
+
+    if flagged:
+        worst = max(flagged, key=lambda r: r.disagreement_score)
+        explanation = (
+            f"@{current_agent_id} contradicts {len(flagged)} earlier agent(s) in this "
+            f"trace across {evaluated} comparison(s); strongest is "
+            f"@{worst.source_agent_id} at {worst.disagreement_score:.3f}."
+        )
+    else:
+        explanation = (
+            f"@{current_agent_id} is consistent with {evaluated} earlier agent(s)"
+            + (f" ({gated_count} skipped as off-topic)." if gated_count else ".")
+        )
+    if truncated:
+        explanation += f" Comparison budget reached; oldest agents beyond {max_comparisons} skipped."
+
+    return TraceDisagreementResult(
+        max_disagreement_score=round(max_score, 4),
+        is_disagreement=bool(flagged),
+        pairs_evaluated=evaluated,
+        pairs_gated_low_relevance=gated_count,
+        flagged_pairs=flagged,
+        explanation=explanation,
+    )
