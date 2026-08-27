@@ -1,0 +1,46 @@
+{
+  "dataset_name": "agentpulse_tool_claim_external",
+  "data_class": "EXTERNAL_REAL_DATA",
+  "provenance": {
+    "dataset_id": "Exgentic/agent-llm-traces-v2",
+    "dataset_url": "https://huggingface.co/datasets/Exgentic/agent-llm-traces-v2",
+    "revision": "4b8ad4ab198438e5a170f9171c19c6a2cf7c1814",
+    "retrieved_at": "2026-08-27T07:55:07Z",
+    "shards_read": [
+      0,
+      5
+    ],
+    "sessions_per_cell": 40
+  },
+  "construction": {
+    "claim_surface": "last substantive assistant text (>=40 chars, excluding placeholders)",
+    "evidence_source": "structured tool_call names and deduplicated tool_call_response results",
+    "validator_consulted_during_construction": false,
+    "completion_matcher": "independent of and broader than tool_claim.py SUCCESS_CLAIM_PATTERNS",
+    "stratified_by": [
+      "benchmark",
+      "harness",
+      "model"
+    ]
+  },
+  "label_semantics": {
+    "tier_1_external": "summary asserts completion; label from the corpus `success` field. An overclaim means completion asserted on an objectively failed run -- NOT that every statement is false.",
+    "tier_2_candidate": "numeric assertion with countable evidence; deliberately UNLABELLED",
+    "unlabelled": "behavioural measurement only; no precision/recall"
+  },
+  "counts": {
+    "total_cases": 574,
+    "by_tier": {
+      "unlabelled": 396,
+      "tier_1_external": 124,
+      "tier_2_candidate": 54
+    },
+    "tier_1_overclaims": 63,
+    "tier_1_consistent": 61,
+    "cells": 6,
+    "models": 5,
+    "skipped": {
+      "no_substantive_summary": 226
+    }
+  }
+}
