@@ -56,6 +56,7 @@ SAFETY PROPERTIES
 
 from __future__ import annotations
 
+import json
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
@@ -66,6 +67,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import (
     Alert,
+    RetentionRun,
     DriftRecord,
     Evaluation,
     EvaluationJob,
@@ -269,6 +271,7 @@ async def apply_retention(
                     cutoff.isoformat(), report.deleted)
         return report
 
+    started_at = datetime.now(timezone.utc).replace(tzinfo=None)
     report = RetentionReport(cutoff=cutoff, retention_days=retention_days, dry_run=False)
     counts: dict[str, int] = {
         "traces": 0, "spans": 0, "evaluations": 0,
@@ -298,6 +301,25 @@ async def apply_retention(
         await session.commit()
 
     report.deleted = counts
+
+    # Persisted so "did retention run, and what did it remove?" is answerable
+    # without reading logs from a process that has already exited.
+    try:
+        async with session_factory() as session:
+            session.add(RetentionRun(
+                started_at=started_at,
+                completed_at=datetime.now(timezone.utc).replace(tzinfo=None),
+                cutoff=cutoff,
+                retention_days=retention_days,
+                dry_run=False,
+                batches=report.batches,
+                total_rows_deleted=report.total,
+                rows_deleted_json=json.dumps(counts),
+            ))
+            await session.commit()
+    except Exception:
+        logger.warning("Could not record retention run", exc_info=True)
+
     logger.info(
         "Retention complete: cutoff=%s batches=%d deleted=%s (exempt: %s)",
         cutoff.isoformat(), report.batches, counts, ", ".join(sorted(EXEMPT_ENTITIES)),

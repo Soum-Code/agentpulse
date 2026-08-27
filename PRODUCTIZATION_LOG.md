@@ -790,3 +790,116 @@ since evaluation moved to the worker. Splitting *API health* from *worker/evalua
 is that phase's task; it is recorded here so it is not lost, and deliberately not acted on.
 
 ---
+
+## Self-monitoring — the platform observes itself
+
+Acceptance question: *can an operator tell whether AgentPulse is healthy, backlogged,
+degraded or failing from measured runtime signals, rather than inferring it from an HTTP
+status code?*
+
+### The five states a 200 response cannot distinguish
+
+| | |
+| :--- | :--- |
+| process alive | the API answered at all |
+| API healthy | serving without server errors |
+| models loaded | the API's own models finished loading |
+| **worker alive** | an evaluator process has heartbeat recently |
+| **worker processing** | that evaluator is actually completing jobs |
+
+These are genuinely different, and this project has already been bitten by conflating them:
+`/v1/health` returned 200 while models loaded on a background thread, and a probe that
+trusted it measured *"60 spans evaluated in 1.5 seconds"* because nothing was being
+evaluated.
+
+### Live demonstration
+
+`scripts/demo_self_monitoring.py` walks a real API and real worker through four situations.
+**Every one returns HTTP 200 from `/v1/health`:**
+
+| situation | `/v1/health` | platform state | queue | workers |
+| :--- | :--- | :--- | :--- | :--- |
+| API up, models loaded, **no worker** | 200 | **FAILING** | 0 | 0 alive |
+| worker started | 200 | HEALTHY | 0 | 1 alive, `onnx` |
+| 20 spans ingested | 200 | HEALTHY | depth 12 (11 queued, 1 running, 8 done) | 1 alive |
+| worker SIGKILLed, heartbeat stale | 200 | **FAILING** | 0 | 0 alive, 1 stale |
+
+The first row is the one that matters: a fully-loaded API with no evaluator is *accepting
+work that nothing will ever evaluate*, and reports 200 while doing it.
+
+### What is measured, and from where
+
+**In-process counters** (`services/runtime_metrics.py`) — ingestion requests, accepted /
+failed / duplicate spans, jobs enqueued, API request count, server errors, API latency
+p50/p95/p99, plus 60-second rates. These change on every request, so writing a row each time
+would make monitoring the most expensive thing in the request path.
+
+**Database aggregates** (`services/platform_health.py`), computed on demand when the endpoint
+is called, not per request — queue depth and job counts by status, evaluation latency
+percentiles over a bounded recent sample, failure rate, retry count.
+
+**Cross-process state** — `worker_heartbeats` and `retention_runs` tables (migration
+`1ccaf1189def`). The API cannot observe a separate process's memory, so worker liveness has
+to be persisted.
+
+**Worker liveness decays rather than being declared.** A heartbeat older than 90s means dead.
+Same reasoning as job leases: a SIGKILLed process announces nothing. Beat interval is 15s
+idle, so two missed beats still leave margin — pinned by a test.
+
+### The ONNX regression guard
+
+Each worker records **its own** `nli_backend`, `embedding_backend` and `degraded` flag, not
+the API's. The two processes load models independently and evaluation happens in the worker,
+so the API's view says nothing about what actually evaluated a span. `/v1/platform` reports
+`backend_distribution` across the fleet and a `degraded_backends` count.
+
+A dependency regression that silently reverted the evaluator to the slow PyTorch path would
+otherwise be invisible — results stay correct, only speed halves. Now it surfaces as a
+reported state.
+
+### A defect the live demo caught
+
+The first demo run reported **`jobs processed: 0` after twenty jobs had succeeded**.
+`jobs_processed` only reached the database on the 15-second idle heartbeat, and the worker
+was killed between beats. An operator reading that would conclude the evaluator was alive but
+idle, at the moment it was the busiest thing running — defeating exactly the
+"alive" vs "processing" distinction this phase exists to provide.
+
+Fixed with a rate-limited progress beat (minimum 3s apart, so a fast queue cannot turn
+reporting into a write per job). After the fix the same demo reports **1** during evaluation
+and **18** after drain.
+
+The residual 18-vs-20 is the honest bound of 3-second granularity, not a bug: the
+`evaluation_jobs` table (`succeeded: 20`) stays authoritative for *what happened*, while the
+heartbeat counter is a *liveness and activity* signal. Both are reported, and they answer
+different questions.
+
+### Verdict, with reasons attached
+
+`derive_state` reduces the signals to `healthy` / `starting` / `degraded` / `backlogged` /
+`failing`, and always returns the reasons alongside so the verdict can be checked rather than
+trusted. `failing` outranks `backlogged`, because with no worker a backlog is a symptom
+rather than the problem.
+
+Backlog threshold is 750 outstanding jobs — roughly a minute of work at the measured 12
+spans/sec, chosen relative to that measurement rather than picked as a round number.
+
+### Tests: 164 → 186
+
+`tests/test_self_monitoring.py`, 22 tests: queue depth from real rows, all statuses present
+when zero, successful evaluation timing, failure counting, retries counting extra attempts
+only, fresh vs stale heartbeats, degraded-backend visibility, all five verdict states,
+in-process counters, retention run visibility, endpoint shape, and the heartbeat-interval
+safety margins.
+
+### Scope
+
+No evaluator logic, no risk thresholds, no dashboard, no SDK, no PostgreSQL, no
+multi-tenancy — verified by `git status`: `evaluator.py`, `disagreement.py`,
+`tool_claim.py`, `drift.py` and `alerting.py` are all untouched.
+
+Readiness semantics deliberately **not** redesigned. `/v1/health` keeps its existing
+contract; `/v1/platform` is additive. The health/readiness phase owns the final API contract,
+including the still-open question of the API loading 1.24 GB of models it no longer uses.
+
+---

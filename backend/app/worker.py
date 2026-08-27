@@ -30,7 +30,12 @@ import socket
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 
+from datetime import datetime, timezone
+
+from sqlmodel import select
+
 from app.database import get_session
+from app.models import WorkerHeartbeat
 from app.services import job_queue
 from app.services.evaluation_runner import MalformedJobError, execute_job
 
@@ -38,6 +43,12 @@ logger = logging.getLogger("agentpulse.worker")
 
 POLL_INTERVAL_SECONDS = 0.5
 RECOVERY_INTERVAL_SECONDS = 30.0
+# Well below platform_health.WORKER_STALE_AFTER_SECONDS (90s), so a worker that
+# is merely busy is never mistaken for a dead one.
+HEARTBEAT_INTERVAL_SECONDS = 15.0
+# Minimum gap between progress heartbeats while actively working. Bounds the
+# write rate so a fast queue does not turn reporting into a write per job.
+PROGRESS_HEARTBEAT_MIN_INTERVAL_SECONDS = 3.0
 
 
 def make_worker_id() -> str:
@@ -58,10 +69,70 @@ class EvaluationWorker:
             max_workers=1, thread_name_prefix="agentpulse-eval"
         )
         self._stopping = False
+        # Counted here rather than derived from the jobs table so "alive but
+        # doing nothing" is distinguishable from "alive and working" even when
+        # the queue is empty.
+        self.jobs_processed = 0
+        self.jobs_failed = 0
+        self._next_progress_beat = 0.0
 
     async def recover(self) -> int:
         async with get_session() as session:
             return await job_queue.recover_expired_leases(session)
+
+    async def heartbeat(self, status: str = "running") -> None:
+        """Publish liveness and backend identity so the API can see this process.
+
+        The API cannot observe a separate process's memory, so "is an evaluator
+        alive, and what is it running on?" has to be answered through the
+        database. Backend identity is written here rather than read from the
+        API's own `backend_info()` because the two processes load models
+        independently -- taking it from the API would make a regression that
+        silently reverts THIS worker to the slow PyTorch path invisible.
+
+        Failures are logged and swallowed: monitoring must never be the reason a
+        worker stops evaluating.
+        """
+        from app.services.grounding import backend_info
+
+        try:
+            backend = backend_info()
+            now = datetime.now(timezone.utc).replace(tzinfo=None)
+            async with get_session() as session:
+                existing = (
+                    await session.execute(
+                        select(WorkerHeartbeat)
+                        .where(WorkerHeartbeat.worker_id == self.worker_id)
+                    )
+                ).scalar_one_or_none()
+
+                if existing is None:
+                    session.add(WorkerHeartbeat(
+                        worker_id=self.worker_id,
+                        hostname=socket.gethostname(),
+                        pid=os.getpid(),
+                        status=status,
+                        started_at=now,
+                        last_heartbeat_at=now,
+                        jobs_processed=self.jobs_processed,
+                        jobs_failed=self.jobs_failed,
+                        nli_backend=backend.get("nli_backend"),
+                        embedding_backend=backend.get("embedding_backend"),
+                        backend_degraded=bool(backend.get("degraded")),
+                        fallback_reason=backend.get("fallback_reason"),
+                    ))
+                else:
+                    existing.last_heartbeat_at = now
+                    existing.status = status
+                    existing.jobs_processed = self.jobs_processed
+                    existing.jobs_failed = self.jobs_failed
+                    existing.nli_backend = backend.get("nli_backend")
+                    existing.embedding_backend = backend.get("embedding_backend")
+                    existing.backend_degraded = bool(backend.get("degraded"))
+                    existing.fallback_reason = backend.get("fallback_reason")
+                await session.commit()
+        except Exception:
+            logger.warning("Heartbeat failed; continuing to evaluate", exc_info=True)
 
     async def run_once(self) -> bool:
         """Claim and process a single job. Returns False if the queue was empty.
@@ -93,6 +164,7 @@ class EvaluationWorker:
                 await job_queue.mark_failed(
                     session, job_id, error=f"malformed job: {exc}", retryable=False
                 )
+            self.jobs_failed += 1
             logger.error("Job %s permanently failed (malformed): %s", job_id, exc)
             return True
         except Exception as exc:  # noqa: BLE001 - classify, do not swallow
@@ -100,12 +172,14 @@ class EvaluationWorker:
                 status = await job_queue.mark_failed(
                     session, job_id, error=f"{type(exc).__name__}: {exc}", retryable=True
                 )
+            self.jobs_failed += 1
             logger.error("Job %s failed (%s), now %s: %s",
                          job_id, type(exc).__name__, status, exc, exc_info=True)
             return True
 
         async with get_session() as session:
             await job_queue.mark_succeeded(session, job_id)
+        self.jobs_processed += 1
         logger.info("Job %s succeeded (span %s, results_written=%s)",
                     job_id, span_id, written)
         return True
@@ -118,6 +192,7 @@ class EvaluationWorker:
 
         loop = asyncio.get_running_loop()
         next_recovery = loop.time() + RECOVERY_INTERVAL_SECONDS
+        next_heartbeat = loop.time()  # publish immediately on startup
 
         while not self._stopping:
             try:
@@ -127,8 +202,31 @@ class EvaluationWorker:
                     await self.recover()
                     next_recovery = loop.time() + RECOVERY_INTERVAL_SECONDS
 
+                if loop.time() >= next_heartbeat:
+                    await self.heartbeat()
+                    next_heartbeat = loop.time() + HEARTBEAT_INTERVAL_SECONDS
+
                 did_work = await self.run_once()
-                if not did_work:
+
+                if did_work:
+                    # Publish progress sooner than the idle interval allows.
+                    #
+                    # Without this, `jobs_processed` only reaches the database
+                    # every 15 seconds, so a worker that processes a burst and
+                    # then dies reports zero work done -- observed in the
+                    # self-monitoring demo, where 20 completed jobs showed as
+                    # "jobs processed: 0". An operator would read that as "alive
+                    # but idle" while it was in fact the busiest thing running.
+                    #
+                    # Rate-limited so a fast queue cannot turn progress
+                    # reporting into a write per job.
+                    if loop.time() >= self._next_progress_beat:
+                        await self.heartbeat()
+                        next_heartbeat = loop.time() + HEARTBEAT_INTERVAL_SECONDS
+                        self._next_progress_beat = (
+                            loop.time() + PROGRESS_HEARTBEAT_MIN_INTERVAL_SECONDS
+                        )
+                else:
                     await asyncio.sleep(POLL_INTERVAL_SECONDS)
             except asyncio.CancelledError:
                 raise
@@ -136,6 +234,10 @@ class EvaluationWorker:
                 logger.exception("Worker loop error; continuing")
                 await asyncio.sleep(POLL_INTERVAL_SECONDS)
 
+        # Mark ourselves stopped on a graceful exit. A SIGKILLed worker cannot
+        # do this, which is exactly why liveness is judged by heartbeat
+        # staleness rather than by any status a worker writes about itself.
+        await self.heartbeat(status="stopping")
         logger.info("Evaluation worker %s stopped", self.worker_id)
 
     def stop(self) -> None:

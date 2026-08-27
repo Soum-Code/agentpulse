@@ -414,6 +414,31 @@ async def get_metrics():
         }
 
 
+@metrics_router.get("/platform")
+async def platform_health():
+    """Operational state of AgentPulse ITSELF, from measured runtime signals.
+
+    Distinct from `/v1/metrics`, which reports what the monitored agents are
+    doing. This answers whether the platform is healthy, backlogged, degraded or
+    failing — and does so without requiring the reader to infer it from an HTTP
+    status code.
+
+    Specifically it separates five states that a 200 response cannot
+    distinguish: process alive, API healthy, models loaded, an evaluation worker
+    alive, and that worker actually completing jobs. A fully-loaded API with no
+    worker running returns 200 here and reports `state: failing`, because it is
+    accepting work that nothing will ever evaluate.
+
+    The final readiness/liveness API contract is deliberately left to the
+    health/readiness phase; this endpoint reports state without redefining what
+    `/v1/health` means.
+    """
+    from app.services.platform_health import collect_platform_health
+
+    async with get_session() as session:
+        return await collect_platform_health(session)
+
+
 @metrics_router.get("/health")
 async def health_check():
     """Backend health check.
