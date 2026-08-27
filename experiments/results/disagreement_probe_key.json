@@ -1,0 +1,963 @@
+{
+  "timestamp": "2026-08-27 09:37:56 UTC",
+  "dataset": {
+    "id": "Multi-Agent-LLMs/DEBATE",
+    "url": "https://huggingface.co/datasets/Multi-Agent-LLMs/DEBATE"
+  },
+  "purpose": "feasibility probe only; NOT a benchmark and NOT a labelled dataset",
+  "seed": 20260827,
+  "configs_sampled": [
+    "critical_expert_relay_majority_consensus",
+    "critical_nopersona_debate_majority_consensus",
+    "critical_nopersona_memory_approval_voting",
+    "critical_nopersona_memory_unanimity_consensus",
+    "reasoning_expert_debate_approval_voting",
+    "reasoning_expert_report_unanimity_consensus",
+    "reasoning_ipip_relay_simple_voting",
+    "reasoning_nopersona_debate_approval_voting",
+    "simple_expert_debate_simple_voting",
+    "simple_ipip_relay_approval_voting",
+    "simple_ipip_relay_majority_consensus",
+    "simple_nopersona_relay_simple_voting"
+  ],
+  "rows_read": 240,
+  "pairs_extracted": 7582,
+  "mismatch_pairs_available": 81,
+  "solution_mismatch_base_rate": 0.010683,
+  "vote_token_strip_ratio": 1.0,
+  "stop_rule": {
+    "min_positives": 8,
+    "pre_registered": true,
+    "action_if_below": "report negative feasibility result; do not build pipeline"
+  },
+  "blinding": [
+    "solution values withheld from the blinded file",
+    "agreement flags withheld from the blinded file",
+    "sampling group withheld from the blinded file",
+    "pairs shuffled so ordering cannot encode the group",
+    "MALLM [AGREE]/[DISAGREE] protocol tokens stripped from message text",
+    "AgentPulse detector is not run in this script"
+  ],
+  "cases": [
+    {
+      "case_id": "P001",
+      "group": "mismatch",
+      "solution_mismatch": true,
+      "config": "critical_nopersona_memory_approval_voting",
+      "family": "critical",
+      "row_index": 11,
+      "turn": 1,
+      "a": {
+        "agent_id": "ba2020ad-546b-45e7-ac60-97e4bf54287c",
+        "persona": "Participant 1",
+        "solution": "A) Yes",
+        "agreement": false,
+        "message_id": 0
+      },
+      "b": {
+        "agent_id": "b3d44825-c5cb-437f-a2f6-6a3e60de31da",
+        "persona": "Participant 2",
+        "solution": "B) No",
+        "agreement": false,
+        "message_id": 1
+      }
+    },
+    {
+      "case_id": "P002",
+      "group": "control",
+      "solution_mismatch": false,
+      "config": "reasoning_expert_debate_approval_voting",
+      "family": "reasoning",
+      "row_index": 6,
+      "turn": 5,
+      "a": {
+        "agent_id": "21b3eec5-db10-449a-b276-26ee8a484f09",
+        "persona": "Zoologist",
+        "solution": "B) No",
+        "agreement": true,
+        "message_id": 21
+      },
+      "b": {
+        "agent_id": "de002e44-bb5d-487a-ab93-9212ee7486b4",
+        "persona": "Wildlife Photographer",
+        "solution": "B) No",
+        "agreement": true,
+        "message_id": 24
+      }
+    },
+    {
+      "case_id": "P003",
+      "group": "mismatch",
+      "solution_mismatch": true,
+      "config": "critical_expert_relay_majority_consensus",
+      "family": "critical",
+      "row_index": 18,
+      "turn": 1,
+      "a": {
+        "agent_id": "4ca44016-b733-4529-865d-1122c096b1b6",
+        "persona": "Medical Professional",
+        "solution": "A) Yes",
+        "agreement": false,
+        "message_id": 0
+      },
+      "b": {
+        "agent_id": "5d3a2beb-da70-431c-9edc-4ffdc8a75b65",
+        "persona": "Nutritionist",
+        "solution": "B) No",
+        "agreement": false,
+        "message_id": 2
+      }
+    },
+    {
+      "case_id": "P004",
+      "group": "mismatch",
+      "solution_mismatch": true,
+      "config": "reasoning_ipip_relay_simple_voting",
+      "family": "reasoning",
+      "row_index": 17,
+      "turn": 1,
+      "a": {
+        "agent_id": "69e03b48-ff1f-4771-9d30-462b9069b68b",
+        "persona": "Orchestra Conductor",
+        "solution": "B) No",
+        "agreement": false,
+        "message_id": 1
+      },
+      "b": {
+        "agent_id": "4977dae8-5cc2-4306-9847-0aaff5295407",
+        "persona": "Stage Manager",
+        "solution": "A) Yes",
+        "agreement": false,
+        "message_id": 2
+      }
+    },
+    {
+      "case_id": "P005",
+      "group": "control",
+      "solution_mismatch": false,
+      "config": "reasoning_nopersona_debate_approval_voting",
+      "family": "reasoning",
+      "row_index": 7,
+      "turn": 5,
+      "a": {
+        "agent_id": "4a998b46-2fa0-4248-b98b-35ffc955b093",
+        "persona": "Participant 2",
+        "solution": "B) No",
+        "agreement": true,
+        "message_id": 21
+      },
+      "b": {
+        "agent_id": "82d00643-c03d-4712-bb7c-060bf8c03d80",
+        "persona": "Participant 3",
+        "solution": "B) No",
+        "agreement": true,
+        "message_id": 22
+      }
+    },
+    {
+      "case_id": "P006",
+      "group": "control",
+      "solution_mismatch": false,
+      "config": "simple_expert_debate_simple_voting",
+      "family": "simple",
+      "row_index": 18,
+      "turn": 2,
+      "a": {
+        "agent_id": "f67c011d-b691-4439-9227-438ef74ffa61",
+        "persona": "Geographer",
+        "solution": "B) No",
+        "agreement": true,
+        "message_id": 7
+      },
+      "b": {
+        "agent_id": "7921f4ff-f799-4f1d-a471-3621c57981a7",
+        "persona": "Wildlife Expert",
+        "solution": "B) No",
+        "agreement": true,
+        "message_id": 8
+      }
+    },
+    {
+      "case_id": "P007",
+      "group": "control",
+      "solution_mismatch": false,
+      "config": "simple_expert_debate_simple_voting",
+      "family": "simple",
+      "row_index": 15,
+      "turn": 5,
+      "a": {
+        "agent_id": "9ea0b09d-b951-4afc-9a31-7fc0fc869f77",
+        "persona": "Aviation Historian",
+        "solution": "A) Yes",
+        "agreement": null,
+        "message_id": 20
+      },
+      "b": {
+        "agent_id": "8e4a237f-dc25-41c0-9978-cf1772e10649",
+        "persona": "Air Traffic Control Specialist",
+        "solution": "A) Yes",
+        "agreement": true,
+        "message_id": 22
+      }
+    },
+    {
+      "case_id": "P008",
+      "group": "mismatch",
+      "solution_mismatch": true,
+      "config": "reasoning_nopersona_debate_approval_voting",
+      "family": "reasoning",
+      "row_index": 8,
+      "turn": 1,
+      "a": {
+        "agent_id": "e1c69b49-098b-4b61-a071-a1efda83adaf",
+        "persona": "Participant 1",
+        "solution": "A) Yes",
+        "agreement": null,
+        "message_id": 0
+      },
+      "b": {
+        "agent_id": "228369d4-60db-41e4-bde2-7869c1e624ef",
+        "persona": "Participant 3",
+        "solution": "B) No",
+        "agreement": false,
+        "message_id": 2
+      }
+    },
+    {
+      "case_id": "P009",
+      "group": "mismatch",
+      "solution_mismatch": true,
+      "config": "reasoning_expert_debate_approval_voting",
+      "family": "reasoning",
+      "row_index": 9,
+      "turn": 1,
+      "a": {
+        "agent_id": "49f8c198-39c1-4330-b4dc-357b4b34dcc9",
+        "persona": "Molecular Biologist",
+        "solution": "B) No",
+        "agreement": null,
+        "message_id": 0
+      },
+      "b": {
+        "agent_id": "f79ad49b-3451-4182-ad7d-b51256110907",
+        "persona": "Historian",
+        "solution": "A) Yes",
+        "agreement": false,
+        "message_id": 1
+      }
+    },
+    {
+      "case_id": "P010",
+      "group": "mismatch",
+      "solution_mismatch": true,
+      "config": "critical_nopersona_memory_unanimity_consensus",
+      "family": "critical",
+      "row_index": 16,
+      "turn": 1,
+      "a": {
+        "agent_id": "fb78bdea-f727-45e7-b186-a57f3e805d91",
+        "persona": "Participant 1",
+        "solution": "A) Yes",
+        "agreement": false,
+        "message_id": 0
+      },
+      "b": {
+        "agent_id": "1a251f83-4e65-4c5b-b871-6dea99500b3b",
+        "persona": "Participant 2",
+        "solution": "B) No",
+        "agreement": false,
+        "message_id": 1
+      }
+    },
+    {
+      "case_id": "P011",
+      "group": "control",
+      "solution_mismatch": false,
+      "config": "simple_ipip_relay_majority_consensus",
+      "family": "simple",
+      "row_index": 12,
+      "turn": 4,
+      "a": {
+        "agent_id": "a84ff77f-e2be-42c3-891e-6800c2c0dbea",
+        "persona": "Theologian",
+        "solution": "B) No",
+        "agreement": true,
+        "message_id": 9
+      },
+      "b": {
+        "agent_id": "66e704ba-cebf-43bd-8979-aee20a4ae198",
+        "persona": "Cultural Researcher",
+        "solution": "B) No",
+        "agreement": true,
+        "message_id": 10
+      }
+    },
+    {
+      "case_id": "P012",
+      "group": "control",
+      "solution_mismatch": false,
+      "config": "reasoning_expert_debate_approval_voting",
+      "family": "reasoning",
+      "row_index": 8,
+      "turn": 7,
+      "a": {
+        "agent_id": "8215361f-436c-4b14-9de7-0ddd7f889655",
+        "persona": "Botanist",
+        "solution": "B) No",
+        "agreement": null,
+        "message_id": 30
+      },
+      "b": {
+        "agent_id": "10a46130-5a0e-4834-9d5d-cc3e8769c1ee",
+        "persona": "Horticulturist",
+        "solution": "B) No",
+        "agreement": true,
+        "message_id": 34
+      }
+    },
+    {
+      "case_id": "P013",
+      "group": "control",
+      "solution_mismatch": false,
+      "config": "simple_ipip_relay_majority_consensus",
+      "family": "simple",
+      "row_index": 14,
+      "turn": 2,
+      "a": {
+        "agent_id": "1c187aae-00e3-4cec-9989-e90b01718641",
+        "persona": "Medical Researcher",
+        "solution": "B) No",
+        "agreement": true,
+        "message_id": 3
+      },
+      "b": {
+        "agent_id": "afc9903d-f4aa-48fe-816b-0f53c8bf188a",
+        "persona": "Pediatrician",
+        "solution": "B) No",
+        "agreement": true,
+        "message_id": 4
+      }
+    },
+    {
+      "case_id": "P014",
+      "group": "control",
+      "solution_mismatch": false,
+      "config": "critical_expert_relay_majority_consensus",
+      "family": "critical",
+      "row_index": 3,
+      "turn": 6,
+      "a": {
+        "agent_id": "ac35be5c-666c-4bb3-b45d-48a6d0857174",
+        "persona": "Dermatologist",
+        "solution": "A) Yes",
+        "agreement": false,
+        "message_id": 15
+      },
+      "b": {
+        "agent_id": "9935c8bc-6257-4208-bd6b-a1ea4d1d1f86",
+        "persona": "Burning Man Attendee",
+        "solution": "A) Yes",
+        "agreement": false,
+        "message_id": 16
+      }
+    },
+    {
+      "case_id": "P015",
+      "group": "mismatch",
+      "solution_mismatch": true,
+      "config": "critical_nopersona_memory_approval_voting",
+      "family": "critical",
+      "row_index": 11,
+      "turn": 1,
+      "a": {
+        "agent_id": "ba2020ad-546b-45e7-ac60-97e4bf54287c",
+        "persona": "Participant 1",
+        "solution": "A) Yes",
+        "agreement": false,
+        "message_id": 0
+      },
+      "b": {
+        "agent_id": "7878c351-5d79-43ed-a988-52a75bc2c33a",
+        "persona": "Participant 3",
+        "solution": "B) No",
+        "agreement": false,
+        "message_id": 2
+      }
+    },
+    {
+      "case_id": "P016",
+      "group": "mismatch",
+      "solution_mismatch": true,
+      "config": "critical_nopersona_memory_unanimity_consensus",
+      "family": "critical",
+      "row_index": 15,
+      "turn": 4,
+      "a": {
+        "agent_id": "c6cc13f8-300a-4f0c-870e-69634b9fde14",
+        "persona": "Participant 2",
+        "solution": "B) No.",
+        "agreement": false,
+        "message_id": 10
+      },
+      "b": {
+        "agent_id": "d0880fec-d36f-4fb8-9c96-a91b5b6fa1da",
+        "persona": "Participant 3",
+        "solution": "B) No",
+        "agreement": false,
+        "message_id": 11
+      }
+    },
+    {
+      "case_id": "P017",
+      "group": "mismatch",
+      "solution_mismatch": true,
+      "config": "reasoning_ipip_relay_simple_voting",
+      "family": "reasoning",
+      "row_index": 17,
+      "turn": 5,
+      "a": {
+        "agent_id": "49350311-6a63-40dd-a4fa-e6e62465858e",
+        "persona": "Ballet Dancer",
+        "solution": "A) Yes",
+        "agreement": false,
+        "message_id": 12
+      },
+      "b": {
+        "agent_id": "4977dae8-5cc2-4306-9847-0aaff5295407",
+        "persona": "Stage Manager",
+        "solution": "B) No",
+        "agreement": false,
+        "message_id": 14
+      }
+    },
+    {
+      "case_id": "P018",
+      "group": "control",
+      "solution_mismatch": false,
+      "config": "simple_expert_debate_simple_voting",
+      "family": "simple",
+      "row_index": 14,
+      "turn": 6,
+      "a": {
+        "agent_id": "ec9386dc-9dd1-4d40-af52-bf780cef7986",
+        "persona": "Safety Officer",
+        "solution": "A) Yes",
+        "agreement": true,
+        "message_id": 27
+      },
+      "b": {
+        "agent_id": "65a426ec-4ae5-4b85-8998-89695d96fb41",
+        "persona": "Experimental Physicist",
+        "solution": "A) Yes",
+        "agreement": true,
+        "message_id": 28
+      }
+    },
+    {
+      "case_id": "P019",
+      "group": "mismatch",
+      "solution_mismatch": true,
+      "config": "critical_expert_relay_majority_consensus",
+      "family": "critical",
+      "row_index": 18,
+      "turn": 7,
+      "a": {
+        "agent_id": "4ca44016-b733-4529-865d-1122c096b1b6",
+        "persona": "Medical Professional",
+        "solution": "B) No",
+        "agreement": false,
+        "message_id": 18
+      },
+      "b": {
+        "agent_id": "177f7a6e-4919-40ce-9da1-37f26c7f53b1",
+        "persona": "Toxicologist",
+        "solution": "A) Yes",
+        "agreement": false,
+        "message_id": 19
+      }
+    },
+    {
+      "case_id": "P020",
+      "group": "mismatch",
+      "solution_mismatch": true,
+      "config": "critical_expert_relay_majority_consensus",
+      "family": "critical",
+      "row_index": 18,
+      "turn": 1,
+      "a": {
+        "agent_id": "177f7a6e-4919-40ce-9da1-37f26c7f53b1",
+        "persona": "Toxicologist",
+        "solution": "A) Yes",
+        "agreement": false,
+        "message_id": 1
+      },
+      "b": {
+        "agent_id": "5d3a2beb-da70-431c-9edc-4ffdc8a75b65",
+        "persona": "Nutritionist",
+        "solution": "B) No",
+        "agreement": false,
+        "message_id": 2
+      }
+    },
+    {
+      "case_id": "P021",
+      "group": "control",
+      "solution_mismatch": false,
+      "config": "simple_nopersona_relay_simple_voting",
+      "family": "simple",
+      "row_index": 9,
+      "turn": 1,
+      "a": {
+        "agent_id": "857c81f2-c326-458c-aef0-cc4166ecda0e",
+        "persona": "Participant 1",
+        "solution": "B) No",
+        "agreement": false,
+        "message_id": 0
+      },
+      "b": {
+        "agent_id": "f79a68ca-a007-4e8f-9dfe-18699dd24da4",
+        "persona": "Participant 2",
+        "solution": "B) No",
+        "agreement": true,
+        "message_id": 1
+      }
+    },
+    {
+      "case_id": "P022",
+      "group": "mismatch",
+      "solution_mismatch": true,
+      "config": "reasoning_ipip_relay_simple_voting",
+      "family": "reasoning",
+      "row_index": 17,
+      "turn": 1,
+      "a": {
+        "agent_id": "49350311-6a63-40dd-a4fa-e6e62465858e",
+        "persona": "Ballet Dancer",
+        "solution": "B) No",
+        "agreement": false,
+        "message_id": 0
+      },
+      "b": {
+        "agent_id": "4977dae8-5cc2-4306-9847-0aaff5295407",
+        "persona": "Stage Manager",
+        "solution": "A) Yes",
+        "agreement": false,
+        "message_id": 2
+      }
+    },
+    {
+      "case_id": "P023",
+      "group": "mismatch",
+      "solution_mismatch": true,
+      "config": "simple_ipip_relay_approval_voting",
+      "family": "simple",
+      "row_index": 4,
+      "turn": 1,
+      "a": {
+        "agent_id": "a007812c-2e9a-42a9-8ab0-aed48c0afd4d",
+        "persona": "Geographer",
+        "solution": "B) No",
+        "agreement": true,
+        "message_id": 1
+      },
+      "b": {
+        "agent_id": "367212e3-4ac6-41e8-b978-9a9ed171a553",
+        "persona": "Researcher",
+        "solution": "A) Yes",
+        "agreement": false,
+        "message_id": 2
+      }
+    },
+    {
+      "case_id": "P024",
+      "group": "mismatch",
+      "solution_mismatch": true,
+      "config": "critical_expert_relay_majority_consensus",
+      "family": "critical",
+      "row_index": 18,
+      "turn": 2,
+      "a": {
+        "agent_id": "177f7a6e-4919-40ce-9da1-37f26c7f53b1",
+        "persona": "Toxicologist",
+        "solution": "A) Yes",
+        "agreement": false,
+        "message_id": 4
+      },
+      "b": {
+        "agent_id": "5d3a2beb-da70-431c-9edc-4ffdc8a75b65",
+        "persona": "Nutritionist",
+        "solution": "B) No",
+        "agreement": false,
+        "message_id": 5
+      }
+    },
+    {
+      "case_id": "P025",
+      "group": "control",
+      "solution_mismatch": false,
+      "config": "critical_nopersona_debate_majority_consensus",
+      "family": "critical",
+      "row_index": 19,
+      "turn": 5,
+      "a": {
+        "agent_id": "30868f04-73a7-4b46-9722-f060a238cfad",
+        "persona": "Participant 2",
+        "solution": "A) Yes",
+        "agreement": false,
+        "message_id": 23
+      },
+      "b": {
+        "agent_id": "73db807c-3057-442a-a0fa-493753704fb6",
+        "persona": "Participant 3",
+        "solution": "A) Yes",
+        "agreement": false,
+        "message_id": 24
+      }
+    },
+    {
+      "case_id": "P026",
+      "group": "mismatch",
+      "solution_mismatch": true,
+      "config": "critical_nopersona_debate_majority_consensus",
+      "family": "critical",
+      "row_index": 18,
+      "turn": 3,
+      "a": {
+        "agent_id": "0ad706c5-bc39-49c6-acba-c8cc2a50f3b2",
+        "persona": "Participant 1",
+        "solution": "B) No, a copy of The Daily Mirror cannot sustain a campfire on its own, but it can be used as a fire starter when combined with other materials and used safely.",
+        "agreement": null,
+        "message_id": 10
+      },
+      "b": {
+        "agent_id": "eaf3c17f-0a25-4fc3-a3d1-2c03d394b21a",
+        "persona": "Participant 3",
+        "solution": "B) No",
+        "agreement": false,
+        "message_id": 14
+      }
+    },
+    {
+      "case_id": "P027",
+      "group": "mismatch",
+      "solution_mismatch": true,
+      "config": "reasoning_ipip_relay_simple_voting",
+      "family": "reasoning",
+      "row_index": 13,
+      "turn": 2,
+      "a": {
+        "agent_id": "47520557-4f0e-4d77-a5b9-147c9a0ccf1c",
+        "persona": "Music Historian",
+        "solution": "A) Yes",
+        "agreement": false,
+        "message_id": 4
+      },
+      "b": {
+        "agent_id": "ed5a2e67-3847-441d-aac5-bae9b26d74ea",
+        "persona": "Music Journalist",
+        "solution": "B) No",
+        "agreement": false,
+        "message_id": 5
+      }
+    },
+    {
+      "case_id": "P028",
+      "group": "control",
+      "solution_mismatch": false,
+      "config": "simple_nopersona_relay_simple_voting",
+      "family": "simple",
+      "row_index": 12,
+      "turn": 6,
+      "a": {
+        "agent_id": "1c2709a8-d88b-4933-8a3c-fe9c06a4254f",
+        "persona": "Participant 2",
+        "solution": "B) No",
+        "agreement": true,
+        "message_id": 16
+      },
+      "b": {
+        "agent_id": "42da00d4-4053-491b-9c76-e5af4e45442d",
+        "persona": "Participant 3",
+        "solution": "B) No",
+        "agreement": true,
+        "message_id": 17
+      }
+    },
+    {
+      "case_id": "P029",
+      "group": "control",
+      "solution_mismatch": false,
+      "config": "simple_expert_debate_simple_voting",
+      "family": "simple",
+      "row_index": 16,
+      "turn": 5,
+      "a": {
+        "agent_id": "207d1a6e-4a4b-4f4e-bbfe-247a77b70be3",
+        "persona": "Linguist",
+        "solution": "B) No.",
+        "agreement": null,
+        "message_id": 20
+      },
+      "b": {
+        "agent_id": "83a8d0f7-7c8d-4a4f-9988-631ab3cdf36a",
+        "persona": "Technologist",
+        "solution": "B) No.",
+        "agreement": true,
+        "message_id": 23
+      }
+    },
+    {
+      "case_id": "P030",
+      "group": "mismatch",
+      "solution_mismatch": true,
+      "config": "reasoning_expert_debate_approval_voting",
+      "family": "reasoning",
+      "row_index": 9,
+      "turn": 1,
+      "a": {
+        "agent_id": "49f8c198-39c1-4330-b4dc-357b4b34dcc9",
+        "persona": "Molecular Biologist",
+        "solution": "B) No",
+        "agreement": null,
+        "message_id": 0
+      },
+      "b": {
+        "agent_id": "80e8ecc0-767f-4a53-84a8-c9f4224c9a0f",
+        "persona": "Biography Expert",
+        "solution": "A) Yes",
+        "agreement": true,
+        "message_id": 4
+      }
+    },
+    {
+      "case_id": "P031",
+      "group": "control",
+      "solution_mismatch": false,
+      "config": "simple_ipip_relay_approval_voting",
+      "family": "simple",
+      "row_index": 6,
+      "turn": 3,
+      "a": {
+        "agent_id": "550c5159-6e96-4a52-8815-323d59d47d1f",
+        "persona": "Gamer",
+        "solution": "A) Yes",
+        "agreement": true,
+        "message_id": 6
+      },
+      "b": {
+        "agent_id": "632a26f2-7f9a-40ca-8ff7-b6221c66fd68",
+        "persona": "Data Analyst",
+        "solution": "A) Yes",
+        "agreement": false,
+        "message_id": 8
+      }
+    },
+    {
+      "case_id": "P032",
+      "group": "mismatch",
+      "solution_mismatch": true,
+      "config": "simple_ipip_relay_approval_voting",
+      "family": "simple",
+      "row_index": 7,
+      "turn": 1,
+      "a": {
+        "agent_id": "cd228313-fcb9-4591-bc5b-8e21f81c2b2c",
+        "persona": "Binge-Watcher",
+        "solution": "B) No",
+        "agreement": false,
+        "message_id": 0
+      },
+      "b": {
+        "agent_id": "33effce6-12a9-4039-85f7-3a5126eb057f",
+        "persona": "Media Analyst",
+        "solution": "A) Yes",
+        "agreement": true,
+        "message_id": 2
+      }
+    },
+    {
+      "case_id": "P033",
+      "group": "control",
+      "solution_mismatch": false,
+      "config": "reasoning_nopersona_debate_approval_voting",
+      "family": "reasoning",
+      "row_index": 8,
+      "turn": 4,
+      "a": {
+        "agent_id": "228369d4-60db-41e4-bde2-7869c1e624ef",
+        "persona": "Participant 3",
+        "solution": "B) No",
+        "agreement": true,
+        "message_id": 17
+      },
+      "b": {
+        "agent_id": "2b907df2-5562-463e-9bc3-67dce94881bc",
+        "persona": "Participant 2",
+        "solution": "B) No",
+        "agreement": true,
+        "message_id": 18
+      }
+    },
+    {
+      "case_id": "P034",
+      "group": "control",
+      "solution_mismatch": false,
+      "config": "simple_expert_debate_simple_voting",
+      "family": "simple",
+      "row_index": 16,
+      "turn": 4,
+      "a": {
+        "agent_id": "207d1a6e-4a4b-4f4e-bbfe-247a77b70be3",
+        "persona": "Linguist",
+        "solution": "B) No.",
+        "agreement": null,
+        "message_id": 15
+      },
+      "b": {
+        "agent_id": "83a8d0f7-7c8d-4a4f-9988-631ab3cdf36a",
+        "persona": "Technologist",
+        "solution": "B) No.",
+        "agreement": true,
+        "message_id": 18
+      }
+    },
+    {
+      "case_id": "P035",
+      "group": "mismatch",
+      "solution_mismatch": true,
+      "config": "critical_nopersona_memory_unanimity_consensus",
+      "family": "critical",
+      "row_index": 15,
+      "turn": 7,
+      "a": {
+        "agent_id": "8df589db-1777-4133-b2d0-fff487cf95ab",
+        "persona": "Participant 1",
+        "solution": "B) No.",
+        "agreement": false,
+        "message_id": 18
+      },
+      "b": {
+        "agent_id": "c6cc13f8-300a-4f0c-870e-69634b9fde14",
+        "persona": "Participant 2",
+        "solution": "B) No",
+        "agreement": false,
+        "message_id": 19
+      }
+    },
+    {
+      "case_id": "P036",
+      "group": "control",
+      "solution_mismatch": false,
+      "config": "critical_nopersona_debate_majority_consensus",
+      "family": "critical",
+      "row_index": 11,
+      "turn": 3,
+      "a": {
+        "agent_id": "f994b3cf-636c-4226-9bd3-9660b4941707",
+        "persona": "Participant 2",
+        "solution": "B) No",
+        "agreement": false,
+        "message_id": 11
+      },
+      "b": {
+        "agent_id": "cf469af7-8735-4d7c-9169-0f354ef80e8c",
+        "persona": "Participant 3",
+        "solution": "B) No",
+        "agreement": false,
+        "message_id": 14
+      }
+    },
+    {
+      "case_id": "P037",
+      "group": "mismatch",
+      "solution_mismatch": true,
+      "config": "simple_ipip_relay_approval_voting",
+      "family": "simple",
+      "row_index": 12,
+      "turn": 2,
+      "a": {
+        "agent_id": "1b1d081a-036b-4065-ba51-0e9378386d4c",
+        "persona": "Entomologist",
+        "solution": "A) Yes",
+        "agreement": false,
+        "message_id": 3
+      },
+      "b": {
+        "agent_id": "9016415c-2ca1-447d-835c-573ce5091f21",
+        "persona": "Agricultural Specialist",
+        "solution": "B) No",
+        "agreement": false,
+        "message_id": 5
+      }
+    },
+    {
+      "case_id": "P038",
+      "group": "control",
+      "solution_mismatch": false,
+      "config": "reasoning_expert_report_unanimity_consensus",
+      "family": "reasoning",
+      "row_index": 5,
+      "turn": 2,
+      "a": {
+        "agent_id": "704e415e-9058-4ecc-b0c7-4108d55b7c1d",
+        "persona": "Biographer",
+        "solution": "A) Yes",
+        "agreement": true,
+        "message_id": 4
+      },
+      "b": {
+        "agent_id": "5b72e12c-6d2a-404d-a3a0-feb8d61949a8",
+        "persona": "Geographer",
+        "solution": "A) Yes",
+        "agreement": true,
+        "message_id": 5
+      }
+    },
+    {
+      "case_id": "P039",
+      "group": "control",
+      "solution_mismatch": false,
+      "config": "simple_nopersona_relay_simple_voting",
+      "family": "simple",
+      "row_index": 14,
+      "turn": 5,
+      "a": {
+        "agent_id": "88826c5e-a16f-411c-ab0a-92d3541b96d9",
+        "persona": "Participant 2",
+        "solution": "A) Yes",
+        "agreement": true,
+        "message_id": 13
+      },
+      "b": {
+        "agent_id": "0f72ee09-8c46-427d-8582-7177f298654f",
+        "persona": "Participant 3",
+        "solution": "A) Yes",
+        "agreement": true,
+        "message_id": 14
+      }
+    },
+    {
+      "case_id": "P040",
+      "group": "control",
+      "solution_mismatch": false,
+      "config": "critical_nopersona_debate_majority_consensus",
+      "family": "critical",
+      "row_index": 6,
+      "turn": 6,
+      "a": {
+        "agent_id": "9b1d36c4-b406-4917-8c86-95e946afb38a",
+        "persona": "Participant 1",
+        "solution": "A) Yes",
+        "agreement": null,
+        "message_id": 25
+      },
+      "b": {
+        "agent_id": "86fa1805-5222-4867-87a1-5384627338d8",
+        "persona": "Participant 3",
+        "solution": "A) Yes",
+        "agreement": false,
+        "message_id": 27
+      }
+    }
+  ]
+}

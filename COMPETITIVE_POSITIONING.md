@@ -108,7 +108,7 @@ monitoring), so agent traces sit alongside everything else in the same system.
 | Automatic issue detection | AI-powered issue detection | **Signal** — ranked issues + proposed fix | **Insights** + **Patterns** | None — threshold alerting only |
 | Evaluation approach | Scorers, 50+ built-in metrics/judges | Evaluators with human alignment | Built-in quality/safety/privacy evals | **NLI cascade** (MiniLM → DeBERTa), no LLM judge |
 | Tool-call verification | **Ships `ToolCallCorrectness`, `ToolCallEfficiency`** — audited | **Ships 3 dedicated evaluators** — audited | Not a dedicated feature *(doc-based, unaudited)* | Dedicated deterministic validator — **but inert on real traces, F1 0.000, see §5.1** |
-| Inter-agent disagreement | No named feature — audited; **composable via `@scorer`** | No named feature — audited | Not a dedicated feature *(doc-based, unaudited)* | **Dedicated engine** (see §5.2) |
+| Inter-agent disagreement | No named feature — audited; **composable via `@scorer`** | No named feature — audited | Not a dedicated feature *(doc-based, unaudited)* | Dedicated engine, but ⚠️ **0.00 recall on external real traces** (see §5.2) |
 | Drift detection | No named feature, no primitives — audited | No named feature in Phoenix — audited; AX's Signal/Patterns not auditable | Indirect via Insights *(doc-based)* | **Dedicated, rebuilt and validated** (§5.3) |
 | Fix-proving loop | Prompt optimization | **Experiments** — prove before shipping | Not a focus | None |
 | In-product AI assistant | No | **Alyx** | No | No |
@@ -227,29 +227,81 @@ agent say it used"* (structurally known from `tool_call` names, no inference req
 ask *"do the agent's statements about tool **results** match those results"* — where
 fabrication actually causes harm.
 
-### 5.2 Inter-agent disagreement — measured this session, but not live
+### 5.2 Inter-agent disagreement — ❌ fails on external real traces
 
 Detects contradictions between agents within one trace using NLI.
 
-**Measured** (`DISAGREEMENT_BENCHMARK_REPORT.md`, 22 constructed cases): rebuilt this
-session from F1 **0.800** to **0.960** (precision 0.923, recall 1.000), with false-positive
-rate cut from 0.300 to 0.100.
+> **Status as of 2026-08-27: this is a research capability, not a validated differentiator.**
+> On external real multi-agent traces the shipped configuration detects **0 of 10**
+> independently labelled contradictions. Full evidence in
+> `DISAGREEMENT_FORMULATION_DIAGNOSIS_REPORT.md` and
+> `DISAGREEMENT_EXTRACTION_GENERALIZATION_REPORT.md`. The internal F1 below should not be
+> quoted without the external result beside it.
+
+**Measured internally** (`DISAGREEMENT_BENCHMARK_REPORT.md`, 22 constructed cases): rebuilt
+this session from F1 **0.800** to **0.960** (precision 0.923, recall 1.000), with
+false-positive rate cut from 0.300 to 0.100.
+
+**What that number actually measured.** Those 22 cases have agent outputs of **median 10
+words** — near-minimal assertion pairs of the form *"The account is active and in good
+standing"* / *"The account has been suspended and is not in good standing"*. That is the
+shape `cross-encoder/nli-deberta-v3-small` was trained on, and it means the benchmark handed
+the detector **pre-extracted claims**. The absence of a claim-extraction stage was therefore
+invisible to it.
+
+**External result** (`Multi-Agent-LLMs/DEBATE`, 10 independently labelled contradictions,
+30 negatives; agent outputs ~2,100–2,600 characters of natural discourse):
+
+| Formulation | Recall | FP rate | mean P(contradiction) |
+| :--- | ---: | ---: | ---: |
+| Shipped configuration | **0.00** | 0.0% | 0.0070 |
+| + concluding-assertion extraction, reversed | 0.60 | 0.0% | 0.6276 |
+
+Maximum contradiction probability across all 10 positives was **0.0414** against a 0.6
+threshold — not near-misses, effectively zero. Truncation was tested and **refuted** as the
+cause (short pairs fail identically; the untruncated condition already retained both
+conclusions in 10/10 cases).
+
+**The extraction fix does not generalize.** Tested on
+`siddharthmb/multiagent-verification-failure-modes`, a marker-free corpus of real
+verifier/subagent fact-checking traces: assertion-extraction correctness **31.2%** (25/80,
+95% CI [22.2%, 42.1%]), recall moving 0.12 → 0.25 within fully overlapping confidence
+intervals, and false positives *rising* 6.2% → 12.5%. DEBATE's extraction worked because its
+`A) Yes / B) No` marker is terminal by construction; in the external corpus **68% of
+assertions sit in the first third of the answer**, where a last-sentence rule cannot reach.
+
+**A distinct problem the signal does not address at all.** Real multi-agent systems
+distribute evidence across agents. When one agent reports *"my documents do not contain X"*
+and another reports *"my documents contain X"*, that reads as a contradiction and **is not
+one** — both are correct about their own partition. Six of 40 externally labelled cases are
+of this form. An NLI contradiction score compares two strings and has no representation of
+which evidence each agent held, so it cannot separate a genuine fault from legitimate
+disagreement caused by partial evidence. This is a design constraint, independent of NLI
+quality or extraction method, and it is now the open research question for this capability.
+
+**Wiring, for completeness.** Until 2026-08-26 this was the largest gap between claim and
+shipped capability in the project: `evaluator.py` never called the N-way path, so the 0.960
+described a configuration production did not run — production had only the relevance gate,
+which that same report measures at F1 **0.762**, *worse* than the 0.800 baseline in
+isolation.
 
 **This was, until 2026-08-26, the largest gap between claim and shipped capability in
 the project:** `evaluator.py` never called the N-way path, so the 0.960 described a
 configuration production did not run — production had only the relevance gate, which that
 same report measures at F1 **0.762**, *worse* than the 0.800 baseline in isolation.
 
-**Now closed** (`DISAGREEMENT_BENCHMARK_REPORT.md` §9). Rather than a trace-completion
-hook — impossible without inventing a signal the SDK does not send — the pipeline compares
-each arriving span against the earlier agents of its own trace, reaching the same coverage
-incrementally. Verified against the real database and real model weights: a contradiction
-three agents back scores 0.9999 and is flagged, where the previous adjacent-only path
-scored 0.0042 and missed it. The same change fixed a separate bug in which spans were
-compared against agents from a *different trace*, because batches are not trace-grouped.
+That gap is **now closed** (`DISAGREEMENT_BENCHMARK_REPORT.md` §9). Rather than a
+trace-completion hook — impossible without inventing a signal the SDK does not send — the
+pipeline compares each arriving span against the earlier agents of its own trace, reaching
+the same coverage incrementally. Verified against the real database and real model weights:
+a contradiction three agents back scores 0.9999 and is flagged, where the previous
+adjacent-only path scored 0.0042 and missed it. The same change fixed a separate bug in
+which spans were compared against agents from a *different trace*, because batches are not
+trace-grouped.
 
-So the benchmarked configuration and the shipped configuration now match. The remaining
-honest caveat is the one in §5.1 of that report: these are 22 hand-constructed cases.
+So the benchmarked and shipped configurations now match. **That is a correctness fix, not
+evidence of capability** — the two configurations agree, and both score 0.00 recall on
+external real traces.
 
 ### 5.3 Drift and Agent Stability Index — weakest of the three
 
@@ -303,11 +355,21 @@ were:**
 - **Drift is the strongest.** Both audits found no named feature *and*, for MLflow, no
   adjacent primitive either. It is also the one capability AgentPulse has rebuilt and
   validated on external data (§5.3).
-- **Disagreement holds only in the narrow "no named feature" sense.** MLflow's `@scorer`
-  primitive was probed and runs; anyone could implement cross-agent contradiction checking
-  inside it. *"No named feature"* and *"cannot do this"* are different claims, and only the
-  first is supported. Its F1 0.960 also still rests on 22 self-authored cases and has never
-  been externally validated — see §9.
+- **Disagreement is no longer a differentiator claim at all.** Two separate problems, either
+  of which is disqualifying on its own:
+  - *The competitive half is narrow.* MLflow's `@scorer` primitive was probed and runs;
+    anyone could implement cross-agent contradiction checking inside it. *"No named feature"*
+    and *"cannot do this"* are different claims, and only the first is supported.
+  - *The capability half now has a measured external result, and it is bad.* F1 0.960 was
+    measured on 22 self-authored near-minimal pairs. On external real multi-agent traces the
+    shipped configuration scores **0.00 recall**, the extraction fix that recovers it does
+    **not generalize** to a marker-free corpus, and evidence-partition relativity means
+    contradiction detection alone cannot distinguish a genuine fault from agents holding
+    different evidence. See §5.2 and
+    `DISAGREEMENT_EXTRACTION_GENERALIZATION_REPORT.md`.
+
+  It should be described as a promising but externally unvalidated research capability, and
+  never as a validated differentiator.
 
 The evaluation approach is the strongest structural argument. Where the three platforms
 default to LLM judges (which cost a model call per evaluation and vary between runs),
@@ -425,6 +487,16 @@ benchmark rather than an assertion.
   match, and a cross-trace comparison bug was fixed alongside it. Alert volume on
   multi-agent traces should be watched — disagreement can now fire where it previously
   could not.
+- **Disagreement external validation: complete, and the result is negative** (§5.2,
+  `DISAGREEMENT_FORMULATION_DIAGNOSIS_REPORT.md`,
+  `DISAGREEMENT_EXTRACTION_GENERALIZATION_REPORT.md`). Shipped configuration: **0.00 recall**
+  on 10 independently labelled external contradictions. Truncation refuted as the cause;
+  claim extraction identified as the gap but shown **not to generalize** to a marker-free
+  corpus (31.2% assertion correctness). Evidence-partition relativity identified as a
+  further, separate obstacle. `disagreement.py` deliberately left unchanged — the open
+  question is how to distinguish true contradiction from legitimate disagreement caused by
+  partial evidence, and improving extraction before answering it optimises the wrong
+  objective.
 - **NLI-cascade vs LLM-judge benchmark: complete.** See `LLM_JUDGE_COMPARISON_REPORT.md`
   and §5.4 above. Cost claim confirmed; quality claim narrowed. A new NLI defect
   (numeric rounding paraphrase) was identified and deliberately not fixed from a single
@@ -459,11 +531,15 @@ benchmark rather than an assertion.
   tool-claim cases, 22 disagreement cases, 11 drift scenarios. They measure the components
   against their authors' intent, not against production traffic.
 
-  **Two of those three have since been checked against an external, independently
-  collected corpus, and both checks changed the conclusion**: drift was found to fire on
-  91.7% of unchanged operation and was rebuilt (§5.3), and tool-claim validation was found
-  to extract nothing at all (§5.1). In both cases the self-authored benchmark had reported
-  a healthy figure. **Inter-agent disagreement (§5.2) has not had this treatment** — its
-  F1 0.960 still rests on 22 cases written by the same person who wrote the code, and that
-  corpus cannot supply the check, since every session in it has a single agent identity.
-  Treat that number with the same suspicion the other two earned.
+  **All three have now been checked against external, independently collected corpora, and
+  every check changed the conclusion**: drift was found to fire on 91.7% of unchanged
+  operation and was rebuilt (§5.3); tool-claim validation was found to extract nothing at
+  all (§5.1); and inter-agent disagreement, checked last, was found to detect **0 of 10**
+  independently labelled contradictions on real multi-agent traces (§5.2). In all three
+  cases the self-authored benchmark had reported a healthy figure.
+
+  That is a three-for-three record of internal benchmarks failing to survive external data,
+  and it is the single most reliable pattern in this project. It is the reason for the
+  standing rule that **no capability is called a differentiator until it survives an
+  external-data audit or carries a documented limitation**. Any future internal number
+  should be assumed provisional until externally checked.
