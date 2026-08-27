@@ -107,7 +107,7 @@ monitoring), so agent traces sit alongside everything else in the same system.
 | Tracing standard | OpenTelemetry + GenAI conventions | OpenInference on OTel | OTel GenAI conventions | W3C-compatible custom context |
 | Automatic issue detection | AI-powered issue detection | **Signal** — ranked issues + proposed fix | **Insights** + **Patterns** | None — threshold alerting only |
 | Evaluation approach | Scorers, 50+ built-in metrics/judges | Evaluators with human alignment | Built-in quality/safety/privacy evals | **NLI cascade** (MiniLM → DeBERTa), no LLM judge |
-| Tool-call verification | Not a dedicated feature | Not a dedicated feature | Not a dedicated feature | **Dedicated deterministic validator** |
+| Tool-call verification | Not a dedicated feature | Not a dedicated feature | Not a dedicated feature | Dedicated deterministic validator — **but inert on real traces, see §5.1** |
 | Multi-agent disagreement | Not a dedicated feature | Not a dedicated feature | Not a dedicated feature | **Dedicated engine** (see §5.2 for real status) |
 | Drift detection | Not offered for LLM/agents | Indirect via Signal/Patterns | Indirect via Insights | **Dedicated 4-signal + ASI** (see §5.3) |
 | Fix-proving loop | Prompt optimization | **Experiments** — prove before shipping | Not a focus | None |
@@ -149,18 +149,41 @@ The defensible position is narrow: three signals none of the three platforms shi
 first-class feature. But the honest state of those three is uneven, and this section
 separates what is claimed from what is measured.
 
-### 5.1 Deterministic tool-claim validation — measured, real
+### 5.1 Deterministic tool-claim validation — ⚠️ inert on real agents
 
 Cross-references an agent's textual claims about tool use against actual recorded tool
 calls: fabricated tools, wrong result counts, claimed success on a failed call.
 
-**Measured** (`TOOL_CLAIM_VALIDATOR_REPORT.md`, `experiments/results/tool_claim_benchmark_results.json`):
-precision **1.000**, recall **0.727**, F1 **0.842** on 19 hand-written cases, at
-**0.07 ms** per call.
+**Measured on its own benchmark** (`TOOL_CLAIM_VALIDATOR_REPORT.md`): precision **1.000**,
+recall **0.727**, F1 **0.842** on 19 hand-written cases, at **0.07 ms** per call.
 
-The recall gap is a deliberate design boundary — the validator is regex-based and misses
-paraphrases, documented rather than chased. The genuine strength is the cost profile:
-sub-millisecond and deterministic, where an LLM-judge equivalent costs a model call.
+**Measured on real agent traces** (`TOOL_CLAIM_EXTERNAL_TEST_REPORT.md`, external corpus,
+500 sessions across 3 benchmarks / 4 harnesses / all 5 models): **zero claims extracted
+from 8,353 prose spans.** Not a low score — nothing at all, in every cell.
+
+An earlier revision of this section called this signal "measured, real" and presented the
+19-case figures as evidence of a live differentiator. **That was wrong**, and the error is
+instructive: every one of those 19 cases was hand-written in the phrasing the regex
+expects, which made the benchmark a test of the regex against itself. It could not have
+surfaced this.
+
+The cause is a design-premise mismatch rather than a tuning gap. The validator's patterns
+require the agent to *narrate* tool use — "I used the X tool". In structured-tool-calling
+harnesses the agent never narrates it, because invocation is a `tool_call` field and the
+prose narrates intent instead. The tool name the regex hunts for is in a field the
+validator never reads, so expanding the patterns cannot fix it.
+
+**Honest current status:** the *capability* is real and remains a genuine gap in the three
+platforms — none ships tool-claim verification as a named feature, and the cost argument
+(sub-millisecond and deterministic, against a model call for an LLM-judge equivalent) still
+holds. But AgentPulse does not currently deliver it on modern agent traces. It should be
+described as **a designed capability pending a working extraction stage**, not as a
+measured advantage.
+
+The productive reformulation is identified but not built: stop asking *"which tools did the
+agent say it used"* (structurally known from `tool_call` names, no inference required) and
+ask *"do the agent's statements about tool **results** match those results"* — where
+fabrication actually causes harm.
 
 ### 5.2 Inter-agent disagreement — measured this session, but not live
 
@@ -221,11 +244,17 @@ classifies it `EXPERIMENTAL — not calibrated.`
 
 The credible pitch is **not** "better than MLflow." It is narrower and defensible:
 
-> A self-hosted monitor for multi-agent pipelines that checks three things generic
-> LLM-observability platforms do not check as named features — whether an agent's tool
-> claims match its actual tool calls, whether agents in the same trace contradict each
-> other, and whether an agent's behaviour is drifting — using deterministic and
-> model-based checks rather than an LLM judge, at a fraction of the per-call cost.
+> A self-hosted monitor for multi-agent pipelines that checks things generic
+> LLM-observability platforms do not check as named features — whether agents in the same
+> trace contradict each other, and whether an agent's behaviour is drifting — using
+> deterministic and model-based checks rather than an LLM judge, at a fraction of the
+> per-call cost.
+
+**Two signals, not three, as of 2026-08-27.** Tool-claim validation was previously counted
+here. It is a designed capability and the platforms genuinely do not ship an equivalent,
+but §5.1 records that it extracts nothing from real agent traces, so it cannot be pitched
+as something AgentPulse currently does. It returns to this list when the extraction stage
+is rebuilt.
 
 The evaluation approach is the strongest structural argument. Where the three platforms
 default to LLM judges (which cost a model call per evaluation and vary between runs),
@@ -324,11 +353,20 @@ benchmark rather than an assertion.
    product — using the existing Qwen3-8B GGUF adapter, so no API key, no external cost,
    and a fully reproducible comparison. Directly tests the §5.4 hypothesis.
 
-## 8. Execution status as of 2026-08-26
+## 8. Execution status as of 2026-08-27
 
+- **Drift: diagnosed and rebuilt.** `DRIFT_REAL_TEXT_DIAGNOSIS_REPORT.md`. The shipped
+  detector was flagging 91.7% of unchanged operation on real traces; false alarms are now
+  1.5% with 92% detection, calibrated on a dev split and measured once on held-out, and
+  wired into the `DRIFT_DETECTED` alert rule. Coverage is 24.5% — the detector stays silent
+  on short traces by design, and that figure belongs with the accuracy one.
+- **Tool-claim validation: tested externally and found inert.**
+  `TOOL_CLAIM_EXTERNAL_TEST_REPORT.md`. Zero extractions from 8,353 real prose spans. §5.1
+  and §5.4 were revised as a direct result; the extraction stage needs rebuilding before
+  this can be claimed again.
 - **Disagreement engine rebuild: complete.** Baseline → fixes → tests → report. Details
   and numbers in `DISAGREEMENT_BENCHMARK_REPORT.md`, not duplicated here so the two
-  cannot drift apart. Test suite 113 passing.
+  cannot drift apart. Test suite now 130 passing.
 - **N-way comparison wired into the live pipeline: complete** (§5.2,
   `DISAGREEMENT_BENCHMARK_REPORT.md` §9). The benchmarked and shipped configurations now
   match, and a cross-trace comparison bug was fixed alongside it. Alert volume on
@@ -351,6 +389,15 @@ benchmark rather than an assertion.
 - **The differentiator claim is an absence-of-evidence claim.** "None of them ships
   first-class tool-claim validation" comes from reading docs. Any of the three could add
   it, or already support it through a mechanism not surfaced in their documentation.
-- **AgentPulse's own numbers come from small, hand-constructed datasets** — 19 tool-claim
-  cases, 22 disagreement cases, 10 drift scenarios. They measure the components against
-  their authors' intent, not against production traffic.
+- **AgentPulse's own internal numbers come from small, hand-constructed datasets** — 19
+  tool-claim cases, 22 disagreement cases, 11 drift scenarios. They measure the components
+  against their authors' intent, not against production traffic.
+
+  **Two of those three have since been checked against an external, independently
+  collected corpus, and both checks changed the conclusion**: drift was found to fire on
+  91.7% of unchanged operation and was rebuilt (§5.3), and tool-claim validation was found
+  to extract nothing at all (§5.1). In both cases the self-authored benchmark had reported
+  a healthy figure. **Inter-agent disagreement (§5.2) has not had this treatment** — its
+  F1 0.960 still rests on 22 cases written by the same person who wrote the code, and that
+  corpus cannot supply the check, since every session in it has a single agent identity.
+  Treat that number with the same suspicion the other two earned.
