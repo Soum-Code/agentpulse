@@ -1,0 +1,362 @@
+{
+  "timestamp": "2026-08-27 07:22:43 UTC",
+  "data_class": "EXTERNAL_REAL_DATA",
+  "source": {
+    "dataset_id": "Exgentic/agent-llm-traces-v2",
+    "dataset_url": "https://huggingface.co/datasets/Exgentic/agent-llm-traces-v2",
+    "revision": "4b8ad4ab198438e5a170f9171c19c6a2cf7c1814",
+    "retrieved_at": "2026-08-27T07:21:48Z",
+    "shards_read": [
+      0,
+      5
+    ],
+    "sessions_per_cell": 25
+  },
+  "validator": "backend/app/services/tool_claim.py (unmodified)",
+  "labels": "NONE \u2014 the corpus carries no tool-claim correctness annotations",
+  "metrics_not_reported": {
+    "precision": "UNLABELLED",
+    "recall": "UNLABELLED",
+    "f1": "UNLABELLED",
+    "reason": "no ground truth in the corpus, and with zero extractions there are no predictions to score"
+  },
+  "positive_control": {
+    "cases": [
+      {
+        "text": "We queried the search tool and retrieved 3 records.",
+        "expected_tool": "search",
+        "expected_count": 3,
+        "extracted": [
+          {
+            "tool_name": "search",
+            "claimed_count": 3
+          }
+        ],
+        "passed": true
+      },
+      {
+        "text": "Executed the calculator tool to compute variance.",
+        "expected_tool": "calculator",
+        "expected_count": null,
+        "extracted": [
+          {
+            "tool_name": "calculator",
+            "claimed_count": null
+          }
+        ],
+        "passed": true
+      },
+      {
+        "text": "The database_lookup tool returned 5 rows.",
+        "expected_tool": "database_lookup",
+        "expected_count": null,
+        "extracted": [
+          {
+            "tool_name": "database_lookup",
+            "claimed_count": null
+          }
+        ],
+        "passed": true
+      },
+      {
+        "text": "Retrieved 12 records from the database.",
+        "expected_tool": "unknown",
+        "expected_count": 12,
+        "extracted": [
+          {
+            "tool_name": "unknown",
+            "claimed_count": 12
+          }
+        ],
+        "passed": true
+      }
+    ],
+    "all_passed": true
+  },
+  "totals": {
+    "sessions": 500,
+    "spans": 12808,
+    "tool_calls": 7344,
+    "tool_responses": 10422,
+    "countable_results": 146,
+    "prose_spans": 8353,
+    "spans_with_claims": 0
+  },
+  "extraction_rate_on_prose_spans": 0.0,
+  "per_cell": [
+    {
+      "benchmark": "appworld",
+      "harness": "claude_code",
+      "model": "DeepSeek-V3.2",
+      "sessions": 25,
+      "spans": 570,
+      "tool_calls": 616,
+      "tool_responses": 606,
+      "countable_results": 22,
+      "prose_spans": 555
+    },
+    {
+      "benchmark": "appworld",
+      "harness": "claude_code",
+      "model": "Kimi-K2.5",
+      "sessions": 25,
+      "spans": 669,
+      "tool_calls": 83,
+      "tool_responses": 687,
+      "countable_results": 121,
+      "prose_spans": 328
+    },
+    {
+      "benchmark": "browsecompplus",
+      "harness": "claude_code",
+      "model": "gemini-3-pro-preview",
+      "sessions": 25,
+      "spans": 604,
+      "tool_calls": 1451,
+      "tool_responses": 820,
+      "countable_results": 0,
+      "prose_spans": 486
+    },
+    {
+      "benchmark": "browsecompplus",
+      "harness": "openai_solo",
+      "model": "DeepSeek-V3.2",
+      "sessions": 25,
+      "spans": 670,
+      "tool_calls": 552,
+      "tool_responses": 644,
+      "countable_results": 0,
+      "prose_spans": 600
+    },
+    {
+      "benchmark": "browsecompplus",
+      "harness": "openai_solo",
+      "model": "Kimi-K2.5",
+      "sessions": 25,
+      "spans": 646,
+      "tool_calls": 148,
+      "tool_responses": 645,
+      "countable_results": 0,
+      "prose_spans": 576
+    },
+    {
+      "benchmark": "browsecompplus",
+      "harness": "openai_solo",
+      "model": "claude-opus-4-5",
+      "sessions": 25,
+      "spans": 605,
+      "tool_calls": 605,
+      "tool_responses": 580,
+      "countable_results": 0
+    },
+    {
+      "benchmark": "browsecompplus",
+      "harness": "openai_solo",
+      "model": "gemini-3-pro-preview",
+      "sessions": 25,
+      "spans": 218,
+      "tool_calls": 207,
+      "tool_responses": 193,
+      "countable_results": 0,
+      "prose_spans": 11
+    },
+    {
+      "benchmark": "browsecompplus",
+      "harness": "openai_solo",
+      "model": "gpt-5.2-2025-12-11",
+      "sessions": 25,
+      "spans": 336,
+      "tool_calls": 332,
+      "tool_responses": 311,
+      "countable_results": 0,
+      "prose_spans": 4
+    },
+    {
+      "benchmark": "browsecompplus",
+      "harness": "smolagents_code",
+      "model": "DeepSeek-V3.2",
+      "sessions": 25,
+      "spans": 521,
+      "tool_calls": 0,
+      "tool_responses": 0,
+      "countable_results": 0,
+      "prose_spans": 521
+    },
+    {
+      "benchmark": "browsecompplus",
+      "harness": "smolagents_code",
+      "model": "Kimi-K2.5",
+      "sessions": 25,
+      "spans": 632,
+      "tool_calls": 0,
+      "tool_responses": 0,
+      "countable_results": 0,
+      "prose_spans": 629
+    },
+    {
+      "benchmark": "browsecompplus",
+      "harness": "smolagents_code",
+      "model": "claude-opus-4-5",
+      "sessions": 25,
+      "spans": 589,
+      "tool_calls": 0,
+      "tool_responses": 562,
+      "countable_results": 0,
+      "prose_spans": 589
+    },
+    {
+      "benchmark": "browsecompplus",
+      "harness": "smolagents_code",
+      "model": "gemini-3-pro-preview",
+      "sessions": 25,
+      "spans": 265,
+      "tool_calls": 0,
+      "tool_responses": 240,
+      "countable_results": 0,
+      "prose_spans": 265
+    },
+    {
+      "benchmark": "browsecompplus",
+      "harness": "smolagents_code",
+      "model": "gpt-5.2-2025-12-11",
+      "sessions": 25,
+      "spans": 193,
+      "tool_calls": 0,
+      "tool_responses": 143,
+      "countable_results": 0,
+      "prose_spans": 193
+    },
+    {
+      "benchmark": "browsecompplus",
+      "harness": "tool_calling",
+      "model": "DeepSeek-V3.2",
+      "sessions": 25,
+      "spans": 656,
+      "tool_calls": 655,
+      "tool_responses": 631,
+      "countable_results": 0,
+      "prose_spans": 404
+    },
+    {
+      "benchmark": "browsecompplus",
+      "harness": "tool_calling",
+      "model": "Kimi-K2.5",
+      "sessions": 25,
+      "spans": 641,
+      "tool_calls": 94,
+      "tool_responses": 632,
+      "countable_results": 0,
+      "prose_spans": 562
+    },
+    {
+      "benchmark": "browsecompplus",
+      "harness": "tool_calling",
+      "model": "claude-opus-4-5",
+      "sessions": 25,
+      "spans": 563,
+      "tool_calls": 706,
+      "tool_responses": 681,
+      "countable_results": 0
+    },
+    {
+      "benchmark": "browsecompplus",
+      "harness": "tool_calling",
+      "model": "gemini-3-pro-preview",
+      "sessions": 25,
+      "spans": 198,
+      "tool_calls": 215,
+      "tool_responses": 212,
+      "countable_results": 0,
+      "prose_spans": 22
+    },
+    {
+      "benchmark": "browsecompplus",
+      "harness": "tool_calling",
+      "model": "gpt-5.2-2025-12-11",
+      "sessions": 25,
+      "spans": 215,
+      "tool_calls": 314,
+      "tool_responses": 290,
+      "countable_results": 0,
+      "prose_spans": 1
+    },
+    {
+      "benchmark": "swebench",
+      "harness": "claude_code",
+      "model": "DeepSeek-V3.2",
+      "sessions": 25,
+      "spans": 1584,
+      "tool_calls": 1269,
+      "tool_responses": 1527,
+      "countable_results": 0,
+      "prose_spans": 1570
+    },
+    {
+      "benchmark": "swebench",
+      "harness": "claude_code",
+      "model": "Kimi-K2.5",
+      "sessions": 25,
+      "spans": 2433,
+      "tool_calls": 97,
+      "tool_responses": 1018,
+      "countable_results": 3,
+      "prose_spans": 1037
+    }
+  ],
+  "samples": [
+    {
+      "benchmark": "appworld",
+      "harness": "claude_code",
+      "agent_prose": "I need to understand the task: Ashley wants to update RSVPs in a CSV file based on friends' latest replies to phone messages. Let me start by exploring the available tools and then proceed step by ste",
+      "structured_tool_calls": [
+        "TodoWrite"
+      ],
+      "claims_extracted_from_prose": 0
+    },
+    {
+      "benchmark": "appworld",
+      "harness": "claude_code",
+      "agent_prose": "\n\n",
+      "structured_tool_calls": [
+        "TodoWrite"
+      ],
+      "claims_extracted_from_prose": 0
+    },
+    {
+      "benchmark": "appworld",
+      "harness": "claude_code",
+      "agent_prose": "First, I need to get the supervisor's profile and credentials to log into the phone and file system applications",
+      "structured_tool_calls": [
+        "mcp__environment__supervisor__show_profile"
+      ],
+      "claims_extracted_from_prose": 0
+    },
+    {
+      "benchmark": "appworld",
+      "harness": "claude_code",
+      "agent_prose": "\n\n",
+      "structured_tool_calls": [
+        "mcp__environment__supervisor__show_account_passwords"
+      ],
+      "claims_extracted_from_prose": 0
+    },
+    {
+      "benchmark": "appworld",
+      "harness": "claude_code",
+      "agent_prose": "Now I have the credentials. Let me mark this task as completed and move to accessing the file system",
+      "structured_tool_calls": [
+        "TodoWrite"
+      ],
+      "claims_extracted_from_prose": 0
+    },
+    {
+      "benchmark": "appworld",
+      "harness": "claude_code",
+      "agent_prose": "First, I need to log into the file system application\n\n",
+      "structured_tool_calls": [
+        "mcp__environment__file_system__login"
+      ],
+      "claims_extracted_from_prose": 0
+    }
+  ]
+}
