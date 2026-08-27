@@ -438,3 +438,112 @@ removed, and this phase did not change that. It remains a safe no-op on a migrat
   that order, so architecture and evaluator speed do not change together
 
 ---
+
+## ONNX backend — fixed, and made observable
+
+Two problems, and the second mattered more than the first: the ONNX path had been
+dead since a torch upgrade, and **nothing reported it**. `models_loaded()` returned
+`nli_model: True` whether ONNX Runtime or the PyTorch fallback loaded, so the system ran a
+slower backend than configured while presenting as healthy. For a platform sold on
+observability, not observing its own degraded execution mode is a defect independent of the
+lost speed.
+
+### Diagnosis
+
+```
+ImportError: cannot import name '_attention_scale' from 'torch.onnx.symbolic_opset14'
+  at optimum/exporters/onnx/model_patcher.py:346
+```
+
+| Package | Was | Now |
+| :--- | :--- | :--- |
+| `torch` | 2.13.0 | 2.13.0 (unchanged) |
+| `transformers` | 4.53.3 | 4.53.3 (unchanged) |
+| `onnxruntime` | 1.29.0 | 1.29.0 (unchanged) |
+| `numpy` | 2.5.2 | 2.5.2 (unchanged) |
+| `optimum` | 1.27.0 | **2.1.0** |
+| `optimum-onnx` | not installed | **0.1.0** |
+
+torch 2.13 removed `_attention_scale`; optimum 1.27 still imports it. The old pin
+`optimum[onnxruntime]>=1.19,<2.0` is what held optimum at a version that could not work.
+ONNX applies **only** to the NLI model — the embedding model always loads via
+SentenceTransformer, which is why that half never failed.
+
+### Verified in isolation before touching the project venv
+
+A `--target` install was tried first and **rejected as invalid**: it produced a mixed state
+where `optimum.utils` resolved to 2.1.0 while `optimum.exporters` resolved to 1.27.0,
+testing neither version. A clean `uv venv` with the exact candidate set was used instead.
+
+| Measure | PyTorch | ONNX |
+| :--- | ---: | ---: |
+| Worst absolute probability difference across 5 NLI pairs | — | **1.2e-08** |
+| Mean inference latency | 47.5 ms | **24.2 ms (1.97×)** |
+| First model load | 1.3 s | 199.5 s |
+| Subsequent load (export cached) | 1.3 s | 3.8 s |
+
+**Correctness is the load-bearing number, not speed.** A faster backend that scored
+differently would silently move every threshold this project has calibrated. At 1.2e-08 the
+two backends are identical to floating-point noise.
+
+**Operational note:** the first ONNX load performs the export and takes ~200 s, writing
+`model.onnx` into the model cache. Subsequent loads are 3.8 s. A fresh deployment with no
+warm cache pays that once — worth pre-warming rather than discovering during a deploy.
+
+Only after that did the project venv change. `pip install --dry-run` confirmed **every other
+dependency already satisfied** — no torch, transformers or numpy churn, which is the failure
+class `SESSION_HANDOFF.md` §3 documents.
+
+### Observability — the part that must hold even if ONNX breaks again
+
+New `grounding.backend_info()`:
+
+```json
+{"nli_backend": "onnx", "nli_backend_requested": "onnx", "degraded": false,
+ "fallback_reason": null, "embedding_backend": "pytorch"}
+```
+
+Surfaced on `/v1/health` as `inference_backend` plus a top-level `degraded` flag, and logged
+at worker startup (`Inference backend: nli=onnx embedding=pytorch`, or a WARNING naming the
+fallback reason when degraded).
+
+Three deliberate choices:
+
+- **`models_loaded()` stays bool-only.** `app/worker.py` and
+  `scripts/measure_durability.py` both gate readiness on `all(models_loaded().values())`;
+  adding a truthy backend string would make those checks silently wrong. Backend identity
+  lives in a separate function, and a test pins that contract.
+- **`degraded` means "not running what was asked for"**, not "not running ONNX". A
+  deliberately PyTorch-configured deployment is not degraded and must not alarm forever.
+- **Degraded is not fatal.** The fallback is correct behaviour and results are identical;
+  the worker logs loudly and carries on rather than refusing to start.
+
+### Tests: 148 → 154
+
+`tests/test_inference_backend.py`, 6 tests: ONNX loads and is reported; the fallback is
+visible with a recorded reason; deliberate PyTorch is not degraded; `models_loaded()` stays
+bool-only; both backends produce identical scores; `/v1/health` exposes the fields.
+
+**A test-design bug worth recording.** The first version loaded models in-process and passed
+alone but failed inside the full suite. Cause: `load_models()` cannot be called repeatedly in
+one process — the second load leaves torch tensors on the `meta` device
+(`Cannot copy out of meta tensor`), after which inference raises `Tensor on device cpu is
+not on the expected device meta`. Production loads once per process (API lifespan, worker
+startup), so every probe now runs in its **own subprocess**. In-process loading was measuring
+an artefact of the harness rather than the system.
+
+### Acceptance criteria
+
+| Criterion | Status |
+| :--- | :--- |
+| ONNX path works | ✅ `nli_backend: "onnx"`, verified in the production code path |
+| Or system reports ONNX unavailable + fallback | ✅ also implemented, and tested by forcing the failure |
+| No silent degradation | ✅ `/v1/health`, `backend_info()`, worker startup log |
+| Inference correctness unchanged | ✅ worst difference 1.2e-08; guarded by a test |
+| Full tests pass | ✅ **154/154** |
+
+Dashboard and SDK untouched. Worker counts and throughput deliberately **not** benchmarked —
+that is the next phase, and it can now measure the real backend rather than an accidentally
+degraded one.
+
+---

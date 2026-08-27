@@ -153,7 +153,7 @@ async def _amain(lease_seconds: int) -> None:
     from app.services.alerting import AlertEngine
     from app.services.drift import DriftDetector
     from app.services.evaluator import EvaluationPipeline
-    from app.services.grounding import load_models, models_loaded
+    from app.services.grounding import backend_info, load_models, models_loaded
 
     logging.basicConfig(
         level=getattr(logging, settings.log_level, logging.INFO),
@@ -178,6 +178,21 @@ async def _amain(lease_seconds: int) -> None:
         # A worker that cannot evaluate should not silently claim jobs and fail
         # them one attempt at a time until they dead-letter.
         raise SystemExit(f"ABORT: models not fully loaded ({loaded}); refusing to start.")
+
+    # The worker is where inference actually happens now, so it must say which
+    # backend it is running. Degraded is not fatal -- results are identical and
+    # only speed differs -- but it must not be silent.
+    backend = backend_info()
+    if backend["degraded"]:
+        logger.warning(
+            "INFERENCE BACKEND DEGRADED: %s requested but running on %s. Reason: %s. "
+            "Results are unaffected; throughput is roughly halved.",
+            backend["nli_backend_requested"], backend["nli_backend"],
+            backend["fallback_reason"],
+        )
+    else:
+        logger.info("Inference backend: nli=%s embedding=%s",
+                    backend["nli_backend"], backend["embedding_backend"])
 
     # Same construction as the API's lifespan, settings included -- the worker
     # is now where evaluation actually happens, so a divergence here would mean
