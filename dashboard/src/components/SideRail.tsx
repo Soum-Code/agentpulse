@@ -18,14 +18,14 @@ const GROUPS: { title: string; items: Item[] }[] = [
     title: 'Monitor',
     items: [
       { id: 'overview', label: 'Overview', icon: LayoutGrid },
-      { id: 'traces', label: 'Traces', icon: Route },
       { id: 'incidents', label: 'Incidents', icon: AlertTriangle },
     ],
   },
   {
     title: 'Investigate',
     items: [
-      { id: 'incident-replay', label: 'Replay Debugger', icon: History },
+      { id: 'traces', label: 'Traces', icon: Route },
+      { id: 'incident-replay', label: 'Recorded Replay', icon: History },
       { id: 'drift', label: 'Drift & Stability', icon: Activity },
     ],
   },

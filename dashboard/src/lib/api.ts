@@ -108,7 +108,15 @@ export const api = {
       drift_trend: { timestamp: string; centroid_distance: number | null; stability_index: number | null }[];
     }>(`/v1/agents/${agentId}/health`),
   getDrift: () =>
-    fetchApi<{ agents: { agent_id: string; current_asi: number | null; latest_centroid_distance: number | null }[] }>('/v1/drift'),
+    fetchApi<{
+      agents: {
+        agent_id: string;
+        current_asi: number | null;
+        latest_centroid_distance: number | null;
+        latest_tool_drift?: number | null;
+        baseline_size?: number;
+      }[];
+    }>('/v1/drift'),
   getAlerts: (limit = 50) => fetchApi<{ alerts: AlertItem[] }>(`/v1/alerts?limit=${limit}`),
   acknowledgeAlert: (id: number) =>
     fetchApi<{ status: string }>(`/v1/alerts/${id}`, {

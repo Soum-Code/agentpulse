@@ -10,7 +10,8 @@ import {
   AlertTriangle, Flame, ArrowRight, Play, Pause, SkipForward, SkipBack,
   Sparkles, Compass, Search, Terminal, Zap, Bug, Clock,
   Filter, Command, Lock, Server, Check, X, Layers, RefreshCw, Eye,
-  Database, FlaskConical, PlusCircle, BookmarkCheck, ArrowUpRight, Route, Wrench
+  Database, FlaskConical, PlusCircle, BookmarkCheck, ArrowUpRight, Route, Wrench,
+  ChevronRight, ChevronDown, Info
 } from 'lucide-react';
 import { SideRail, type NavPage } from './components/SideRail';
 import {
@@ -22,18 +23,6 @@ import {
 // ─── Types & Enums ─────────────────────────────────────────────────────
 
 type ReasoningStrategy = 'ALL' | 'DIRECT' | 'COT' | 'AOT';
-
-interface IncidentStep {
-  timeOffset: number;
-  timeLabel: string;
-  agent: string;
-  role: string;
-  status: 'healthy' | 'watch' | 'critical';
-  riskScore: number;
-  event: string;
-  evidence?: string;
-  toolUsed?: string;
-}
 
 // ─── Status & Badge Components ─────────────────────────────────────────
 
@@ -262,124 +251,361 @@ function AgentTopologySection({
 
 // ─── 3. Trace Waterfall & Step Timeline ────────────────────────────────
 
-interface WaterfallSpan {
-  id: string;
-  agent: string;
-  role: string;
-  startMs: number;
-  durationMs: number;
-  riskScore: number;
-  status: string;
-  eventType: string;
-  toolUsed?: string;
-  claim?: string;
+interface SpanTreeNode {
+  span: SpanDetail;
+  depth: number;
+  children: SpanTreeNode[];
 }
 
-const SAMPLE_WATERFALL_SPANS: WaterfallSpan[] = [
-  { id: 'sp-01', agent: 'researcher', role: 'Query Planner', startMs: 0, durationMs: 42, riskScore: 0.05, status: 'success', eventType: 'agent_start' },
-  { id: 'sp-02', agent: 'retriever', role: 'Paper Indexer', startMs: 44, durationMs: 110, riskScore: 0.08, status: 'success', eventType: 'tool_call', toolUsed: 'academic_search_api' },
-  { id: 'sp-03', agent: 'verifier', role: 'Claim Verifier', startMs: 156, durationMs: 88, riskScore: 0.92, status: 'error', eventType: 'llm_generation', claim: 'Zhang et al. (2024) proven that 300,000 customers experienced quantum synchronization.' },
-  { id: 'sp-04', agent: 'analyst', role: 'Synthesis Engine', startMs: 246, durationMs: 140, riskScore: 0.98, status: 'error', eventType: 'agent_end' },
-  { id: 'sp-05', agent: 'writer', role: 'Report Author', startMs: 388, durationMs: 95, riskScore: 0.95, status: 'error', eventType: 'agent_end' },
-];
+function buildSpanTree(spans: SpanDetail[]): SpanTreeNode[] {
+  const spanIdMap = new Set(spans.map((s) => s.span_id));
+  const childrenMap = new Map<string, SpanDetail[]>();
+  const rootSpans: SpanDetail[] = [];
+
+  for (const span of spans) {
+    const pId = span.parent_span_id;
+    const isRoot = !pId || pId === '0000000000000000' || !spanIdMap.has(pId);
+    if (isRoot) {
+      rootSpans.push(span);
+    } else {
+      const list = childrenMap.get(pId) || [];
+      list.push(span);
+      childrenMap.set(pId, list);
+    }
+  }
+
+  // Fallback: if somehow no root was identified but spans exist, treat all as top-level
+  if (rootSpans.length === 0 && spans.length > 0) {
+    return spans.map((s) => ({ span: s, depth: 0, children: [] }));
+  }
+
+  function attachChildren(span: SpanDetail, depth: number): SpanTreeNode {
+    const children = childrenMap.get(span.span_id) || [];
+    return {
+      span,
+      depth,
+      children: children.map((c) => attachChildren(c, depth + 1)),
+    };
+  }
+
+  return rootSpans.map((r) => attachChildren(r, 0));
+}
+
+function SpanTreeView({
+  spans,
+  selectedSpanId,
+  onSelectSpan,
+  totalDurationMs,
+  minStartTime,
+}: {
+  spans: SpanDetail[];
+  selectedSpanId?: string | null;
+  onSelectSpan: (span: SpanDetail) => void;
+  totalDurationMs: number;
+  minStartTime: number;
+}) {
+  const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
+
+  const toggleCollapse = (spanId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setCollapsedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(spanId)) next.delete(spanId);
+      else next.add(spanId);
+      return next;
+    });
+  };
+
+  const tree = useMemo(() => buildSpanTree(spans), [spans]);
+
+  const visibleNodes = useMemo(() => {
+    const result: SpanTreeNode[] = [];
+    function walk(node: SpanTreeNode) {
+      result.push(node);
+      if (!collapsedIds.has(node.span.span_id)) {
+        for (const child of node.children) {
+          walk(child);
+        }
+      }
+    }
+    for (const root of tree) {
+      walk(root);
+    }
+    return result;
+  }, [tree, collapsedIds]);
+
+  return (
+    <div className="space-y-1">
+      {visibleNodes.map(({ span, depth, children }) => {
+        const isSelected = selectedSpanId === span.span_id;
+        const hasChildren = children.length > 0;
+        const isCollapsed = collapsedIds.has(span.span_id);
+
+        // Compute inline timeline bar
+        const spanStart = span.start_time ? new Date(span.start_time).getTime() : minStartTime;
+        const offsetMs = Math.max(0, spanStart - minStartTime);
+        const latMs = span.latency_ms ?? 0;
+        const leftPct = Math.min(100, Math.max(0, (offsetMs / totalDurationMs) * 100));
+        const widthPct = Math.min(100 - leftPct, Math.max(3, (latMs / totalDurationMs) * 100));
+
+        const riskScore = span.evaluation?.overall_risk_score;
+        const barTone = riskScore !== null && riskScore !== undefined ? riskTone(riskScore) : 'ok';
+        const barColor = barTone === 'bad' ? 'bg-state-bad' : barTone === 'warn' ? 'bg-state-warn' : 'bg-state-ok';
+
+        const isTool = Boolean(span.tool_name || span.span_kind === 'TOOL');
+        const isLlm = span.event_type === 'llm_generation' || Boolean(span.model);
+
+        return (
+          <button
+            key={span.span_id}
+            onClick={() => onSelectSpan(span)}
+            aria-selected={isSelected}
+            className={cx(
+              'w-full tile p-2.5 text-left cursor-pointer transition-all duration-150 relative',
+              isSelected ? 'tile-active bracket-on' : 'tile-hover',
+            )}
+            style={{ paddingLeft: `${Math.max(10, depth * 18 + 10)}px` }}
+          >
+            <div className="flex items-center justify-between gap-3 mb-2">
+              <div className="flex items-center gap-2 min-w-0">
+                {/* Expand / Collapse Chevron */}
+                {hasChildren ? (
+                  <span
+                    onClick={(e) => toggleCollapse(span.span_id, e)}
+                    role="button"
+                    aria-expanded={!isCollapsed}
+                    aria-label={isCollapsed ? 'Expand child spans' : 'Collapse child spans'}
+                    className="p-0.5 rounded text-ink-faint hover:text-ink hover:bg-surface-3 transition-colors"
+                  >
+                    {isCollapsed ? (
+                      <ChevronRight className="w-3.5 h-3.5" aria-hidden="true" />
+                    ) : (
+                      <ChevronDown className="w-3.5 h-3.5" aria-hidden="true" />
+                    )}
+                  </span>
+                ) : (
+                  <span className="w-3.5 h-3.5 shrink-0 opacity-0" aria-hidden="true" />
+                )}
+
+                {/* Span Type Icon */}
+                <span className="shrink-0 text-ink-faint">
+                  {isTool ? (
+                    <Wrench className="w-3.5 h-3.5 text-ink-faint" aria-hidden="true" />
+                  ) : isLlm ? (
+                    <Cpu className="w-3.5 h-3.5 text-ink-faint" aria-hidden="true" />
+                  ) : (
+                    <GitFork className="w-3.5 h-3.5 text-ink-faint" aria-hidden="true" />
+                  )}
+                </span>
+
+                {/* Agent & Span identifiers */}
+                <span className="font-mono text-xs font-semibold text-ink capitalize truncate">
+                  @{span.agent_id}
+                </span>
+
+                {span.agent_role && (
+                  <span className="text-2xs font-mono text-ink-faint truncate hidden sm:inline">
+                    {span.agent_role}
+                  </span>
+                )}
+
+                {span.tool_name && (
+                  <span className="inline-flex items-center gap-1 shrink-0 px-1.5 py-px rounded border border-line bg-surface-3 text-ink-dim text-2xs font-mono">
+                    <Wrench className="w-2.5 h-2.5" aria-hidden="true" />
+                    {span.tool_name}
+                  </span>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2.5 shrink-0">
+                <span className="font-mono text-2xs tnum text-ink-faint">
+                  {span.latency_ms !== null ? `${span.latency_ms.toFixed(1)}ms` : '—'}
+                </span>
+                <RiskScorePill score={riskScore} />
+              </div>
+            </div>
+
+            {/* Inline Relative Duration Bar */}
+            <div className="w-full h-1.5 rounded-full bg-surface-3 relative overflow-hidden">
+              <div
+                className={cx('absolute top-0 bottom-0 rounded-full', barColor)}
+                style={{ left: `${leftPct}%`, width: `${widthPct}%` }}
+              />
+            </div>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
 
 function TraceWaterfallSection({
-  selectedSpanId, onSelectSpan
+  traces,
+  selectedTraceId,
+  onSelectTraceId,
+  spans,
+  selectedSpanId,
+  onSelectSpan,
+  isLoading,
+  error,
 }: {
-  selectedSpanId?: string;
-  onSelectSpan: (span: WaterfallSpan) => void;
+  traces: TraceListItem[];
+  selectedTraceId: string | null;
+  onSelectTraceId: (id: string) => void;
+  spans: SpanDetail[];
+  selectedSpanId?: string | null;
+  onSelectSpan: (span: SpanDetail) => void;
+  isLoading: boolean;
+  error: string | null;
 }) {
-  const totalDuration = 490;
+  // Compute trace timeline metrics
+  const { totalDurationMs, minStartTime } = useMemo(() => {
+    if (spans.length === 0) return { totalDurationMs: 1, minStartTime: 0 };
+    let minStart = Infinity;
+    let maxEnd = -Infinity;
+    let sumLatency = 0;
+
+    for (const s of spans) {
+      const start = s.start_time ? new Date(s.start_time).getTime() : 0;
+      const lat = s.latency_ms ?? 0;
+      sumLatency += lat;
+      if (start > 0) {
+        minStart = Math.min(minStart, start);
+        maxEnd = Math.max(maxEnd, start + lat);
+      }
+    }
+
+    const calculated = maxEnd > minStart ? maxEnd - minStart : sumLatency || 1;
+    return {
+      totalDurationMs: Math.max(calculated, 1),
+      minStartTime: minStart === Infinity ? 0 : minStart,
+    };
+  }, [spans]);
 
   return (
     <Tile className="p-4" hover={false} index={5}>
-      <div className="flex items-center justify-between gap-4 pb-2.5 mb-2.5 border-b border-line">
-        <div>
-          <h2 className="text-sm font-semibold text-ink tracking-tight">Active Trace Waterfall</h2>
-          <p className="text-2xs font-mono text-ink-faint mt-0.5">
-            TRACE <span className="text-signal">tr_e2e_research_48821</span>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 mb-3 border-b border-line">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <h2 className="text-sm font-semibold text-ink tracking-tight">Active Trace Waterfall</h2>
+            {isLoading && (
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-2xs font-mono text-signal bg-signal/10 border border-signal/25">
+                <RefreshCw className="w-2.5 h-2.5 animate-spin" aria-hidden="true" />
+                Loading
+              </span>
+            )}
+          </div>
+          <p className="text-2xs font-mono text-ink-faint mt-0.5 truncate">
+            TRACE REPOSITORY &bull; {traces.length} RECORDED SESSIONS
           </p>
         </div>
-        <div className="text-right shrink-0">
-          <Eyebrow>Total duration</Eyebrow>
-          <div className="font-mono text-xs font-semibold tnum text-ink">483ms</div>
+
+        <div className="flex items-center gap-3 shrink-0">
+          {/* Real Trace Picker Dropdown */}
+          <div className="flex items-center gap-1.5">
+            <Eyebrow className="hidden md:inline">Trace</Eyebrow>
+            <select
+              value={selectedTraceId || ''}
+              onChange={(e) => onSelectTraceId(e.target.value)}
+              aria-label="Select active trace"
+              className="bg-surface-2 border border-line hover:border-line-strong text-ink font-mono text-xs rounded px-2.5 py-1 outline-none focus:border-signal/50 transition-colors cursor-pointer max-w-[200px] truncate"
+            >
+              {traces.length === 0 ? (
+                <option value="">No traces available</option>
+              ) : (
+                traces.map((t) => (
+                  <option key={t.trace_id} value={t.trace_id}>
+                    {t.trace_id.slice(0, 16)}… ({t.total_spans} spans)
+                  </option>
+                ))
+              )}
+            </select>
+          </div>
+
+          <div className="text-right pl-3 border-l border-line">
+            <Eyebrow>Total Duration</Eyebrow>
+            <div className="font-mono text-xs font-semibold tnum text-ink">
+              {spans.length > 0 ? `${totalDurationMs.toFixed(1)}ms` : '—'}
+            </div>
+          </div>
         </div>
       </div>
 
-      <div className="space-y-1.5">
-        {SAMPLE_WATERFALL_SPANS.map((span) => {
-          const leftPercent = (span.startMs / totalDuration) * 100;
-          const widthPercent = Math.max((span.durationMs / totalDuration) * 100, 3);
-          const isSelected = selectedSpanId === span.id;
-          const barColor =
-            span.riskScore > 0.7 ? 'bg-state-bad'
-              : span.riskScore > 0.4 ? 'bg-state-warn'
-                : 'bg-state-ok';
-
-          return (
-            <button
-              key={span.id}
-              onClick={() => onSelectSpan(span)}
-              aria-pressed={isSelected}
-              className={cx(
-                'w-full tile p-2.5 text-left cursor-pointer',
-                isSelected ? 'tile-active' : 'tile-hover',
-              )}
-            >
-              <div className="flex items-center justify-between gap-3 mb-2">
-                <div className="flex items-center gap-2 min-w-0">
-                  <span className="font-mono text-xs font-semibold text-ink capitalize truncate">
-                    @{span.agent}
-                  </span>
-                  <span className="text-2xs font-mono text-ink-faint truncate">{span.role}</span>
-                  {span.toolUsed && (
-                    <span className="inline-flex items-center gap-1 shrink-0 px-1.5 py-px rounded border border-signal/25 bg-signal/10 text-signal text-2xs font-mono">
-                      <Wrench className="w-2.5 h-2.5" aria-hidden="true" />
-                      {span.toolUsed}
-                    </span>
-                  )}
-                </div>
-                <div className="flex items-center gap-2.5 shrink-0">
-                  <span className="font-mono text-2xs tnum text-ink-faint">{span.durationMs}ms</span>
-                  <RiskScorePill score={span.riskScore} />
-                </div>
-              </div>
-
-              {/* Timeline bar positioned along the trace's total duration */}
-              <div className="w-full h-1.5 rounded-full bg-surface-3 relative overflow-hidden">
-                <div
-                  className={cx('absolute top-0 bottom-0 rounded-full', barColor)}
-                  style={{ left: `${leftPercent}%`, width: `${widthPercent}%` }}
-                />
-              </div>
-            </button>
-          );
-        })}
-      </div>
+      {/* State rendering: Loading / Error / Empty / Tree */}
+      {isLoading ? (
+        <div className="py-12 px-4 flex flex-col items-center justify-center space-y-3">
+          <RefreshCw className="w-6 h-6 text-signal animate-spin" aria-hidden="true" />
+          <p className="text-xs font-mono text-ink-dim">Retrieving trace telemetry...</p>
+        </div>
+      ) : error ? (
+        <div className="p-6 text-center space-y-2 border border-state-bad/25 bg-state-bad/[0.04] rounded">
+          <p className="text-xs font-mono font-semibold text-state-bad">Failed to load trace details</p>
+          <p className="text-2xs font-mono text-ink-faint">{error}</p>
+        </div>
+      ) : traces.length === 0 ? (
+        <EmptyState
+          icon={<Route className="w-7 h-7" />}
+          title="No traces recorded"
+          hint="Send telemetry through the SDK or trigger a scenario in Telemetry Lab."
+        />
+      ) : spans.length === 0 ? (
+        <EmptyState
+          icon={<Route className="w-7 h-7" />}
+          title="No spans in selected trace"
+          hint={selectedTraceId ? `Trace ${selectedTraceId} contains no recorded spans.` : 'Select a trace to inspect.'}
+        />
+      ) : (
+        <SpanTreeView
+          spans={spans}
+          selectedSpanId={selectedSpanId}
+          onSelectSpan={onSelectSpan}
+          totalDurationMs={totalDurationMs}
+          minStartTime={minStartTime}
+        />
+      )}
     </Tile>
   );
 }
 
 // ─── 4. Evidence Inspector Panel (Side-by-Side Dual Pane) ──────────────
 
-function EvidenceInspectorPanel({ selectedSpan }: { selectedSpan?: WaterfallSpan | null }) {
-  const [activeTab, setActiveTab] = useState<'evidence' | 'tools' | 'eval' | 'drift' | 'meta'>('evidence');
+function EvidenceInspectorPanel({
+  selectedSpan,
+  agents,
+  isLoading,
+}: {
+  selectedSpan?: SpanDetail | null;
+  agents: Agent[];
+  isLoading: boolean;
+}) {
+  const [activeTab, setActiveTab] = useState<'evidence' | 'tools' | 'eval' | 'drift'>('evidence');
+
+  const agentData = useMemo(() => {
+    if (!selectedSpan) return null;
+    return agents.find((a) => a.agent_id === selectedSpan.agent_id) || null;
+  }, [selectedSpan, agents]);
 
   return (
-    <Tile className="p-4 flex flex-col h-full space-y-4" hover={false} index={6}>
+    <Tile className="p-4 flex flex-col h-full space-y-3.5" hover={false} index={6}>
       <div>
         <div className="flex items-center justify-between gap-3">
           <h2 className="text-sm font-semibold text-ink tracking-tight">Evidence &amp; Grounding Inspector</h2>
-          <Eyebrow>{selectedSpan?.id || 'sp-03'}</Eyebrow>
+          {selectedSpan && (
+            <span className="px-1.5 py-0.5 rounded border border-line bg-surface-3 text-ink-dim font-mono text-2xs">
+              {selectedSpan.span_id}
+            </span>
+          )}
         </div>
-        <p className="text-xs text-ink-dim mt-0.5">Verifies model claims against source premise documents</p>
+        <p className="text-xs text-ink-dim mt-0.5">
+          Span-level evaluation cascade, tool arguments, and telemetry
+        </p>
       </div>
 
-      {/* Tabs */}
+      {/* Navigation Tabs */}
       <div className="flex items-center border-b border-line text-xs font-mono">
         <button
           onClick={() => setActiveTab('evidence')}
-          className={`px-3 py-1.5 border-b-2 font-medium transition-colors ${
+          className={`px-3 py-1.5 border-b-2 font-medium transition-colors cursor-pointer ${
             activeTab === 'evidence' ? 'border-signal text-signal' : 'border-transparent text-ink-faint hover:text-ink-dim'
           }`}
         >
@@ -387,7 +613,7 @@ function EvidenceInspectorPanel({ selectedSpan }: { selectedSpan?: WaterfallSpan
         </button>
         <button
           onClick={() => setActiveTab('tools')}
-          className={`px-3 py-1.5 border-b-2 font-medium transition-colors ${
+          className={`px-3 py-1.5 border-b-2 font-medium transition-colors cursor-pointer ${
             activeTab === 'tools' ? 'border-signal text-signal' : 'border-transparent text-ink-faint hover:text-ink-dim'
           }`}
         >
@@ -395,7 +621,7 @@ function EvidenceInspectorPanel({ selectedSpan }: { selectedSpan?: WaterfallSpan
         </button>
         <button
           onClick={() => setActiveTab('eval')}
-          className={`px-3 py-1.5 border-b-2 font-medium transition-colors ${
+          className={`px-3 py-1.5 border-b-2 font-medium transition-colors cursor-pointer ${
             activeTab === 'eval' ? 'border-signal text-signal' : 'border-transparent text-ink-faint hover:text-ink-dim'
           }`}
         >
@@ -403,7 +629,7 @@ function EvidenceInspectorPanel({ selectedSpan }: { selectedSpan?: WaterfallSpan
         </button>
         <button
           onClick={() => setActiveTab('drift')}
-          className={`px-3 py-1.5 border-b-2 font-medium transition-colors ${
+          className={`px-3 py-1.5 border-b-2 font-medium transition-colors cursor-pointer ${
             activeTab === 'drift' ? 'border-signal text-signal' : 'border-transparent text-ink-faint hover:text-ink-dim'
           }`}
         >
@@ -411,47 +637,184 @@ function EvidenceInspectorPanel({ selectedSpan }: { selectedSpan?: WaterfallSpan
         </button>
       </div>
 
-      {/* Tab Content */}
-      <div className="flex-1 overflow-y-auto space-y-3 text-xs">
-        {activeTab === 'evidence' ? (
-          <div className="space-y-3">
-            <div className="tile p-3 space-y-1">
-              <span className="text-[10px] font-mono text-slate-500 uppercase font-bold">Source Premise Context</span>
-              <p className="text-slate-300 font-sans text-xs leading-relaxed">
-                "The database query executed in 45ms and returned 3 verified customer profile records."
+      {/* Tab Content Body with strict null safety */}
+      <div className="flex-1 overflow-y-auto space-y-3 text-xs font-mono">
+        {isLoading ? (
+          <div className="py-12 px-4 flex flex-col items-center justify-center text-ink-faint space-y-2">
+            <RefreshCw className="w-5 h-5 animate-spin text-signal" aria-hidden="true" />
+            <p className="text-2xs">Loading span evidence...</p>
+          </div>
+        ) : !selectedSpan ? (
+          <div className="py-12 px-4 text-center text-ink-faint">
+            <p className="text-xs">No span selected</p>
+            <p className="text-2xs mt-1">Select a span from the waterfall to inspect its evaluated evidence.</p>
+          </div>
+        ) : activeTab === 'evidence' ? (
+          <div className="space-y-3 font-sans">
+            {/* Privacy capture state notice */}
+            <div className="tile p-3 bg-surface-2 border-line space-y-1.5">
+              <div className="flex items-center gap-1.5 text-2xs font-mono uppercase tracking-wider text-ink-faint font-semibold">
+                <Lock className="w-3 h-3 text-ink-faint" aria-hidden="true" />
+                <span>Payload Capture Notice</span>
+              </div>
+              <p className="text-ink-dim text-xs leading-relaxed">
+                Raw input/output capture is off for this deployment (
+                <code className="font-mono text-2xs text-ink">AGENTPULSE_CAPTURE_INPUTS=false</code>).
+                Payload contents are protected by default privacy configuration.
               </p>
             </div>
 
-            <div className="p-3 rounded bg-rose-950/20 border border-rose-500/30 space-y-1">
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-mono text-rose-400 uppercase font-bold">Agent Asserted Claim</span>
-                <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-rose-500/20 text-rose-300 font-bold">UNGROUNDED</span>
+            {/* Error message conditional render */}
+            {selectedSpan.error_message && (
+              <div className="tile p-3 border-state-bad/30 bg-state-bad/[0.06] space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-2xs font-mono text-state-bad uppercase font-bold">Execution Error</span>
+                  <StatusBadge status="critical" />
+                </div>
+                <p className="text-state-bad font-mono text-xs leading-relaxed">
+                  {selectedSpan.error_message}
+                </p>
               </div>
-              <p className="text-rose-200 font-sans text-xs leading-relaxed">
-                "Zhang et al. (2024) proven that 300,000 customers experienced instant quantum telemetry synchronization."
-              </p>
+            )}
+
+            {/* Span metadata summary */}
+            <div className="tile p-3 space-y-2 font-mono text-xs">
+              <Eyebrow>Execution Overview</Eyebrow>
+              <div className="flex justify-between items-center text-ink-dim">
+                <span>Status</span>
+                <StatusBadge status={selectedSpan.status} />
+              </div>
+              <div className="flex justify-between items-center text-ink-dim">
+                <span>Event Type</span>
+                <span className="text-ink">{selectedSpan.event_type}</span>
+              </div>
+              {selectedSpan.latency_ms !== null && (
+                <div className="flex justify-between items-center text-ink-dim">
+                  <span>Latency</span>
+                  <span className="tnum text-ink font-semibold">{selectedSpan.latency_ms.toFixed(1)}ms</span>
+                </div>
+              )}
+              {selectedSpan.model && (
+                <div className="flex justify-between items-center text-ink-dim">
+                  <span>Model</span>
+                  <span className="text-ink">{selectedSpan.model}</span>
+                </div>
+              )}
+              {(selectedSpan.tokens_in !== null || selectedSpan.tokens_out !== null) && (
+                <div className="flex justify-between items-center text-ink-dim">
+                  <span>Tokens (In / Out)</span>
+                  <span className="tnum text-ink">
+                    {selectedSpan.tokens_in !== null ? selectedSpan.tokens_in : '—'} /{' '}
+                    {selectedSpan.tokens_out !== null ? selectedSpan.tokens_out : '—'}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
         ) : activeTab === 'tools' ? (
-          <div className="tile p-3 space-y-2 font-mono text-xs">
-            <div className="text-ink-dim">Tool name: <span className="text-signal font-semibold">support_kb_search</span></div>
-            <div className="text-ink-dim">
-              Claimed count: <span className="text-state-bad font-semibold tnum">14</span>
-              {' · '}Actual returned: <span className="text-state-ok font-semibold tnum">3</span>
+          selectedSpan.tool_name ? (
+            <div className="tile p-3 space-y-2.5 font-mono text-xs">
+              <div className="flex justify-between items-center">
+                <span className="text-ink-dim">Tool Name</span>
+                <span className="text-signal font-semibold">{selectedSpan.tool_name}</span>
+              </div>
+              {selectedSpan.tool_args && (
+                <div>
+                  <Eyebrow>Arguments</Eyebrow>
+                  <pre className="mt-1 p-2 rounded bg-surface border border-line text-2xs text-ink-dim overflow-x-auto whitespace-pre-wrap">
+                    {selectedSpan.tool_args}
+                  </pre>
+                </div>
+              )}
+              {selectedSpan.tool_result_summary && (
+                <div>
+                  <Eyebrow>Result Summary</Eyebrow>
+                  <p className="mt-1 text-xs text-ink-dim leading-relaxed">
+                    {selectedSpan.tool_result_summary}
+                  </p>
+                </div>
+              )}
             </div>
-            <div className="text-slate-500 text-[11px]">Verdict: Deterministic tool count mismatch detected.</div>
-          </div>
+          ) : (
+            <div className="tile p-4 text-center text-xs font-mono text-ink-faint">
+              No external tool invocation recorded for this span.
+            </div>
+          )
         ) : activeTab === 'eval' ? (
-          <div className="tile p-3 space-y-2 font-mono text-xs">
-            <div>MiniLM Similarity: <span className="text-slate-200">0.241</span> (Threshold: 0.70)</div>
-            <div>DeBERTa Contradiction: <span className="text-rose-400 font-bold">0.985</span></div>
-            <div>Composite Risk: <span className="text-rose-400 font-bold">0.920 (HIGH_RISK)</span></div>
-          </div>
+          selectedSpan.evaluation ? (
+            <div className="tile p-3 space-y-2.5 font-mono text-xs">
+              {selectedSpan.evaluation.evaluation_stage && (
+                <div className="flex justify-between items-center">
+                  <span className="text-ink-dim">Evaluation Stage</span>
+                  <span className="text-ink font-semibold">{selectedSpan.evaluation.evaluation_stage}</span>
+                </div>
+              )}
+              <div className="flex justify-between items-center">
+                <span className="text-ink-dim">Grounding Score</span>
+                <span className="tnum font-semibold text-ink">
+                  {selectedSpan.evaluation.grounding_score !== null
+                    ? selectedSpan.evaluation.grounding_score.toFixed(4)
+                    : '—'}
+                </span>
+              </div>
+              {selectedSpan.evaluation.tool_claim_score !== null && (
+                <div className="flex justify-between items-center">
+                  <span className="text-ink-dim">Tool Claim Score</span>
+                  <span className="tnum font-semibold text-ink">
+                    {selectedSpan.evaluation.tool_claim_score.toFixed(4)}
+                  </span>
+                </div>
+              )}
+              <div className="flex justify-between items-center pt-2 border-t border-line">
+                <span className="text-ink-dim">Overall Risk</span>
+                <RiskScorePill score={selectedSpan.evaluation.overall_risk_score} />
+              </div>
+              {selectedSpan.evaluation.label && (
+                <div className="flex justify-between items-center">
+                  <span className="text-ink-dim">Classification Label</span>
+                  <span className="px-1.5 py-0.5 rounded text-2xs font-semibold uppercase bg-surface-3 text-ink">
+                    {selectedSpan.evaluation.label}
+                  </span>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="tile p-4 text-center text-xs font-mono text-ink-faint">
+              No evaluation record associated with this span.
+            </div>
+          )
         ) : (
-          <div className="tile p-3 space-y-2 font-mono text-xs">
-            <div>Centroid Distance: <span className="text-amber-400 font-bold">0.420</span></div>
-            <div>Agent Stability Index (ASI): <span className="text-amber-400 font-bold">48/100</span></div>
-          </div>
+          agentData ? (
+            <div className="tile p-3 space-y-2 font-mono text-xs">
+              <div className="flex justify-between items-center">
+                <span className="text-ink-dim">Reporting Agent</span>
+                <span className="text-signal font-semibold capitalize">@{agentData.agent_id}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-ink-dim">Agent Stability Index (ASI)</span>
+                <span
+                  className={cx(
+                    'font-semibold tnum',
+                    agentData.current_asi !== null ? toneText(asiTone(agentData.current_asi)) : 'text-ink-faint',
+                  )}
+                >
+                  {agentData.current_asi !== null ? `${agentData.current_asi.toFixed(1)}/100` : '—'}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-ink-dim">Fleet Avg Risk</span>
+                <RiskScorePill score={agentData.avg_risk_score} />
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-ink-dim">Total Errors</span>
+                <span className="tnum font-semibold text-ink">{agentData.total_errors}</span>
+              </div>
+            </div>
+          ) : (
+            <div className="tile p-4 text-center text-xs font-mono text-ink-faint">
+              Agent telemetry unavailable for @{selectedSpan.agent_id}.
+            </div>
+          )
         )}
       </div>
     </Tile>
@@ -460,26 +823,169 @@ function EvidenceInspectorPanel({ selectedSpan }: { selectedSpan?: WaterfallSpan
 
 // ─── 5. Incident Inbox & Trace Curation Modal ──────────────────────────
 
+// ─── 5. Incident Inbox & Trace Curation Modal ──────────────────────────
+
 function IncidentInboxView({
-  alerts, onCurateTrace
+  alerts,
+  onCurateTrace,
+  onAcknowledgeAlert,
+  acknowledgingAlertIds,
+  actionError,
+  actionSuccess,
+  onDismissError,
 }: {
   alerts: AlertItem[];
   onCurateTrace: (al: AlertItem) => void;
+  onAcknowledgeAlert: (alertId: number) => Promise<void>;
+  acknowledgingAlertIds: Set<number>;
+  actionError: string | null;
+  actionSuccess: string | null;
+  onDismissError: () => void;
 }) {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'OPEN' | 'ACKNOWLEDGED'>('ALL');
+  const [severityFilter, setSeverityFilter] = useState<'ALL' | 'CRITICAL' | 'WARN'>('ALL');
+
+  const filteredAlerts = useMemo(() => {
+    return alerts.filter((al) => {
+      // Search filter
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase().trim();
+        const matchesMsg = al.message.toLowerCase().includes(q);
+        const matchesType = al.alert_type.toLowerCase().includes(q);
+        const matchesAgent = al.agent_id ? al.agent_id.toLowerCase().includes(q) : false;
+        const matchesTrace = al.trace_id ? al.trace_id.toLowerCase().includes(q) : false;
+        if (!matchesMsg && !matchesType && !matchesAgent && !matchesTrace) return false;
+      }
+
+      // Status filter
+      if (statusFilter === 'OPEN' && al.acknowledged) return false;
+      if (statusFilter === 'ACKNOWLEDGED' && !al.acknowledged) return false;
+
+      // Severity filter
+      const sev = al.severity.toUpperCase();
+      if (severityFilter === 'CRITICAL' && sev !== 'HIGH' && sev !== 'CRITICAL') return false;
+      if (severityFilter === 'WARN' && sev !== 'WARNING' && sev !== 'WARN') return false;
+
+      return true;
+    });
+  }, [alerts, searchQuery, statusFilter, severityFilter]);
+
+  const openCount = alerts.filter((a) => !a.acknowledged).length;
+
   return (
-    <div>
+    <div className="space-y-4">
       <SectionHead
         title="Incident Inbox"
-        sub="Storm-suppressed anomalies, grounding contradictions and tool mismatches"
-        right={<Eyebrow>{alerts.length} alerts</Eyebrow>}
+        sub="Storm-suppressed anomalies, grounding contradictions and evaluated tool mismatches"
+        right={
+          <div className="flex items-center gap-2">
+            <Eyebrow>{openCount} open</Eyebrow>
+            <span className="text-ink-faint">&bull;</span>
+            <Eyebrow>{alerts.length} total</Eyebrow>
+          </div>
+        }
       />
 
-      <Tile className="overflow-hidden" hover={false} index={0}>
-        {alerts.length === 0 ? (
+      {/* Action Notification Banners */}
+      {actionError && (
+        <div className="tile p-3 border-state-bad/40 bg-state-bad/[0.08] flex items-center justify-between gap-3 text-xs font-mono">
+          <div className="flex items-center gap-2 text-state-bad">
+            <AlertTriangle className="w-4 h-4 shrink-0" aria-hidden="true" />
+            <span>{actionError}</span>
+          </div>
+          <button
+            onClick={onDismissError}
+            aria-label="Dismiss error"
+            className="text-state-bad/70 hover:text-state-bad cursor-pointer"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
+      {actionSuccess && (
+        <div className="tile p-3 border-state-ok/40 bg-state-ok/[0.08] flex items-center gap-2 text-xs font-mono text-state-ok">
+          <CheckCircle2 className="w-4 h-4 shrink-0" aria-hidden="true" />
+          <span>{actionSuccess}</span>
+        </div>
+      )}
+
+      <Tile className="p-3 space-y-3" hover={false} index={0}>
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+          {/* Search bar */}
+          <div className="relative flex-1 max-w-md">
+            <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-ink-faint pointer-events-none" aria-hidden="true" />
+            <input
+              type="text"
+              placeholder="Search message, alert type, agent, trace ID..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              aria-label="Filter incidents"
+              className="w-full pl-8.5 pr-8 py-1.5 bg-surface-2 border border-line focus:border-signal/50 rounded font-mono text-xs text-ink placeholder:text-ink-faint outline-none transition-colors"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                aria-label="Clear search"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-ink-faint hover:text-ink text-xs font-mono cursor-pointer"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            )}
+          </div>
+
+          {/* Status & Severity Filter Pills */}
+          <div className="flex flex-wrap items-center gap-2 text-2xs font-mono">
+            <span className="text-ink-faint uppercase text-2xs">Status:</span>
+            <div className="inline-flex rounded border border-line/60 overflow-hidden">
+              {(['ALL', 'OPEN', 'ACKNOWLEDGED'] as const).map((s) => (
+                <button
+                  key={s}
+                  onClick={() => setStatusFilter(s)}
+                  className={cx(
+                    'px-2.5 py-1 transition-colors cursor-pointer',
+                    statusFilter === s
+                      ? 'bg-surface-3 text-ink font-semibold'
+                      : 'bg-surface text-ink-faint hover:text-ink'
+                  )}
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+
+            <span className="text-ink-faint uppercase text-2xs ml-2">Severity:</span>
+            <div className="inline-flex rounded border border-line/60 overflow-hidden">
+              {(['ALL', 'CRITICAL', 'WARN'] as const).map((sev) => (
+                <button
+                  key={sev}
+                  onClick={() => setSeverityFilter(sev)}
+                  className={cx(
+                    'px-2.5 py-1 transition-colors cursor-pointer',
+                    severityFilter === sev
+                      ? 'bg-surface-3 text-ink font-semibold'
+                      : 'bg-surface text-ink-faint hover:text-ink'
+                  )}
+                >
+                  {sev}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </Tile>
+
+      <Tile className="overflow-hidden" hover={false} index={1}>
+        {filteredAlerts.length === 0 ? (
           <EmptyState
             icon={<CheckCircle2 className="w-7 h-7" />}
-            title="No active incidents"
-            hint="Alerts raised by the evaluator appear here for triage and can be curated into the evaluation dataset."
+            title="No matching incidents"
+            hint={
+              alerts.length === 0
+                ? 'No alerts raised by the evaluator. Trigger an anomalous run in Telemetry Lab to generate incidents.'
+                : 'No incidents match the active search or filter criteria.'
+            }
           />
         ) : (
           <div className="overflow-x-auto">
@@ -487,45 +993,122 @@ function IncidentInboxView({
               <thead>
                 <tr className="border-b border-line bg-surface">
                   <th className="px-4 py-2.5 font-normal"><Eyebrow>Severity</Eyebrow></th>
+                  <th className="px-4 py-2.5 font-normal"><Eyebrow>Status</Eyebrow></th>
                   <th className="px-4 py-2.5 font-normal"><Eyebrow>Type</Eyebrow></th>
                   <th className="px-4 py-2.5 font-normal"><Eyebrow>Agent</Eyebrow></th>
                   <th className="px-4 py-2.5 font-normal"><Eyebrow>Trace</Eyebrow></th>
-                  <th className="px-4 py-2.5 font-normal"><Eyebrow>Message</Eyebrow></th>
+                  <th className="px-4 py-2.5 font-normal"><Eyebrow>Observed Anomaly</Eyebrow></th>
+                  <th className="px-4 py-2.5 font-normal"><Eyebrow>Timestamp</Eyebrow></th>
                   <th className="px-4 py-2.5 font-normal text-right"><Eyebrow>Actions</Eyebrow></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-line/60">
-                {alerts.map((al) => (
-                  <tr key={al.id} className="hover:bg-surface-3/60 transition-colors">
-                    <td className="px-4 py-2.5">
-                      <span className={cx(
-                        'inline-flex items-center gap-1.5 px-2 py-0.5 rounded border text-2xs font-mono font-medium',
-                        al.severity === 'HIGH'
-                          ? 'bg-state-bad/10 text-state-bad border-state-bad/25'
-                          : 'bg-state-warn/10 text-state-warn border-state-warn/25',
-                      )}>
-                        <span className={cx(
-                          'w-1.5 h-1.5 rounded-full',
-                          al.severity === 'HIGH' ? 'bg-state-bad' : 'bg-state-warn',
-                        )} aria-hidden="true" />
-                        {al.severity}
-                      </span>
-                    </td>
-                    <td className="px-4 py-2.5 font-mono text-ink">{al.alert_type}</td>
-                    <td className="px-4 py-2.5 font-mono text-signal capitalize">@{al.agent_id}</td>
-                    <td className="px-4 py-2.5 font-mono text-ink-faint">{al.trace_id?.slice(0, 12)}…</td>
-                    <td className="px-4 py-2.5 text-ink-dim max-w-md truncate">{al.message}</td>
-                    <td className="px-4 py-2.5 text-right">
-                      <button
-                        onClick={() => onCurateTrace(al)}
-                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded border border-signal/30 bg-signal/10 text-signal hover:bg-signal/20 text-2xs font-mono font-semibold transition-colors cursor-pointer"
-                      >
-                        <BookmarkCheck className="w-3 h-3" aria-hidden="true" />
-                        Curate case
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                {filteredAlerts.map((al) => {
+                  const isHigh = al.severity.toUpperCase() === 'HIGH' || al.severity.toUpperCase() === 'CRITICAL';
+                  const isAcknowledging = acknowledgingAlertIds.has(al.id);
+
+                  return (
+                    <tr key={al.id} className="hover:bg-surface-3/60 transition-colors">
+                      {/* Severity (strict semantic risk colors, never cyan) */}
+                      <td className="px-4 py-2.5">
+                        <span
+                          className={cx(
+                            'inline-flex items-center gap-1.5 px-2 py-0.5 rounded border text-2xs font-mono font-medium',
+                            isHigh
+                              ? 'bg-state-bad/10 text-state-bad border-state-bad/25'
+                              : 'bg-state-warn/10 text-state-warn border-state-warn/25'
+                          )}
+                        >
+                          <span
+                            className={cx(
+                              'w-1.5 h-1.5 rounded-full',
+                              isHigh ? 'bg-state-bad' : 'bg-state-warn'
+                            )}
+                            aria-hidden="true"
+                          />
+                          {al.severity}
+                        </span>
+                      </td>
+
+                      {/* Status (real lifecycle state only: OPEN / ACKNOWLEDGED / RESOLVED) */}
+                      <td className="px-4 py-2.5 font-mono text-2xs">
+                        {al.resolved ? (
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-state-ok bg-state-ok/10 border border-state-ok/25">
+                            RESOLVED
+                          </span>
+                        ) : al.acknowledged ? (
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-ink-faint bg-surface-3 border border-line">
+                            ACKNOWLEDGED
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-state-warn bg-state-warn/10 border border-state-warn/25 font-semibold">
+                            <span className="w-1.5 h-1.5 rounded-full bg-state-warn animate-pulse" aria-hidden="true" />
+                            OPEN
+                          </span>
+                        )}
+                      </td>
+
+                      <td className="px-4 py-2.5 font-mono text-ink">{al.alert_type}</td>
+
+                      <td className="px-4 py-2.5 font-mono text-signal">
+                        {al.agent_id ? `@${al.agent_id}` : '—'}
+                      </td>
+
+                      <td className="px-4 py-2.5 font-mono text-ink-dim">
+                        {al.trace_id ? `${al.trace_id.slice(0, 14)}…` : '—'}
+                      </td>
+
+                      <td className="px-4 py-2.5 text-ink max-w-sm">
+                        <span className="line-clamp-2">{al.message}</span>
+                      </td>
+
+                      <td className="px-4 py-2.5 font-mono tnum text-ink-faint text-2xs">
+                        {new Date(al.created_at).toLocaleString()}
+                      </td>
+
+                      <td className="px-4 py-2.5 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          {/* Acknowledge Action */}
+                          {al.acknowledged ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-1 text-2xs font-mono text-ink-faint">
+                              <Check className="w-3 h-3 text-state-ok" aria-hidden="true" />
+                              Acknowledged
+                            </span>
+                          ) : (
+                            <button
+                              disabled={isAcknowledging}
+                              onClick={() => onAcknowledgeAlert(al.id)}
+                              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded border border-line hover:border-line-strong bg-surface-2 hover:bg-surface-3 text-ink text-2xs font-mono font-medium disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer transition-colors"
+                              title="Acknowledge this incident alert"
+                            >
+                              {isAcknowledging ? (
+                                <>
+                                  <RefreshCw className="w-2.5 h-2.5 animate-spin text-signal" aria-hidden="true" />
+                                  <span>Acknowledging…</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Check className="w-3 h-3 text-state-ok" aria-hidden="true" />
+                                  <span>Acknowledge</span>
+                                </>
+                              )}
+                            </button>
+                          )}
+
+                          {/* Curate Case Action */}
+                          <button
+                            onClick={() => onCurateTrace(al)}
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded border border-signal/30 bg-signal/10 text-signal hover:bg-signal/20 text-2xs font-mono font-semibold transition-colors cursor-pointer"
+                            title="Curate incident telemetry into evaluation dataset"
+                          >
+                            <BookmarkCheck className="w-3 h-3" aria-hidden="true" />
+                            <span>Curate case</span>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -538,29 +1121,38 @@ function IncidentInboxView({
 // ─── 6. Curate Case Modal ──────────────────────────────────────────────
 
 function CurateCaseModal({
-  isOpen, alert, onClose, onSave
+  isOpen,
+  alert,
+  onClose,
+  onSave,
 }: {
   isOpen: boolean;
   alert: AlertItem | null;
   onClose: () => void;
-  onSave: (payload: any) => Promise<void>;
+  onSave: (datasetName: string, payload: any) => Promise<void>;
 }) {
   const [caseId, setCaseId] = useState('');
   const [query, setQuery] = useState('');
   const [claim, setClaim] = useState('');
   const [evidence, setEvidence] = useState('');
   const [classification, setClassification] = useState('CONTRADICTED');
+  const [targetDataset, setTargetDataset] = useState('v1.0_curated');
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
+  const [validationError, setValidationError] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   useEffect(() => {
     if (alert) {
       setCaseId(`curated_${alert.trace_id?.slice(0, 8) || 'trace'}_${Date.now().toString().slice(-4)}`);
-      setQuery('Multi-agent LLM query');
-      setClaim(alert.message);
-      setEvidence('Verified reference premise context');
+      setQuery('Multi-agent query session');
+      setClaim(alert.message || '');
+      setEvidence(alert.details ? JSON.stringify(alert.details) : 'Verified reference premise context');
       setClassification('CONTRADICTED');
-      setNotes(`Curated by operator from Incident #${alert.id} (${alert.alert_type})`);
+      setTargetDataset('v1.0_curated');
+      setNotes(`Curated from incident #${alert.id} (${alert.alert_type})`);
+      setValidationError(null);
+      setSubmitError(null);
     }
   }, [alert]);
 
@@ -568,24 +1160,42 @@ function CurateCaseModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setValidationError(null);
+    setSubmitError(null);
+
+    // Validate only fields actually required by backend CurateCaseRequest:
+    // case_id, input_query, agent_claim
+    if (!caseId.trim()) {
+      setValidationError('Case ID is required.');
+      return;
+    }
+    if (!query.trim()) {
+      setValidationError('Input query is required.');
+      return;
+    }
+    if (!claim.trim()) {
+      setValidationError('Agent claim is required.');
+      return;
+    }
+
     setSaving(true);
     try {
-      await onSave({
-        case_id: caseId,
-        input_query: query,
-        agent_claim: claim,
-        evidence: evidence,
+      await onSave(targetDataset, {
+        case_id: caseId.trim(),
+        input_query: query.trim(),
+        agent_claim: claim.trim(),
+        evidence: evidence.trim() || null,
         expected_classification: classification,
         expected_failure_type: alert.alert_type,
         is_failure: classification !== 'SUPPORTED',
-        trace_id: alert.trace_id,
-        span_id: alert.span_id,
+        trace_id: alert.trace_id || null,
+        span_id: alert.span_id || null,
         domain: 'production_incident',
-        operator_notes: notes,
+        operator_notes: notes.trim() || null,
       });
       onClose();
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      setSubmitError(err?.message || 'Failed to curate case into dataset');
     } finally {
       setSaving(false);
     }
@@ -602,7 +1212,7 @@ function CurateCaseModal({
         aria-modal="true"
         aria-label="Curate incident into dataset"
         onClick={(e) => e.stopPropagation()}
-        className="glass max-w-lg w-full p-6 space-y-4"
+        className="glass max-w-lg w-full p-6 space-y-4 shadow-2xl"
       >
         <div className="flex items-center justify-between gap-3 pb-3 border-b border-line">
           <div className="flex items-center gap-2">
@@ -618,71 +1228,114 @@ function CurateCaseModal({
           </button>
         </div>
 
+        {/* Validation Error Banner */}
+        {validationError && (
+          <div className="tile p-2.5 border-state-bad/40 bg-state-bad/[0.08] text-2xs font-mono text-state-bad flex items-center gap-2">
+            <AlertTriangle className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+            <span>{validationError}</span>
+          </div>
+        )}
+
+        {/* Backend Submit Error Banner */}
+        {submitError && (
+          <div className="tile p-2.5 border-state-bad/40 bg-state-bad/[0.08] text-2xs font-mono text-state-bad flex items-center gap-2">
+            <AlertTriangle className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+            <span>{submitError}</span>
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-3 text-xs font-mono">
           <div>
-            <label className="block mb-1 text-2xs font-mono uppercase tracking-[0.14em] text-ink-faint">Case ID</label>
+            <label className="block mb-1 text-2xs font-mono uppercase tracking-[0.14em] text-ink-faint">
+              Case ID <span className="text-state-bad">*</span>
+            </label>
             <input
               type="text"
               value={caseId}
               onChange={(e) => setCaseId(e.target.value)}
               className="w-full bg-surface border border-line rounded px-3 py-1.5 text-ink focus:border-signal/50 transition-colors"
-              required
+              placeholder="e.g. curated_case_01"
             />
           </div>
 
           <div>
-            <label className="block mb-1 text-2xs font-mono uppercase tracking-[0.14em] text-ink-faint">Agent Claim</label>
+            <label className="block mb-1 text-2xs font-mono uppercase tracking-[0.14em] text-ink-faint">
+              Input Query <span className="text-state-bad">*</span>
+            </label>
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              className="w-full bg-surface border border-line rounded px-3 py-1.5 text-ink focus:border-signal/50 transition-colors"
+              placeholder="Multi-agent prompt or query"
+            />
+          </div>
+
+          <div>
+            <label className="block mb-1 text-2xs font-mono uppercase tracking-[0.14em] text-ink-faint">
+              Agent Claim <span className="text-state-bad">*</span>
+            </label>
             <textarea
               value={claim}
               onChange={(e) => setClaim(e.target.value)}
               rows={2}
               className="w-full bg-surface border border-line rounded px-3 py-1.5 text-ink focus:border-signal/50 transition-colors font-sans"
-              required
+              placeholder="Asserted claim or observation"
             />
           </div>
 
           <div>
-            <label className="block mb-1 text-2xs font-mono uppercase tracking-[0.14em] text-ink-faint">Source Evidence</label>
+            <label className="block mb-1 text-2xs font-mono uppercase tracking-[0.14em] text-ink-faint">
+              Source Evidence Context
+            </label>
             <textarea
               value={evidence}
               onChange={(e) => setEvidence(e.target.value)}
               rows={2}
               className="w-full bg-surface border border-line rounded px-3 py-1.5 text-ink focus:border-signal/50 transition-colors font-sans"
+              placeholder="Verified premise context (optional)"
             />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block mb-1 text-2xs font-mono uppercase tracking-[0.14em] text-ink-faint">Classification</label>
+              <label className="block mb-1 text-2xs font-mono uppercase tracking-[0.14em] text-ink-faint">
+                Classification
+              </label>
               <select
                 value={classification}
                 onChange={(e) => setClassification(e.target.value)}
                 className="w-full bg-surface border border-line rounded px-3 py-1.5 text-ink focus:border-signal/50 transition-colors"
               >
-                <option value="SUPPORTED">SUPPORTED</option>
-                <option value="UNSUPPORTED">UNSUPPORTED</option>
                 <option value="CONTRADICTED">CONTRADICTED</option>
+                <option value="UNSUPPORTED">UNSUPPORTED</option>
+                <option value="SUPPORTED">SUPPORTED</option>
               </select>
             </div>
 
             <div>
-              <label className="block mb-1 text-2xs font-mono uppercase tracking-[0.14em] text-ink-faint">Target Dataset</label>
+              <label className="block mb-1 text-2xs font-mono uppercase tracking-[0.14em] text-ink-faint">
+                Target Dataset
+              </label>
               <input
                 type="text"
-                value="v1.0_curated"
-                disabled
-                className="w-full bg-surface/60 border border-line rounded px-3 py-1.5 text-ink-faint cursor-not-allowed"
+                value={targetDataset}
+                onChange={(e) => setTargetDataset(e.target.value)}
+                className="w-full bg-surface border border-line rounded px-3 py-1.5 text-ink focus:border-signal/50 transition-colors"
               />
             </div>
           </div>
 
           <div>
-            <label className="block mb-1 text-2xs font-mono uppercase tracking-[0.14em] text-ink-faint">Operator Notes</label>
+            <label className="block mb-1 text-2xs font-mono uppercase tracking-[0.14em] text-ink-faint">
+              Operator Notes
+            </label>
             <input
               type="text"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               className="w-full bg-surface border border-line rounded px-3 py-1.5 text-ink focus:border-signal/50 transition-colors"
+              placeholder="Triage rationale or notes"
             />
           </div>
 
@@ -955,158 +1608,484 @@ function DatasetsView() {
   );
 }
 
-// ─── 9. Incident Replay Trace Debugger ──────────────────────────────────
+// ─── 9. Recorded Execution Replay / Trace Playback ─────────────────────
 
-const SAMPLE_REPLAY_STEPS: IncidentStep[] = [
-  { timeOffset: 0.0, timeLabel: 'T+00.0s', agent: 'researcher', role: 'Query Planner', status: 'healthy', riskScore: 0.04, event: 'Decomposed user goal into 3 sub-queries.' },
-  { timeOffset: 0.8, timeLabel: 'T+00.8s', agent: 'retriever', role: 'Paper Indexer', status: 'healthy', riskScore: 0.08, event: 'Queried academic index; fetched 3 abstracts.', toolUsed: 'academic_search_api' },
-  { timeOffset: 1.5, timeLabel: 'T+01.5s', agent: 'verifier', role: 'Claim Verifier', status: 'critical', riskScore: 0.92, event: 'Citation verification discrepancy against retrieved corpus.', evidence: 'Contradiction: Claim cites Zhang (2024), absent from index.' },
-  { timeOffset: 2.2, timeLabel: 'T+02.2s', agent: 'analyst', role: 'Synthesis Engine', status: 'critical', riskScore: 0.98, event: 'Downstream hallucination amplification.', evidence: 'Ungrounded synthesis of quantum consciousness claims.' },
-  { timeOffset: 3.4, timeLabel: 'T+03.4s', agent: 'writer', role: 'Report Author', status: 'critical', riskScore: 0.95, event: 'Report generated containing fabricated claims.', evidence: 'Final synthesis failed grounding verification.' },
-];
-
-function IncidentReplayDebugger() {
-  const [currentStepIdx, setCurrentStepIdx] = useState(2);
-  const [isPlaying, setIsPlaying] = useState(false);
+function RecordedTracePlaybackView({
+  traces,
+  agents,
+}: {
+  traces: TraceListItem[];
+  agents: Agent[];
+}) {
+  const [selectedTraceId, setSelectedTraceId] = useState<string>(
+    traces.length > 0 ? traces[0].trace_id : ''
+  );
+  const [spans, setSpans] = useState<SpanDetail[]>([]);
+  const [currentStepIdx, setCurrentStepIdx] = useState<number>(0);
+  const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [playbackSpeed, setPlaybackSpeed] = useState<number>(1);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
-  const step = SAMPLE_REPLAY_STEPS[currentStepIdx];
+  // Sync default trace if initial selection was empty
+  useEffect(() => {
+    if (!selectedTraceId && traces.length > 0) {
+      setSelectedTraceId(traces[0].trace_id);
+    }
+  }, [traces, selectedTraceId]);
 
+  // Load trace recorded spans with strict failure hygiene & immediate state clearing
+  useEffect(() => {
+    if (!selectedTraceId) {
+      setSpans([]);
+      setCurrentStepIdx(0);
+      setIsPlaying(false);
+      return;
+    }
+
+    let isMounted = true;
+    setIsLoading(true);
+    setFetchError(null);
+    setIsPlaying(false);
+    // Immediate state hygiene: clear previous playback state so stale data is never shown
+    setSpans([]);
+    setCurrentStepIdx(0);
+
+    api.getTrace(selectedTraceId)
+      .then((res) => {
+        if (!isMounted) return;
+        const rawSpans = res.spans || [];
+        // Sort spans strictly chronologically by start_time
+        const sorted = [...rawSpans].sort((a, b) => {
+          const timeA = a.start_time ? new Date(a.start_time).getTime() : 0;
+          const timeB = b.start_time ? new Date(b.start_time).getTime() : 0;
+          return timeA - timeB;
+        });
+        setSpans(sorted);
+        setCurrentStepIdx(0);
+      })
+      .catch((err) => {
+        if (!isMounted) return;
+        setSpans([]);
+        setCurrentStepIdx(0);
+        setFetchError(err?.message || 'Failed to load recorded trace spans.');
+      })
+      .finally(() => {
+        if (isMounted) setIsLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedTraceId]);
+
+  // Playback timer stepping through recorded spans
   useEffect(() => {
     let timer: any;
-    if (isPlaying) {
+    if (isPlaying && spans.length > 1) {
       timer = setInterval(() => {
         setCurrentStepIdx((prev) => {
-          if (prev >= SAMPLE_REPLAY_STEPS.length - 1) {
+          if (prev >= spans.length - 1) {
             setIsPlaying(false);
             return prev;
           }
           return prev + 1;
         });
-      }, 1400 / playbackSpeed);
+      }, 1500 / playbackSpeed);
+    } else if (isPlaying && spans.length <= 1) {
+      setIsPlaying(false);
     }
     return () => clearInterval(timer);
-  }, [isPlaying, playbackSpeed]);
+  }, [isPlaying, playbackSpeed, spans.length]);
+
+  const currentSpan: SpanDetail | null = spans[currentStepIdx] || null;
+
+  // Relative timing offsets
+  const firstStartTime =
+    spans.length > 0 && spans[0].start_time ? new Date(spans[0].start_time).getTime() : null;
+
+  const getRelativeOffset = (s: SpanDetail) => {
+    if (!firstStartTime || !s.start_time) return null;
+    const currentMs = new Date(s.start_time).getTime();
+    if (isNaN(currentMs) || isNaN(firstStartTime)) return null;
+    const diffSec = Math.max(0, (currentMs - firstStartTime) / 1000);
+    return `T+${diffSec.toFixed(1)}s`;
+  };
+
+  // Compute timeline metrics for SpanTreeView
+  const { totalDurationMs, minStartTime } = useMemo(() => {
+    if (spans.length === 0) return { totalDurationMs: 1, minStartTime: 0 };
+    let minStart = Infinity;
+    let maxEnd = -Infinity;
+    let sumLatency = 0;
+
+    for (const s of spans) {
+      const start = s.start_time ? new Date(s.start_time).getTime() : 0;
+      const lat = s.latency_ms ?? 0;
+      if (start > 0) {
+        if (start < minStart) minStart = start;
+        if (start + lat > maxEnd) maxEnd = start + lat;
+      }
+      sumLatency += lat;
+    }
+
+    const duration =
+      minStart !== Infinity && maxEnd !== -Infinity && maxEnd > minStart
+        ? maxEnd - minStart
+        : Math.max(sumLatency, 1);
+
+    return {
+      totalDurationMs: Math.max(duration, 1),
+      minStartTime: minStart !== Infinity ? minStart : 0,
+    };
+  }, [spans]);
+
+  const selectedTraceItem = traces.find((t) => t.trace_id === selectedTraceId);
 
   return (
     <div className="space-y-4">
       <SectionHead
-        title="Time-Scrub Incident Replay Debugger"
-        sub="Step-by-step causal investigation of failure propagation across agent DAG nodes"
+        title="Recorded Execution Replay / Trace Playback"
+        sub="Chronological timeline playback of recorded spans across multi-agent execution sessions"
+        right={
+          selectedTraceItem && (
+            <div className="flex items-center gap-2">
+              <Eyebrow>{selectedTraceItem.total_spans} recorded spans</Eyebrow>
+              {selectedTraceItem.overall_risk_score !== null && (
+                <>
+                  <span className="text-ink-faint">&bull;</span>
+                  <RiskScorePill score={selectedTraceItem.overall_risk_score} label="Trace Risk" />
+                </>
+              )}
+            </div>
+          )
+        }
       />
 
-      {/* Control Bar */}
-      <Tile className="p-4 space-y-3" hover={false} index={0}>
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setCurrentStepIdx(Math.max(0, currentStepIdx - 1))}
-              disabled={currentStepIdx === 0}
-              aria-label="Previous step"
-              className="p-1.5 rounded border border-line bg-surface-2 text-ink-dim hover:text-ink hover:border-line-strong disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors"
+      {/* Prominent Mandatory Disclosure Banner */}
+      <div className="tile p-3 border-line bg-surface-2 flex items-center gap-2.5 text-xs font-mono text-ink-dim">
+        <Info className="w-4 h-4 text-signal shrink-0" aria-hidden="true" />
+        <span>
+          <strong className="text-ink font-semibold">Recorded span playback.</strong> Full causal state re-execution is not currently supported.
+        </span>
+      </div>
+
+      {/* Fetch Error Banner */}
+      {fetchError && (
+        <div className="tile p-3 border-state-bad/40 bg-state-bad/[0.08] flex items-center gap-2 text-xs font-mono text-state-bad">
+          <AlertTriangle className="w-4 h-4 shrink-0" aria-hidden="true" />
+          <span>{fetchError}</span>
+        </div>
+      )}
+
+      {/* Trace Selector & Playback Control Bar */}
+      <Tile className="p-4 space-y-4" hover={false} index={0}>
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          {/* Real Trace Selector Dropdown */}
+          <div className="flex items-center gap-2.5">
+            <label htmlFor="playback-trace-selector" className="text-2xs font-mono uppercase tracking-[0.14em] text-ink-faint">
+              Trace:
+            </label>
+            <select
+              id="playback-trace-selector"
+              value={selectedTraceId}
+              onChange={(e) => setSelectedTraceId(e.target.value)}
+              className="bg-surface-2 border border-line focus:border-signal/50 rounded px-2.5 py-1.5 text-xs font-mono text-ink outline-none cursor-pointer transition-colors max-w-sm sm:max-w-md"
             >
-              <SkipBack className="w-4 h-4" aria-hidden="true" />
-            </button>
-            <button
-              onClick={() => setIsPlaying(!isPlaying)}
-              className="px-3 py-1.5 rounded border border-signal/35 bg-signal/15 hover:bg-signal/25 text-signal font-mono text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-colors"
-            >
-              {isPlaying ? <Pause className="w-3.5 h-3.5" aria-hidden="true" /> : <Play className="w-3.5 h-3.5" aria-hidden="true" />}
-              <span>{isPlaying ? 'PAUSE' : 'PLAY'}</span>
-            </button>
-            <button
-              onClick={() => setCurrentStepIdx(Math.min(SAMPLE_REPLAY_STEPS.length - 1, currentStepIdx + 1))}
-              disabled={currentStepIdx === SAMPLE_REPLAY_STEPS.length - 1}
-              aria-label="Next step"
-              className="p-1.5 rounded border border-line bg-surface-2 text-ink-dim hover:text-ink hover:border-line-strong disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors"
-            >
-              <SkipForward className="w-4 h-4" aria-hidden="true" />
-            </button>
+              {traces.map((t) => (
+                <option key={t.trace_id} value={t.trace_id}>
+                  {t.trace_id.slice(0, 16)}… ({t.service_name || t.pipeline_id || 'session'}) &bull; {t.total_spans} spans
+                </option>
+              ))}
+            </select>
           </div>
 
-          <div className="flex items-center gap-2">
-            <Eyebrow>Speed</Eyebrow>
-            <div className="flex items-center gap-0.5 p-0.5 rounded border border-line bg-surface-2">
-              {[0.5, 1, 2].map((sp) => (
-                <button
-                  key={sp}
-                  onClick={() => setPlaybackSpeed(sp)}
-                  aria-pressed={playbackSpeed === sp}
+          {/* Stepper Controls & Speed Selector */}
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={() => setCurrentStepIdx(Math.max(0, currentStepIdx - 1))}
+                disabled={currentStepIdx === 0 || spans.length === 0}
+                aria-label="Previous recorded span"
+                className="p-1.5 rounded border border-line bg-surface-2 text-ink-dim hover:text-ink hover:border-line-strong disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors"
+              >
+                <SkipBack className="w-4 h-4" aria-hidden="true" />
+              </button>
+
+              <button
+                onClick={() => setIsPlaying(!isPlaying)}
+                disabled={spans.length <= 1}
+                className="px-3 py-1.5 rounded border border-signal/35 bg-signal/15 hover:bg-signal/25 text-signal font-mono text-xs font-semibold flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors"
+              >
+                {isPlaying ? <Pause className="w-3.5 h-3.5" aria-hidden="true" /> : <Play className="w-3.5 h-3.5" aria-hidden="true" />}
+                <span>{isPlaying ? 'PAUSE' : 'PLAY'}</span>
+              </button>
+
+              <button
+                onClick={() => setCurrentStepIdx(Math.min(spans.length - 1, currentStepIdx + 1))}
+                disabled={currentStepIdx >= spans.length - 1 || spans.length === 0}
+                aria-label="Next recorded span"
+                className="p-1.5 rounded border border-line bg-surface-2 text-ink-dim hover:text-ink hover:border-line-strong disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors"
+              >
+                <SkipForward className="w-4 h-4" aria-hidden="true" />
+              </button>
+            </div>
+
+            <div className="h-4 w-px bg-line/60 mx-1" aria-hidden="true" />
+
+            <div className="flex items-center gap-2">
+              <Eyebrow>Speed</Eyebrow>
+              <div className="flex items-center gap-0.5 p-0.5 rounded border border-line bg-surface-2">
+                {[0.5, 1, 2].map((sp) => (
+                  <button
+                    key={sp}
+                    onClick={() => setPlaybackSpeed(sp)}
+                    aria-pressed={playbackSpeed === sp}
+                    className={cx(
+                      'px-2 py-0.5 rounded text-2xs font-mono font-semibold cursor-pointer transition-colors',
+                      playbackSpeed === sp ? 'bg-signal/15 text-signal' : 'text-ink-faint hover:text-ink-dim'
+                    )}
+                  >
+                    {sp}x
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Chronological Timeline Scrubber Track */}
+        {spans.length > 0 ? (
+          <div className="space-y-1.5 pt-2 border-t border-line/60">
+            <div className="flex items-center justify-between text-2xs font-mono text-ink-faint">
+              <span>RECORDED TIMELINE SEQUENCE</span>
+              <span className="tnum font-semibold text-ink">
+                SPAN {String(currentStepIdx + 1).padStart(2, '0')} / {String(spans.length).padStart(2, '0')}
+              </span>
+            </div>
+
+            <div className="flex gap-2 overflow-x-auto pb-2 pt-1 scrollbar-thin">
+              {spans.map((s, idx) => {
+                const isCurrent = idx === currentStepIdx;
+                const offset = getRelativeOffset(s);
+                const isErr = s.status.toUpperCase() === 'ERROR';
+
+                return (
+                  <button
+                    key={s.span_id}
+                    onClick={() => setCurrentStepIdx(idx)}
+                    className={cx(
+                      'tile p-2.5 text-left shrink-0 w-44 transition-all cursor-pointer rounded',
+                      isCurrent
+                        ? 'tile-active border-signal/60 bg-signal/5 ring-1 ring-signal/40'
+                        : 'opacity-65 hover:opacity-100'
+                    )}
+                  >
+                    <div className="flex items-center justify-between gap-1 text-2xs font-mono">
+                      <span className={cx('font-semibold', isCurrent ? 'text-signal' : 'text-ink-faint')}>
+                        #{String(idx + 1).padStart(2, '0')}
+                      </span>
+                      <span className="text-ink-faint">{offset || '—'}</span>
+                    </div>
+
+                    <div className="font-mono text-xs font-semibold text-ink truncate mt-1">
+                      @{s.agent_id}
+                    </div>
+
+                    <div className="text-2xs font-mono text-ink-dim truncate mt-0.5">
+                      {s.event_type}
+                    </div>
+
+                    <div className="flex items-center justify-between mt-2 pt-1 border-t border-line/40 text-2xs font-mono">
+                      <span className={isErr ? 'text-state-bad font-semibold' : 'text-state-ok'}>
+                        {s.status}
+                      </span>
+                      <span className="text-ink-faint tnum">
+                        {s.latency_ms !== null ? `${s.latency_ms.toFixed(0)}ms` : '—'}
+                      </span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ) : null}
+      </Tile>
+
+      {/* Main Playback & Inspection Area */}
+      {isLoading ? (
+        <Tile className="p-8 flex items-center justify-center text-xs font-mono text-ink-dim" hover={false} index={1}>
+          <div className="flex items-center gap-2.5">
+            <RefreshCw className="w-4 h-4 animate-spin text-signal" aria-hidden="true" />
+            <span>Loading recorded spans for playback…</span>
+          </div>
+        </Tile>
+      ) : spans.length === 0 ? (
+        <Tile className="overflow-hidden" hover={false} index={1}>
+          <EmptyState
+            icon={<Route className="w-7 h-7" />}
+            title="No recorded spans available"
+            hint="The selected trace does not contain recorded spans or trace telemetry is unavailable."
+          />
+        </Tile>
+      ) : currentSpan ? (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          {/* Left Column: Recorded Span Detail & Topology Tree Context */}
+          <div className="lg:col-span-2 space-y-4">
+            <Tile className="p-5 space-y-4" hover={false} index={1}>
+              {/* Header */}
+              <div className="flex items-center justify-between gap-3 pb-3 border-b border-line">
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="px-2 py-0.5 rounded border border-signal/25 bg-signal/10 text-signal font-mono text-2xs font-semibold tnum">
+                      SPAN {String(currentStepIdx + 1).padStart(2, '0')} / {String(spans.length).padStart(2, '0')}
+                    </span>
+                    <h3 className="text-sm font-semibold text-ink font-mono">
+                      @{currentSpan.agent_id}{' '}
+                      <span className="text-ink-faint font-normal">
+                        ({currentSpan.agent_role || 'Unspecified role'})
+                      </span>
+                    </h3>
+                  </div>
+                  <div className="mt-1 flex items-center gap-2 text-2xs font-mono text-ink-faint">
+                    <Eyebrow>Chronology offset {getRelativeOffset(currentSpan) || '—'}</Eyebrow>
+                    <span>&bull;</span>
+                    <span className="tnum">
+                      Start: {currentSpan.start_time ? new Date(currentSpan.start_time).toLocaleTimeString() : '—'}
+                    </span>
+                  </div>
+                </div>
+
+                {currentSpan.evaluation?.overall_risk_score !== null &&
+                currentSpan.evaluation?.overall_risk_score !== undefined ? (
+                  <RiskScorePill score={currentSpan.evaluation.overall_risk_score} label="Span Risk" />
+                ) : (
+                  <span className="text-2xs font-mono text-ink-faint border border-line px-2 py-0.5 rounded bg-surface">
+                    Risk: —
+                  </span>
+                )}
+              </div>
+
+              {/* Execution Metrics Grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs font-mono">
+                <div className="tile p-2.5 space-y-1">
+                  <span className="text-2xs text-ink-faint uppercase tracking-wider block">Latency</span>
+                  <span className="font-semibold text-ink tnum">
+                    {currentSpan.latency_ms !== null ? `${currentSpan.latency_ms.toFixed(1)} ms` : '—'}
+                  </span>
+                </div>
+                <div className="tile p-2.5 space-y-1">
+                  <span className="text-2xs text-ink-faint uppercase tracking-wider block">Model</span>
+                  <span className="font-semibold text-ink truncate block">
+                    {currentSpan.model || '—'}
+                  </span>
+                </div>
+                <div className="tile p-2.5 space-y-1">
+                  <span className="text-2xs text-ink-faint uppercase tracking-wider block">Tokens In</span>
+                  <span className="font-semibold text-ink tnum">
+                    {currentSpan.tokens_in !== null ? currentSpan.tokens_in.toLocaleString() : '—'}
+                  </span>
+                </div>
+                <div className="tile p-2.5 space-y-1">
+                  <span className="text-2xs text-ink-faint uppercase tracking-wider block">Tokens Out</span>
+                  <span className="font-semibold text-ink tnum">
+                    {currentSpan.tokens_out !== null ? currentSpan.tokens_out.toLocaleString() : '—'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Observed Action & Tool Invocation */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="tile p-3 space-y-2">
+                  <Eyebrow>Observed Node Event</Eyebrow>
+                  <p className="text-ink text-xs font-mono font-semibold">{currentSpan.event_type}</p>
+                  <div className="text-2xs font-mono text-ink-dim flex items-center gap-2">
+                    <span>Kind: {currentSpan.span_kind}</span>
+                    <span>&bull;</span>
+                    <span>Span ID: {currentSpan.span_id}</span>
+                  </div>
+                  {currentSpan.tool_name && (
+                    <div className="mt-2 pt-2 border-t border-line/50">
+                      <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded border border-signal/25 bg-signal/10 text-signal text-2xs font-mono font-semibold">
+                        <Wrench className="w-3 h-3" aria-hidden="true" />
+                        {currentSpan.tool_name}
+                      </span>
+                      {currentSpan.tool_args && (
+                        <p className="text-2xs font-mono text-ink-dim mt-1.5 line-clamp-2">
+                          Args: {currentSpan.tool_args}
+                        </p>
+                      )}
+                      {currentSpan.tool_result_summary && (
+                        <p className="text-2xs font-mono text-ink-faint mt-1 line-clamp-2">
+                          Result: {currentSpan.tool_result_summary}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                <div
                   className={cx(
-                    'px-2 py-0.5 rounded text-2xs font-mono font-semibold cursor-pointer transition-colors',
-                    playbackSpeed === sp ? 'bg-signal/15 text-signal' : 'text-ink-faint hover:text-ink-dim',
+                    'tile p-3 space-y-2',
+                    currentSpan.error_message ? 'border-state-bad/30 bg-state-bad/[0.06]' : ''
                   )}
                 >
-                  {sp}x
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Step Track */}
-        <div className="grid grid-cols-5 gap-2 pt-2">
-          {SAMPLE_REPLAY_STEPS.map((s, idx) => (
-            <div
-              key={s.agent}
-              onClick={() => setCurrentStepIdx(idx)}
-              className={cx(
-                'tile p-2.5 text-left cursor-pointer',
-                idx === currentStepIdx ? 'tile-active' : idx < currentStepIdx ? 'tile-hover' : 'tile-hover opacity-45',
-              )}
-            >
-              <div className="flex justify-between items-center gap-1">
-                <Eyebrow>{s.timeLabel}</Eyebrow>
-                <StatusBadge status={s.status} />
+                  <Eyebrow className={currentSpan.error_message ? 'text-state-bad' : undefined}>
+                    Execution Status &amp; Error Signal
+                  </Eyebrow>
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={cx(
+                        'w-2 h-2 rounded-full',
+                        currentSpan.status.toUpperCase() === 'ERROR' ? 'bg-state-bad' : 'bg-state-ok'
+                      )}
+                      aria-hidden="true"
+                    />
+                    <span className="text-xs font-mono font-semibold text-ink">{currentSpan.status}</span>
+                  </div>
+                  <p
+                    className={cx(
+                      'text-xs leading-relaxed font-mono',
+                      currentSpan.error_message ? 'text-state-bad' : 'text-ink-faint'
+                    )}
+                  >
+                    {currentSpan.error_message || 'Span executed with no recorded runtime error.'}
+                  </p>
+                </div>
               </div>
-              <div className="font-mono font-semibold text-ink text-xs mt-1.5 capitalize truncate">@{s.agent}</div>
-            </div>
-          ))}
-        </div>
-      </Tile>
+            </Tile>
 
-      {/* Step Detail Card */}
-      <Tile className="p-5 space-y-4" hover={false} index={1}>
-        <div className="flex items-center justify-between gap-3 pb-3 border-b border-line">
-          <div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="px-2 py-0.5 rounded border border-signal/25 bg-signal/10 text-signal font-mono text-2xs font-semibold tnum">
-                STEP {String(currentStepIdx + 1).padStart(2, '0')} / {String(SAMPLE_REPLAY_STEPS.length).padStart(2, '0')}
-              </span>
-              <h3 className="text-sm font-semibold text-ink font-mono capitalize">
-                @{step.agent} <span className="text-ink-faint font-normal">({step.role})</span>
-              </h3>
-            </div>
-            <div className="mt-1"><Eyebrow>Time offset {step.timeLabel}</Eyebrow></div>
-          </div>
-          <RiskScorePill score={step.riskScore} label="Risk" />
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div className="tile p-3 space-y-2">
-            <Eyebrow>Observed node action</Eyebrow>
-            <p className="text-ink-dim text-xs leading-relaxed">{step.event}</p>
-            {step.toolUsed && (
-              <span className="inline-flex items-center gap-1.5 px-1.5 py-0.5 rounded border border-signal/25 bg-signal/10 text-signal text-2xs font-mono">
-                <Wrench className="w-2.5 h-2.5" aria-hidden="true" />
-                {step.toolUsed}
-              </span>
-            )}
+            {/* Hierarchical Tree Context for the Trace */}
+            <Tile className="p-4 space-y-3" hover={false} index={2}>
+              <div className="flex items-center justify-between gap-2 pb-2 border-b border-line">
+                <Eyebrow>Full Trace Topology (Active Playback Node Highlighted)</Eyebrow>
+                <span className="text-2xs font-mono text-ink-faint">
+                  Click any span in tree to jump timeline
+                </span>
+              </div>
+              <SpanTreeView
+                spans={spans}
+                selectedSpanId={currentSpan.span_id}
+                totalDurationMs={totalDurationMs}
+                minStartTime={minStartTime}
+                onSelectSpan={(s) => {
+                  const idx = spans.findIndex((x) => x.span_id === s.span_id);
+                  if (idx !== -1) setCurrentStepIdx(idx);
+                }}
+              />
+            </Tile>
           </div>
 
-          <div className={cx(
-            'tile p-3 space-y-2',
-            step.evidence && 'border-state-bad/30 bg-state-bad/[0.06]',
-          )}>
-            <Eyebrow className={step.evidence ? 'text-state-bad' : undefined}>
-              Evidence &amp; grounding flag
-            </Eyebrow>
-            <p className={cx('text-xs leading-relaxed', step.evidence ? 'text-state-bad' : 'text-ink-faint')}>
-              {step.evidence || 'No grounding or contradiction flags observed on this step.'}
-            </p>
+          {/* Right Column: Evidence Inspector with Grounding Cascade & Agent Telemetry */}
+          <div className="lg:col-span-1">
+            <EvidenceInspectorPanel
+              selectedSpan={currentSpan}
+              agents={agents}
+              isLoading={isLoading}
+            />
           </div>
         </div>
-      </Tile>
+      ) : null}
     </div>
   );
 }
@@ -1322,12 +2301,336 @@ function CommandPalette({
   );
 }
 
+// ─── 13. Traces Forensic View ───────────────────────────────────────────
+
+function TracesForensicView({
+  traces,
+  agents,
+}: {
+  traces: TraceListItem[];
+  agents: Agent[];
+}) {
+  const [selectedTraceId, setSelectedTraceId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'CRITICAL' | 'WARN' | 'OK'>('ALL');
+  const [traceDetail, setTraceDetail] = useState<{ trace: TraceListItem; spans: SpanDetail[]; alerts: AlertItem[] } | null>(null);
+  const [selectedSpan, setSelectedSpan] = useState<SpanDetail | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Default selection to first trace
+  useEffect(() => {
+    if (!selectedTraceId && traces.length > 0) {
+      setSelectedTraceId(traces[0].trace_id);
+    }
+  }, [traces, selectedTraceId]);
+
+  // Fetch selected trace detail with strict failure hygiene
+  useEffect(() => {
+    if (!selectedTraceId) {
+      setTraceDetail(null);
+      setSelectedSpan(null);
+      return;
+    }
+
+    let isMounted = true;
+    setIsLoading(true);
+    setError(null);
+    // State hygiene: immediately clear previous spans and selection
+    setTraceDetail(null);
+    setSelectedSpan(null);
+
+    api.getTrace(selectedTraceId)
+      .then((res) => {
+        if (!isMounted) return;
+        setTraceDetail(res);
+        if (res.spans && res.spans.length > 0) {
+          const sorted = [...res.spans].sort(
+            (a, b) => (b.evaluation?.overall_risk_score ?? -1) - (a.evaluation?.overall_risk_score ?? -1)
+          );
+          setSelectedSpan(sorted[0] || res.spans[0]);
+        }
+      })
+      .catch((err) => {
+        if (!isMounted) return;
+        setError(err.message || 'Failed to retrieve trace session');
+        setTraceDetail(null);
+        setSelectedSpan(null);
+      })
+      .finally(() => {
+        if (isMounted) setIsLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedTraceId]);
+
+  // Filter traces strictly against real fields on TraceListItem
+  const filteredTraces = useMemo(() => {
+    return traces.filter((t) => {
+      // Search matching trace_id, pipeline_id, service_name
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase().trim();
+        const matchesId = t.trace_id.toLowerCase().includes(q);
+        const matchesPipeline = t.pipeline_id ? t.pipeline_id.toLowerCase().includes(q) : false;
+        const matchesService = t.service_name ? t.service_name.toLowerCase().includes(q) : false;
+        if (!matchesId && !matchesPipeline && !matchesService) return false;
+      }
+
+      // Status/risk filter
+      if (statusFilter === 'CRITICAL') {
+        const isHighRisk = t.overall_risk_score !== null && t.overall_risk_score > 0.7;
+        const isError = t.status.toLowerCase() === 'error' || t.status.toLowerCase() === 'critical';
+        return isHighRisk || isError;
+      }
+      if (statusFilter === 'WARN') {
+        return t.overall_risk_score !== null && t.overall_risk_score >= 0.4 && t.overall_risk_score <= 0.7;
+      }
+      if (statusFilter === 'OK') {
+        const isLowRisk = t.overall_risk_score !== null && t.overall_risk_score < 0.4;
+        const isSuccess = t.status.toLowerCase() === 'success' || t.status.toLowerCase() === 'ok';
+        return isLowRisk || isSuccess;
+      }
+      return true;
+    });
+  }, [traces, searchQuery, statusFilter]);
+
+  // Compute duration metrics for selected trace spans
+  const { detailTotalDurationMs, detailMinStartTime } = useMemo(() => {
+    const spans = traceDetail?.spans || [];
+    if (spans.length === 0) return { detailTotalDurationMs: 1, detailMinStartTime: 0 };
+    let minStart = Infinity;
+    let maxEnd = -Infinity;
+    let sumLatency = 0;
+
+    for (const s of spans) {
+      const start = s.start_time ? new Date(s.start_time).getTime() : 0;
+      const lat = s.latency_ms ?? 0;
+      sumLatency += lat;
+      if (start > 0) {
+        minStart = Math.min(minStart, start);
+        maxEnd = Math.max(maxEnd, start + lat);
+      }
+    }
+
+    const calculated = maxEnd > minStart ? maxEnd - minStart : sumLatency || 1;
+    return {
+      detailTotalDurationMs: Math.max(calculated, 1),
+      detailMinStartTime: minStart === Infinity ? 0 : minStart,
+    };
+  }, [traceDetail?.spans]);
+
+  return (
+    <div className="space-y-4">
+      <SectionHead
+        title="Execution Traces & Forensics"
+        sub="Deep inspection of multi-agent span hierarchies, evaluated grounding claims, and execution trees"
+        right={<Eyebrow>{filteredTraces.length} / {traces.length} traces</Eyebrow>}
+      />
+
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+        {/* Left Column: Trace List Filter & Master View */}
+        <div className="lg:col-span-4 space-y-3">
+          <Tile className="p-3 space-y-3" hover={false} index={0}>
+            {/* Search Input */}
+            <div className="relative">
+              <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-ink-faint pointer-events-none" aria-hidden="true" />
+              <input
+                type="text"
+                placeholder="Search trace ID, pipeline, service..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                aria-label="Filter execution traces"
+                className="w-full pl-8.5 pr-8 py-1.5 bg-surface-2 border border-line focus:border-signal/50 rounded font-mono text-xs text-ink placeholder:text-ink-faint outline-none transition-colors"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  aria-label="Clear search"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-ink-faint hover:text-ink text-xs font-mono"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              )}
+            </div>
+
+            {/* Filter Buttons */}
+            <div className="grid grid-cols-4 gap-1 text-2xs font-mono">
+              {(['ALL', 'CRITICAL', 'WARN', 'OK'] as const).map((filter) => (
+                <button
+                  key={filter}
+                  onClick={() => setStatusFilter(filter)}
+                  className={cx(
+                    'py-1 text-center rounded border transition-colors cursor-pointer uppercase',
+                    statusFilter === filter
+                      ? 'bg-surface-3 border-line-strong text-ink font-semibold'
+                      : 'border-line/60 text-ink-faint hover:text-ink hover:border-line'
+                  )}
+                >
+                  {filter}
+                </button>
+              ))}
+            </div>
+          </Tile>
+
+          {/* Master Trace List */}
+          <div className="space-y-1.5 max-h-[calc(100vh-280px)] overflow-y-auto pr-1">
+            {filteredTraces.length === 0 ? (
+              <Tile className="p-6 text-center text-xs font-mono text-ink-faint" hover={false} index={1}>
+                No traces match the active filter criteria.
+              </Tile>
+            ) : (
+              filteredTraces.map((t) => {
+                const isSelected = selectedTraceId === t.trace_id;
+                return (
+                  <button
+                    key={t.trace_id}
+                    onClick={() => setSelectedTraceId(t.trace_id)}
+                    aria-selected={isSelected}
+                    className={cx(
+                      'w-full tile p-3 text-left cursor-pointer transition-all duration-150',
+                      isSelected ? 'tile-active bracket-on' : 'tile-hover',
+                    )}
+                  >
+                    <div className="flex items-center justify-between gap-2 mb-1.5">
+                      <span className="font-mono text-xs font-semibold text-signal truncate">
+                        {t.trace_id.slice(0, 18)}…
+                      </span>
+                      <RiskScorePill score={t.overall_risk_score} />
+                    </div>
+
+                    <div className="flex items-center justify-between text-2xs font-mono text-ink-dim">
+                      <span className="truncate max-w-[150px]">{t.pipeline_id || t.service_name || 'Unavailable'}</span>
+                      <span className="tnum shrink-0 text-ink-faint">{t.total_spans} spans</span>
+                    </div>
+
+                    <div className="flex items-center justify-between text-2xs font-mono text-ink-faint mt-1 pt-1 border-t border-line/40">
+                      <span>{t.status}</span>
+                      <span className="tnum">{new Date(t.start_time).toLocaleTimeString()}</span>
+                    </div>
+                  </button>
+                );
+              })
+            )}
+          </div>
+        </div>
+
+        {/* Right Column: Detailed Forensic Span Tree & Inspector */}
+        <div className="lg:col-span-8 space-y-4">
+          {isLoading ? (
+            <Tile className="p-12 flex flex-col items-center justify-center space-y-3" hover={false} index={1}>
+              <RefreshCw className="w-6 h-6 text-signal animate-spin" aria-hidden="true" />
+              <p className="text-xs font-mono text-ink-dim">Loading trace session telemetry...</p>
+            </Tile>
+          ) : error ? (
+            <Tile className="p-6 text-center space-y-2 border border-state-bad/30 bg-state-bad/[0.04]" hover={false} index={1}>
+              <p className="text-xs font-mono font-semibold text-state-bad">Failed to retrieve trace session</p>
+              <p className="text-2xs font-mono text-ink-faint">{error}</p>
+            </Tile>
+          ) : !traceDetail ? (
+            <Tile className="p-12 text-center" hover={false} index={1}>
+              <EmptyState
+                icon={<Route className="w-7 h-7" />}
+                title="No trace selected"
+                hint="Select an execution session from the left to inspect its span tree and claims."
+              />
+            </Tile>
+          ) : (
+            <div className="space-y-4">
+              {/* Selected Trace Header Card */}
+              <Tile className="p-4 space-y-2.5" hover={false} index={1}>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2.5 border-b border-line">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <Eyebrow>Trace ID</Eyebrow>
+                      <span className="font-mono text-xs font-semibold text-signal truncate">
+                        {traceDetail.trace.trace_id}
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2 mt-1 text-2xs font-mono text-ink-dim">
+                      <span>Service: <strong className="text-ink">{traceDetail.trace.service_name}</strong></span>
+                      <span>&bull;</span>
+                      <span>Pipeline: <strong className="text-ink">{traceDetail.trace.pipeline_id || 'Unavailable'}</strong></span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3 shrink-0">
+                    <div className="text-right">
+                      <Eyebrow>Total Duration</Eyebrow>
+                      <div className="font-mono text-xs font-semibold tnum text-ink">
+                        {detailTotalDurationMs.toFixed(1)}ms
+                      </div>
+                    </div>
+                    <div className="pl-3 border-l border-line">
+                      <RiskScorePill score={traceDetail.trace.overall_risk_score} label="Session Risk" />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center justify-between text-2xs font-mono text-ink-faint pt-0.5">
+                  <span>Start: {new Date(traceDetail.trace.start_time).toLocaleString()}</span>
+                  <span>Recorded Spans: {traceDetail.spans.length}</span>
+                </div>
+              </Tile>
+
+              {/* Side-by-side: Span Tree and Evidence Inspector */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Span Tree Explorer */}
+                <Tile className="p-4 flex flex-col h-full space-y-3" hover={false} index={2}>
+                  <div className="flex items-center justify-between border-b border-line pb-2.5">
+                    <div>
+                      <h3 className="text-sm font-semibold text-ink tracking-tight">Span Hierarchy</h3>
+                      <p className="text-2xs font-mono text-ink-faint">
+                        {traceDetail.spans.length} spans recorded in session
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex-1 overflow-y-auto max-h-[580px] pr-1">
+                    {traceDetail.spans.length === 0 ? (
+                      <div className="py-12 text-center text-xs font-mono text-ink-faint">
+                        No recorded spans found for this trace.
+                      </div>
+                    ) : (
+                      <SpanTreeView
+                        spans={traceDetail.spans}
+                        selectedSpanId={selectedSpan?.span_id}
+                        onSelectSpan={setSelectedSpan}
+                        totalDurationMs={detailTotalDurationMs}
+                        minStartTime={detailMinStartTime}
+                      />
+                    )}
+                  </div>
+                </Tile>
+
+                {/* Evidence & Grounding Inspector (Reused primitive!) */}
+                <div className="h-full">
+                  <EvidenceInspectorPanel
+                    selectedSpan={selectedSpan}
+                    agents={agents}
+                    isLoading={false}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Main Application Container ────────────────────────────────────────
 
 export function App() {
   const [currentPage, setCurrentPage] = useState<NavPage>('overview');
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>('verifier');
-  const [selectedSpan, setSelectedSpan] = useState<WaterfallSpan | null>(SAMPLE_WATERFALL_SPANS[2]);
+  const [selectedTraceId, setSelectedTraceId] = useState<string | null>(null);
+  const [activeSpans, setActiveSpans] = useState<SpanDetail[]>([]);
+  const [selectedSpan, setSelectedSpan] = useState<SpanDetail | null>(null);
+  const [isTraceLoading, setIsTraceLoading] = useState(false);
+  const [traceError, setTraceError] = useState<string | null>(null);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [isRunningLab, setIsRunningLab] = useState(false);
   const [activeStrategy, setActiveStrategy] = useState<ReasoningStrategy>('ALL');
@@ -1344,6 +2647,11 @@ export function App() {
   // readout -- capped so the trace covers a fixed recent window rather than
   // growing unbounded over a long-lived session.
   const [riskHistory, setRiskHistory] = useState<number[]>([]);
+  // In-flight alert IDs to prevent duplicate writes
+  const [acknowledgingAlertIds, setAcknowledgingAlertIds] = useState<Set<number>>(new Set());
+  // Explicit notification error & success banners for incident operations
+  const [incidentActionError, setIncidentActionError] = useState<string | null>(null);
+  const [incidentActionSuccess, setIncidentActionSuccess] = useState<string | null>(null);
 
   // Must match the backend route in backend/app/routers/websocket.py
   // (@router.websocket("/v1/ws/live")) — a bare /v1/ws does not exist.
@@ -1384,6 +2692,56 @@ export function App() {
   }, [loadData]);
   useEffect(() => { if (lastMessage) loadData(); }, [lastMessage, loadData]);
 
+  // Set default trace when traces load
+  useEffect(() => {
+    if (!selectedTraceId && traces.length > 0) {
+      setSelectedTraceId(traces[0].trace_id);
+    }
+  }, [traces, selectedTraceId]);
+
+  // Load trace detail whenever selectedTraceId changes (with strict failure hygiene)
+  useEffect(() => {
+    if (!selectedTraceId) {
+      setActiveSpans([]);
+      setSelectedSpan(null);
+      return;
+    }
+
+    let isMounted = true;
+    setIsTraceLoading(true);
+    setTraceError(null);
+    // Immediate state hygiene: clear previous spans so stale data is never shown
+    setActiveSpans([]);
+    setSelectedSpan(null);
+
+    api.getTrace(selectedTraceId)
+      .then((res) => {
+        if (!isMounted) return;
+        const spans = res.spans || [];
+        setActiveSpans(spans);
+        if (spans.length > 0) {
+          // Select riskiest span by default, or first span
+          const sortedByRisk = [...spans].sort(
+            (a, b) => (b.evaluation?.overall_risk_score ?? -1) - (a.evaluation?.overall_risk_score ?? -1)
+          );
+          setSelectedSpan(sortedByRisk[0] || spans[0]);
+        }
+      })
+      .catch((err) => {
+        if (!isMounted) return;
+        setTraceError(err.message || 'Failed to fetch trace details');
+        setActiveSpans([]);
+        setSelectedSpan(null);
+      })
+      .finally(() => {
+        if (isMounted) setIsTraceLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedTraceId]);
+
   // Keyboard shortcut for Command Palette
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -1422,8 +2780,44 @@ export function App() {
     else if (actionId === 'sim-clean') handleRunScenario('clean');
   };
 
-  const handleSaveCuratedCase = async (payload: any) => {
-    await api.curateCase('v1.0_curated', payload);
+  const handleAcknowledgeAlert = async (alertId: number) => {
+    // Constraint 3: Prevent duplicate writes while in flight
+    if (acknowledgingAlertIds.has(alertId)) return;
+
+    // Constraint 1: Check alert existence
+    const previousAlerts = [...alerts];
+    const targetAlert = alerts.find((a) => a.id === alertId);
+    if (!targetAlert || targetAlert.acknowledged) return;
+
+    // Constraint 2: Pending -> optimistic acknowledged state
+    setAcknowledgingAlertIds((prev) => new Set(prev).add(alertId));
+    setIncidentActionError(null);
+    setAlerts((prev) => prev.map((a) => (a.id === alertId ? { ...a, acknowledged: true } : a)));
+
+    try {
+      await api.acknowledgeAlert(alertId);
+      setIncidentActionSuccess(`Alert #${alertId} acknowledged.`);
+      setTimeout(() => setIncidentActionSuccess(null), 4000);
+    } catch (err: any) {
+      // Constraint 2: Revert optimistic state on backend failure & show explicit error
+      setAlerts(previousAlerts);
+      setIncidentActionError(`Failed to acknowledge alert #${alertId}: ${err?.message || 'Server error'}`);
+      setTimeout(() => setIncidentActionError(null), 6000);
+    } finally {
+      setAcknowledgingAlertIds((prev) => {
+        const next = new Set(prev);
+        next.delete(alertId);
+        return next;
+      });
+    }
+  };
+
+  const handleSaveCuratedCase = async (datasetName: string, payload: any) => {
+    // Constraint 5 & 8: Real backend call & confirmation
+    const res = await api.curateCase(datasetName, payload);
+    setIncidentActionSuccess(res.message || `Case '${payload.case_id}' curated into '${datasetName}'.`);
+    setTimeout(() => setIncidentActionSuccess(null), 4000);
+    loadData();
   };
 
   const openIncidentsCount = alerts.filter(a => !a.acknowledged).length;
@@ -1432,7 +2826,7 @@ export function App() {
     'overview': { title: 'Fleet Overview', sub: 'LIVE AGENT TOPOLOGY / GROUNDING RISK' },
     'traces': { title: 'Execution Traces', sub: 'MULTI-AGENT SESSIONS / GROUNDING AUDITS' },
     'incidents': { title: 'Incident Inbox', sub: 'TRIGGERED ALERTS / TRIAGE QUEUE' },
-    'incident-replay': { title: 'Replay Debugger', sub: 'STEP-THROUGH FAULT PROPAGATION' },
+    'incident-replay': { title: 'Recorded Execution Replay / Trace Playback', sub: 'RECORDED SPAN CHRONOLOGY / TIMELINE PLAYBACK' },
     'drift': { title: 'Drift & Stability', sub: 'CENTROID DISTANCE / AGENT STABILITY INDEX' },
     'experiments': { title: 'Experiments', sub: 'ABLATION / REASONING STRATEGY BENCHMARKS' },
     'datasets': { title: 'Datasets', sub: 'CURATED EVALUATION CASES' },
@@ -1501,68 +2895,40 @@ export function App() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
               <div className="lg:col-span-2">
                 <TraceWaterfallSection
-                  selectedSpanId={selectedSpan?.id}
-                  onSelectSpan={(span) => setSelectedSpan(span)}
+                  traces={traces}
+                  selectedTraceId={selectedTraceId}
+                  onSelectTraceId={setSelectedTraceId}
+                  spans={activeSpans}
+                  selectedSpanId={selectedSpan?.span_id}
+                  onSelectSpan={setSelectedSpan}
+                  isLoading={isTraceLoading}
+                  error={traceError}
                 />
               </div>
 
               <div className="lg:col-span-1">
-                <EvidenceInspectorPanel selectedSpan={selectedSpan} />
+                <EvidenceInspectorPanel
+                  selectedSpan={selectedSpan}
+                  agents={agents}
+                  isLoading={isTraceLoading}
+                />
               </div>
             </div>
           </div>
         ) : currentPage === 'traces' ? (
-          <div>
-            <SectionHead
-              title="Execution Traces"
-              sub="Multi-agent execution sessions and grounding audits"
-              right={<Eyebrow>{traces.length} traces</Eyebrow>}
-            />
-
-            <Tile className="overflow-hidden" hover={false} index={0}>
-              {traces.length === 0 ? (
-                <EmptyState
-                  icon={<Route className="w-7 h-7" />}
-                  title="No traces captured yet"
-                  hint="Send spans through the SDK, or run a scenario from Telemetry Lab, and they will appear here."
-                />
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-xs text-left">
-                    <thead>
-                      <tr className="border-b border-line bg-surface">
-                        <th className="px-4 py-2.5 font-normal"><Eyebrow>Trace ID</Eyebrow></th>
-                        <th className="px-4 py-2.5 font-normal"><Eyebrow>Pipeline</Eyebrow></th>
-                        <th className="px-4 py-2.5 font-normal text-center"><Eyebrow>Spans</Eyebrow></th>
-                        <th className="px-4 py-2.5 font-normal text-center"><Eyebrow>Risk</Eyebrow></th>
-                        <th className="px-4 py-2.5 font-normal text-right"><Eyebrow>Timestamp</Eyebrow></th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-line/60">
-                      {traces.map((t) => (
-                        <tr key={t.trace_id} className="hover:bg-surface-3/60 cursor-pointer transition-colors">
-                          <td className="px-4 py-2.5 font-mono text-signal">{t.trace_id}</td>
-                          <td className="px-4 py-2.5 text-ink-dim">{t.pipeline_id || 'research_pipeline'}</td>
-                          <td className="px-4 py-2.5 text-center font-mono tnum text-ink">{t.total_spans}</td>
-                          <td className="px-4 py-2.5 text-center"><RiskScorePill score={t.overall_risk_score} /></td>
-                          <td className="px-4 py-2.5 text-right font-mono tnum text-ink-faint">
-                            {new Date(t.start_time).toLocaleString()}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </Tile>
-          </div>
+          <TracesForensicView traces={traces} agents={agents} />
         ) : currentPage === 'incidents' ? (
           <IncidentInboxView
             alerts={alerts}
             onCurateTrace={(al) => setCuratingAlert(al)}
+            onAcknowledgeAlert={handleAcknowledgeAlert}
+            acknowledgingAlertIds={acknowledgingAlertIds}
+            actionError={incidentActionError}
+            actionSuccess={incidentActionSuccess}
+            onDismissError={() => setIncidentActionError(null)}
           />
         ) : currentPage === 'incident-replay' ? (
-          <IncidentReplayDebugger />
+          <RecordedTracePlaybackView traces={traces} agents={agents} />
         ) : currentPage === 'drift' ? (
           <DriftCenterView agents={agents} />
         ) : currentPage === 'experiments' ? (
