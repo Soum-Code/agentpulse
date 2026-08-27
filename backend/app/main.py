@@ -19,7 +19,7 @@ from sqlmodel import select
 
 from app.config import settings
 from app.database import get_session, init_db, close_db
-from app.middleware import APIKeyMiddleware, RateLimitMiddleware
+from app.middleware import APIKeyMiddleware, RateLimitMiddleware, RequestMetricsMiddleware
 from app.models import Baseline
 from app.routers import (
     agents_router,
@@ -140,6 +140,9 @@ def create_app() -> FastAPI:
     # before CORSMiddleware's own preflight short-circuit ever runs, breaking
     # every cross-origin caller regardless of whether it has a valid key.
     app.add_middleware(APIKeyMiddleware)
+    # Added last so it wraps outermost and therefore times the whole stack,
+    # including auth rejections and rate-limited requests.
+    app.add_middleware(RequestMetricsMiddleware)
     app.add_middleware(
         RateLimitMiddleware,
         max_requests=settings.rate_limit_max_requests,

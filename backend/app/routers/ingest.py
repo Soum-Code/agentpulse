@@ -17,6 +17,7 @@ from app.models import (
     Trace,
 )
 from app.services.job_queue import enqueue_job
+from app.services.runtime_metrics import COUNTERS
 
 # Evaluation no longer runs in this process. Ingest persists spans, enqueues a
 # durable job per span, and returns; a separate worker process
@@ -193,6 +194,14 @@ async def ingest_spans(
                 await session.commit()
         except Exception as exc:
             logger.error("Failed to enqueue evaluation jobs: %s", exc, exc_info=True)
+
+    # Recorded in process memory rather than written to a table: this runs on
+    # every ingest, and a row per request would make monitoring the most
+    # expensive thing in the request path.
+    COUNTERS.record_ingest(
+        accepted=accepted, failed=failed, duplicates=duplicates,
+        queued=queued, enqueue_failed=bool(enqueue_targets) and queued == 0 and accepted > 0,
+    )
 
     if duplicates:
         logger.info(

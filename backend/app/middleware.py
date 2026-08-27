@@ -69,3 +69,30 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
         self._counts[client].append(now)
         return await call_next(request)
+
+
+class RequestMetricsMiddleware(BaseHTTPMiddleware):
+    """Record API request count, server errors and latency.
+
+    Purely in-process (see services/runtime_metrics.py). Measuring the request
+    path must not add a database write to the request path, or the monitoring
+    becomes the dominant cost of the thing it monitors.
+
+    Recording happens in a `finally` so a handler that raises is still counted --
+    an endpoint that always 500s would otherwise be invisible in the metrics
+    precisely when it matters most.
+    """
+
+    async def dispatch(self, request: Request, call_next):
+        start = time.perf_counter()
+        status_code = 500
+        try:
+            response = await call_next(request)
+            status_code = response.status_code
+            return response
+        finally:
+            from app.services.runtime_metrics import COUNTERS
+            COUNTERS.record_api_request(
+                duration_ms=(time.perf_counter() - start) * 1000,
+                status_code=status_code,
+            )

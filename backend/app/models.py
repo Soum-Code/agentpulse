@@ -332,6 +332,79 @@ class EvaluationJob(SQLModel, table=True):
     )
 
 
+class WorkerHeartbeat(SQLModel, table=True):
+    """Liveness and identity of an evaluation worker process.
+
+    Exists because the worker runs in a DIFFERENT PROCESS from the API. Nothing
+    in the API's memory can answer "is an evaluator alive, and what is it running
+    on?", so the answer has to be persisted somewhere both can see.
+
+    Liveness is inferred from `last_heartbeat_at` going stale rather than from
+    the worker announcing its own death, for the same reason job leases work that
+    way: a SIGKILLed process announces nothing.
+
+    `nli_backend` / `backend_degraded` are recorded per worker, not read from the
+    API's own `backend_info()`. The API and the worker load models independently,
+    and since evaluation happens in the worker, the API's view of its own backend
+    says nothing about what actually evaluated a span. A dependency regression
+    that silently put the evaluator back on the slow PyTorch path would be
+    invisible if this were taken from the API.
+    """
+
+    __tablename__ = "worker_heartbeats"
+
+    worker_id: str = Field(primary_key=True, max_length=128)
+    hostname: str = Field(max_length=128)
+    pid: int
+    status: str = Field(default="running", max_length=32)
+
+    started_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc).replace(tzinfo=None),
+        sa_column=Column(sa.DateTime, nullable=False),
+    )
+    last_heartbeat_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc).replace(tzinfo=None),
+        sa_column=Column(sa.DateTime, nullable=False, index=True),
+    )
+
+    # Cumulative for this process, so "alive but doing nothing" is
+    # distinguishable from "alive and working".
+    jobs_processed: int = Field(default=0)
+    jobs_failed: int = Field(default=0)
+
+    nli_backend: Optional[str] = Field(default=None, max_length=32)
+    embedding_backend: Optional[str] = Field(default=None, max_length=32)
+    backend_degraded: bool = Field(default=False)
+    fallback_reason: Optional[str] = Field(default=None, sa_column=Column(Text))
+
+
+class RetentionRun(SQLModel, table=True):
+    """Record of a retention execution.
+
+    Retention runs as a separate scheduled process, so without this an operator
+    has no way to answer "did retention run, and what did it remove?" other than
+    reading logs from a process that has already exited.
+    """
+
+    __tablename__ = "retention_runs"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    started_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc).replace(tzinfo=None),
+        sa_column=Column(sa.DateTime, nullable=False, index=True),
+    )
+    completed_at: Optional[datetime] = Field(
+        default=None, sa_column=Column(sa.DateTime, nullable=True)
+    )
+    cutoff: datetime = Field(sa_column=Column(sa.DateTime, nullable=False))
+    retention_days: int
+    dry_run: bool = Field(default=False)
+    batches: int = Field(default=0)
+    total_rows_deleted: int = Field(default=0)
+    rows_deleted_json: Optional[str] = Field(default=None, sa_column=Column(Text))
+    error: Optional[str] = Field(default=None, sa_column=Column(Text))
+
+
 class ExperimentRun(SQLModel, table=True):
     """Recorded metrics and metadata from a reproducible experiment run."""
 
