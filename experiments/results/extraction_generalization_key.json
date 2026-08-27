@@ -1,0 +1,821 @@
+{
+  "timestamp": "2026-08-27 11:44:07 UTC",
+  "dataset": {
+    "id": "siddharthmb/multiagent-verification-failure-modes",
+    "url": "https://huggingface.co/datasets/siddharthmb/multiagent-verification-failure-modes",
+    "license": "CC-BY-NC-4.0",
+    "shard": "episodes/exp1/shard_0000.jsonl"
+  },
+  "purpose": "test whether conclusion extraction generalizes beyond DEBATE's answer markers",
+  "seed": 20260827,
+  "pairs_available": 424,
+  "enriched_pool": 211,
+  "blinding": [
+    "holds_gold / sampling stratum withheld from the blinded file",
+    "extracted spans withheld -- annotator marks the assertion independently",
+    "detector not run before labels are frozen",
+    "pairs shuffled so ordering cannot encode the stratum"
+  ],
+  "cases": [
+    {
+      "case_id": "G001",
+      "stratum": "gold_asymmetric",
+      "episode_id": "dev_36|s0|c2_blind",
+      "variant": "c2_blind",
+      "gold_label": "Supported",
+      "gold_asymmetry": true,
+      "a": {
+        "agent_id": "subagent_1",
+        "holds_gold": false,
+        "partition": 0,
+        "n_hits": 10
+      },
+      "b": {
+        "agent_id": "subagent_2",
+        "holds_gold": true,
+        "partition": 1,
+        "n_hits": 10
+      }
+    },
+    {
+      "case_id": "G002",
+      "stratum": "control",
+      "episode_id": "dev_36|s1|c2a_strong",
+      "variant": "c2a_strong",
+      "gold_label": "Supported",
+      "gold_asymmetry": true,
+      "a": {
+        "agent_id": "subagent_1",
+        "holds_gold": false,
+        "partition": 0,
+        "n_hits": 10
+      },
+      "b": {
+        "agent_id": "subagent_3",
+        "holds_gold": true,
+        "partition": 2,
+        "n_hits": 10
+      }
+    },
+    {
+      "case_id": "G003",
+      "stratum": "gold_asymmetric",
+      "episode_id": "dev_207|s2|c2a_mild",
+      "variant": "c2a_mild",
+      "gold_label": "Supported",
+      "gold_asymmetry": true,
+      "a": {
+        "agent_id": "subagent_1",
+        "holds_gold": true,
+        "partition": 0,
+        "n_hits": 10
+      },
+      "b": {
+        "agent_id": "subagent_2",
+        "holds_gold": false,
+        "partition": 1,
+        "n_hits": 10
+      }
+    },
+    {
+      "case_id": "G004",
+      "stratum": "control",
+      "episode_id": "dev_361|s0|c0",
+      "variant": "c0",
+      "gold_label": "Supported",
+      "gold_asymmetry": true,
+      "a": {
+        "agent_id": "subagent_2",
+        "holds_gold": true,
+        "partition": 1,
+        "n_hits": 10
+      },
+      "b": {
+        "agent_id": "subagent_3",
+        "holds_gold": false,
+        "partition": 2,
+        "n_hits": 10
+      }
+    },
+    {
+      "case_id": "G005",
+      "stratum": "gold_asymmetric",
+      "episode_id": "dev_156|s1|c2_told",
+      "variant": "c2_told",
+      "gold_label": "Supported",
+      "gold_asymmetry": true,
+      "a": {
+        "agent_id": "subagent_1",
+        "holds_gold": false,
+        "partition": 0,
+        "n_hits": 10
+      },
+      "b": {
+        "agent_id": "subagent_2",
+        "holds_gold": true,
+        "partition": 1,
+        "n_hits": 10
+      }
+    },
+    {
+      "case_id": "G006",
+      "stratum": "control",
+      "episode_id": "dev_7|s2|c2_blind",
+      "variant": "c2_blind",
+      "gold_label": "Supported",
+      "gold_asymmetry": true,
+      "a": {
+        "agent_id": "subagent_2",
+        "holds_gold": false,
+        "partition": 1,
+        "n_hits": 10
+      },
+      "b": {
+        "agent_id": "subagent_4",
+        "holds_gold": true,
+        "partition": 3,
+        "n_hits": 10
+      }
+    },
+    {
+      "case_id": "G007",
+      "stratum": "control",
+      "episode_id": "dev_92|s2|c2a_strong",
+      "variant": "c2a_strong",
+      "gold_label": "Supported",
+      "gold_asymmetry": false,
+      "a": {
+        "agent_id": "subagent_1",
+        "holds_gold": false,
+        "partition": 0,
+        "n_hits": 10
+      },
+      "b": {
+        "agent_id": "subagent_2",
+        "holds_gold": false,
+        "partition": 1,
+        "n_hits": 10
+      }
+    },
+    {
+      "case_id": "G008",
+      "stratum": "control",
+      "episode_id": "dev_305|s0|c2a_strong",
+      "variant": "c2a_strong",
+      "gold_label": "Supported",
+      "gold_asymmetry": false,
+      "a": {
+        "agent_id": "subagent_1",
+        "holds_gold": false,
+        "partition": 0,
+        "n_hits": 10
+      },
+      "b": {
+        "agent_id": "subagent_2",
+        "holds_gold": false,
+        "partition": 1,
+        "n_hits": 10
+      }
+    },
+    {
+      "case_id": "G009",
+      "stratum": "gold_asymmetric",
+      "episode_id": "dev_361|s1|c2a_strong",
+      "variant": "c2a_strong",
+      "gold_label": "Supported",
+      "gold_asymmetry": true,
+      "a": {
+        "agent_id": "subagent_1",
+        "holds_gold": true,
+        "partition": 0,
+        "n_hits": 10
+      },
+      "b": {
+        "agent_id": "subagent_2",
+        "holds_gold": false,
+        "partition": 1,
+        "n_hits": 10
+      }
+    },
+    {
+      "case_id": "G010",
+      "stratum": "control",
+      "episode_id": "dev_36|s1|c2b",
+      "variant": "c2b",
+      "gold_label": "Supported",
+      "gold_asymmetry": false,
+      "a": {
+        "agent_id": "subagent_1",
+        "holds_gold": false,
+        "partition": 0,
+        "n_hits": 10
+      },
+      "b": {
+        "agent_id": "subagent_2",
+        "holds_gold": false,
+        "partition": 1,
+        "n_hits": 10
+      }
+    },
+    {
+      "case_id": "G011",
+      "stratum": "gold_asymmetric",
+      "episode_id": "dev_92|s0|c2_told",
+      "variant": "c2_told",
+      "gold_label": "Supported",
+      "gold_asymmetry": true,
+      "a": {
+        "agent_id": "subagent_1",
+        "holds_gold": true,
+        "partition": 0,
+        "n_hits": 10
+      },
+      "b": {
+        "agent_id": "subagent_4",
+        "holds_gold": false,
+        "partition": 3,
+        "n_hits": 10
+      }
+    },
+    {
+      "case_id": "G012",
+      "stratum": "control",
+      "episode_id": "dev_450|s2|c2a_strong",
+      "variant": "c2a_strong",
+      "gold_label": "Supported",
+      "gold_asymmetry": true,
+      "a": {
+        "agent_id": "subagent_1",
+        "holds_gold": true,
+        "partition": 0,
+        "n_hits": 10
+      },
+      "b": {
+        "agent_id": "subagent_2",
+        "holds_gold": false,
+        "partition": 1,
+        "n_hits": 10
+      }
+    },
+    {
+      "case_id": "G013",
+      "stratum": "gold_asymmetric",
+      "episode_id": "dev_450|s2|c2b",
+      "variant": "c2b",
+      "gold_label": "Supported",
+      "gold_asymmetry": true,
+      "a": {
+        "agent_id": "subagent_1",
+        "holds_gold": true,
+        "partition": 0,
+        "n_hits": 10
+      },
+      "b": {
+        "agent_id": "subagent_4",
+        "holds_gold": false,
+        "partition": 3,
+        "n_hits": 10
+      }
+    },
+    {
+      "case_id": "G014",
+      "stratum": "control",
+      "episode_id": "dev_497|s1|c2b",
+      "variant": "c2b",
+      "gold_label": "Supported",
+      "gold_asymmetry": false,
+      "a": {
+        "agent_id": "subagent_1",
+        "holds_gold": false,
+        "partition": 0,
+        "n_hits": 10
+      },
+      "b": {
+        "agent_id": "subagent_4",
+        "holds_gold": false,
+        "partition": 3,
+        "n_hits": 10
+      }
+    },
+    {
+      "case_id": "G015",
+      "stratum": "control",
+      "episode_id": "dev_450|s2|c2a_strong",
+      "variant": "c2a_strong",
+      "gold_label": "Supported",
+      "gold_asymmetry": true,
+      "a": {
+        "agent_id": "subagent_1",
+        "holds_gold": true,
+        "partition": 0,
+        "n_hits": 10
+      },
+      "b": {
+        "agent_id": "subagent_3",
+        "holds_gold": false,
+        "partition": 2,
+        "n_hits": 10
+      }
+    },
+    {
+      "case_id": "G016",
+      "stratum": "control",
+      "episode_id": "dev_497|s2|c2a_mild",
+      "variant": "c2a_mild",
+      "gold_label": "Supported",
+      "gold_asymmetry": false,
+      "a": {
+        "agent_id": "subagent_3",
+        "holds_gold": false,
+        "partition": 2,
+        "n_hits": 10
+      },
+      "b": {
+        "agent_id": "subagent_4",
+        "holds_gold": false,
+        "partition": 3,
+        "n_hits": 10
+      }
+    },
+    {
+      "case_id": "G017",
+      "stratum": "control",
+      "episode_id": "dev_7|s2|c2a_strong",
+      "variant": "c2a_strong",
+      "gold_label": "Supported",
+      "gold_asymmetry": false,
+      "a": {
+        "agent_id": "subagent_2",
+        "holds_gold": false,
+        "partition": 1,
+        "n_hits": 10
+      },
+      "b": {
+        "agent_id": "subagent_3",
+        "holds_gold": false,
+        "partition": 2,
+        "n_hits": 10
+      }
+    },
+    {
+      "case_id": "G018",
+      "stratum": "control",
+      "episode_id": "dev_92|s2|c0",
+      "variant": "c0",
+      "gold_label": "Supported",
+      "gold_asymmetry": true,
+      "a": {
+        "agent_id": "subagent_2",
+        "holds_gold": false,
+        "partition": 1,
+        "n_hits": 10
+      },
+      "b": {
+        "agent_id": "subagent_3",
+        "holds_gold": true,
+        "partition": 2,
+        "n_hits": 10
+      }
+    },
+    {
+      "case_id": "G019",
+      "stratum": "gold_asymmetric",
+      "episode_id": "dev_92|s0|c2a_mild",
+      "variant": "c2a_mild",
+      "gold_label": "Supported",
+      "gold_asymmetry": true,
+      "a": {
+        "agent_id": "subagent_1",
+        "holds_gold": true,
+        "partition": 0,
+        "n_hits": 10
+      },
+      "b": {
+        "agent_id": "subagent_2",
+        "holds_gold": false,
+        "partition": 1,
+        "n_hits": 10
+      }
+    },
+    {
+      "case_id": "G020",
+      "stratum": "gold_asymmetric",
+      "episode_id": "dev_361|s2|c1",
+      "variant": "c1",
+      "gold_label": "Supported",
+      "gold_asymmetry": true,
+      "a": {
+        "agent_id": "subagent_1",
+        "holds_gold": true,
+        "partition": 0,
+        "n_hits": 10
+      },
+      "b": {
+        "agent_id": "subagent_2",
+        "holds_gold": false,
+        "partition": 1,
+        "n_hits": 10
+      }
+    },
+    {
+      "case_id": "G021",
+      "stratum": "gold_asymmetric",
+      "episode_id": "dev_7|s0|c2_told",
+      "variant": "c2_told",
+      "gold_label": "Supported",
+      "gold_asymmetry": true,
+      "a": {
+        "agent_id": "subagent_2",
+        "holds_gold": true,
+        "partition": 1,
+        "n_hits": 10
+      },
+      "b": {
+        "agent_id": "subagent_4",
+        "holds_gold": false,
+        "partition": 3,
+        "n_hits": 10
+      }
+    },
+    {
+      "case_id": "G022",
+      "stratum": "gold_asymmetric",
+      "episode_id": "dev_361|s0|c0",
+      "variant": "c0",
+      "gold_label": "Supported",
+      "gold_asymmetry": true,
+      "a": {
+        "agent_id": "subagent_1",
+        "holds_gold": false,
+        "partition": 0,
+        "n_hits": 10
+      },
+      "b": {
+        "agent_id": "subagent_2",
+        "holds_gold": true,
+        "partition": 1,
+        "n_hits": 10
+      }
+    },
+    {
+      "case_id": "G023",
+      "stratum": "control",
+      "episode_id": "dev_36|s0|c2a_mild",
+      "variant": "c2a_mild",
+      "gold_label": "Supported",
+      "gold_asymmetry": true,
+      "a": {
+        "agent_id": "subagent_2",
+        "holds_gold": true,
+        "partition": 1,
+        "n_hits": 10
+      },
+      "b": {
+        "agent_id": "subagent_3",
+        "holds_gold": false,
+        "partition": 2,
+        "n_hits": 10
+      }
+    },
+    {
+      "case_id": "G024",
+      "stratum": "control",
+      "episode_id": "dev_497|s1|c1",
+      "variant": "c1",
+      "gold_label": "Supported",
+      "gold_asymmetry": false,
+      "a": {
+        "agent_id": "subagent_1",
+        "holds_gold": false,
+        "partition": 0,
+        "n_hits": 10
+      },
+      "b": {
+        "agent_id": "subagent_4",
+        "holds_gold": false,
+        "partition": 3,
+        "n_hits": 10
+      }
+    },
+    {
+      "case_id": "G025",
+      "stratum": "gold_asymmetric",
+      "episode_id": "dev_450|s2|c1",
+      "variant": "c1",
+      "gold_label": "Supported",
+      "gold_asymmetry": true,
+      "a": {
+        "agent_id": "subagent_1",
+        "holds_gold": true,
+        "partition": 0,
+        "n_hits": 10
+      },
+      "b": {
+        "agent_id": "subagent_2",
+        "holds_gold": false,
+        "partition": 1,
+        "n_hits": 10
+      }
+    },
+    {
+      "case_id": "G026",
+      "stratum": "gold_asymmetric",
+      "episode_id": "dev_497|s0|c2b",
+      "variant": "c2b",
+      "gold_label": "Supported",
+      "gold_asymmetry": true,
+      "a": {
+        "agent_id": "subagent_1",
+        "holds_gold": true,
+        "partition": 0,
+        "n_hits": 10
+      },
+      "b": {
+        "agent_id": "subagent_3",
+        "holds_gold": false,
+        "partition": 2,
+        "n_hits": 10
+      }
+    },
+    {
+      "case_id": "G027",
+      "stratum": "gold_asymmetric",
+      "episode_id": "dev_156|s2|c2b",
+      "variant": "c2b",
+      "gold_label": "Supported",
+      "gold_asymmetry": true,
+      "a": {
+        "agent_id": "subagent_1",
+        "holds_gold": false,
+        "partition": 0,
+        "n_hits": 10
+      },
+      "b": {
+        "agent_id": "subagent_3",
+        "holds_gold": true,
+        "partition": 2,
+        "n_hits": 10
+      }
+    },
+    {
+      "case_id": "G028",
+      "stratum": "control",
+      "episode_id": "dev_369|s2|c0",
+      "variant": "c0",
+      "gold_label": "Supported",
+      "gold_asymmetry": false,
+      "a": {
+        "agent_id": "subagent_1",
+        "holds_gold": false,
+        "partition": 0,
+        "n_hits": 10
+      },
+      "b": {
+        "agent_id": "subagent_2",
+        "holds_gold": false,
+        "partition": 1,
+        "n_hits": 10
+      }
+    },
+    {
+      "case_id": "G029",
+      "stratum": "gold_asymmetric",
+      "episode_id": "dev_450|s0|c2_told",
+      "variant": "c2_told",
+      "gold_label": "Supported",
+      "gold_asymmetry": true,
+      "a": {
+        "agent_id": "subagent_1",
+        "holds_gold": true,
+        "partition": 0,
+        "n_hits": 10
+      },
+      "b": {
+        "agent_id": "subagent_3",
+        "holds_gold": false,
+        "partition": 2,
+        "n_hits": 10
+      }
+    },
+    {
+      "case_id": "G030",
+      "stratum": "control",
+      "episode_id": "dev_497|s1|c1",
+      "variant": "c1",
+      "gold_label": "Supported",
+      "gold_asymmetry": true,
+      "a": {
+        "agent_id": "subagent_1",
+        "holds_gold": false,
+        "partition": 0,
+        "n_hits": 10
+      },
+      "b": {
+        "agent_id": "subagent_2",
+        "holds_gold": true,
+        "partition": 1,
+        "n_hits": 10
+      }
+    },
+    {
+      "case_id": "G031",
+      "stratum": "control",
+      "episode_id": "dev_156|s1|c2b",
+      "variant": "c2b",
+      "gold_label": "Supported",
+      "gold_asymmetry": true,
+      "a": {
+        "agent_id": "subagent_1",
+        "holds_gold": false,
+        "partition": 0,
+        "n_hits": 10
+      },
+      "b": {
+        "agent_id": "subagent_2",
+        "holds_gold": true,
+        "partition": 1,
+        "n_hits": 10
+      }
+    },
+    {
+      "case_id": "G032",
+      "stratum": "gold_asymmetric",
+      "episode_id": "dev_497|s0|c2a_strong",
+      "variant": "c2a_strong",
+      "gold_label": "Supported",
+      "gold_asymmetry": true,
+      "a": {
+        "agent_id": "subagent_1",
+        "holds_gold": true,
+        "partition": 0,
+        "n_hits": 10
+      },
+      "b": {
+        "agent_id": "subagent_2",
+        "holds_gold": false,
+        "partition": 1,
+        "n_hits": 10
+      }
+    },
+    {
+      "case_id": "G033",
+      "stratum": "control",
+      "episode_id": "dev_450|s0|c2a_strong",
+      "variant": "c2a_strong",
+      "gold_label": "Supported",
+      "gold_asymmetry": false,
+      "a": {
+        "agent_id": "subagent_2",
+        "holds_gold": false,
+        "partition": 1,
+        "n_hits": 10
+      },
+      "b": {
+        "agent_id": "subagent_4",
+        "holds_gold": false,
+        "partition": 3,
+        "n_hits": 10
+      }
+    },
+    {
+      "case_id": "G034",
+      "stratum": "gold_asymmetric",
+      "episode_id": "dev_497|s2|c2_blind",
+      "variant": "c2_blind",
+      "gold_label": "Supported",
+      "gold_asymmetry": true,
+      "a": {
+        "agent_id": "subagent_1",
+        "holds_gold": false,
+        "partition": 0,
+        "n_hits": 10
+      },
+      "b": {
+        "agent_id": "subagent_2",
+        "holds_gold": true,
+        "partition": 1,
+        "n_hits": 10
+      }
+    },
+    {
+      "case_id": "G035",
+      "stratum": "control",
+      "episode_id": "dev_7|s1|c1",
+      "variant": "c1",
+      "gold_label": "Supported",
+      "gold_asymmetry": true,
+      "a": {
+        "agent_id": "subagent_1",
+        "holds_gold": true,
+        "partition": 0,
+        "n_hits": 10
+      },
+      "b": {
+        "agent_id": "subagent_2",
+        "holds_gold": false,
+        "partition": 1,
+        "n_hits": 10
+      }
+    },
+    {
+      "case_id": "G036",
+      "stratum": "gold_asymmetric",
+      "episode_id": "dev_450|s0|c2a_mild",
+      "variant": "c2a_mild",
+      "gold_label": "Supported",
+      "gold_asymmetry": true,
+      "a": {
+        "agent_id": "subagent_1",
+        "holds_gold": true,
+        "partition": 0,
+        "n_hits": 10
+      },
+      "b": {
+        "agent_id": "subagent_3",
+        "holds_gold": false,
+        "partition": 2,
+        "n_hits": 10
+      }
+    },
+    {
+      "case_id": "G037",
+      "stratum": "control",
+      "episode_id": "dev_361|s2|c2a_mild",
+      "variant": "c2a_mild",
+      "gold_label": "Supported",
+      "gold_asymmetry": true,
+      "a": {
+        "agent_id": "subagent_1",
+        "holds_gold": true,
+        "partition": 0,
+        "n_hits": 10
+      },
+      "b": {
+        "agent_id": "subagent_2",
+        "holds_gold": false,
+        "partition": 1,
+        "n_hits": 10
+      }
+    },
+    {
+      "case_id": "G038",
+      "stratum": "gold_asymmetric",
+      "episode_id": "dev_497|s2|c2b",
+      "variant": "c2b",
+      "gold_label": "Supported",
+      "gold_asymmetry": true,
+      "a": {
+        "agent_id": "subagent_1",
+        "holds_gold": false,
+        "partition": 0,
+        "n_hits": 10
+      },
+      "b": {
+        "agent_id": "subagent_2",
+        "holds_gold": true,
+        "partition": 1,
+        "n_hits": 10
+      }
+    },
+    {
+      "case_id": "G039",
+      "stratum": "gold_asymmetric",
+      "episode_id": "dev_497|s1|c2_blind",
+      "variant": "c2_blind",
+      "gold_label": "Supported",
+      "gold_asymmetry": true,
+      "a": {
+        "agent_id": "subagent_1",
+        "holds_gold": false,
+        "partition": 0,
+        "n_hits": 10
+      },
+      "b": {
+        "agent_id": "subagent_2",
+        "holds_gold": true,
+        "partition": 1,
+        "n_hits": 10
+      }
+    },
+    {
+      "case_id": "G040",
+      "stratum": "gold_asymmetric",
+      "episode_id": "dev_369|s0|c2_blind",
+      "variant": "c2_blind",
+      "gold_label": "Supported",
+      "gold_asymmetry": true,
+      "a": {
+        "agent_id": "subagent_1",
+        "holds_gold": true,
+        "partition": 0,
+        "n_hits": 10
+      },
+      "b": {
+        "agent_id": "subagent_2",
+        "holds_gold": false,
+        "partition": 1,
+        "n_hits": 10
+      }
+    }
+  ]
+}

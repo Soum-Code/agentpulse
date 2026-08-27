@@ -1,0 +1,1501 @@
+{
+  "timestamp": "2026-08-27 11:49:35 UTC",
+  "purpose": "generalization test for conclusion extraction on a marker-free corpus",
+  "not_a_benchmark": true,
+  "production_code_modified": false,
+  "dataset": {
+    "id": "siddharthmb/multiagent-verification-failure-modes",
+    "url": "https://huggingface.co/datasets/siddharthmb/multiagent-verification-failure-modes",
+    "license": "CC-BY-NC-4.0"
+  },
+  "detector": {
+    "threshold": 0.6,
+    "relevance_floor": 0.4
+  },
+  "extractor": "conclusion_only, imported unmodified from the formulation diagnosis",
+  "labelled": {
+    "positives": 8,
+    "negatives": 32
+  },
+  "extraction": {
+    "outputs_total": 80,
+    "succeeded": 80,
+    "correct": 25,
+    "success_rate": 1.0,
+    "correctness_rate": 0.3125
+  },
+  "detection": {
+    "forward": {
+      "tp": 1,
+      "fp": 2,
+      "fn": 7,
+      "tn": 30,
+      "recall": 0.125,
+      "fp_rate": 0.0625,
+      "mean_contradiction_prob_on_positives": 0.1008,
+      "max_contradiction_prob_on_positives": 0.6988
+    },
+    "conclusion": {
+      "tp": 2,
+      "fp": 3,
+      "fn": 6,
+      "tn": 29,
+      "recall": 0.25,
+      "fp_rate": 0.0938,
+      "mean_contradiction_prob_on_positives": 0.2519,
+      "max_contradiction_prob_on_positives": 0.9993
+    },
+    "conclusion_reversed": {
+      "tp": 2,
+      "fp": 4,
+      "fn": 6,
+      "tn": 28,
+      "recall": 0.25,
+      "fp_rate": 0.125,
+      "mean_contradiction_prob_on_positives": 0.2501,
+      "max_contradiction_prob_on_positives": 0.9987
+    }
+  },
+  "per_case": [
+    {
+      "case_id": "G001",
+      "label": "NO_CONTRADICTION",
+      "is_contradiction": false,
+      "stratum": "gold_asymmetric",
+      "a_chars": 723,
+      "b_chars": 659,
+      "a_extracted_chars": 323,
+      "b_extracted_chars": 200,
+      "a_extraction_succeeded": true,
+      "b_extraction_succeeded": true,
+      "a_extraction_correct": false,
+      "b_extraction_correct": false,
+      "a_extracted": "While the excerpts do not explicitly state Vos ran for a specific seat, the context of him being a contender for Ryan\u2019s seat (held by a Republican) and his role as speaker supports the claim. The documents do not directly confirm he ran for a seat in 2018, but the implication of being a contender al",
+      "b_extracted": "No other excerpts mention Robin Vos losing a seat or it switching to a non-Republican candidate. The documents focus on his role as Assembly Speaker and political strategies, not his electoral defeat.",
+      "conditions": {
+        "forward": {
+          "contradiction_prob": 0.0011,
+          "similarity": 0.7276,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion": {
+          "contradiction_prob": 0.0006,
+          "similarity": 0.5659,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion_reversed": {
+          "contradiction_prob": 0.0001,
+          "similarity": 0.5659,
+          "gated": false,
+          "alarm": false
+        }
+      }
+    },
+    {
+      "case_id": "G002",
+      "label": "NO_CONTRADICTION",
+      "is_contradiction": false,
+      "stratum": "control",
+      "a_chars": 468,
+      "b_chars": 814,
+      "a_extracted_chars": 104,
+      "b_extracted_chars": 227,
+      "a_extraction_succeeded": true,
+      "b_extraction_succeeded": true,
+      "a_extraction_correct": false,
+      "b_extraction_correct": true,
+      "a_extracted": "No excerpts indicate he lost his seat in 2018. The documents consistently show he retained his position.",
+      "b_extracted": "House districts, which are distinct from Wisconsin\u2019s State Assembly districts. Thus, none of the provided excerpts specify particular legislative districts or results where a Republican-held seat was lost in the 2018 elections.",
+      "conditions": {
+        "forward": {
+          "contradiction_prob": 0.0017,
+          "similarity": 0.463,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion": {
+          "contradiction_prob": 0.0002,
+          "similarity": 0.4587,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion_reversed": {
+          "contradiction_prob": 0.0049,
+          "similarity": 0.4587,
+          "gated": false,
+          "alarm": false
+        }
+      }
+    },
+    {
+      "case_id": "G003",
+      "label": "CONTRADICTION",
+      "is_contradiction": true,
+      "stratum": "gold_asymmetric",
+      "a_chars": 722,
+      "b_chars": 775,
+      "a_extracted_chars": 287,
+      "b_extracted_chars": 258,
+      "a_extraction_succeeded": true,
+      "b_extraction_succeeded": true,
+      "a_extraction_correct": false,
+      "b_extraction_correct": true,
+      "a_extracted": "While [3](https://content.time.com/time/magazine/article/0,9171,829981,00.html) notes Nigeria's status as the \"most populous black state\" in 1960, it does not provide a population count. Thus, the 63 million figure from Voanews is the most specific and directly relevant to the question.",
+      "b_extracted": "Scholars suggest the population at independence was closer to **33\u201337 million** (Sources 3\u20134), but these are estimates, not official census data. Thus, while early 1960s data exists (1963 census), no official 1960 census figures are provided in the excerpts.",
+      "conditions": {
+        "forward": {
+          "contradiction_prob": 0.0329,
+          "similarity": 0.8414,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion": {
+          "contradiction_prob": 0.0017,
+          "similarity": 0.5459,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion_reversed": {
+          "contradiction_prob": 0.0014,
+          "similarity": 0.5459,
+          "gated": false,
+          "alarm": false
+        }
+      }
+    },
+    {
+      "case_id": "G004",
+      "label": "NO_CONTRADICTION",
+      "is_contradiction": false,
+      "stratum": "control",
+      "a_chars": 751,
+      "b_chars": 875,
+      "a_extracted_chars": 210,
+      "b_extracted_chars": 248,
+      "a_extraction_succeeded": true,
+      "b_extraction_succeeded": true,
+      "a_extraction_correct": false,
+      "b_extraction_correct": false,
+      "a_extracted": "However, no U.S.-based news outlets or official records are explicitly cited as corroborating the specific statement in the documents. The documents do not mention other independent sources verifying the claim.",
+      "b_extracted": "However, no U.S.-based reputable news source or official record directly quotes Klain using the specific phrase in question. The sources collectively refute Trump\u2019s claims of Obama administration negligence but do not confirm Klain\u2019s exact wording.",
+      "conditions": {
+        "forward": {
+          "contradiction_prob": 0.0037,
+          "similarity": 0.853,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion": {
+          "contradiction_prob": 0.0003,
+          "similarity": 0.5264,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion_reversed": {
+          "contradiction_prob": 0.0002,
+          "similarity": 0.5264,
+          "gated": false,
+          "alarm": false
+        }
+      }
+    },
+    {
+      "case_id": "G005",
+      "label": "NO_CONTRADICTION",
+      "is_contradiction": false,
+      "stratum": "gold_asymmetric",
+      "a_chars": 712,
+      "b_chars": 830,
+      "a_extracted_chars": 148,
+      "b_extracted_chars": 303,
+      "a_extraction_succeeded": true,
+      "b_extraction_succeeded": true,
+      "a_extraction_correct": false,
+      "b_extraction_correct": false,
+      "a_extracted": "No excerpt explicitly attributes a statement to Pence about the FBI's role in this context. Thus, the documents do not confirm the quoted statement.",
+      "b_extracted": "Other documents (e.g., [5], [6]) reference broader surveillance allegations but do not explicitly link the FBI to actions during Biden\u2019s VP term. Thus, the claim conflates timelines, and your documents do not provide evidence of Pence explicitly linking the FBI to surveillance during Biden\u2019s VP tenu",
+      "conditions": {
+        "forward": {
+          "contradiction_prob": 0.0002,
+          "similarity": 0.8971,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion": {
+          "contradiction_prob": 0.0001,
+          "similarity": 0.6738,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion_reversed": {
+          "contradiction_prob": 0.0001,
+          "similarity": 0.6738,
+          "gated": false,
+          "alarm": false
+        }
+      }
+    },
+    {
+      "case_id": "G006",
+      "label": "NO_CONTRADICTION",
+      "is_contradiction": false,
+      "stratum": "control",
+      "a_chars": 719,
+      "b_chars": 669,
+      "a_extracted_chars": 251,
+      "b_extracted_chars": 153,
+      "a_extraction_succeeded": true,
+      "b_extraction_succeeded": true,
+      "a_extraction_correct": false,
+      "b_extraction_correct": false,
+      "a_extracted": "No conflicting information about different amounts or no payments for those years is present in the excerpts. The only alternative explanation mentioned is Trump\u2019s own denial during a debate ([10]), but this does not contradict the $750 figure itself.",
+      "b_extracted": "No excerpt explicitly ties this statement to the $750 tax payments. The documents confirm the tax figures but do not include the exact quote in question.",
+      "conditions": {
+        "forward": {
+          "contradiction_prob": 0.0002,
+          "similarity": 0.6596,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion": {
+          "contradiction_prob": 0.0014,
+          "similarity": 0.6447,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion_reversed": {
+          "contradiction_prob": 0.0003,
+          "similarity": 0.6447,
+          "gated": false,
+          "alarm": false
+        }
+      }
+    },
+    {
+      "case_id": "G007",
+      "label": "NO_CONTRADICTION",
+      "is_contradiction": false,
+      "stratum": "control",
+      "a_chars": 739,
+      "b_chars": 591,
+      "a_extracted_chars": 179,
+      "b_extracted_chars": 154,
+      "a_extraction_succeeded": true,
+      "b_extraction_succeeded": true,
+      "a_extraction_correct": true,
+      "b_extraction_correct": true,
+      "a_extracted": "The discrepancy between passing and failing suggests conflicting accounts, but source [2] provides a clear timeline. Your documents do not resolve this contradiction definitively.",
+      "b_extracted": "Thus, the documents do not definitively clarify the year of her first attempt (1989 vs. 1990) or the result (pass/fail), as sources contradict each other.",
+      "conditions": {
+        "forward": {
+          "contradiction_prob": 0.0003,
+          "similarity": 0.9127,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion": {
+          "contradiction_prob": 0.021,
+          "similarity": 0.6161,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion_reversed": {
+          "contradiction_prob": 0.0014,
+          "similarity": 0.6161,
+          "gated": false,
+          "alarm": false
+        }
+      }
+    },
+    {
+      "case_id": "G008",
+      "label": "CONTRADICTION",
+      "is_contradiction": true,
+      "stratum": "control",
+      "a_chars": 637,
+      "b_chars": 729,
+      "a_extracted_chars": 74,
+      "b_extracted_chars": 268,
+      "a_extraction_succeeded": true,
+      "b_extraction_succeeded": true,
+      "a_extraction_correct": false,
+      "b_extraction_correct": true,
+      "a_extracted": "The references point to RIA Novosti and Photo Researchers Inc. as sources.",
+      "b_extracted": "While some sources (e.g., collectspace.com) reference graphic photos labeled as Komarov's remains, they do not attribute these to RIA Novosti or Photo Researchers Inc. The documents emphasize that no credible records or verified sources confirm such photographs exist.",
+      "conditions": {
+        "forward": {
+          "contradiction_prob": 0.6988,
+          "similarity": 0.8533,
+          "gated": false,
+          "alarm": true
+        },
+        "conclusion": {
+          "contradiction_prob": 0.9993,
+          "similarity": 0.6688,
+          "gated": false,
+          "alarm": true
+        },
+        "conclusion_reversed": {
+          "contradiction_prob": 0.9987,
+          "similarity": 0.6688,
+          "gated": false,
+          "alarm": true
+        }
+      }
+    },
+    {
+      "case_id": "G009",
+      "label": "NO_CONTRADICTION",
+      "is_contradiction": false,
+      "stratum": "gold_asymmetric",
+      "a_chars": 764,
+      "b_chars": 755,
+      "a_extracted_chars": 213,
+      "b_extracted_chars": 264,
+      "a_extraction_succeeded": true,
+      "b_extraction_succeeded": true,
+      "a_extraction_correct": true,
+      "b_extraction_correct": true,
+      "a_extracted": "Additionally, [6] and [8] clarify that Biden\u2019s role in the 2009 response was limited, with experts noting he was not prominent in leadership. Thus, no direct evidence from the 2009 period exists in your documents.",
+      "b_extracted": "Thus, while [4] appears to reference a 2009 claim, it is contradicted by [3], which clarifies the quote is a misattribution. Your documents do not provide 2009-era records directly from Klain criticizing Biden\u2019s H1N1 response as \"doing every possible thing wrong.\"",
+      "conditions": {
+        "forward": {
+          "contradiction_prob": 0.0008,
+          "similarity": 0.7015,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion": {
+          "contradiction_prob": 0.001,
+          "similarity": 0.5862,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion_reversed": {
+          "contradiction_prob": 0.0024,
+          "similarity": 0.5862,
+          "gated": false,
+          "alarm": false
+        }
+      }
+    },
+    {
+      "case_id": "G010",
+      "label": "NO_CONTRADICTION",
+      "is_contradiction": false,
+      "stratum": "control",
+      "a_chars": 386,
+      "b_chars": 768,
+      "a_extracted_chars": 203,
+      "b_extracted_chars": 189,
+      "a_extraction_succeeded": true,
+      "b_extraction_succeeded": true,
+      "a_extraction_correct": false,
+      "b_extraction_correct": true,
+      "a_extracted": "Excerpt [10] further notes that Republican Assembly Speaker Robin Vos \"tried to spin the results as 'a mandate' for his caucus,\" implying he retained his seat. No documents indicate he lost the election.",
+      "b_extracted": "The focus of the documents is on Republican gains or gerrymandering, not on Republican seat losses. Thus, the evidence does not confirm any Republican-held Assembly seats were lost in 2018.",
+      "conditions": {
+        "forward": {
+          "contradiction_prob": 0.011,
+          "similarity": 0.6473,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion": {
+          "contradiction_prob": 0.0001,
+          "similarity": 0.4965,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion_reversed": {
+          "contradiction_prob": 0.0062,
+          "similarity": 0.4965,
+          "gated": false,
+          "alarm": false
+        }
+      }
+    },
+    {
+      "case_id": "G011",
+      "label": "NO_CONTRADICTION",
+      "is_contradiction": false,
+      "stratum": "gold_asymmetric",
+      "a_chars": 557,
+      "b_chars": 608,
+      "a_extracted_chars": 174,
+      "b_extracted_chars": 165,
+      "a_extraction_succeeded": true,
+      "b_extraction_succeeded": true,
+      "a_extraction_correct": false,
+      "b_extraction_correct": false,
+      "a_extracted": "No documents mention her taking the exam multiple times beyond the first two attempts. Sources [6] and [8] reference others failing the bar exam but do not pertain to Harris.",
+      "b_extracted": "Source [2] and [5] confirm she failed the first time and passed on the second attempt but do not specify the years. Thus, the years are clearly stated in Source [7].",
+      "conditions": {
+        "forward": {
+          "contradiction_prob": 0.4954,
+          "similarity": 0.9115,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion": {
+          "contradiction_prob": 0.9992,
+          "similarity": 0.5422,
+          "gated": false,
+          "alarm": true
+        },
+        "conclusion_reversed": {
+          "contradiction_prob": 0.8108,
+          "similarity": 0.5422,
+          "gated": false,
+          "alarm": true
+        }
+      }
+    },
+    {
+      "case_id": "G012",
+      "label": "NO_CONTRADICTION",
+      "is_contradiction": false,
+      "stratum": "control",
+      "a_chars": 797,
+      "b_chars": 696,
+      "a_extracted_chars": 183,
+      "b_extracted_chars": 370,
+      "a_extraction_succeeded": true,
+      "b_extraction_succeeded": true,
+      "a_extraction_correct": false,
+      "b_extraction_correct": true,
+      "a_extracted": "No state-level documents (e.g., Texas\u2019s order in Source [10]) are part of the Trump administration\u2019s direct actions. These statements and guidance constitute explicit classifications.",
+      "b_extracted": "Federal guidance, such as from the CDC, encouraged states to consider religious institutions as essential, but the final designation was left to state and local authorities, as emphasized in [1][6], and [10]. Thus, while the administration promoted this categorization through guidance, no federal ex",
+      "conditions": {
+        "forward": {
+          "contradiction_prob": 0.0028,
+          "similarity": 0.8501,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion": {
+          "contradiction_prob": 0.0082,
+          "similarity": 0.3658,
+          "gated": true,
+          "alarm": false
+        },
+        "conclusion_reversed": {
+          "contradiction_prob": 0.0521,
+          "similarity": 0.3658,
+          "gated": true,
+          "alarm": false
+        }
+      }
+    },
+    {
+      "case_id": "G013",
+      "label": "NO_CONTRADICTION",
+      "is_contradiction": false,
+      "stratum": "gold_asymmetric",
+      "a_chars": 825,
+      "b_chars": 760,
+      "a_extracted_chars": 340,
+      "b_extracted_chars": 190,
+      "a_extraction_succeeded": true,
+      "b_extraction_succeeded": true,
+      "a_extraction_correct": true,
+      "b_extraction_correct": false,
+      "a_extracted": "The only mention of an executive order is [8], which refers to Texas\u2019s state-level order, not federal action. Thus, while Trump\u2019s guidance and proclamations (if interpreted as such) classified places of worship as essential, the documents do not confirm the existence of formal federal executive orde",
+      "b_extracted": "Excerpts [4][5], and [7] mention state actions (e.g., DeSantis\u2019s order) but do not explicitly reference Trump\u2019s federal guidance as the basis. Thus, [10] provides the clearest explicit link.",
+      "conditions": {
+        "forward": {
+          "contradiction_prob": 0.6061,
+          "similarity": 0.7716,
+          "gated": false,
+          "alarm": true
+        },
+        "conclusion": {
+          "contradiction_prob": 0.061,
+          "similarity": 0.6123,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion_reversed": {
+          "contradiction_prob": 0.0053,
+          "similarity": 0.6123,
+          "gated": false,
+          "alarm": false
+        }
+      }
+    },
+    {
+      "case_id": "G014",
+      "label": "NO_CONTRADICTION",
+      "is_contradiction": false,
+      "stratum": "control",
+      "a_chars": 596,
+      "b_chars": 629,
+      "a_extracted_chars": 242,
+      "b_extracted_chars": 95,
+      "a_extraction_succeeded": true,
+      "b_extraction_succeeded": true,
+      "a_extraction_correct": false,
+      "b_extraction_correct": false,
+      "a_extracted": "The phrasing suggests the article is reporting Pelosi\u2019s remarks, but without additional context, the directness of her statement remains ambiguous. No other excerpts explicitly document Pelosi directly addressing China\u2019s preference for Biden.",
+      "b_extracted": "candidates. The documents do not answer the question about Pelosi's own comments on this topic.",
+      "conditions": {
+        "forward": {
+          "contradiction_prob": 0.0009,
+          "similarity": 0.8583,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion": {
+          "contradiction_prob": 0.0003,
+          "similarity": 0.5217,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion_reversed": {
+          "contradiction_prob": 0.0002,
+          "similarity": 0.5217,
+          "gated": false,
+          "alarm": false
+        }
+      }
+    },
+    {
+      "case_id": "G015",
+      "label": "NO_CONTRADICTION",
+      "is_contradiction": false,
+      "stratum": "control",
+      "a_chars": 797,
+      "b_chars": 970,
+      "a_extracted_chars": 183,
+      "b_extracted_chars": 340,
+      "a_extraction_succeeded": true,
+      "b_extraction_succeeded": true,
+      "a_extraction_correct": false,
+      "b_extraction_correct": true,
+      "a_extracted": "No state-level documents (e.g., Texas\u2019s order in Source [10]) are part of the Trump administration\u2019s direct actions. These statements and guidance constitute explicit classifications.",
+      "b_extracted": "Instead, the guidance appears to treat religious institutions as a distinct category, prioritizing their reopening based on constitutional or cultural arguments rather than aligning them with standard essential service protocols. Thus, the documents do not explicitly list places of worship in the sa",
+      "conditions": {
+        "forward": {
+          "contradiction_prob": 0.0003,
+          "similarity": 0.814,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion": {
+          "contradiction_prob": 0.0012,
+          "similarity": 0.3104,
+          "gated": true,
+          "alarm": false
+        },
+        "conclusion_reversed": {
+          "contradiction_prob": 0.0154,
+          "similarity": 0.3104,
+          "gated": true,
+          "alarm": false
+        }
+      }
+    },
+    {
+      "case_id": "G016",
+      "label": "NO_CONTRADICTION",
+      "is_contradiction": false,
+      "stratum": "control",
+      "a_chars": 799,
+      "b_chars": 776,
+      "a_extracted_chars": 233,
+      "b_extracted_chars": 174,
+      "a_extraction_succeeded": true,
+      "b_extraction_succeeded": true,
+      "a_extraction_correct": false,
+      "b_extraction_correct": false,
+      "a_extracted": "Additionally, excerpt [9] mentions a 2008 CNN interview about Trump and Biden\u2019s plagiarism, which is unrelated. Thus, the sources do not confirm the CNN transcript contains the claim, and the statement appears to be a misattribution.",
+      "b_extracted": "No original press coverage or official records in the provided documents verify Pelosi making this specific statement. The claim appears unverified in the available evidence.",
+      "conditions": {
+        "forward": {
+          "contradiction_prob": 0.0004,
+          "similarity": 0.6693,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion": {
+          "contradiction_prob": 0.0002,
+          "similarity": 0.5176,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion_reversed": {
+          "contradiction_prob": 0.0001,
+          "similarity": 0.5176,
+          "gated": false,
+          "alarm": false
+        }
+      }
+    },
+    {
+      "case_id": "G017",
+      "label": "NO_CONTRADICTION",
+      "is_contradiction": false,
+      "stratum": "control",
+      "a_chars": 463,
+      "b_chars": 567,
+      "a_extracted_chars": 124,
+      "b_extracted_chars": 327,
+      "a_extraction_succeeded": true,
+      "b_extraction_succeeded": true,
+      "a_extraction_correct": false,
+      "b_extraction_correct": false,
+      "a_extracted": "No other excerpt provides the verbatim quote. The closest match is source [2], which includes the key elements of the claim.",
+      "b_extracted": "While other sources (e.g., [4][5][8]) mention Trump linking his tax practices to being \"smart\" or \"gaming the system,\" **source [2] does not explicitly tie these remarks to the $750 tax payment**. The connection between the $750 figure and Trump's statements is implied in broader context but not dir",
+      "conditions": {
+        "forward": {
+          "contradiction_prob": 0.0049,
+          "similarity": 0.6348,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion": {
+          "contradiction_prob": 0.0002,
+          "similarity": 0.2421,
+          "gated": true,
+          "alarm": false
+        },
+        "conclusion_reversed": {
+          "contradiction_prob": 0.0022,
+          "similarity": 0.2421,
+          "gated": true,
+          "alarm": false
+        }
+      }
+    },
+    {
+      "case_id": "G018",
+      "label": "NO_CONTRADICTION",
+      "is_contradiction": false,
+      "stratum": "control",
+      "a_chars": 826,
+      "b_chars": 668,
+      "a_extracted_chars": 299,
+      "b_extracted_chars": 218,
+      "a_extraction_succeeded": true,
+      "b_extraction_succeeded": true,
+      "a_extraction_correct": false,
+      "b_extraction_correct": false,
+      "a_extracted": "- [6] describes her \"shock of failing the bar exam at the first attempt.\"  \n\nNo documents in this collection mention her passing the California bar on her first attempt. All sources either directly state she failed initially or imply it through context (e.g., delayed admission, subsequent success).",
+      "b_extracted": "All sources contradict the claim that she passed initially, instead supporting the narrative of a first-time failure. The documents do not provide evidence to support the assertion that she passed on her first attempt.",
+      "conditions": {
+        "forward": {
+          "contradiction_prob": 0.9953,
+          "similarity": 0.9487,
+          "gated": false,
+          "alarm": true
+        },
+        "conclusion": {
+          "contradiction_prob": 0.1895,
+          "similarity": 0.6313,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion_reversed": {
+          "contradiction_prob": 0.0013,
+          "similarity": 0.6313,
+          "gated": false,
+          "alarm": false
+        }
+      }
+    },
+    {
+      "case_id": "G019",
+      "label": "NO_CONTRADICTION",
+      "is_contradiction": false,
+      "stratum": "gold_asymmetric",
+      "a_chars": 632,
+      "b_chars": 521,
+      "a_extracted_chars": 246,
+      "b_extracted_chars": 212,
+      "a_extraction_succeeded": true,
+      "b_extraction_succeeded": true,
+      "a_extraction_correct": false,
+      "b_extraction_correct": false,
+      "a_extracted": "She sat and passed on her next attempt, and was admitted to the California bar in 1990.\" These sources consistently support that she failed initially but passed on her second attempt. No contradictory evidence is present in the provided excerpts.",
+      "b_extracted": "For example, [10] directly states she \"flunked once and then went on to pass it on her second attempt,\" reinforcing the assertion of a first-time failure. The documents do not present evidence refuting the claim.",
+      "conditions": {
+        "forward": {
+          "contradiction_prob": 0.0002,
+          "similarity": 0.9289,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion": {
+          "contradiction_prob": 0.0001,
+          "similarity": 0.5048,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion_reversed": {
+          "contradiction_prob": 0.0003,
+          "similarity": 0.5048,
+          "gated": false,
+          "alarm": false
+        }
+      }
+    },
+    {
+      "case_id": "G020",
+      "label": "NO_CONTRADICTION",
+      "is_contradiction": false,
+      "stratum": "gold_asymmetric",
+      "a_chars": 805,
+      "b_chars": 658,
+      "a_extracted_chars": 254,
+      "b_extracted_chars": 279,
+      "a_extraction_succeeded": true,
+      "b_extraction_succeeded": true,
+      "a_extraction_correct": true,
+      "b_extraction_correct": false,
+      "a_extracted": "Excerpt [2] also mentions Klain\u2019s remark in 2020 about the \u201cfortuity\u201d of avoiding a mass casualty event, implying criticism of the administration\u2019s response. Thus, the answer is **yes**, based on statements by Klain, Biden\u2019s chief of staff, made in 2020.",
+      "b_extracted": "While some sources (e.g., [1]) mention Klain criticizing the Obama administration\u2019s response broadly, the specific wording in [5] and [7] ties the criticism to Biden\u2019s personal role in the 2009 crisis. Thus, Klain\u2019s remarks explicitly targeted Biden\u2019s actions during that period.",
+      "conditions": {
+        "forward": {
+          "contradiction_prob": 0.014,
+          "similarity": 0.6938,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion": {
+          "contradiction_prob": 0.0423,
+          "similarity": 0.5463,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion_reversed": {
+          "contradiction_prob": 0.0018,
+          "similarity": 0.5463,
+          "gated": false,
+          "alarm": false
+        }
+      }
+    },
+    {
+      "case_id": "G021",
+      "label": "NO_CONTRADICTION",
+      "is_contradiction": false,
+      "stratum": "gold_asymmetric",
+      "a_chars": 680,
+      "b_chars": 653,
+      "a_extracted_chars": 314,
+      "b_extracted_chars": 285,
+      "a_extraction_succeeded": true,
+      "b_extraction_succeeded": true,
+      "a_extraction_correct": true,
+      "b_extraction_correct": true,
+      "a_extracted": "Regarding the \"gaming the system\" statement, **source 7** directly quotes Trump saying, \u201cMakes me smart,\u201d referencing his alleged tax strategies during a 2016 debate. This aligns with claims that he \u201cgamed the tax system.\u201d  \n\nNo refutations of the $750 figure or the statement are present in the prov",
+      "b_extracted": "The \u201cgaming the system\u201d statement is attributed to Hillary Clinton (Source [3]), not Trump, and no documents provide Trump\u2019s exact wording on this phrase. Thus, the documents confirm the tax figure but contradict it, and the \u201cgaming the system\u201d remark is not directly sourced to Trump.",
+      "conditions": {
+        "forward": {
+          "contradiction_prob": 0.0468,
+          "similarity": 0.9303,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion": {
+          "contradiction_prob": 0.9657,
+          "similarity": 0.8669,
+          "gated": false,
+          "alarm": true
+        },
+        "conclusion_reversed": {
+          "contradiction_prob": 0.995,
+          "similarity": 0.8669,
+          "gated": false,
+          "alarm": true
+        }
+      }
+    },
+    {
+      "case_id": "G022",
+      "label": "NO_CONTRADICTION",
+      "is_contradiction": false,
+      "stratum": "gold_asymmetric",
+      "a_chars": 520,
+      "b_chars": 751,
+      "a_extracted_chars": 172,
+      "b_extracted_chars": 210,
+      "a_extraction_succeeded": true,
+      "b_extraction_succeeded": true,
+      "a_extraction_correct": false,
+      "b_extraction_correct": false,
+      "a_extracted": "Other excerpts discuss criticism of Biden\u2019s 2009 swine flu response but do not include this specific quote. No conflicting information is present in the provided documents.",
+      "b_extracted": "However, no U.S.-based news outlets or official records are explicitly cited as corroborating the specific statement in the documents. The documents do not mention other independent sources verifying the claim.",
+      "conditions": {
+        "forward": {
+          "contradiction_prob": 0.0064,
+          "similarity": 0.7501,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion": {
+          "contradiction_prob": 0.0028,
+          "similarity": 0.3326,
+          "gated": true,
+          "alarm": false
+        },
+        "conclusion_reversed": {
+          "contradiction_prob": 0.0183,
+          "similarity": 0.3326,
+          "gated": true,
+          "alarm": false
+        }
+      }
+    },
+    {
+      "case_id": "G023",
+      "label": "NO_CONTRADICTION",
+      "is_contradiction": false,
+      "stratum": "control",
+      "a_chars": 538,
+      "b_chars": 767,
+      "a_extracted_chars": 215,
+      "b_extracted_chars": 312,
+      "a_extraction_succeeded": true,
+      "b_extraction_succeeded": true,
+      "a_extraction_correct": false,
+      "b_extraction_correct": true,
+      "a_extracted": "Additional excerpts [5][6][7][8][9], and [10] consistently refer to him as Assembly Speaker in 2018, including his leadership during legislative sessions and debates. These sources collectively confirm his position.",
+      "b_extracted": "While the 2018 election outcome is not directly stated, the evidence supports that he was re-elected. **Answer:** Yes, Robin Vos was re-elected in the 2018 election for his state Assembly seat, as evidenced by his continued service in office and the context of his 2020 re-election challenge (sources",
+      "conditions": {
+        "forward": {
+          "contradiction_prob": 0.0011,
+          "similarity": 0.7819,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion": {
+          "contradiction_prob": 0.001,
+          "similarity": 0.3928,
+          "gated": true,
+          "alarm": false
+        },
+        "conclusion_reversed": {
+          "contradiction_prob": 0.0011,
+          "similarity": 0.3928,
+          "gated": true,
+          "alarm": false
+        }
+      }
+    },
+    {
+      "case_id": "G024",
+      "label": "NO_CONTRADICTION",
+      "is_contradiction": false,
+      "stratum": "control",
+      "a_chars": 716,
+      "b_chars": 718,
+      "a_extracted_chars": 212,
+      "b_extracted_chars": 294,
+      "a_extraction_succeeded": true,
+      "b_extraction_succeeded": true,
+      "a_extraction_correct": true,
+      "b_extraction_correct": false,
+      "a_extracted": "Thus, while [2] suggests Pelosi made such a statement, the context and verbatim attribution are unclear. The documents do not provide definitive evidence of Pelosi explicitly stating China's preference for Biden.",
+      "b_extracted": "No documents in your portion address the 2008 interview or directly contextualize the claim about Pelosi stating China preferred Biden. The focus of your evidence is on Pelosi\u2019s 2020 activities, such as her visit to Chinatown and Wuhan-related claims, which are unrelated to the 2008 interview.",
+      "conditions": {
+        "forward": {
+          "contradiction_prob": 0.0024,
+          "similarity": 0.8427,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion": {
+          "contradiction_prob": 0.0006,
+          "similarity": 0.7986,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion_reversed": {
+          "contradiction_prob": 0.0001,
+          "similarity": 0.7986,
+          "gated": false,
+          "alarm": false
+        }
+      }
+    },
+    {
+      "case_id": "G025",
+      "label": "NO_CONTRADICTION",
+      "is_contradiction": false,
+      "stratum": "gold_asymmetric",
+      "a_chars": 917,
+      "b_chars": 667,
+      "a_extracted_chars": 338,
+      "b_extracted_chars": 244,
+      "a_extraction_succeeded": true,
+      "b_extraction_succeeded": true,
+      "a_extraction_correct": false,
+      "b_extraction_correct": true,
+      "a_extracted": "While some executive orders (e.g., 2020-18 and 2020-33) did not mandate reopening, they did not explicitly exclude places of worship from essential status (Source [8]). State-level orders, like Texas\u2019s, later classified religious services as essential (Source [9]), but the federal designation was di",
+      "b_extracted": "None of the excerpts mention any official Trump administration documents or statements that explicitly contradict this classification. All sources align with Trump\u2019s position, and no conflicting information is present in the provided documents.",
+      "conditions": {
+        "forward": {
+          "contradiction_prob": 0.0011,
+          "similarity": 0.8219,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion": {
+          "contradiction_prob": 0.0041,
+          "similarity": 0.2954,
+          "gated": true,
+          "alarm": false
+        },
+        "conclusion_reversed": {
+          "contradiction_prob": 0.0003,
+          "similarity": 0.2954,
+          "gated": true,
+          "alarm": false
+        }
+      }
+    },
+    {
+      "case_id": "G026",
+      "label": "CONTRADICTION",
+      "is_contradiction": true,
+      "stratum": "gold_asymmetric",
+      "a_chars": 459,
+      "b_chars": 780,
+      "a_extracted_chars": 227,
+      "b_extracted_chars": 189,
+      "a_extraction_succeeded": true,
+      "b_extraction_succeeded": true,
+      "a_extraction_correct": false,
+      "b_extraction_correct": false,
+      "a_extracted": "Other excerpts focus on her endorsements of Biden or her China policy critiques but do not address China's preference for him. No additional evidence is provided in the documents to corroborate or expand on this specific claim.",
+      "b_extracted": "Other excerpts [5][7][8][9], and [10] discuss unrelated topics like meetings or legal matters. Thus, your documents do not confirm Pelosi discussing China's electoral preferences for Biden.",
+      "conditions": {
+        "forward": {
+          "contradiction_prob": 0.0015,
+          "similarity": 0.8098,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion": {
+          "contradiction_prob": 0.0001,
+          "similarity": 0.7463,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion_reversed": {
+          "contradiction_prob": 0.0006,
+          "similarity": 0.7463,
+          "gated": false,
+          "alarm": false
+        }
+      }
+    },
+    {
+      "case_id": "G027",
+      "label": "NO_CONTRADICTION",
+      "is_contradiction": false,
+      "stratum": "gold_asymmetric",
+      "a_chars": 600,
+      "b_chars": 855,
+      "a_extracted_chars": 210,
+      "b_extracted_chars": 282,
+      "a_extraction_succeeded": true,
+      "b_extraction_succeeded": true,
+      "a_extraction_correct": false,
+      "b_extraction_correct": false,
+      "a_extracted": "Trump himself stated, \u201cThey spied on my campaign, and that includes Biden and Obama\u201d (Source 9), but this is a direct quote from Trump, not Pence. No documents link Pence to the specific allegation in question.",
+      "b_extracted": "Instead, they reference surveillance linked to the 2016 election (source [5][6][10]), which predates Biden\u2019s VP\u4efb\u671f. Thus, the evidence does not directly address the specific timing of Pence\u2019s claim but shows the FBI\u2019s actions were focused on the 2016 campaign, not Biden\u2019s VP period.",
+      "conditions": {
+        "forward": {
+          "contradiction_prob": 0.001,
+          "similarity": 0.7826,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion": {
+          "contradiction_prob": 0.0003,
+          "similarity": 0.6768,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion_reversed": {
+          "contradiction_prob": 0.9749,
+          "similarity": 0.6768,
+          "gated": false,
+          "alarm": true
+        }
+      }
+    },
+    {
+      "case_id": "G028",
+      "label": "NO_CONTRADICTION",
+      "is_contradiction": false,
+      "stratum": "control",
+      "a_chars": 778,
+      "b_chars": 758,
+      "a_extracted_chars": 393,
+      "b_extracted_chars": 199,
+      "a_extraction_succeeded": true,
+      "b_extraction_succeeded": true,
+      "a_extraction_correct": false,
+      "b_extraction_correct": false,
+      "a_extracted": "While the CDC does not explicitly state that all non-N95 masks are ineffective, the focus on cloth masks and their ineffectiveness against smoke particles implies that their inability to filter small particles is the reason. Thus, the evidence supports that the CDC has addressed non-N95 masks (e.g.,",
+      "b_extracted": "Excerpt [4] adds that masks are \"too loose-fitting\" to block smoke particles. Thus, the CDC guidance specifies that non-N95 masks are ineffective against wildfire smoke due to these combined factors.",
+      "conditions": {
+        "forward": {
+          "contradiction_prob": 0.0044,
+          "similarity": 0.9307,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion": {
+          "contradiction_prob": 0.0023,
+          "similarity": 0.8941,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion_reversed": {
+          "contradiction_prob": 0.0003,
+          "similarity": 0.8941,
+          "gated": false,
+          "alarm": false
+        }
+      }
+    },
+    {
+      "case_id": "G029",
+      "label": "NO_CONTRADICTION",
+      "is_contradiction": false,
+      "stratum": "gold_asymmetric",
+      "a_chars": 613,
+      "b_chars": 840,
+      "a_extracted_chars": 188,
+      "b_extracted_chars": 219,
+      "a_extraction_succeeded": true,
+      "b_extraction_succeeded": true,
+      "a_extraction_correct": false,
+      "b_extraction_correct": false,
+      "a_extracted": "The sources consistently describe verbal assertions, not legally binding executive actions. Thus, the documents do not answer whether a specific executive order or proclamation was issued.",
+      "b_extracted": "- Other sources (e.g., [1][2][10]) clarify that federal guidance left classifications to states, and Trump\u2019s claim was not a formal declaration. No other state-level documents beyond Texas are included in your evidence.",
+      "conditions": {
+        "forward": {
+          "contradiction_prob": 0.0456,
+          "similarity": 0.6426,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion": {
+          "contradiction_prob": 0.0044,
+          "similarity": 0.3688,
+          "gated": true,
+          "alarm": false
+        },
+        "conclusion_reversed": {
+          "contradiction_prob": 0.0116,
+          "similarity": 0.3688,
+          "gated": true,
+          "alarm": false
+        }
+      }
+    },
+    {
+      "case_id": "G030",
+      "label": "CONTRADICTION",
+      "is_contradiction": true,
+      "stratum": "control",
+      "a_chars": 716,
+      "b_chars": 486,
+      "a_extracted_chars": 212,
+      "b_extracted_chars": 120,
+      "a_extraction_succeeded": true,
+      "b_extraction_succeeded": true,
+      "a_extraction_correct": true,
+      "b_extraction_correct": false,
+      "a_extracted": "Thus, while [2] suggests Pelosi made such a statement, the context and verbatim attribution are unclear. The documents do not provide definitive evidence of Pelosi explicitly stating China's preference for Biden.",
+      "b_extracted": "No other excerpts confirm or clarify this claim. Source: [1] http://transcripts.cnn.com/TRANSCRIPTS/2008/09/sotu.01.html",
+      "conditions": {
+        "forward": {
+          "contradiction_prob": 0.0015,
+          "similarity": 0.8955,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion": {
+          "contradiction_prob": 0.0002,
+          "similarity": 0.3006,
+          "gated": true,
+          "alarm": false
+        },
+        "conclusion_reversed": {
+          "contradiction_prob": 0.0001,
+          "similarity": 0.3006,
+          "gated": true,
+          "alarm": false
+        }
+      }
+    },
+    {
+      "case_id": "G031",
+      "label": "NO_CONTRADICTION",
+      "is_contradiction": false,
+      "stratum": "control",
+      "a_chars": 906,
+      "b_chars": 803,
+      "a_extracted_chars": 236,
+      "b_extracted_chars": 253,
+      "a_extraction_succeeded": true,
+      "b_extraction_succeeded": true,
+      "a_extraction_correct": true,
+      "b_extraction_correct": false,
+      "a_extracted": "The closest evidence is Pence\u2019s broader accusation against the administration, not a direct reference to the FBI\u2019s actions. Thus, the documents do not provide a direct quote from Pence about the FBI\u2019s surveillance during Biden\u2019s tenure.",
+      "b_extracted": "The documents instead focus on debates over whether the FBI illegally spied on Trump\u2019s 2016 campaign, with Wray and others denying such claims. Thus, the evidence does not confirm Pence\u2019s explicit attribution of spying to the FBI during Biden\u2019s VP term.",
+      "conditions": {
+        "forward": {
+          "contradiction_prob": 0.003,
+          "similarity": 0.9096,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion": {
+          "contradiction_prob": 0.0002,
+          "similarity": 0.8518,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion_reversed": {
+          "contradiction_prob": 0.0001,
+          "similarity": 0.8518,
+          "gated": false,
+          "alarm": false
+        }
+      }
+    },
+    {
+      "case_id": "G032",
+      "label": "NO_CONTRADICTION",
+      "is_contradiction": false,
+      "stratum": "gold_asymmetric",
+      "a_chars": 571,
+      "b_chars": 607,
+      "a_extracted_chars": 129,
+      "b_extracted_chars": 231,
+      "a_extraction_succeeded": true,
+      "b_extraction_succeeded": true,
+      "a_extraction_correct": false,
+      "b_extraction_correct": false,
+      "a_extracted": "The other sources focus on her China policy, impeachment, or unrelated statements. Thus, the only direct evidence is excerpt [1].",
+      "b_extracted": "The only mention of China \u201cpreferring\u201d a candidate relates to Trump Jr.\u2019s 2020 claim (source [1]) and a 2020 fact-check noting China \u201cprefers\u201d a Trump defeat (source [7]), not Pelosi. Thus, the documents do not answer the question.",
+      "conditions": {
+        "forward": {
+          "contradiction_prob": 0.0157,
+          "similarity": 0.8901,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion": {
+          "contradiction_prob": 0.9942,
+          "similarity": 0.5228,
+          "gated": false,
+          "alarm": true
+        },
+        "conclusion_reversed": {
+          "contradiction_prob": 0.0167,
+          "similarity": 0.5228,
+          "gated": false,
+          "alarm": false
+        }
+      }
+    },
+    {
+      "case_id": "G033",
+      "label": "NO_CONTRADICTION",
+      "is_contradiction": false,
+      "stratum": "control",
+      "a_chars": 837,
+      "b_chars": 808,
+      "a_extracted_chars": 274,
+      "b_extracted_chars": 237,
+      "a_extraction_succeeded": true,
+      "b_extraction_succeeded": true,
+      "a_extraction_correct": true,
+      "b_extraction_correct": true,
+      "a_extracted": "Texas\u2019s stay-at-home order exempting religious services as essential [10] is state-level, not federal. Thus, while Trump\u2019s actions pressured federal agencies, the provided documents do not confirm formal federal agency directives categorizing places of worship as essential.",
+      "b_extracted": "While Trump\u2019s administration issued guidance (e.g., [2][4][7]), the excerpts do not specify the exact legal text or document name. Thus, the provided materials do not explicitly identify a federal-level document with this classification.",
+      "conditions": {
+        "forward": {
+          "contradiction_prob": 0.0001,
+          "similarity": 0.7703,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion": {
+          "contradiction_prob": 0.0001,
+          "similarity": 0.3877,
+          "gated": true,
+          "alarm": false
+        },
+        "conclusion_reversed": {
+          "contradiction_prob": 0.0001,
+          "similarity": 0.3877,
+          "gated": true,
+          "alarm": false
+        }
+      }
+    },
+    {
+      "case_id": "G034",
+      "label": "CONTRADICTION",
+      "is_contradiction": true,
+      "stratum": "gold_asymmetric",
+      "a_chars": 585,
+      "b_chars": 562,
+      "a_extracted_chars": 210,
+      "b_extracted_chars": 235,
+      "a_extraction_succeeded": true,
+      "b_extraction_succeeded": true,
+      "a_extraction_correct": false,
+      "b_extraction_correct": false,
+      "a_extracted": "- Pelosi's interactions with China or Biden (Sources 1, 5, 8, 10), but none directly link her to asserting China's preference for Biden. Your documents do not provide evidence of Pelosi making such a statement.",
+      "b_extracted": "Excerpt **[2]** paraphrases a claim about Pelosi\u2019s stance on China, but it is not a direct quote from her. No other documents in this set provide further evidence of Pelosi explicitly or implicitly stating China\u2019s preference for Biden.",
+      "conditions": {
+        "forward": {
+          "contradiction_prob": 0.0021,
+          "similarity": 0.912,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion": {
+          "contradiction_prob": 0.0002,
+          "similarity": 0.887,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion_reversed": {
+          "contradiction_prob": 0.0003,
+          "similarity": 0.887,
+          "gated": false,
+          "alarm": false
+        }
+      }
+    },
+    {
+      "case_id": "G035",
+      "label": "NO_CONTRADICTION",
+      "is_contradiction": false,
+      "stratum": "control",
+      "a_chars": 539,
+      "b_chars": 710,
+      "a_extracted_chars": 116,
+      "b_extracted_chars": 265,
+      "a_extraction_succeeded": true,
+      "b_extraction_succeeded": true,
+      "a_extraction_correct": false,
+      "b_extraction_correct": false,
+      "a_extracted": "No other years are mentioned in the excerpts. The sources consistently attribute the $750 payments to 2016 and 2017.",
+      "b_extracted": "The New York Times (Source [5][8]) confirms the $750 tax payment figure, contextualizing the claims. While the exact phrasing in the question is not verbatim in all sources, multiple documents attribute similar statements to Trump in response to the $750 tax issue.",
+      "conditions": {
+        "forward": {
+          "contradiction_prob": 0.0035,
+          "similarity": 0.6737,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion": {
+          "contradiction_prob": 0.0023,
+          "similarity": 0.4962,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion_reversed": {
+          "contradiction_prob": 0.8621,
+          "similarity": 0.4962,
+          "gated": false,
+          "alarm": true
+        }
+      }
+    },
+    {
+      "case_id": "G036",
+      "label": "NO_CONTRADICTION",
+      "is_contradiction": false,
+      "stratum": "gold_asymmetric",
+      "a_chars": 811,
+      "b_chars": 938,
+      "a_extracted_chars": 252,
+      "b_extracted_chars": 185,
+      "a_extraction_succeeded": true,
+      "b_extraction_succeeded": true,
+      "a_extraction_correct": true,
+      "b_extraction_correct": true,
+      "a_extracted": "However, none of the excerpts mention an **executive order**\u2014only public statements. Thus, while Trump explicitly labeled places of worship as essential in speeches and briefings, there is no evidence of an executive order formalizing this designation.",
+      "b_extracted": "State-level actions, like Texas\u2019s order in excerpt [7], were separate from federal policy. Thus, no federal agency records explicitly categorize places of worship as essential services.",
+      "conditions": {
+        "forward": {
+          "contradiction_prob": 0.0096,
+          "similarity": 0.8093,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion": {
+          "contradiction_prob": 0.002,
+          "similarity": 0.6514,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion_reversed": {
+          "contradiction_prob": 0.0005,
+          "similarity": 0.6514,
+          "gated": false,
+          "alarm": false
+        }
+      }
+    },
+    {
+      "case_id": "G037",
+      "label": "NO_CONTRADICTION",
+      "is_contradiction": false,
+      "stratum": "control",
+      "a_chars": 680,
+      "b_chars": 692,
+      "a_extracted_chars": 174,
+      "b_extracted_chars": 153,
+      "a_extraction_succeeded": true,
+      "b_extraction_succeeded": true,
+      "a_extraction_correct": false,
+      "b_extraction_correct": true,
+      "a_extracted": "Trump\u2019s criticism of the Obama administration\u2019s response is cited in [5] and [9], but these are not Klain\u2019s statements. Thus, the documents do not confirm the specific claim.",
+      "b_extracted": "Instead, they highlight disputes over its origin and accuracy. Thus, no direct statement from Klain using the exact phrase is confirmed in your evidence.",
+      "conditions": {
+        "forward": {
+          "contradiction_prob": 0.0002,
+          "similarity": 0.6943,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion": {
+          "contradiction_prob": 0.0,
+          "similarity": 0.6997,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion_reversed": {
+          "contradiction_prob": 0.0,
+          "similarity": 0.6997,
+          "gated": false,
+          "alarm": false
+        }
+      }
+    },
+    {
+      "case_id": "G038",
+      "label": "CONTRADICTION",
+      "is_contradiction": true,
+      "stratum": "gold_asymmetric",
+      "a_chars": 704,
+      "b_chars": 473,
+      "a_extracted_chars": 111,
+      "b_extracted_chars": 164,
+      "a_extraction_succeeded": true,
+      "b_extraction_succeeded": true,
+      "a_extraction_correct": false,
+      "b_extraction_correct": false,
+      "a_extracted": "There is no evidence in these documents that Pelosi addressed China's preference for a U.S. president or Biden.",
+      "b_extracted": "Excerpt [8] incorrectly claims Xi Jinping prefers \"China\" as a victor, not that China prefers Biden. Thus, only Excerpt [1] provides a direct statement from Pelosi.",
+      "conditions": {
+        "forward": {
+          "contradiction_prob": 0.0539,
+          "similarity": 0.8802,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion": {
+          "contradiction_prob": 0.9434,
+          "similarity": 0.7056,
+          "gated": false,
+          "alarm": true
+        },
+        "conclusion_reversed": {
+          "contradiction_prob": 0.988,
+          "similarity": 0.7056,
+          "gated": false,
+          "alarm": true
+        }
+      }
+    },
+    {
+      "case_id": "G039",
+      "label": "CONTRADICTION",
+      "is_contradiction": true,
+      "stratum": "gold_asymmetric",
+      "a_chars": 625,
+      "b_chars": 675,
+      "a_extracted_chars": 225,
+      "b_extracted_chars": 170,
+      "a_extraction_succeeded": true,
+      "b_extraction_succeeded": true,
+      "a_extraction_correct": true,
+      "b_extraction_correct": false,
+      "a_extracted": "Other sources highlight her criticism of China (e.g., climate change, human rights) but do not address this specific claim. Thus, the only direct reference is source [3], though its reliability as a direct quote is ambiguous.",
+      "b_extracted": "intelligence assessments about China's preference for Trump's loss, but these are not direct quotes from Pelosi. Thus, the claim in question is not present in source [3].",
+      "conditions": {
+        "forward": {
+          "contradiction_prob": 0.0026,
+          "similarity": 0.9221,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion": {
+          "contradiction_prob": 0.0686,
+          "similarity": 0.6196,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion_reversed": {
+          "contradiction_prob": 0.0031,
+          "similarity": 0.6196,
+          "gated": false,
+          "alarm": false
+        }
+      }
+    },
+    {
+      "case_id": "G040",
+      "label": "CONTRADICTION",
+      "is_contradiction": true,
+      "stratum": "gold_asymmetric",
+      "a_chars": 772,
+      "b_chars": 823,
+      "a_extracted_chars": 186,
+      "b_extracted_chars": 487,
+      "a_extraction_succeeded": true,
+      "b_extraction_succeeded": true,
+      "a_extraction_correct": false,
+      "b_extraction_correct": false,
+      "a_extracted": "The focus is on the mismatch between cloth masks\u2019 design (for droplet transmission) and wildfire smoke\u2019s hazards. Thus, the provided excerpts do not explicitly confirm the stated reason.",
+      "b_extracted": "- [6] notes that masks used for COVID-19 (e.g., surgical masks) offer little protection against \"small particles that can injure the lungs.\"  \n- [10] clarifies surgical masks are not designed to block \"very small particles from the air.\"  \n\nWhile some excerpts mention fit or filter characteristics (",
+      "conditions": {
+        "forward": {
+          "contradiction_prob": 0.0133,
+          "similarity": 0.8545,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion": {
+          "contradiction_prob": 0.0018,
+          "similarity": 0.5124,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion_reversed": {
+          "contradiction_prob": 0.0085,
+          "similarity": 0.5124,
+          "gated": false,
+          "alarm": false
+        }
+      }
+    }
+  ]
+}

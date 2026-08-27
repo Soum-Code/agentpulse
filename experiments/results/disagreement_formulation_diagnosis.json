@@ -1,0 +1,1545 @@
+{
+  "timestamp": "2026-08-27 11:31:28 UTC",
+  "purpose": "localize the cause of 0/10 recall after truncation was ruled out",
+  "not_a_benchmark": true,
+  "production_code_modified": false,
+  "detector": {
+    "threshold": 0.6,
+    "relevance_floor": 0.4
+  },
+  "conclusion_extraction_rule": "positional only: keep the sentence containing the final 'A) Yes'/'B) No' marker, else the last two sentences. No paraphrase.",
+  "summary": {
+    "forward": {
+      "tp": 0,
+      "fp": 0,
+      "fn": 10,
+      "tn": 30,
+      "recall": 0.0,
+      "precision": null,
+      "fp_rate_on_30_negatives": 0.0,
+      "mean_contradiction_prob_on_positives": 0.007,
+      "max_contradiction_prob_on_positives": 0.0204
+    },
+    "reversed": {
+      "tp": 0,
+      "fp": 1,
+      "fn": 10,
+      "tn": 29,
+      "recall": 0.0,
+      "precision": 0.0,
+      "fp_rate_on_30_negatives": 0.0333,
+      "mean_contradiction_prob_on_positives": 0.0298,
+      "max_contradiction_prob_on_positives": 0.2444
+    },
+    "conclusion": {
+      "tp": 4,
+      "fp": 3,
+      "fn": 6,
+      "tn": 27,
+      "recall": 0.4,
+      "precision": 0.5714,
+      "fp_rate_on_30_negatives": 0.1,
+      "mean_contradiction_prob_on_positives": 0.4288,
+      "max_contradiction_prob_on_positives": 0.9993
+    },
+    "conclusion_reversed": {
+      "tp": 6,
+      "fp": 0,
+      "fn": 4,
+      "tn": 30,
+      "recall": 0.6,
+      "precision": 1.0,
+      "fp_rate_on_30_negatives": 0.0,
+      "mean_contradiction_prob_on_positives": 0.6276,
+      "max_contradiction_prob_on_positives": 0.9991
+    }
+  },
+  "verdict": "CLAIM EXTRACTION IS THE DOMINANT FACTOR, PARTIALLY. Best variant 'conclusion_reversed' lifts recall 0.00 -> 0.60 at 0% false positives. The production path's failure is feeding NLI whole discursive turns rather than the asserted claim. Not a full fix: misses remain on hedged conclusions whose caveats agree.",
+  "per_case": [
+    {
+      "case_id": "P001",
+      "label": "NO_CONTRADICTION",
+      "is_contradiction": false,
+      "a_conclusion": "The final answer is: A) Yes",
+      "b_conclusion": "The final answer is: A) Yes",
+      "a_conclusion_chars": 27,
+      "b_conclusion_chars": 27,
+      "a_final_answer": "A) Yes",
+      "b_final_answer": "A) Yes",
+      "conditions": {
+        "forward": {
+          "contradiction_prob": 0.0021,
+          "similarity": 0.8812,
+          "gated": false,
+          "alarm": false
+        },
+        "reversed": {
+          "contradiction_prob": 0.0021,
+          "similarity": 0.8812,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion": {
+          "contradiction_prob": 0.0008,
+          "similarity": 1.0,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion_reversed": {
+          "contradiction_prob": 0.0008,
+          "similarity": 1.0,
+          "gated": false,
+          "alarm": false
+        }
+      }
+    },
+    {
+      "case_id": "P002",
+      "label": "NO_CONTRADICTION",
+      "is_contradiction": false,
+      "a_conclusion": "The Wildlife Biologist outlined key physical differences, and both the Wildlife Photographer and I agree that these characteristics are sufficient for identification. The Wildlife Photographer confirms that head shape and ear tufts are clear and identifiable.",
+      "b_conclusion": "The Wildlife Biologist outlined key physical differences, and both the Zoologist and I agree that these characteristics are sufficient for identification. Given this consensus,",
+      "a_conclusion_chars": 259,
+      "b_conclusion_chars": 176,
+      "a_final_answer": null,
+      "b_final_answer": null,
+      "conditions": {
+        "forward": {
+          "contradiction_prob": 0.0004,
+          "similarity": 0.7379,
+          "gated": false,
+          "alarm": false
+        },
+        "reversed": {
+          "contradiction_prob": 0.0004,
+          "similarity": 0.7379,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion": {
+          "contradiction_prob": 0.0004,
+          "similarity": 0.7379,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion_reversed": {
+          "contradiction_prob": 0.0004,
+          "similarity": 0.7379,
+          "gated": false,
+          "alarm": false
+        }
+      }
+    },
+    {
+      "case_id": "P003",
+      "label": "CONTRADICTION",
+      "is_contradiction": true,
+      "a_conclusion": "**Solution: A) Yes**, but with the caveat that the scenario is extreme and intended to highlight the importance of carbohydrate management for individuals with hyperglycemia rather than to suggest a common or likely cause of death.",
+      "b_conclusion": "**Revised Solution: B) No**, with the caveat that a wheelbarrow full of starch is unlikely to be consumed in reality, and that hyperglycemics can manage their glycemic control and prevent complications by following a balanced nutrition plan and receiving personalized guidance from a healthcare profe",
+      "a_conclusion_chars": 231,
+      "b_conclusion_chars": 308,
+      "a_final_answer": "A) Yes",
+      "b_final_answer": "B) No",
+      "conditions": {
+        "forward": {
+          "contradiction_prob": 0.0069,
+          "similarity": 0.8388,
+          "gated": false,
+          "alarm": false
+        },
+        "reversed": {
+          "contradiction_prob": 0.008,
+          "similarity": 0.8388,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion": {
+          "contradiction_prob": 0.0081,
+          "similarity": 0.5814,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion_reversed": {
+          "contradiction_prob": 0.6195,
+          "similarity": 0.5814,
+          "gated": false,
+          "alarm": true
+        }
+      }
+    },
+    {
+      "case_id": "P004",
+      "label": "CONTRADICTION",
+      "is_contradiction": true,
+      "a_conclusion": "As the Orchestra Conductor, I can confidently say that a traditional Swan Lake performance does not involve a large body of water that could cause drowning. I'd like to hear more from the Ballet Dancer about what kind of water feature or special effect they're imagining, but so far, it seems unlikel",
+      "b_conclusion": "As the Stage Manager, I know that some productions of Swan Lake may include water features or special effects that could potentially pose a drowning risk. The Orchestra Conductor's assumption that a traditional performance is the only type that exists is narrow-minded.",
+      "a_conclusion_chars": 302,
+      "b_conclusion_chars": 269,
+      "a_final_answer": null,
+      "b_final_answer": null,
+      "conditions": {
+        "forward": {
+          "contradiction_prob": 0.0105,
+          "similarity": 0.8703,
+          "gated": false,
+          "alarm": false
+        },
+        "reversed": {
+          "contradiction_prob": 0.2444,
+          "similarity": 0.8703,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion": {
+          "contradiction_prob": 0.008,
+          "similarity": 0.8298,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion_reversed": {
+          "contradiction_prob": 0.9006,
+          "similarity": 0.8298,
+          "gated": false,
+          "alarm": true
+        }
+      }
+    },
+    {
+      "case_id": "P005",
+      "label": "NO_CONTRADICTION",
+      "is_contradiction": false,
+      "a_conclusion": "The crucial comparison, as noted by Participant 1, shows these are distinct. Given this, I think we can rely on Participant 1's steps: identifying Kobe's product and a BLT's ingredients, then comparing them.",
+      "b_conclusion": "I agree with Participant 1's steps: identifying Kobe's product as beef and a BLT's ingredients, including bacon, then comparing them to show they are distinct. Participant 2 also correctly noted that this comparison is crucial.",
+      "a_conclusion_chars": 207,
+      "b_conclusion_chars": 227,
+      "a_final_answer": null,
+      "b_final_answer": null,
+      "conditions": {
+        "forward": {
+          "contradiction_prob": 0.0002,
+          "similarity": 0.9553,
+          "gated": false,
+          "alarm": false
+        },
+        "reversed": {
+          "contradiction_prob": 0.0001,
+          "similarity": 0.9553,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion": {
+          "contradiction_prob": 0.0002,
+          "similarity": 0.8085,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion_reversed": {
+          "contradiction_prob": 0.0002,
+          "similarity": 0.8085,
+          "gated": false,
+          "alarm": false
+        }
+      }
+    },
+    {
+      "case_id": "P006",
+      "label": "NO_CONTRADICTION",
+      "is_contradiction": false,
+      "a_conclusion": "The solution is: B) No\n\nThis answer is based on the accurate geographical location of Vellore Fort, the known habitat of Grizzly Bears, and the types of wildlife, including bears, that are actually found in India.",
+      "b_conclusion": "The solution remains: B) No",
+      "a_conclusion_chars": 213,
+      "b_conclusion_chars": 27,
+      "a_final_answer": "B) No",
+      "b_final_answer": "B) No",
+      "conditions": {
+        "forward": {
+          "contradiction_prob": 0.0087,
+          "similarity": 1.0,
+          "gated": false,
+          "alarm": false
+        },
+        "reversed": {
+          "contradiction_prob": 0.0088,
+          "similarity": 1.0,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion": {
+          "contradiction_prob": 0.0629,
+          "similarity": 0.2235,
+          "gated": true,
+          "alarm": false
+        },
+        "conclusion_reversed": {
+          "contradiction_prob": 0.0004,
+          "similarity": 0.2235,
+          "gated": true,
+          "alarm": false
+        }
+      }
+    },
+    {
+      "case_id": "P007",
+      "label": "NO_CONTRADICTION",
+      "is_contradiction": false,
+      "a_conclusion": "The final answer is: A) Yes",
+      "b_conclusion": "The final answer is: A) Yes",
+      "a_conclusion_chars": 27,
+      "b_conclusion_chars": 27,
+      "a_final_answer": "A) Yes",
+      "b_final_answer": "A) Yes",
+      "conditions": {
+        "forward": {
+          "contradiction_prob": 0.0037,
+          "similarity": 0.8578,
+          "gated": false,
+          "alarm": false
+        },
+        "reversed": {
+          "contradiction_prob": 0.0035,
+          "similarity": 0.8578,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion": {
+          "contradiction_prob": 0.0008,
+          "similarity": 1.0,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion_reversed": {
+          "contradiction_prob": 0.0008,
+          "similarity": 1.0,
+          "gated": false,
+          "alarm": false
+        }
+      }
+    },
+    {
+      "case_id": "P008",
+      "label": "NO_CONTRADICTION",
+      "is_contradiction": false,
+      "a_conclusion": "This implies we need to confirm if spider wasps differ from the general insect leg count. Before we proceed to a conclusion, let's consider if there's any known exception or specific trait of spider wasps that could influence the number of legs they have.",
+      "b_conclusion": "However, I think we can conclude based on general knowledge of insects. Since spider wasps are insects and there's no common exception mentioned for them having eight legs, we can likely rely on the typical insect leg count.",
+      "a_conclusion_chars": 255,
+      "b_conclusion_chars": 224,
+      "a_final_answer": null,
+      "b_final_answer": null,
+      "conditions": {
+        "forward": {
+          "contradiction_prob": 0.0129,
+          "similarity": 0.8865,
+          "gated": false,
+          "alarm": false
+        },
+        "reversed": {
+          "contradiction_prob": 0.0085,
+          "similarity": 0.8865,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion": {
+          "contradiction_prob": 0.0414,
+          "similarity": 0.8819,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion_reversed": {
+          "contradiction_prob": 0.0745,
+          "similarity": 0.8819,
+          "gated": false,
+          "alarm": false
+        }
+      }
+    },
+    {
+      "case_id": "P009",
+      "label": "NO_CONTRADICTION",
+      "is_contradiction": false,
+      "a_conclusion": "Francis Crick, on the other hand, was born on June 8, 1916, and passed away on July 28, 2004. Now, we have the necessary information to proceed with comparing their lifespans and determining if Francis Crick outlived James Watson or not.",
+      "b_conclusion": "Since James Watson is still alive and Francis Crick passed away in 2004, we can infer that James Watson has outlived Francis Crick so far. Let's confirm if this is enough to answer the question.",
+      "a_conclusion_chars": 237,
+      "b_conclusion_chars": 194,
+      "a_final_answer": null,
+      "b_final_answer": null,
+      "conditions": {
+        "forward": {
+          "contradiction_prob": 0.0145,
+          "similarity": 0.8034,
+          "gated": false,
+          "alarm": false
+        },
+        "reversed": {
+          "contradiction_prob": 0.004,
+          "similarity": 0.8034,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion": {
+          "contradiction_prob": 0.9944,
+          "similarity": 0.831,
+          "gated": false,
+          "alarm": true
+        },
+        "conclusion_reversed": {
+          "contradiction_prob": 0.0128,
+          "similarity": 0.831,
+          "gated": false,
+          "alarm": false
+        }
+      }
+    },
+    {
+      "case_id": "P010",
+      "label": "NO_CONTRADICTION",
+      "is_contradiction": false,
+      "a_conclusion": "Solution: A) Yes, with the caveat that the nature and complexity of this disgust would likely be significantly different from the human experience of disgust.",
+      "b_conclusion": "**Revised Solution**: \nA) Yes, with the understanding that the experience of disgust in frogs is likely to be fundamentally different from the human experience, manifesting as instinctual avoidance behaviors rather than a complex emotional response.",
+      "a_conclusion_chars": 158,
+      "b_conclusion_chars": 249,
+      "a_final_answer": "A) Yes",
+      "b_final_answer": "A) Yes",
+      "conditions": {
+        "forward": {
+          "contradiction_prob": 0.0004,
+          "similarity": 0.8188,
+          "gated": false,
+          "alarm": false
+        },
+        "reversed": {
+          "contradiction_prob": 0.0004,
+          "similarity": 0.8188,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion": {
+          "contradiction_prob": 0.0029,
+          "similarity": 0.6005,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion_reversed": {
+          "contradiction_prob": 0.0008,
+          "similarity": 0.6005,
+          "gated": false,
+          "alarm": false
+        }
+      }
+    },
+    {
+      "case_id": "P011",
+      "label": "NO_CONTRADICTION",
+      "is_contradiction": false,
+      "a_conclusion": "The final answer remains: B) No.",
+      "b_conclusion": "Therefore, the answer remains: B) No.",
+      "a_conclusion_chars": 32,
+      "b_conclusion_chars": 37,
+      "a_final_answer": "B) No",
+      "b_final_answer": "B) No",
+      "conditions": {
+        "forward": {
+          "contradiction_prob": 0.0005,
+          "similarity": 0.8185,
+          "gated": false,
+          "alarm": false
+        },
+        "reversed": {
+          "contradiction_prob": 0.0002,
+          "similarity": 0.8185,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion": {
+          "contradiction_prob": 0.0001,
+          "similarity": 0.9378,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion_reversed": {
+          "contradiction_prob": 0.0001,
+          "similarity": 0.9378,
+          "gated": false,
+          "alarm": false
+        }
+      }
+    },
+    {
+      "case_id": "P012",
+      "label": "NO_CONTRADICTION",
+      "is_contradiction": false,
+      "a_conclusion": "Given this consensus and the established facts, the answer to the question \"Are cucumbers often found in deserts?\" is:\n\nB) No\n\nThis conclusion is based on the agreement among the three experts that cucumbers require significant water, which is scarce in deserts, making deserts unsuitable for cucumbe",
+      "b_conclusion": "I, as the Horticulturist, agree that this combination makes deserts unsuitable for cucumber growth without irrigation. Given the consensus among the three of us,",
+      "a_conclusion_chars": 328,
+      "b_conclusion_chars": 161,
+      "a_final_answer": "B) No",
+      "b_final_answer": null,
+      "conditions": {
+        "forward": {
+          "contradiction_prob": 0.002,
+          "similarity": 0.9115,
+          "gated": false,
+          "alarm": false
+        },
+        "reversed": {
+          "contradiction_prob": 0.0005,
+          "similarity": 0.9115,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion": {
+          "contradiction_prob": 0.0008,
+          "similarity": 0.7675,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion_reversed": {
+          "contradiction_prob": 0.0002,
+          "similarity": 0.7675,
+          "gated": false,
+          "alarm": false
+        }
+      }
+    },
+    {
+      "case_id": "P013",
+      "label": "NO_CONTRADICTION",
+      "is_contradiction": false,
+      "a_conclusion": "Given this analysis, the conclusion that pediatricians do not perform abortions is well-supported, and the answer B) No is correct.",
+      "b_conclusion": "Therefore, I agree with the current solution, and the answer remains B) No.",
+      "a_conclusion_chars": 131,
+      "b_conclusion_chars": 75,
+      "a_final_answer": "B) No",
+      "b_final_answer": "B) No",
+      "conditions": {
+        "forward": {
+          "contradiction_prob": 0.0002,
+          "similarity": 0.937,
+          "gated": false,
+          "alarm": false
+        },
+        "reversed": {
+          "contradiction_prob": 0.0002,
+          "similarity": 0.937,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion": {
+          "contradiction_prob": 0.0008,
+          "similarity": 0.3842,
+          "gated": true,
+          "alarm": false
+        },
+        "conclusion_reversed": {
+          "contradiction_prob": 0.0005,
+          "similarity": 0.3842,
+          "gated": true,
+          "alarm": false
+        }
+      }
+    },
+    {
+      "case_id": "P014",
+      "label": "NO_CONTRADICTION",
+      "is_contradiction": false,
+      "a_conclusion": "Specific areas that need enhancement include:\n\n* Personalized sun protection coaching and advice\n* Interactive and immersive sun protection education and training\n* Promoting sun protection and sun safety awareness through art and creativity\n* Providing access to a wide range of sun protection produ",
+      "b_conclusion": "Specific areas that need enhancement include:\n\n* Personalized sun protection coaching and advice with wearable technology\n* Immersive sun protection education with augmented reality\n* Community engagement and social support for sun protection\n* Partnerships with health and wellness organizations\n* R",
+      "a_conclusion_chars": 954,
+      "b_conclusion_chars": 1055,
+      "a_final_answer": "A) Yes",
+      "b_final_answer": "A) Yes",
+      "conditions": {
+        "forward": {
+          "contradiction_prob": 0.0057,
+          "similarity": 0.8855,
+          "gated": false,
+          "alarm": false
+        },
+        "reversed": {
+          "contradiction_prob": 0.6334,
+          "similarity": 0.8855,
+          "gated": false,
+          "alarm": true
+        },
+        "conclusion": {
+          "contradiction_prob": 0.0025,
+          "similarity": 0.8561,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion_reversed": {
+          "contradiction_prob": 0.0089,
+          "similarity": 0.8561,
+          "gated": false,
+          "alarm": false
+        }
+      }
+    },
+    {
+      "case_id": "P015",
+      "label": "CONTRADICTION",
+      "is_contradiction": true,
+      "a_conclusion": "The final answer is: A) Yes",
+      "b_conclusion": "The final answer is: B) No",
+      "a_conclusion_chars": 27,
+      "b_conclusion_chars": 26,
+      "a_final_answer": "A) Yes",
+      "b_final_answer": "B) No",
+      "conditions": {
+        "forward": {
+          "contradiction_prob": 0.0014,
+          "similarity": 0.8695,
+          "gated": false,
+          "alarm": false
+        },
+        "reversed": {
+          "contradiction_prob": 0.0021,
+          "similarity": 0.8695,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion": {
+          "contradiction_prob": 0.9935,
+          "similarity": 0.9421,
+          "gated": false,
+          "alarm": true
+        },
+        "conclusion_reversed": {
+          "contradiction_prob": 0.9959,
+          "similarity": 0.9421,
+          "gated": false,
+          "alarm": true
+        }
+      }
+    },
+    {
+      "case_id": "P016",
+      "label": "NO_CONTRADICTION",
+      "is_contradiction": false,
+      "a_conclusion": "The final answer is: B) No.",
+      "b_conclusion": "The final answer is: B) No.",
+      "a_conclusion_chars": 27,
+      "b_conclusion_chars": 27,
+      "a_final_answer": "B) No",
+      "b_final_answer": "B) No",
+      "conditions": {
+        "forward": {
+          "contradiction_prob": 0.0009,
+          "similarity": 0.8632,
+          "gated": false,
+          "alarm": false
+        },
+        "reversed": {
+          "contradiction_prob": 0.0012,
+          "similarity": 0.8632,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion": {
+          "contradiction_prob": 0.0015,
+          "similarity": 1.0,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion_reversed": {
+          "contradiction_prob": 0.0015,
+          "similarity": 1.0,
+          "gated": false,
+          "alarm": false
+        }
+      }
+    },
+    {
+      "case_id": "P017",
+      "label": "NO_CONTRADICTION",
+      "is_contradiction": false,
+      "a_conclusion": "I agree with the Stage Manager that the Orchestra Conductor is being obstinate. Considering the Stage Manager's insight and my own concern, I think it's possible that some Swan Lake productions could pose a drowning risk.",
+      "b_conclusion": "The Ballet Dancer's concern about drowning in a Swan Lake performance is what's being debated. Considering the Orchestra Conductor's traditional perspective and the Ballet Dancer's caution, I will provide a relevant answer.",
+      "a_conclusion_chars": 221,
+      "b_conclusion_chars": 223,
+      "a_final_answer": null,
+      "b_final_answer": null,
+      "conditions": {
+        "forward": {
+          "contradiction_prob": 0.0075,
+          "similarity": 0.8094,
+          "gated": false,
+          "alarm": false
+        },
+        "reversed": {
+          "contradiction_prob": 0.0024,
+          "similarity": 0.8094,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion": {
+          "contradiction_prob": 0.0011,
+          "similarity": 0.7555,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion_reversed": {
+          "contradiction_prob": 0.0021,
+          "similarity": 0.7555,
+          "gated": false,
+          "alarm": false
+        }
+      }
+    },
+    {
+      "case_id": "P018",
+      "label": "NO_CONTRADICTION",
+      "is_contradiction": false,
+      "a_conclusion": "The final answer is: A) Yes.",
+      "b_conclusion": "Therefore, the final answer is: A) Yes.",
+      "a_conclusion_chars": 28,
+      "b_conclusion_chars": 39,
+      "a_final_answer": "A) Yes",
+      "b_final_answer": "A) Yes",
+      "conditions": {
+        "forward": {
+          "contradiction_prob": 0.0006,
+          "similarity": 0.8821,
+          "gated": false,
+          "alarm": false
+        },
+        "reversed": {
+          "contradiction_prob": 0.0005,
+          "similarity": 0.8821,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion": {
+          "contradiction_prob": 0.0001,
+          "similarity": 0.9601,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion_reversed": {
+          "contradiction_prob": 0.0004,
+          "similarity": 0.9601,
+          "gated": false,
+          "alarm": false
+        }
+      }
+    },
+    {
+      "case_id": "P019",
+      "label": "CONTRADICTION",
+      "is_contradiction": true,
+      "a_conclusion": "**Revised Solution: B) No**, with the caveat that a wheelbarrow full of starch is unlikely to be consumed in reality, and that hyperglycemics can manage their glycemic control and prevent complications by following a personalized diabetes management plan, using technology-enhanced diabetes managemen",
+      "b_conclusion": "**Revised Solution: A) Yes**, with the caveat that the toxicological effects of excessive starch consumption can vary significantly depending on individual factors, and that a comprehensive toxicological risk assessment and management framework is necessary to fully understand and mitigate the risks",
+      "a_conclusion_chars": 429,
+      "b_conclusion_chars": 336,
+      "a_final_answer": "B) No",
+      "b_final_answer": "A) Yes",
+      "conditions": {
+        "forward": {
+          "contradiction_prob": 0.0023,
+          "similarity": 0.793,
+          "gated": false,
+          "alarm": false
+        },
+        "reversed": {
+          "contradiction_prob": 0.0014,
+          "similarity": 0.793,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion": {
+          "contradiction_prob": 0.2285,
+          "similarity": 0.5279,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion_reversed": {
+          "contradiction_prob": 0.0344,
+          "similarity": 0.5279,
+          "gated": false,
+          "alarm": false
+        }
+      }
+    },
+    {
+      "case_id": "P020",
+      "label": "CONTRADICTION",
+      "is_contradiction": true,
+      "a_conclusion": "**Revised Solution: A) Yes**, with the added caveat that the toxicological effects of excessive starch consumption can vary significantly depending on individual factors and that a comprehensive toxicological assessment is necessary to fully understand the risks.",
+      "b_conclusion": "**Revised Solution: B) No**, with the caveat that a wheelbarrow full of starch is unlikely to be consumed in reality, and that hyperglycemics can manage their glycemic control and prevent complications by following a balanced nutrition plan and receiving personalized guidance from a healthcare profe",
+      "a_conclusion_chars": 263,
+      "b_conclusion_chars": 308,
+      "a_final_answer": "A) Yes",
+      "b_final_answer": "B) No",
+      "conditions": {
+        "forward": {
+          "contradiction_prob": 0.002,
+          "similarity": 0.776,
+          "gated": false,
+          "alarm": false
+        },
+        "reversed": {
+          "contradiction_prob": 0.0026,
+          "similarity": 0.776,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion": {
+          "contradiction_prob": 0.0984,
+          "similarity": 0.5578,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion_reversed": {
+          "contradiction_prob": 0.1357,
+          "similarity": 0.5578,
+          "gated": false,
+          "alarm": false
+        }
+      }
+    },
+    {
+      "case_id": "P021",
+      "label": "NO_CONTRADICTION",
+      "is_contradiction": false,
+      "a_conclusion": "Therefore, the answer to whether Noah's Ark is an upgrade for Golden Age of Piracy pirates is:\n\nB) No",
+      "b_conclusion": "The current solution, B) No, is correct and well-reasoned.",
+      "a_conclusion_chars": 101,
+      "b_conclusion_chars": 58,
+      "a_final_answer": "B) No",
+      "b_final_answer": "B) No",
+      "conditions": {
+        "forward": {
+          "contradiction_prob": 0.0004,
+          "similarity": 0.8439,
+          "gated": false,
+          "alarm": false
+        },
+        "reversed": {
+          "contradiction_prob": 0.0006,
+          "similarity": 0.8439,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion": {
+          "contradiction_prob": 0.0004,
+          "similarity": 0.3029,
+          "gated": true,
+          "alarm": false
+        },
+        "conclusion_reversed": {
+          "contradiction_prob": 0.0008,
+          "similarity": 0.3029,
+          "gated": true,
+          "alarm": false
+        }
+      }
+    },
+    {
+      "case_id": "P022",
+      "label": "NO_CONTRADICTION",
+      "is_contradiction": false,
+      "a_conclusion": "*bites lip* I'm not really sure, though... *trails off*",
+      "b_conclusion": "As the Stage Manager, I know that some productions of Swan Lake may include water features or special effects that could potentially pose a drowning risk. The Orchestra Conductor's assumption that a traditional performance is the only type that exists is narrow-minded.",
+      "a_conclusion_chars": 55,
+      "b_conclusion_chars": 269,
+      "a_final_answer": null,
+      "b_final_answer": null,
+      "conditions": {
+        "forward": {
+          "contradiction_prob": 0.0016,
+          "similarity": 0.7267,
+          "gated": false,
+          "alarm": false
+        },
+        "reversed": {
+          "contradiction_prob": 0.0002,
+          "similarity": 0.7267,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion": {
+          "contradiction_prob": 0.295,
+          "similarity": 0.0,
+          "gated": true,
+          "alarm": false
+        },
+        "conclusion_reversed": {
+          "contradiction_prob": 0.0174,
+          "similarity": 0.0,
+          "gated": true,
+          "alarm": false
+        }
+      }
+    },
+    {
+      "case_id": "P023",
+      "label": "CONTRADICTION",
+      "is_contradiction": true,
+      "a_conclusion": "The answer remains B) No.",
+      "b_conclusion": "*confetti and balloons*\n\nSo, my proposed solution is:\n\nA) Yes\n\nWHEW!",
+      "a_conclusion_chars": 25,
+      "b_conclusion_chars": 68,
+      "a_final_answer": "B) No",
+      "b_final_answer": "A) Yes",
+      "conditions": {
+        "forward": {
+          "contradiction_prob": 0.0048,
+          "similarity": 0.8295,
+          "gated": false,
+          "alarm": false
+        },
+        "reversed": {
+          "contradiction_prob": 0.0143,
+          "similarity": 0.8295,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion": {
+          "contradiction_prob": 0.9992,
+          "similarity": 0.4106,
+          "gated": false,
+          "alarm": true
+        },
+        "conclusion_reversed": {
+          "contradiction_prob": 0.9991,
+          "similarity": 0.4106,
+          "gated": false,
+          "alarm": true
+        }
+      }
+    },
+    {
+      "case_id": "P024",
+      "label": "CONTRADICTION",
+      "is_contradiction": true,
+      "a_conclusion": "**Revised Solution: A) Yes**, with the caveat that the toxicological effects of excessive starch consumption can vary significantly depending on individual factors, and that a comprehensive toxicological risk assessment and management framework is necessary to fully understand and mitigate the risks",
+      "b_conclusion": "**Revised Solution: B) No**, with the caveat that a wheelbarrow full of starch is unlikely to be consumed in reality, and that hyperglycemics can manage their glycemic control and prevent complications by following a balanced nutrition plan, considering nutrient interactions, gut microbiome effects,",
+      "a_conclusion_chars": 336,
+      "b_conclusion_chars": 392,
+      "a_final_answer": "A) Yes",
+      "b_final_answer": "B) No",
+      "conditions": {
+        "forward": {
+          "contradiction_prob": 0.0204,
+          "similarity": 0.8098,
+          "gated": false,
+          "alarm": false
+        },
+        "reversed": {
+          "contradiction_prob": 0.006,
+          "similarity": 0.8098,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion": {
+          "contradiction_prob": 0.021,
+          "similarity": 0.5965,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion_reversed": {
+          "contradiction_prob": 0.5969,
+          "similarity": 0.5965,
+          "gated": false,
+          "alarm": false
+        }
+      }
+    },
+    {
+      "case_id": "P025",
+      "label": "NO_CONTRADICTION",
+      "is_contradiction": false,
+      "a_conclusion": "Therefore, the enhanced solution would still conclude that:\nA) Yes",
+      "b_conclusion": "Therefore, the enhanced solution would still conclude that:\nA) Yes",
+      "a_conclusion_chars": 66,
+      "b_conclusion_chars": 66,
+      "a_final_answer": "A) Yes",
+      "b_final_answer": "A) Yes",
+      "conditions": {
+        "forward": {
+          "contradiction_prob": 0.0019,
+          "similarity": 0.8584,
+          "gated": false,
+          "alarm": false
+        },
+        "reversed": {
+          "contradiction_prob": 0.0048,
+          "similarity": 0.8584,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion": {
+          "contradiction_prob": 0.001,
+          "similarity": 1.0,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion_reversed": {
+          "contradiction_prob": 0.001,
+          "similarity": 1.0,
+          "gated": false,
+          "alarm": false
+        }
+      }
+    },
+    {
+      "case_id": "P026",
+      "label": "NO_CONTRADICTION",
+      "is_contradiction": false,
+      "a_conclusion": "### Solution\n\nB) No, a copy of The Daily Mirror cannot sustain a campfire on its own, but it can be used as a fire starter when combined with other materials and used safely.",
+      "b_conclusion": "Solution: B) No, with the proposed enhancements aimed at creating a more interactive, immersive, and inclusive experience for readers.",
+      "a_conclusion_chars": 174,
+      "b_conclusion_chars": 134,
+      "a_final_answer": "B) No",
+      "b_final_answer": "B) No",
+      "conditions": {
+        "forward": {
+          "contradiction_prob": 0.0082,
+          "similarity": 0.2541,
+          "gated": true,
+          "alarm": false
+        },
+        "reversed": {
+          "contradiction_prob": 0.0086,
+          "similarity": 0.2541,
+          "gated": true,
+          "alarm": false
+        },
+        "conclusion": {
+          "contradiction_prob": 0.0005,
+          "similarity": 0.1052,
+          "gated": true,
+          "alarm": false
+        },
+        "conclusion_reversed": {
+          "contradiction_prob": 0.0021,
+          "similarity": 0.1052,
+          "gated": true,
+          "alarm": false
+        }
+      }
+    },
+    {
+      "case_id": "P027",
+      "label": "CONTRADICTION",
+      "is_contradiction": true,
+      "a_conclusion": "I believe the answer is A) Yes, but I need more confirmation.",
+      "b_conclusion": "We need to consider the context and accuracy of sales data. I'm not convinced that Kelly Clarkson has outsold Carrie Underwood.",
+      "a_conclusion_chars": 61,
+      "b_conclusion_chars": 127,
+      "a_final_answer": "A) Yes",
+      "b_final_answer": null,
+      "conditions": {
+        "forward": {
+          "contradiction_prob": 0.017,
+          "similarity": 0.9024,
+          "gated": false,
+          "alarm": false
+        },
+        "reversed": {
+          "contradiction_prob": 0.0148,
+          "similarity": 0.9024,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion": {
+          "contradiction_prob": 0.0003,
+          "similarity": 0.0,
+          "gated": true,
+          "alarm": false
+        },
+        "conclusion_reversed": {
+          "contradiction_prob": 0.0144,
+          "similarity": 0.0,
+          "gated": true,
+          "alarm": false
+        }
+      }
+    },
+    {
+      "case_id": "P028",
+      "label": "NO_CONTRADICTION",
+      "is_contradiction": false,
+      "a_conclusion": "The final answer is: B) No",
+      "b_conclusion": "The final answer remains: B) No.",
+      "a_conclusion_chars": 26,
+      "b_conclusion_chars": 32,
+      "a_final_answer": "B) No",
+      "b_final_answer": "B) No",
+      "conditions": {
+        "forward": {
+          "contradiction_prob": 0.0009,
+          "similarity": 0.9203,
+          "gated": false,
+          "alarm": false
+        },
+        "reversed": {
+          "contradiction_prob": 0.0006,
+          "similarity": 0.9203,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion": {
+          "contradiction_prob": 0.0022,
+          "similarity": 0.9547,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion_reversed": {
+          "contradiction_prob": 0.0006,
+          "similarity": 0.9547,
+          "gated": false,
+          "alarm": false
+        }
+      }
+    },
+    {
+      "case_id": "P029",
+      "label": "NO_CONTRADICTION",
+      "is_contradiction": false,
+      "a_conclusion": "Therefore, the revised solution is: B) No.",
+      "b_conclusion": "The final answer is indeed: B) No.",
+      "a_conclusion_chars": 42,
+      "b_conclusion_chars": 34,
+      "a_final_answer": "B) No",
+      "b_final_answer": "B) No",
+      "conditions": {
+        "forward": {
+          "contradiction_prob": 0.0004,
+          "similarity": 0.8579,
+          "gated": false,
+          "alarm": false
+        },
+        "reversed": {
+          "contradiction_prob": 0.0006,
+          "similarity": 0.8579,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion": {
+          "contradiction_prob": 0.9671,
+          "similarity": 0.7991,
+          "gated": false,
+          "alarm": true
+        },
+        "conclusion_reversed": {
+          "contradiction_prob": 0.1643,
+          "similarity": 0.7991,
+          "gated": false,
+          "alarm": false
+        }
+      }
+    },
+    {
+      "case_id": "P030",
+      "label": "NO_CONTRADICTION",
+      "is_contradiction": false,
+      "a_conclusion": "Francis Crick, on the other hand, was born on June 8, 1916, and passed away on July 28, 2004. Now, we have the necessary information to proceed with comparing their lifespans and determining if Francis Crick outlived James Watson or not.",
+      "b_conclusion": "The Molecular Biologist provided James Watson's birthdate and his current status as alive, along with Francis Crick's birth and death dates. The Historian and I have agreed that this information is sufficient to compare their lifespans.",
+      "a_conclusion_chars": 237,
+      "b_conclusion_chars": 236,
+      "a_final_answer": null,
+      "b_final_answer": null,
+      "conditions": {
+        "forward": {
+          "contradiction_prob": 0.0011,
+          "similarity": 0.8319,
+          "gated": false,
+          "alarm": false
+        },
+        "reversed": {
+          "contradiction_prob": 0.0016,
+          "similarity": 0.8319,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion": {
+          "contradiction_prob": 0.0013,
+          "similarity": 0.7976,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion_reversed": {
+          "contradiction_prob": 0.0008,
+          "similarity": 0.7976,
+          "gated": false,
+          "alarm": false
+        }
+      }
+    },
+    {
+      "case_id": "P031",
+      "label": "NO_CONTRADICTION",
+      "is_contradiction": false,
+      "a_conclusion": "A) Yes.",
+      "b_conclusion": "Conclusion: *whispers* A) Yes, Depala's race can be found in World of Warcraft.",
+      "a_conclusion_chars": 7,
+      "b_conclusion_chars": 79,
+      "a_final_answer": "A) Yes",
+      "b_final_answer": "A) Yes",
+      "conditions": {
+        "forward": {
+          "contradiction_prob": 0.0006,
+          "similarity": 0.7573,
+          "gated": false,
+          "alarm": false
+        },
+        "reversed": {
+          "contradiction_prob": 0.0011,
+          "similarity": 0.7573,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion": {
+          "contradiction_prob": 0.0016,
+          "similarity": 0.1122,
+          "gated": true,
+          "alarm": false
+        },
+        "conclusion_reversed": {
+          "contradiction_prob": 0.0011,
+          "similarity": 0.1122,
+          "gated": true,
+          "alarm": false
+        }
+      }
+    },
+    {
+      "case_id": "P032",
+      "label": "CONTRADICTION",
+      "is_contradiction": true,
+      "a_conclusion": "Therefore, the answer to whether one could watch all of JAG in six months is:\n\nB) No \n\nThis conclusion is based on my personal characteristics and viewing habits rather than the mathematical feasibility of the task.",
+      "b_conclusion": "Given the calculations and the TV Critic's persuasive argument, I concur that the correct answer is indeed:\n\nA) Yes\n\nIt is possible to watch all of JAG in six months, and I would encourage anyone interested in the show to consider giving it a try.",
+      "a_conclusion_chars": 215,
+      "b_conclusion_chars": 247,
+      "a_final_answer": "B) No",
+      "b_final_answer": "A) Yes",
+      "conditions": {
+        "forward": {
+          "contradiction_prob": 0.0002,
+          "similarity": 0.7937,
+          "gated": false,
+          "alarm": false
+        },
+        "reversed": {
+          "contradiction_prob": 0.0003,
+          "similarity": 0.7937,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion": {
+          "contradiction_prob": 0.9993,
+          "similarity": 0.8742,
+          "gated": false,
+          "alarm": true
+        },
+        "conclusion_reversed": {
+          "contradiction_prob": 0.9819,
+          "similarity": 0.8742,
+          "gated": false,
+          "alarm": true
+        }
+      }
+    },
+    {
+      "case_id": "P033",
+      "label": "NO_CONTRADICTION",
+      "is_contradiction": false,
+      "a_conclusion": "No exception was mentioned for spider wasps, a point agreed upon by all participants. Considering these points, I think we have a clear understanding of the typical leg count for spider wasps.",
+      "b_conclusion": "As Participant 1 noted, insects have six legs. Participant 3 and I agree that no exception was mentioned for spider wasps.",
+      "a_conclusion_chars": 192,
+      "b_conclusion_chars": 122,
+      "a_final_answer": null,
+      "b_final_answer": null,
+      "conditions": {
+        "forward": {
+          "contradiction_prob": 0.0041,
+          "similarity": 0.8861,
+          "gated": false,
+          "alarm": false
+        },
+        "reversed": {
+          "contradiction_prob": 0.0005,
+          "similarity": 0.8861,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion": {
+          "contradiction_prob": 0.0016,
+          "similarity": 0.8328,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion_reversed": {
+          "contradiction_prob": 0.0029,
+          "similarity": 0.8328,
+          "gated": false,
+          "alarm": false
+        }
+      }
+    },
+    {
+      "case_id": "P034",
+      "label": "NO_CONTRADICTION",
+      "is_contradiction": false,
+      "a_conclusion": "Therefore, the revised solution is: B) No.",
+      "b_conclusion": "The final answer is indeed: B) No.",
+      "a_conclusion_chars": 42,
+      "b_conclusion_chars": 34,
+      "a_final_answer": "B) No",
+      "b_final_answer": "B) No",
+      "conditions": {
+        "forward": {
+          "contradiction_prob": 0.0006,
+          "similarity": 0.8418,
+          "gated": false,
+          "alarm": false
+        },
+        "reversed": {
+          "contradiction_prob": 0.0012,
+          "similarity": 0.8418,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion": {
+          "contradiction_prob": 0.9671,
+          "similarity": 0.7991,
+          "gated": false,
+          "alarm": true
+        },
+        "conclusion_reversed": {
+          "contradiction_prob": 0.1643,
+          "similarity": 0.7991,
+          "gated": false,
+          "alarm": false
+        }
+      }
+    },
+    {
+      "case_id": "P035",
+      "label": "NO_CONTRADICTION",
+      "is_contradiction": false,
+      "a_conclusion": "The final answer is: B) No.",
+      "b_conclusion": "The final answer is: B) No.",
+      "a_conclusion_chars": 27,
+      "b_conclusion_chars": 27,
+      "a_final_answer": "B) No",
+      "b_final_answer": "B) No",
+      "conditions": {
+        "forward": {
+          "contradiction_prob": 0.0341,
+          "similarity": 0.6514,
+          "gated": false,
+          "alarm": false
+        },
+        "reversed": {
+          "contradiction_prob": 0.0384,
+          "similarity": 0.6514,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion": {
+          "contradiction_prob": 0.0015,
+          "similarity": 1.0,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion_reversed": {
+          "contradiction_prob": 0.0015,
+          "similarity": 1.0,
+          "gated": false,
+          "alarm": false
+        }
+      }
+    },
+    {
+      "case_id": "P036",
+      "label": "NO_CONTRADICTION",
+      "is_contradiction": false,
+      "a_conclusion": "**Solution**: B) No, with the proposed enhancements aiming to provide a more comprehensive, data-driven, and nuanced understanding of Alistair Darling's stance on Scottish independence.",
+      "b_conclusion": "**Solution**: B) No, with the proposed enhancements aiming to provide a more comprehensive, data-driven, and nuanced understanding of Alistair Darling's stance on Scottish independence.",
+      "a_conclusion_chars": 185,
+      "b_conclusion_chars": 185,
+      "a_final_answer": "B) No",
+      "b_final_answer": "B) No",
+      "conditions": {
+        "forward": {
+          "contradiction_prob": 0.0037,
+          "similarity": 0.8244,
+          "gated": false,
+          "alarm": false
+        },
+        "reversed": {
+          "contradiction_prob": 0.0035,
+          "similarity": 0.8244,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion": {
+          "contradiction_prob": 0.0603,
+          "similarity": 1.0,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion_reversed": {
+          "contradiction_prob": 0.0603,
+          "similarity": 1.0,
+          "gated": false,
+          "alarm": false
+        }
+      }
+    },
+    {
+      "case_id": "P037",
+      "label": "CONTRADICTION",
+      "is_contradiction": true,
+      "a_conclusion": "The improved solution remains: A) Yes, but with the caveat that this answer is based on general knowledge of the honey industry and the importance of Western honey bees in commercial honey production, rather than specific information about Nice's practices.",
+      "b_conclusion": "*nods slightly, still looking down* \n\nSo, the improved solution is: B) No, because we don't have enough information to confirm Nice's dependence on Western honey bees...",
+      "a_conclusion_chars": 257,
+      "b_conclusion_chars": 169,
+      "a_final_answer": "A) Yes",
+      "b_final_answer": "B) No",
+      "conditions": {
+        "forward": {
+          "contradiction_prob": 0.0044,
+          "similarity": 0.7653,
+          "gated": false,
+          "alarm": false
+        },
+        "reversed": {
+          "contradiction_prob": 0.0038,
+          "similarity": 0.7653,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion": {
+          "contradiction_prob": 0.9321,
+          "similarity": 0.8063,
+          "gated": false,
+          "alarm": true
+        },
+        "conclusion_reversed": {
+          "contradiction_prob": 0.9981,
+          "similarity": 0.8063,
+          "gated": false,
+          "alarm": true
+        }
+      }
+    },
+    {
+      "case_id": "P038",
+      "label": "NO_CONTRADICTION",
+      "is_contradiction": false,
+      "a_conclusion": "The Historian has correctly identified that Columbus was sponsored by the Spanish monarchs, which is a crucial point. As the Biographer, I concur that this sponsorship indicates he represented a different country than his native Genoa.",
+      "b_conclusion": "This indicates that Columbus represented Spain, not his birthplace, Genoa. Historian's conclusion seems accurate based on this information.",
+      "a_conclusion_chars": 235,
+      "b_conclusion_chars": 139,
+      "a_final_answer": null,
+      "b_final_answer": null,
+      "conditions": {
+        "forward": {
+          "contradiction_prob": 0.0001,
+          "similarity": 0.8408,
+          "gated": false,
+          "alarm": false
+        },
+        "reversed": {
+          "contradiction_prob": 0.0,
+          "similarity": 0.8408,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion": {
+          "contradiction_prob": 0.0001,
+          "similarity": 0.851,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion_reversed": {
+          "contradiction_prob": 0.0001,
+          "similarity": 0.851,
+          "gated": false,
+          "alarm": false
+        }
+      }
+    },
+    {
+      "case_id": "P039",
+      "label": "NO_CONTRADICTION",
+      "is_contradiction": false,
+      "a_conclusion": "Therefore, the final answer remains: A) Yes.",
+      "b_conclusion": "The final answer is: A) Yes.",
+      "a_conclusion_chars": 44,
+      "b_conclusion_chars": 28,
+      "a_final_answer": "A) Yes",
+      "b_final_answer": "A) Yes",
+      "conditions": {
+        "forward": {
+          "contradiction_prob": 0.0028,
+          "similarity": 0.9269,
+          "gated": false,
+          "alarm": false
+        },
+        "reversed": {
+          "contradiction_prob": 0.0015,
+          "similarity": 0.9269,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion": {
+          "contradiction_prob": 0.0003,
+          "similarity": 0.9438,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion_reversed": {
+          "contradiction_prob": 0.0001,
+          "similarity": 0.9438,
+          "gated": false,
+          "alarm": false
+        }
+      }
+    },
+    {
+      "case_id": "P040",
+      "label": "NO_CONTRADICTION",
+      "is_contradiction": false,
+      "a_conclusion": "**Solution**: A) Yes\n\nThis solution is based on the historical context and variability in the adoption of The Pledge of Allegiance during the relevant time period, acknowledging the potential for differences in practice across different schools and regions.",
+      "b_conclusion": "**Solution**: A) Yes\n\nThis solution acknowledges the potential for improvement in the current discussion while affirming the core conclusion based on the historical context and variability in the adoption of The Pledge of Allegiance during the relevant time period.",
+      "a_conclusion_chars": 257,
+      "b_conclusion_chars": 265,
+      "a_final_answer": "A) Yes",
+      "b_final_answer": "A) Yes",
+      "conditions": {
+        "forward": {
+          "contradiction_prob": 0.0005,
+          "similarity": 0.4555,
+          "gated": false,
+          "alarm": false
+        },
+        "reversed": {
+          "contradiction_prob": 0.0006,
+          "similarity": 0.4555,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion": {
+          "contradiction_prob": 0.0008,
+          "similarity": 0.8445,
+          "gated": false,
+          "alarm": false
+        },
+        "conclusion_reversed": {
+          "contradiction_prob": 0.0003,
+          "similarity": 0.8445,
+          "gated": false,
+          "alarm": false
+        }
+      }
+    }
+  ],
+  "limitations": [
+    "10 positives, 30 negatives -- diagnostic, not a benchmark result",
+    "single annotator (first-pass labels), no second judge, no kappa",
+    "conclusion extraction relies on this corpus's mandated answer marker and would not transfer as-is to traces without one"
+  ]
+}

@@ -1,0 +1,1736 @@
+{
+  "timestamp": "2026-08-27 11:17:54 UTC",
+  "purpose": "diagnose the 0/10 recall found by the alarm-rate pilot",
+  "not_a_benchmark": true,
+  "production_code_modified": false,
+  "detector": {
+    "threshold": 0.6,
+    "relevance_floor": 0.4,
+    "model_max_tokens": 512,
+    "per_output_budget": 254
+  },
+  "budget_note": "The 512-token limit applies to the concatenated pair, so each output receives half the window. Passing 512 tokens per output would let the model re-truncate internally and make the manipulation a no-op.",
+  "summary": {
+    "full": {
+      "tp": 0,
+      "fp": 0,
+      "fn": 10,
+      "tn": 30,
+      "recall_on_10_positives": 0.0,
+      "precision": 0.0,
+      "false_positive_rate_on_30_negatives": 0.0,
+      "positives_with_both_conclusions_retained": 10,
+      "mean_contradiction_prob_on_positives": 0.007
+    },
+    "first_512": {
+      "tp": 0,
+      "fp": 0,
+      "fn": 10,
+      "tn": 30,
+      "recall_on_10_positives": 0.0,
+      "precision": 0.0,
+      "false_positive_rate_on_30_negatives": 0.0,
+      "positives_with_both_conclusions_retained": 3,
+      "mean_contradiction_prob_on_positives": 0.0064
+    },
+    "last_512": {
+      "tp": 0,
+      "fp": 0,
+      "fn": 10,
+      "tn": 30,
+      "recall_on_10_positives": 0.0,
+      "precision": 0.0,
+      "false_positive_rate_on_30_negatives": 0.0,
+      "positives_with_both_conclusions_retained": 10,
+      "mean_contradiction_prob_on_positives": 0.01
+    }
+  },
+  "verdict": "TRUNCATION HYPOTHESIS FAILS. Retaining the tail does not recover recall; the cause lies in the NLI formulation, pair direction, or threshold, not the context window.",
+  "per_case": [
+    {
+      "case_id": "P001",
+      "label": "NO_CONTRADICTION",
+      "is_contradiction": false,
+      "group": "mismatch",
+      "a_persona": "Participant 1",
+      "b_persona": "Participant 2",
+      "a_chars": 2350,
+      "b_chars": 2657,
+      "a_tokens": 451,
+      "b_tokens": 480,
+      "a_exceeds_budget": true,
+      "b_exceeds_budget": true,
+      "a_final_answer": "A) Yes",
+      "b_final_answer": "A) Yes",
+      "conditions": {
+        "full": {
+          "contradiction_prob": 0.0021,
+          "similarity": 0.8812,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": true,
+          "b_answer_retained": true
+        },
+        "first_512": {
+          "contradiction_prob": 0.0021,
+          "similarity": 0.88,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": false,
+          "b_answer_retained": false
+        },
+        "last_512": {
+          "contradiction_prob": 0.0004,
+          "similarity": 0.7985,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": true,
+          "b_answer_retained": true
+        }
+      }
+    },
+    {
+      "case_id": "P002",
+      "label": "NO_CONTRADICTION",
+      "is_contradiction": false,
+      "group": "control",
+      "a_persona": "Zoologist",
+      "b_persona": "Wildlife Photographer",
+      "a_chars": 259,
+      "b_chars": 176,
+      "a_tokens": 39,
+      "b_tokens": 28,
+      "a_exceeds_budget": false,
+      "b_exceeds_budget": false,
+      "a_final_answer": null,
+      "b_final_answer": null,
+      "conditions": {
+        "full": {
+          "contradiction_prob": 0.0004,
+          "similarity": 0.7379,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": true,
+          "b_answer_retained": true
+        },
+        "first_512": {
+          "contradiction_prob": 0.0004,
+          "similarity": 0.7379,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": true,
+          "b_answer_retained": true
+        },
+        "last_512": {
+          "contradiction_prob": 0.0004,
+          "similarity": 0.7379,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": true,
+          "b_answer_retained": true
+        }
+      }
+    },
+    {
+      "case_id": "P003",
+      "label": "CONTRADICTION",
+      "is_contradiction": true,
+      "group": "mismatch",
+      "a_persona": "Medical Professional",
+      "b_persona": "Nutritionist",
+      "a_chars": 2655,
+      "b_chars": 3564,
+      "a_tokens": 508,
+      "b_tokens": 601,
+      "a_exceeds_budget": true,
+      "b_exceeds_budget": true,
+      "a_final_answer": "A) Yes",
+      "b_final_answer": "B) No",
+      "conditions": {
+        "full": {
+          "contradiction_prob": 0.0069,
+          "similarity": 0.8388,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": true,
+          "b_answer_retained": true
+        },
+        "first_512": {
+          "contradiction_prob": 0.0049,
+          "similarity": 0.8388,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": false,
+          "b_answer_retained": false
+        },
+        "last_512": {
+          "contradiction_prob": 0.0014,
+          "similarity": 0.7303,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": true,
+          "b_answer_retained": true
+        }
+      }
+    },
+    {
+      "case_id": "P004",
+      "label": "CONTRADICTION",
+      "is_contradiction": true,
+      "group": "mismatch",
+      "a_persona": "Orchestra Conductor",
+      "b_persona": "Stage Manager",
+      "a_chars": 401,
+      "b_chars": 353,
+      "a_tokens": 83,
+      "b_tokens": 66,
+      "a_exceeds_budget": false,
+      "b_exceeds_budget": false,
+      "a_final_answer": null,
+      "b_final_answer": null,
+      "conditions": {
+        "full": {
+          "contradiction_prob": 0.0105,
+          "similarity": 0.8703,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": true,
+          "b_answer_retained": true
+        },
+        "first_512": {
+          "contradiction_prob": 0.0105,
+          "similarity": 0.8703,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": true,
+          "b_answer_retained": true
+        },
+        "last_512": {
+          "contradiction_prob": 0.0105,
+          "similarity": 0.8703,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": true,
+          "b_answer_retained": true
+        }
+      }
+    },
+    {
+      "case_id": "P005",
+      "label": "NO_CONTRADICTION",
+      "is_contradiction": false,
+      "group": "control",
+      "a_persona": "Participant 2",
+      "b_persona": "Participant 3",
+      "a_chars": 309,
+      "b_chars": 227,
+      "a_tokens": 67,
+      "b_tokens": 46,
+      "a_exceeds_budget": false,
+      "b_exceeds_budget": false,
+      "a_final_answer": null,
+      "b_final_answer": null,
+      "conditions": {
+        "full": {
+          "contradiction_prob": 0.0002,
+          "similarity": 0.9553,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": true,
+          "b_answer_retained": true
+        },
+        "first_512": {
+          "contradiction_prob": 0.0002,
+          "similarity": 0.9553,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": true,
+          "b_answer_retained": true
+        },
+        "last_512": {
+          "contradiction_prob": 0.0002,
+          "similarity": 0.9553,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": true,
+          "b_answer_retained": true
+        }
+      }
+    },
+    {
+      "case_id": "P006",
+      "label": "NO_CONTRADICTION",
+      "is_contradiction": false,
+      "group": "control",
+      "a_persona": "Geographer",
+      "b_persona": "Wildlife Expert",
+      "a_chars": 1733,
+      "b_chars": 2081,
+      "a_tokens": 320,
+      "b_tokens": 380,
+      "a_exceeds_budget": true,
+      "b_exceeds_budget": true,
+      "a_final_answer": "B) No",
+      "b_final_answer": "B) No",
+      "conditions": {
+        "full": {
+          "contradiction_prob": 0.0087,
+          "similarity": 1.0,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": true,
+          "b_answer_retained": true
+        },
+        "first_512": {
+          "contradiction_prob": 0.0084,
+          "similarity": 1.0,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": true,
+          "b_answer_retained": true
+        },
+        "last_512": {
+          "contradiction_prob": 0.0006,
+          "similarity": 0.9456,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": true,
+          "b_answer_retained": true
+        }
+      }
+    },
+    {
+      "case_id": "P007",
+      "label": "NO_CONTRADICTION",
+      "is_contradiction": false,
+      "group": "control",
+      "a_persona": "Aviation Historian",
+      "b_persona": "Air Traffic Control Specialist",
+      "a_chars": 1626,
+      "b_chars": 1373,
+      "a_tokens": 326,
+      "b_tokens": 267,
+      "a_exceeds_budget": true,
+      "b_exceeds_budget": true,
+      "a_final_answer": "A) Yes",
+      "b_final_answer": "A) Yes",
+      "conditions": {
+        "full": {
+          "contradiction_prob": 0.0037,
+          "similarity": 0.8578,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": true,
+          "b_answer_retained": true
+        },
+        "first_512": {
+          "contradiction_prob": 0.0038,
+          "similarity": 0.8578,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": false,
+          "b_answer_retained": false
+        },
+        "last_512": {
+          "contradiction_prob": 0.0026,
+          "similarity": 0.9051,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": true,
+          "b_answer_retained": true
+        }
+      }
+    },
+    {
+      "case_id": "P008",
+      "label": "NO_CONTRADICTION",
+      "is_contradiction": false,
+      "group": "mismatch",
+      "a_persona": "Participant 1",
+      "b_persona": "Participant 3",
+      "a_chars": 811,
+      "b_chars": 353,
+      "a_tokens": 161,
+      "b_tokens": 68,
+      "a_exceeds_budget": false,
+      "b_exceeds_budget": false,
+      "a_final_answer": null,
+      "b_final_answer": null,
+      "conditions": {
+        "full": {
+          "contradiction_prob": 0.0129,
+          "similarity": 0.8865,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": true,
+          "b_answer_retained": true
+        },
+        "first_512": {
+          "contradiction_prob": 0.0129,
+          "similarity": 0.8865,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": true,
+          "b_answer_retained": true
+        },
+        "last_512": {
+          "contradiction_prob": 0.0129,
+          "similarity": 0.8865,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": true,
+          "b_answer_retained": true
+        }
+      }
+    },
+    {
+      "case_id": "P009",
+      "label": "NO_CONTRADICTION",
+      "is_contradiction": false,
+      "group": "mismatch",
+      "a_persona": "Molecular Biologist",
+      "b_persona": "Historian",
+      "a_chars": 621,
+      "b_chars": 408,
+      "a_tokens": 132,
+      "b_tokens": 80,
+      "a_exceeds_budget": false,
+      "b_exceeds_budget": false,
+      "a_final_answer": null,
+      "b_final_answer": null,
+      "conditions": {
+        "full": {
+          "contradiction_prob": 0.0145,
+          "similarity": 0.8034,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": true,
+          "b_answer_retained": true
+        },
+        "first_512": {
+          "contradiction_prob": 0.0145,
+          "similarity": 0.8034,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": true,
+          "b_answer_retained": true
+        },
+        "last_512": {
+          "contradiction_prob": 0.0145,
+          "similarity": 0.8034,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": true,
+          "b_answer_retained": true
+        }
+      }
+    },
+    {
+      "case_id": "P010",
+      "label": "NO_CONTRADICTION",
+      "is_contradiction": false,
+      "group": "mismatch",
+      "a_persona": "Participant 1",
+      "b_persona": "Participant 2",
+      "a_chars": 2806,
+      "b_chars": 2998,
+      "a_tokens": 532,
+      "b_tokens": 525,
+      "a_exceeds_budget": true,
+      "b_exceeds_budget": true,
+      "a_final_answer": "A) Yes",
+      "b_final_answer": "A) Yes",
+      "conditions": {
+        "full": {
+          "contradiction_prob": 0.0004,
+          "similarity": 0.8188,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": true,
+          "b_answer_retained": true
+        },
+        "first_512": {
+          "contradiction_prob": 0.0004,
+          "similarity": 0.8188,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": false,
+          "b_answer_retained": false
+        },
+        "last_512": {
+          "contradiction_prob": 0.0009,
+          "similarity": 0.9268,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": true,
+          "b_answer_retained": true
+        }
+      }
+    },
+    {
+      "case_id": "P011",
+      "label": "NO_CONTRADICTION",
+      "is_contradiction": false,
+      "group": "control",
+      "a_persona": "Theologian",
+      "b_persona": "Cultural Researcher",
+      "a_chars": 1169,
+      "b_chars": 1645,
+      "a_tokens": 234,
+      "b_tokens": 331,
+      "a_exceeds_budget": false,
+      "b_exceeds_budget": true,
+      "a_final_answer": "B) No",
+      "b_final_answer": "B) No",
+      "conditions": {
+        "full": {
+          "contradiction_prob": 0.0005,
+          "similarity": 0.8185,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": true,
+          "b_answer_retained": true
+        },
+        "first_512": {
+          "contradiction_prob": 0.0013,
+          "similarity": 0.8185,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": true,
+          "b_answer_retained": false
+        },
+        "last_512": {
+          "contradiction_prob": 0.0004,
+          "similarity": 0.8442,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": true,
+          "b_answer_retained": true
+        }
+      }
+    },
+    {
+      "case_id": "P012",
+      "label": "NO_CONTRADICTION",
+      "is_contradiction": false,
+      "group": "control",
+      "a_persona": "Botanist",
+      "b_persona": "Horticulturist",
+      "a_chars": 951,
+      "b_chars": 286,
+      "a_tokens": 181,
+      "b_tokens": 52,
+      "a_exceeds_budget": false,
+      "b_exceeds_budget": false,
+      "a_final_answer": "B) No",
+      "b_final_answer": null,
+      "conditions": {
+        "full": {
+          "contradiction_prob": 0.002,
+          "similarity": 0.9115,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": true,
+          "b_answer_retained": true
+        },
+        "first_512": {
+          "contradiction_prob": 0.002,
+          "similarity": 0.9115,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": true,
+          "b_answer_retained": true
+        },
+        "last_512": {
+          "contradiction_prob": 0.002,
+          "similarity": 0.9115,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": true,
+          "b_answer_retained": true
+        }
+      }
+    },
+    {
+      "case_id": "P013",
+      "label": "NO_CONTRADICTION",
+      "is_contradiction": false,
+      "group": "control",
+      "a_persona": "Medical Researcher",
+      "b_persona": "Pediatrician",
+      "a_chars": 1116,
+      "b_chars": 1060,
+      "a_tokens": 193,
+      "b_tokens": 189,
+      "a_exceeds_budget": false,
+      "b_exceeds_budget": false,
+      "a_final_answer": "B) No",
+      "b_final_answer": "B) No",
+      "conditions": {
+        "full": {
+          "contradiction_prob": 0.0002,
+          "similarity": 0.937,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": true,
+          "b_answer_retained": true
+        },
+        "first_512": {
+          "contradiction_prob": 0.0002,
+          "similarity": 0.937,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": true,
+          "b_answer_retained": true
+        },
+        "last_512": {
+          "contradiction_prob": 0.0002,
+          "similarity": 0.937,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": true,
+          "b_answer_retained": true
+        }
+      }
+    },
+    {
+      "case_id": "P014",
+      "label": "NO_CONTRADICTION",
+      "is_contradiction": false,
+      "group": "control",
+      "a_persona": "Dermatologist",
+      "b_persona": "Burning Man Attendee",
+      "a_chars": 3329,
+      "b_chars": 3702,
+      "a_tokens": 545,
+      "b_tokens": 600,
+      "a_exceeds_budget": true,
+      "b_exceeds_budget": true,
+      "a_final_answer": "A) Yes",
+      "b_final_answer": "A) Yes",
+      "conditions": {
+        "full": {
+          "contradiction_prob": 0.0057,
+          "similarity": 0.8855,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": true,
+          "b_answer_retained": true
+        },
+        "first_512": {
+          "contradiction_prob": 0.0038,
+          "similarity": 0.8855,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": false,
+          "b_answer_retained": false
+        },
+        "last_512": {
+          "contradiction_prob": 0.0077,
+          "similarity": 0.8659,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": true,
+          "b_answer_retained": true
+        }
+      }
+    },
+    {
+      "case_id": "P015",
+      "label": "CONTRADICTION",
+      "is_contradiction": true,
+      "group": "mismatch",
+      "a_persona": "Participant 1",
+      "b_persona": "Participant 3",
+      "a_chars": 2350,
+      "b_chars": 3962,
+      "a_tokens": 451,
+      "b_tokens": 684,
+      "a_exceeds_budget": true,
+      "b_exceeds_budget": true,
+      "a_final_answer": "A) Yes",
+      "b_final_answer": "B) No",
+      "conditions": {
+        "full": {
+          "contradiction_prob": 0.0014,
+          "similarity": 0.8695,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": true,
+          "b_answer_retained": true
+        },
+        "first_512": {
+          "contradiction_prob": 0.0014,
+          "similarity": 0.8695,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": false,
+          "b_answer_retained": false
+        },
+        "last_512": {
+          "contradiction_prob": 0.0008,
+          "similarity": 0.8579,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": true,
+          "b_answer_retained": true
+        }
+      }
+    },
+    {
+      "case_id": "P016",
+      "label": "NO_CONTRADICTION",
+      "is_contradiction": false,
+      "group": "mismatch",
+      "a_persona": "Participant 2",
+      "b_persona": "Participant 3",
+      "a_chars": 3462,
+      "b_chars": 3261,
+      "a_tokens": 640,
+      "b_tokens": 615,
+      "a_exceeds_budget": true,
+      "b_exceeds_budget": true,
+      "a_final_answer": "B) No",
+      "b_final_answer": "B) No",
+      "conditions": {
+        "full": {
+          "contradiction_prob": 0.0009,
+          "similarity": 0.8632,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": true,
+          "b_answer_retained": true
+        },
+        "first_512": {
+          "contradiction_prob": 0.002,
+          "similarity": 0.8632,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": false,
+          "b_answer_retained": false
+        },
+        "last_512": {
+          "contradiction_prob": 0.0013,
+          "similarity": 0.8398,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": true,
+          "b_answer_retained": true
+        }
+      }
+    },
+    {
+      "case_id": "P017",
+      "label": "NO_CONTRADICTION",
+      "is_contradiction": false,
+      "group": "mismatch",
+      "a_persona": "Ballet Dancer",
+      "b_persona": "Stage Manager",
+      "a_chars": 221,
+      "b_chars": 311,
+      "a_tokens": 43,
+      "b_tokens": 59,
+      "a_exceeds_budget": false,
+      "b_exceeds_budget": false,
+      "a_final_answer": null,
+      "b_final_answer": null,
+      "conditions": {
+        "full": {
+          "contradiction_prob": 0.0075,
+          "similarity": 0.8094,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": true,
+          "b_answer_retained": true
+        },
+        "first_512": {
+          "contradiction_prob": 0.0075,
+          "similarity": 0.8094,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": true,
+          "b_answer_retained": true
+        },
+        "last_512": {
+          "contradiction_prob": 0.0075,
+          "similarity": 0.8094,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": true,
+          "b_answer_retained": true
+        }
+      }
+    },
+    {
+      "case_id": "P018",
+      "label": "NO_CONTRADICTION",
+      "is_contradiction": false,
+      "group": "control",
+      "a_persona": "Safety Officer",
+      "b_persona": "Experimental Physicist",
+      "a_chars": 3018,
+      "b_chars": 1918,
+      "a_tokens": 526,
+      "b_tokens": 342,
+      "a_exceeds_budget": true,
+      "b_exceeds_budget": true,
+      "a_final_answer": "A) Yes",
+      "b_final_answer": "A) Yes",
+      "conditions": {
+        "full": {
+          "contradiction_prob": 0.0006,
+          "similarity": 0.8821,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": true,
+          "b_answer_retained": true
+        },
+        "first_512": {
+          "contradiction_prob": 0.0006,
+          "similarity": 0.8822,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": true,
+          "b_answer_retained": false
+        },
+        "last_512": {
+          "contradiction_prob": 0.0002,
+          "similarity": 0.8408,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": true,
+          "b_answer_retained": true
+        }
+      }
+    },
+    {
+      "case_id": "P019",
+      "label": "CONTRADICTION",
+      "is_contradiction": true,
+      "group": "mismatch",
+      "a_persona": "Medical Professional",
+      "b_persona": "Toxicologist",
+      "a_chars": 4275,
+      "b_chars": 3950,
+      "a_tokens": 709,
+      "b_tokens": 656,
+      "a_exceeds_budget": true,
+      "b_exceeds_budget": true,
+      "a_final_answer": "B) No",
+      "b_final_answer": "A) Yes",
+      "conditions": {
+        "full": {
+          "contradiction_prob": 0.0023,
+          "similarity": 0.793,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": true,
+          "b_answer_retained": true
+        },
+        "first_512": {
+          "contradiction_prob": 0.0024,
+          "similarity": 0.793,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": false,
+          "b_answer_retained": false
+        },
+        "last_512": {
+          "contradiction_prob": 0.0096,
+          "similarity": 0.631,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": true,
+          "b_answer_retained": true
+        }
+      }
+    },
+    {
+      "case_id": "P020",
+      "label": "CONTRADICTION",
+      "is_contradiction": true,
+      "group": "mismatch",
+      "a_persona": "Toxicologist",
+      "b_persona": "Nutritionist",
+      "a_chars": 2963,
+      "b_chars": 3564,
+      "a_tokens": 517,
+      "b_tokens": 601,
+      "a_exceeds_budget": true,
+      "b_exceeds_budget": true,
+      "a_final_answer": "A) Yes",
+      "b_final_answer": "B) No",
+      "conditions": {
+        "full": {
+          "contradiction_prob": 0.002,
+          "similarity": 0.776,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": true,
+          "b_answer_retained": true
+        },
+        "first_512": {
+          "contradiction_prob": 0.0019,
+          "similarity": 0.776,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": false,
+          "b_answer_retained": false
+        },
+        "last_512": {
+          "contradiction_prob": 0.0008,
+          "similarity": 0.8202,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": true,
+          "b_answer_retained": true
+        }
+      }
+    },
+    {
+      "case_id": "P021",
+      "label": "NO_CONTRADICTION",
+      "is_contradiction": false,
+      "group": "control",
+      "a_persona": "Participant 1",
+      "b_persona": "Participant 2",
+      "a_chars": 1105,
+      "b_chars": 718,
+      "a_tokens": 243,
+      "b_tokens": 139,
+      "a_exceeds_budget": false,
+      "b_exceeds_budget": false,
+      "a_final_answer": "B) No",
+      "b_final_answer": "B) No",
+      "conditions": {
+        "full": {
+          "contradiction_prob": 0.0004,
+          "similarity": 0.8439,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": true,
+          "b_answer_retained": true
+        },
+        "first_512": {
+          "contradiction_prob": 0.0004,
+          "similarity": 0.8439,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": true,
+          "b_answer_retained": true
+        },
+        "last_512": {
+          "contradiction_prob": 0.0004,
+          "similarity": 0.8439,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": true,
+          "b_answer_retained": true
+        }
+      }
+    },
+    {
+      "case_id": "P022",
+      "label": "NO_CONTRADICTION",
+      "is_contradiction": false,
+      "group": "mismatch",
+      "a_persona": "Ballet Dancer",
+      "b_persona": "Stage Manager",
+      "a_chars": 458,
+      "b_chars": 353,
+      "a_tokens": 118,
+      "b_tokens": 66,
+      "a_exceeds_budget": false,
+      "b_exceeds_budget": false,
+      "a_final_answer": null,
+      "b_final_answer": null,
+      "conditions": {
+        "full": {
+          "contradiction_prob": 0.0016,
+          "similarity": 0.7267,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": true,
+          "b_answer_retained": true
+        },
+        "first_512": {
+          "contradiction_prob": 0.0016,
+          "similarity": 0.7267,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": true,
+          "b_answer_retained": true
+        },
+        "last_512": {
+          "contradiction_prob": 0.0016,
+          "similarity": 0.7267,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": true,
+          "b_answer_retained": true
+        }
+      }
+    },
+    {
+      "case_id": "P023",
+      "label": "CONTRADICTION",
+      "is_contradiction": true,
+      "group": "mismatch",
+      "a_persona": "Geographer",
+      "b_persona": "Researcher",
+      "a_chars": 879,
+      "b_chars": 1651,
+      "a_tokens": 205,
+      "b_tokens": 478,
+      "a_exceeds_budget": false,
+      "b_exceeds_budget": true,
+      "a_final_answer": "B) No",
+      "b_final_answer": "A) Yes",
+      "conditions": {
+        "full": {
+          "contradiction_prob": 0.0048,
+          "similarity": 0.8295,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": true,
+          "b_answer_retained": true
+        },
+        "first_512": {
+          "contradiction_prob": 0.0032,
+          "similarity": 0.8295,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": true,
+          "b_answer_retained": false
+        },
+        "last_512": {
+          "contradiction_prob": 0.0134,
+          "similarity": 0.5578,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": true,
+          "b_answer_retained": true
+        }
+      }
+    },
+    {
+      "case_id": "P024",
+      "label": "CONTRADICTION",
+      "is_contradiction": true,
+      "group": "mismatch",
+      "a_persona": "Toxicologist",
+      "b_persona": "Nutritionist",
+      "a_chars": 3927,
+      "b_chars": 3725,
+      "a_tokens": 657,
+      "b_tokens": 639,
+      "a_exceeds_budget": true,
+      "b_exceeds_budget": true,
+      "a_final_answer": "A) Yes",
+      "b_final_answer": "B) No",
+      "conditions": {
+        "full": {
+          "contradiction_prob": 0.0204,
+          "similarity": 0.8098,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": true,
+          "b_answer_retained": true
+        },
+        "first_512": {
+          "contradiction_prob": 0.0179,
+          "similarity": 0.8098,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": false,
+          "b_answer_retained": false
+        },
+        "last_512": {
+          "contradiction_prob": 0.0414,
+          "similarity": 0.7656,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": true,
+          "b_answer_retained": true
+        }
+      }
+    },
+    {
+      "case_id": "P025",
+      "label": "NO_CONTRADICTION",
+      "is_contradiction": false,
+      "group": "control",
+      "a_persona": "Participant 2",
+      "b_persona": "Participant 3",
+      "a_chars": 5275,
+      "b_chars": 5339,
+      "a_tokens": 902,
+      "b_tokens": 911,
+      "a_exceeds_budget": true,
+      "b_exceeds_budget": true,
+      "a_final_answer": "A) Yes",
+      "b_final_answer": "A) Yes",
+      "conditions": {
+        "full": {
+          "contradiction_prob": 0.0019,
+          "similarity": 0.8584,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": true,
+          "b_answer_retained": true
+        },
+        "first_512": {
+          "contradiction_prob": 0.0019,
+          "similarity": 0.8584,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": false,
+          "b_answer_retained": false
+        },
+        "last_512": {
+          "contradiction_prob": 0.0006,
+          "similarity": 0.9473,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": true,
+          "b_answer_retained": true
+        }
+      }
+    },
+    {
+      "case_id": "P026",
+      "label": "NO_CONTRADICTION",
+      "is_contradiction": false,
+      "group": "mismatch",
+      "a_persona": "Participant 1",
+      "b_persona": "Participant 3",
+      "a_chars": 2883,
+      "b_chars": 3704,
+      "a_tokens": 563,
+      "b_tokens": 678,
+      "a_exceeds_budget": true,
+      "b_exceeds_budget": true,
+      "a_final_answer": "B) No",
+      "b_final_answer": "B) No",
+      "conditions": {
+        "full": {
+          "contradiction_prob": 0.0082,
+          "similarity": 0.2541,
+          "gated": true,
+          "alarm": false,
+          "a_answer_retained": true,
+          "b_answer_retained": true
+        },
+        "first_512": {
+          "contradiction_prob": 0.0081,
+          "similarity": 0.2541,
+          "gated": true,
+          "alarm": false,
+          "a_answer_retained": false,
+          "b_answer_retained": false
+        },
+        "last_512": {
+          "contradiction_prob": 0.0003,
+          "similarity": 0.2931,
+          "gated": true,
+          "alarm": false,
+          "a_answer_retained": true,
+          "b_answer_retained": true
+        }
+      }
+    },
+    {
+      "case_id": "P027",
+      "label": "CONTRADICTION",
+      "is_contradiction": true,
+      "group": "mismatch",
+      "a_persona": "Music Historian",
+      "b_persona": "Music Journalist",
+      "a_chars": 258,
+      "b_chars": 173,
+      "a_tokens": 57,
+      "b_tokens": 36,
+      "a_exceeds_budget": false,
+      "b_exceeds_budget": false,
+      "a_final_answer": "A) Yes",
+      "b_final_answer": null,
+      "conditions": {
+        "full": {
+          "contradiction_prob": 0.017,
+          "similarity": 0.9024,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": true,
+          "b_answer_retained": true
+        },
+        "first_512": {
+          "contradiction_prob": 0.017,
+          "similarity": 0.9024,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": true,
+          "b_answer_retained": true
+        },
+        "last_512": {
+          "contradiction_prob": 0.017,
+          "similarity": 0.9024,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": true,
+          "b_answer_retained": true
+        }
+      }
+    },
+    {
+      "case_id": "P028",
+      "label": "NO_CONTRADICTION",
+      "is_contradiction": false,
+      "group": "control",
+      "a_persona": "Participant 2",
+      "b_persona": "Participant 3",
+      "a_chars": 901,
+      "b_chars": 1780,
+      "a_tokens": 160,
+      "b_tokens": 338,
+      "a_exceeds_budget": false,
+      "b_exceeds_budget": true,
+      "a_final_answer": "B) No",
+      "b_final_answer": "B) No",
+      "conditions": {
+        "full": {
+          "contradiction_prob": 0.0009,
+          "similarity": 0.9203,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": true,
+          "b_answer_retained": true
+        },
+        "first_512": {
+          "contradiction_prob": 0.0008,
+          "similarity": 0.9142,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": true,
+          "b_answer_retained": true
+        },
+        "last_512": {
+          "contradiction_prob": 0.0019,
+          "similarity": 0.9214,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": true,
+          "b_answer_retained": true
+        }
+      }
+    },
+    {
+      "case_id": "P029",
+      "label": "NO_CONTRADICTION",
+      "is_contradiction": false,
+      "group": "control",
+      "a_persona": "Linguist",
+      "b_persona": "Technologist",
+      "a_chars": 1953,
+      "b_chars": 2007,
+      "a_tokens": 360,
+      "b_tokens": 356,
+      "a_exceeds_budget": true,
+      "b_exceeds_budget": true,
+      "a_final_answer": "B) No",
+      "b_final_answer": "B) No",
+      "conditions": {
+        "full": {
+          "contradiction_prob": 0.0004,
+          "similarity": 0.8579,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": true,
+          "b_answer_retained": true
+        },
+        "first_512": {
+          "contradiction_prob": 0.0004,
+          "similarity": 0.8579,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": false,
+          "b_answer_retained": true
+        },
+        "last_512": {
+          "contradiction_prob": 0.0008,
+          "similarity": 0.7801,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": true,
+          "b_answer_retained": true
+        }
+      }
+    },
+    {
+      "case_id": "P030",
+      "label": "NO_CONTRADICTION",
+      "is_contradiction": false,
+      "group": "mismatch",
+      "a_persona": "Molecular Biologist",
+      "b_persona": "Biography Expert",
+      "a_chars": 621,
+      "b_chars": 236,
+      "a_tokens": 132,
+      "b_tokens": 44,
+      "a_exceeds_budget": false,
+      "b_exceeds_budget": false,
+      "a_final_answer": null,
+      "b_final_answer": null,
+      "conditions": {
+        "full": {
+          "contradiction_prob": 0.0011,
+          "similarity": 0.8319,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": true,
+          "b_answer_retained": true
+        },
+        "first_512": {
+          "contradiction_prob": 0.0011,
+          "similarity": 0.8319,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": true,
+          "b_answer_retained": true
+        },
+        "last_512": {
+          "contradiction_prob": 0.0011,
+          "similarity": 0.8319,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": true,
+          "b_answer_retained": true
+        }
+      }
+    },
+    {
+      "case_id": "P031",
+      "label": "NO_CONTRADICTION",
+      "is_contradiction": false,
+      "group": "control",
+      "a_persona": "Gamer",
+      "b_persona": "Data Analyst",
+      "a_chars": 1075,
+      "b_chars": 927,
+      "a_tokens": 243,
+      "b_tokens": 212,
+      "a_exceeds_budget": false,
+      "b_exceeds_budget": false,
+      "a_final_answer": "A) Yes",
+      "b_final_answer": "A) Yes",
+      "conditions": {
+        "full": {
+          "contradiction_prob": 0.0006,
+          "similarity": 0.7573,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": true,
+          "b_answer_retained": true
+        },
+        "first_512": {
+          "contradiction_prob": 0.0006,
+          "similarity": 0.7573,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": true,
+          "b_answer_retained": true
+        },
+        "last_512": {
+          "contradiction_prob": 0.0006,
+          "similarity": 0.7573,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": true,
+          "b_answer_retained": true
+        }
+      }
+    },
+    {
+      "case_id": "P032",
+      "label": "CONTRADICTION",
+      "is_contradiction": true,
+      "group": "mismatch",
+      "a_persona": "Binge-Watcher",
+      "b_persona": "Media Analyst",
+      "a_chars": 1832,
+      "b_chars": 963,
+      "a_tokens": 398,
+      "b_tokens": 192,
+      "a_exceeds_budget": true,
+      "b_exceeds_budget": false,
+      "a_final_answer": "B) No",
+      "b_final_answer": "A) Yes",
+      "conditions": {
+        "full": {
+          "contradiction_prob": 0.0002,
+          "similarity": 0.7937,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": true,
+          "b_answer_retained": true
+        },
+        "first_512": {
+          "contradiction_prob": 0.0006,
+          "similarity": 0.7937,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": false,
+          "b_answer_retained": true
+        },
+        "last_512": {
+          "contradiction_prob": 0.0014,
+          "similarity": 0.8162,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": true,
+          "b_answer_retained": true
+        }
+      }
+    },
+    {
+      "case_id": "P033",
+      "label": "NO_CONTRADICTION",
+      "is_contradiction": false,
+      "group": "control",
+      "a_persona": "Participant 3",
+      "b_persona": "Participant 2",
+      "a_chars": 341,
+      "b_chars": 122,
+      "a_tokens": 69,
+      "b_tokens": 24,
+      "a_exceeds_budget": false,
+      "b_exceeds_budget": false,
+      "a_final_answer": null,
+      "b_final_answer": null,
+      "conditions": {
+        "full": {
+          "contradiction_prob": 0.0041,
+          "similarity": 0.8861,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": true,
+          "b_answer_retained": true
+        },
+        "first_512": {
+          "contradiction_prob": 0.0041,
+          "similarity": 0.8861,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": true,
+          "b_answer_retained": true
+        },
+        "last_512": {
+          "contradiction_prob": 0.0041,
+          "similarity": 0.8861,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": true,
+          "b_answer_retained": true
+        }
+      }
+    },
+    {
+      "case_id": "P034",
+      "label": "NO_CONTRADICTION",
+      "is_contradiction": false,
+      "group": "control",
+      "a_persona": "Linguist",
+      "b_persona": "Technologist",
+      "a_chars": 1953,
+      "b_chars": 1903,
+      "a_tokens": 360,
+      "b_tokens": 338,
+      "a_exceeds_budget": true,
+      "b_exceeds_budget": true,
+      "a_final_answer": "B) No",
+      "b_final_answer": "B) No",
+      "conditions": {
+        "full": {
+          "contradiction_prob": 0.0006,
+          "similarity": 0.8418,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": true,
+          "b_answer_retained": true
+        },
+        "first_512": {
+          "contradiction_prob": 0.0007,
+          "similarity": 0.8418,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": false,
+          "b_answer_retained": true
+        },
+        "last_512": {
+          "contradiction_prob": 0.0025,
+          "similarity": 0.782,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": true,
+          "b_answer_retained": true
+        }
+      }
+    },
+    {
+      "case_id": "P035",
+      "label": "NO_CONTRADICTION",
+      "is_contradiction": false,
+      "group": "mismatch",
+      "a_persona": "Participant 1",
+      "b_persona": "Participant 2",
+      "a_chars": 3518,
+      "b_chars": 3552,
+      "a_tokens": 636,
+      "b_tokens": 640,
+      "a_exceeds_budget": true,
+      "b_exceeds_budget": true,
+      "a_final_answer": "B) No",
+      "b_final_answer": "B) No",
+      "conditions": {
+        "full": {
+          "contradiction_prob": 0.0341,
+          "similarity": 0.6514,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": true,
+          "b_answer_retained": true
+        },
+        "first_512": {
+          "contradiction_prob": 0.0326,
+          "similarity": 0.6514,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": false,
+          "b_answer_retained": false
+        },
+        "last_512": {
+          "contradiction_prob": 0.019,
+          "similarity": 0.6994,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": true,
+          "b_answer_retained": true
+        }
+      }
+    },
+    {
+      "case_id": "P036",
+      "label": "NO_CONTRADICTION",
+      "is_contradiction": false,
+      "group": "control",
+      "a_persona": "Participant 2",
+      "b_persona": "Participant 3",
+      "a_chars": 3884,
+      "b_chars": 3778,
+      "a_tokens": 679,
+      "b_tokens": 667,
+      "a_exceeds_budget": true,
+      "b_exceeds_budget": true,
+      "a_final_answer": "B) No",
+      "b_final_answer": "B) No",
+      "conditions": {
+        "full": {
+          "contradiction_prob": 0.0037,
+          "similarity": 0.8244,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": true,
+          "b_answer_retained": true
+        },
+        "first_512": {
+          "contradiction_prob": 0.0038,
+          "similarity": 0.8243,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": false,
+          "b_answer_retained": false
+        },
+        "last_512": {
+          "contradiction_prob": 0.1344,
+          "similarity": 0.7101,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": true,
+          "b_answer_retained": true
+        }
+      }
+    },
+    {
+      "case_id": "P037",
+      "label": "CONTRADICTION",
+      "is_contradiction": true,
+      "group": "mismatch",
+      "a_persona": "Entomologist",
+      "b_persona": "Agricultural Specialist",
+      "a_chars": 1422,
+      "b_chars": 780,
+      "a_tokens": 275,
+      "b_tokens": 215,
+      "a_exceeds_budget": true,
+      "b_exceeds_budget": false,
+      "a_final_answer": "A) Yes",
+      "b_final_answer": "B) No",
+      "conditions": {
+        "full": {
+          "contradiction_prob": 0.0044,
+          "similarity": 0.7653,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": true,
+          "b_answer_retained": true
+        },
+        "first_512": {
+          "contradiction_prob": 0.0038,
+          "similarity": 0.7653,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": true,
+          "b_answer_retained": true
+        },
+        "last_512": {
+          "contradiction_prob": 0.0041,
+          "similarity": 0.6983,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": true,
+          "b_answer_retained": true
+        }
+      }
+    },
+    {
+      "case_id": "P038",
+      "label": "NO_CONTRADICTION",
+      "is_contradiction": false,
+      "group": "control",
+      "a_persona": "Biographer",
+      "b_persona": "Geographer",
+      "a_chars": 296,
+      "b_chars": 370,
+      "a_tokens": 53,
+      "b_tokens": 69,
+      "a_exceeds_budget": false,
+      "b_exceeds_budget": false,
+      "a_final_answer": null,
+      "b_final_answer": null,
+      "conditions": {
+        "full": {
+          "contradiction_prob": 0.0001,
+          "similarity": 0.8408,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": true,
+          "b_answer_retained": true
+        },
+        "first_512": {
+          "contradiction_prob": 0.0001,
+          "similarity": 0.8408,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": true,
+          "b_answer_retained": true
+        },
+        "last_512": {
+          "contradiction_prob": 0.0001,
+          "similarity": 0.8408,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": true,
+          "b_answer_retained": true
+        }
+      }
+    },
+    {
+      "case_id": "P039",
+      "label": "NO_CONTRADICTION",
+      "is_contradiction": false,
+      "group": "control",
+      "a_persona": "Participant 2",
+      "b_persona": "Participant 3",
+      "a_chars": 1378,
+      "b_chars": 1655,
+      "a_tokens": 266,
+      "b_tokens": 304,
+      "a_exceeds_budget": true,
+      "b_exceeds_budget": true,
+      "a_final_answer": "A) Yes",
+      "b_final_answer": "A) Yes",
+      "conditions": {
+        "full": {
+          "contradiction_prob": 0.0028,
+          "similarity": 0.9269,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": true,
+          "b_answer_retained": true
+        },
+        "first_512": {
+          "contradiction_prob": 0.0028,
+          "similarity": 0.9269,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": true,
+          "b_answer_retained": true
+        },
+        "last_512": {
+          "contradiction_prob": 0.002,
+          "similarity": 0.958,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": true,
+          "b_answer_retained": true
+        }
+      }
+    },
+    {
+      "case_id": "P040",
+      "label": "NO_CONTRADICTION",
+      "is_contradiction": false,
+      "group": "control",
+      "a_persona": "Participant 1",
+      "b_persona": "Participant 3",
+      "a_chars": 5524,
+      "b_chars": 3758,
+      "a_tokens": 972,
+      "b_tokens": 625,
+      "a_exceeds_budget": true,
+      "b_exceeds_budget": true,
+      "a_final_answer": "A) Yes",
+      "b_final_answer": "A) Yes",
+      "conditions": {
+        "full": {
+          "contradiction_prob": 0.0005,
+          "similarity": 0.4555,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": true,
+          "b_answer_retained": true
+        },
+        "first_512": {
+          "contradiction_prob": 0.0005,
+          "similarity": 0.4555,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": false,
+          "b_answer_retained": false
+        },
+        "last_512": {
+          "contradiction_prob": 0.0003,
+          "similarity": 0.4308,
+          "gated": false,
+          "alarm": false,
+          "a_answer_retained": true,
+          "b_answer_retained": true
+        }
+      }
+    }
+  ],
+  "limitations": [
+    "10 positives, 30 negatives -- indicative, not a benchmark result",
+    "single annotator (first-pass labels only), no second judge, no kappa",
+    "no threshold tuning and no production change; inputs manipulated only"
+  ]
+}

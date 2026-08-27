@@ -1,0 +1,183 @@
+{
+  "purpose": "sample-size justification for the external disagreement benchmark",
+  "source_probe": {
+    "cases": 40,
+    "rows_read": 240,
+    "pairs_extracted": 7582,
+    "mismatch_pairs_available": 81,
+    "mismatch_group": {
+      "n": 20,
+      "positives": 10,
+      "ci95": [
+        0.2993,
+        0.7007
+      ]
+    },
+    "control_group": {
+      "n": 20,
+      "positives": 0,
+      "ci95": [
+        0.0,
+        0.1611
+      ]
+    }
+  },
+  "measured_yields": {
+    "pairs_per_row": 31.5917,
+    "mismatch_pairs_per_row": 0.3375,
+    "contradiction_rate_given_mismatch": 0.5,
+    "genuine_positives_per_row": 0.16875
+  },
+  "production_prevalence": {
+    "median": 0.005316,
+    "ci95": [
+      0.003003,
+      0.008058
+    ],
+    "enrichment_of_balanced_sample": 94.1,
+    "note": "dominated by the 10/20 hit-rate estimate, not the base rate"
+  },
+  "positives_needed_for_recall_ci": {
+    "halfwidth_0.100": 49,
+    "halfwidth_0.075": 88,
+    "halfwidth_0.050": 196
+  },
+  "negatives_needed_for_fpr_ci": {
+    "fpr_0.02": {
+      "halfwidth_0.01": 753,
+      "halfwidth_0.005": 3012,
+      "halfwidth_0.0025": 12048
+    },
+    "fpr_0.01": {
+      "halfwidth_0.01": 381,
+      "halfwidth_0.005": 1522,
+      "halfwidth_0.0025": 6086
+    },
+    "fpr_0.005": {
+      "halfwidth_0.01": 192,
+      "halfwidth_0.005": 765,
+      "halfwidth_0.0025": 3058
+    }
+  },
+  "corrected_precision_under_designs": [
+    {
+      "design": "small   (225 labelled)",
+      "n_positives": 75,
+      "n_negatives": 150,
+      "assumed_true_fpr": 0.02,
+      "corrected_precision_median": 0.1749,
+      "corrected_precision_ci95": [
+        0.0674,
+        0.4582
+      ]
+    },
+    {
+      "design": "small   (225 labelled)",
+      "n_positives": 75,
+      "n_negatives": 150,
+      "assumed_true_fpr": 0.005,
+      "corrected_precision_median": 0.4177,
+      "corrected_precision_ci95": [
+        0.1275,
+        0.9223
+      ]
+    },
+    {
+      "design": "medium  (400 labelled)",
+      "n_positives": 100,
+      "n_negatives": 300,
+      "assumed_true_fpr": 0.02,
+      "corrected_precision_median": 0.1791,
+      "corrected_precision_ci95": [
+        0.0826,
+        0.372
+      ]
+    },
+    {
+      "design": "medium  (400 labelled)",
+      "n_positives": 100,
+      "n_negatives": 300,
+      "assumed_true_fpr": 0.005,
+      "corrected_precision_median": 0.445,
+      "corrected_precision_ci95": [
+        0.1757,
+        0.8526
+      ]
+    },
+    {
+      "design": "large   (800 labelled)",
+      "n_positives": 100,
+      "n_negatives": 700,
+      "assumed_true_fpr": 0.02,
+      "corrected_precision_median": 0.1819,
+      "corrected_precision_ci95": [
+        0.0961,
+        0.3121
+      ]
+    },
+    {
+      "design": "large   (800 labelled)",
+      "n_positives": 100,
+      "n_negatives": 700,
+      "assumed_true_fpr": 0.005,
+      "corrected_precision_median": 0.461,
+      "corrected_precision_ci95": [
+        0.2328,
+        0.7554
+      ]
+    }
+  ],
+  "alarm_audit_design": [
+    {
+      "alarms_labelled": 100,
+      "precision_ci95_if_true_precision_0.20": [
+        0.1334,
+        0.2888
+      ],
+      "pairs_to_screen_by_alarm_rate": {
+        "rate_0.005": 20000,
+        "rate_0.01": 10000,
+        "rate_0.03": 3334
+      }
+    },
+    {
+      "alarms_labelled": 150,
+      "precision_ci95_if_true_precision_0.20": [
+        0.1438,
+        0.2711
+      ],
+      "pairs_to_screen_by_alarm_rate": {
+        "rate_0.005": 30000,
+        "rate_0.01": 15000,
+        "rate_0.03": 5000
+      }
+    },
+    {
+      "alarms_labelled": 200,
+      "precision_ci95_if_true_precision_0.20": [
+        0.1505,
+        0.2609
+      ],
+      "pairs_to_screen_by_alarm_rate": {
+        "rate_0.005": 40000,
+        "rate_0.01": 20000,
+        "rate_0.03": 6667
+      }
+    }
+  ],
+  "recommended_design": {
+    "rows_to_sample": 741,
+    "mismatch_pairs_to_label": 250,
+    "control_pairs_to_label": 300,
+    "total_cases_to_label": 550,
+    "labelling_passes": 2,
+    "target_usable_positives": 100,
+    "judge_exclusion_allowance": 0.2
+  },
+  "assumptions_not_measurements": [
+    "judge-disagreement exclusion rate 20% \u2014 planning assumption; the actual rate is only known after the Qwen3-8B pass",
+    "detector TPR ~0.85 used only to illustrate corrected-precision width",
+    "FPR values are candidates, not estimates \u2014 the detector has never been run on this corpus"
+  ],
+  "binding_constraint": "Corrected precision is driven by FPR, not by the positive count. Labelling more positives does not narrow it."
+}
