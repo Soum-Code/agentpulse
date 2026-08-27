@@ -217,18 +217,26 @@ async def last_retention_run(session: AsyncSession) -> Optional[dict[str, Any]]:
     }
 
 
-def derive_state(*, models_ready: bool, api_degraded: bool, workers: dict,
-                 queue_depth: int) -> dict[str, Any]:
+def derive_state(*, api_ready: bool, api_degraded: bool, workers: dict,
+                 queue_depth: int, models_pending: bool = False) -> dict[str, Any]:
     """Reduce the signals to a single operator-facing verdict, with reasons.
 
     The verdict never replaces the underlying numbers; it exists so an operator
     is not required to interpret six fields correctly under pressure. Reasons
     are returned alongside so the verdict can be checked rather than trusted.
+
+    `api_ready` is the DATABASE, not the API's models. An earlier version took
+    `models_ready` and reported `starting` whenever the API had no models
+    loaded — which became permanent once the API stopped loading them, since it
+    performs no inference. Model state only participates via `models_pending`,
+    and only for deployments that opt into API-side model loading.
     """
     reasons: list[str] = []
 
-    if not models_ready:
-        reasons.append("API models are not fully loaded")
+    if not api_ready:
+        reasons.append("API is not ready: its database dependency is unavailable")
+    if models_pending:
+        reasons.append("API models are still loading (api_load_models is enabled)")
     if api_degraded:
         reasons.append("API inference backend is degraded")
     if workers["alive"] == 0:
@@ -241,9 +249,11 @@ def derive_state(*, models_ready: bool, api_degraded: bool, workers: dict,
     if queue_depth > BACKLOG_THRESHOLD:
         reasons.append(f"evaluation queue depth {queue_depth} exceeds {BACKLOG_THRESHOLD}")
 
-    if workers["alive"] == 0:
+    if not api_ready:
+        state = "failing"          # cannot serve at all
+    elif workers["alive"] == 0:
         state = "failing"          # accepting work that will never be evaluated
-    elif not models_ready:
+    elif models_pending:
         state = "starting"
     elif queue_depth > BACKLOG_THRESHOLD:
         state = "backlogged"
@@ -257,7 +267,9 @@ def derive_state(*, models_ready: bool, api_degraded: bool, workers: dict,
 
 async def collect_platform_health(session: AsyncSession) -> dict[str, Any]:
     """The full self-monitoring picture."""
+    from app.config import settings
     from app.services.grounding import backend_info, models_loaded
+    from app.services.readiness import api_readiness
     from app.services.runtime_metrics import COUNTERS
 
     loaded = models_loaded()
@@ -265,12 +277,16 @@ async def collect_platform_health(session: AsyncSession) -> dict[str, Any]:
     counts = await job_state_counts(session)
     fleet = await worker_fleet(session)
     queue_depth = counts["queued"] + counts["running"]
+    api = await api_readiness(session)
 
     verdict = derive_state(
-        models_ready=all(loaded.values()),
+        api_ready=api["ready"],
         api_degraded=bool(api_backend.get("degraded")),
         workers=fleet,
         queue_depth=queue_depth,
+        # Only a meaningful state when this deployment asked the API to load
+        # models; otherwise their absence is the intended configuration.
+        models_pending=settings.api_load_models and not all(loaded.values()),
     )
 
     return {
@@ -278,8 +294,10 @@ async def collect_platform_health(session: AsyncSession) -> dict[str, Any]:
         "checked_at": _now().isoformat(),
         "api": {
             "process_alive": True,   # true by construction: this response exists
+            "ready": api["ready"],
+            "checks": api["checks"],
             "models_loaded": loaded,
-            "models_ready": all(loaded.values()),
+            "models_required": settings.api_load_models,
             "inference_backend": api_backend,
         },
         "evaluation_queue": {

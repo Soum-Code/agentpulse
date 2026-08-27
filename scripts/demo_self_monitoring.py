@@ -106,13 +106,15 @@ def main() -> None:
         while time.time() < deadline:
             try:
                 body = platform_state()
-                if body["api"]["models_ready"]:
+                # API readiness is the database, not models: the API performs
+                # no inference and no longer loads them.
+                if body["api"]["ready"]:
                     break
             except Exception:
                 pass
             time.sleep(1)
 
-        show("1. API up, models loaded, NO WORKER")
+        show("1. API up and ready (no models by design), NO WORKER")
 
         worker = subprocess.Popen(
             [sys.executable, "-m", "app.worker"],

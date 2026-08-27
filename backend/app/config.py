@@ -44,6 +44,16 @@ class BackendConfig:
     webhook_url: str = ""
 
     # Privacy
+    # The API performs no inference: evaluation moved to the worker process and
+    # no API route calls a model (verified by grep -- only stored evaluation
+    # COLUMNS are read). Loading them held ~1.24 GB of resident memory per API
+    # process and added ~20s to startup for a capability never used.
+    #
+    # Opt-in rather than removed outright, so the previous behaviour is one
+    # environment variable away if a future API feature does need local
+    # inference: AGENTPULSE_API_LOAD_MODELS=true
+    api_load_models: bool = False
+
     retention_days: int = 30
 
     def __post_init__(self) -> None:
@@ -65,6 +75,9 @@ class BackendConfig:
         self.alert_max_per_hour = int(os.getenv("AGENTPULSE_ALERT_MAX_PER_HOUR", str(self.alert_max_per_hour)))
         self.webhook_url = os.getenv("AGENTPULSE_WEBHOOK_URL", self.webhook_url)
         self.retention_days = int(os.getenv("AGENTPULSE_RETENTION_DAYS", str(self.retention_days)))
+        self.api_load_models = os.getenv(
+            "AGENTPULSE_API_LOAD_MODELS", str(self.api_load_models)
+        ).lower() in ("1", "true", "yes")
 
         use_onnx_env = os.getenv("AGENTPULSE_USE_ONNX")
         if use_onnx_env is not None:

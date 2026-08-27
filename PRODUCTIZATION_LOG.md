@@ -903,3 +903,114 @@ contract; `/v1/platform` is additive. The health/readiness phase owns the final 
 including the still-open question of the API loading 1.24 GB of models it no longer uses.
 
 ---
+
+## Health and readiness — explicit contract, then the 1.24 GB cleanup
+
+Semantics defined first; the model-load removal follows from them rather than the reverse.
+
+### The contract
+
+| Question | Depends on | Endpoint |
+| :--- | :--- | :--- |
+| **Liveness** — is this process running? | **nothing** | `GET /v1/health/live` |
+| **API readiness** — can this process serve? | **the database** | `GET /v1/health/ready` |
+| **Evaluator readiness** — can anything evaluate? | **worker heartbeats** | `GET /v1/health/evaluator` |
+| **Aggregate state** | all of the above | `GET /v1/health` |
+
+Each check depends only on what it actually needs, and that is the whole design:
+
+- **Liveness consults nothing.** A liveness probe that touched the database would restart a
+  healthy process during a database blip — the classic way to turn a small outage into a
+  large one. `liveness()` takes no session argument, so the mistake is impossible rather
+  than merely discouraged.
+- **API readiness is the database, not models.** No API route performs inference, so gating
+  readiness on model state would hold a serving API out of a load balancer over a capability
+  it never uses.
+- **Evaluator readiness is a property of the fleet.** The API is **never** counted as an
+  evaluator however many models it has loaded, because it does not claim jobs. Counting it
+  would advertise an evaluation capability that does not exist.
+- **Degraded is not unhealthy.** A PyTorch fallback returns identical results at roughly half
+  the speed. It stays *ready* — pulling it from service would trade a slowdown for an outage
+  — while being reported as degraded.
+
+`/v1/health/ready` and `/v1/health/evaluator` return **503** when not ready, so orchestrator
+probes behave correctly, while the body carries the reason. The status code is a signal, not
+the whole story.
+
+### Backward compatibility
+
+`/v1/health` keeps `status`, `models` and `version` with their original names and types,
+because `dashboard/src/lib/api.ts:98` declares exactly that shape and the dashboard is
+frozen. Everything else is additive: `state`, `reasons`, `liveness`, `readiness.api`,
+`readiness.evaluator`, `inference_backend`, `degraded`, `models_required_by_api`.
+
+**One justified change in meaning.** `models` now reports the models loaded by *this
+process*, which is normally none. That is correct rather than alarming — the API does not
+evaluate — and `models_note` says so in the response. The field was always literally about
+this process; it stopped being a useful system-health signal the moment evaluation moved to
+the worker.
+
+### The 1.24 GB, measured rather than assumed
+
+Only after the contract showed models are not required did the load get removed. Measured by
+starting the same API twice (`scripts/measure_api_footprint.py`):
+
+| `api_load_models` | RSS | time to API ready | time to models loaded |
+| :--- | ---: | ---: | ---: |
+| `true` (old behaviour) | **1.236 GB** | 1.57 s | 16.92 s |
+| `false` (new default) | **0.102 GB** | 1.53 s | — |
+
+**1.134 GB saved per API process, a 92% reduction**, and the API is ready in ~1.5 s either
+way — model loading was always on a background thread, so it never delayed readiness; it
+just consumed memory for 17 seconds and then held it forever.
+
+Kept behind `AGENTPULSE_API_LOAD_MODELS=true` rather than deleted, so a future API feature
+needing local inference is one environment variable away.
+
+### A regression this phase introduced and caught
+
+Removing the API model load broke `/v1/platform`: `derive_state` keyed `starting` on
+`models_ready`, which became permanently false. A healthy API with a healthy worker would
+have reported **`starting` forever**.
+
+Fixed by aligning `platform_health` with the contract — `api_ready` is the database, and
+model state participates only via `models_pending`, which is only meaningful when a
+deployment has opted into API-side loading. Verified across all four cases:
+
+```
+healthy API + worker, no API models -> healthy
+db down                             -> failing
+models pending (opted in)           -> starting
+no worker                           -> failing
+```
+
+Worth recording because it is the failure mode of contract changes generally: the new
+behaviour was correct, and a consumer written against the old assumption silently inverted.
+
+### Consumers updated
+
+`scripts/measure_durability.py` and `experiments/throughput_benchmark.py` gated readiness on
+`all(models.values())` from `/v1/health`. That signal no longer means what they needed, so
+both now use `readiness.api.ready`, with a fallback to the old field so they still work
+against earlier revisions. `scripts/demo_self_monitoring.py` likewise.
+
+### Live verification
+
+The self-monitoring demo re-run end to end with the API loading no models: API ready, worker
+reporting `onnx`, and all four platform states still correct. Every case returns HTTP 200
+from `/v1/health` while `state` distinguishes them.
+
+### Tests: 186 → 209
+
+`tests/test_health_readiness.py`, 22 tests covering each required state: API alive with
+worker absent, API alive with worker healthy, worker stale, worker stopping, models loading
+(opted in), models loaded, ONNX active, degraded PyTorch fallback, database unavailable,
+liveness consulting nothing, backward-compatible `/v1/health` shape, and the API being ready
+without models.
+
+### Scope
+
+Evaluator algorithms, disagreement, tool-claim, drift, dashboard, SDK, queue behaviour and
+retention behaviour all untouched — verified by `git status`.
+
+---
