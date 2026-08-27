@@ -547,3 +547,119 @@ that is the next phase, and it can now measure the real backend rather than an a
 degraded one.
 
 ---
+
+## Throughput and concurrency — measured operating point
+
+First benchmark run on the corrected ONNX backend. Every configuration reports
+`inference_backend: onnx, degraded: false`, so this measures the real evaluator rather than
+the accidentally degraded one — which is why this phase was sequenced after the ONNX fix.
+
+### The workload, stated first because the number is meaningless without it
+
+**1,000 spans as 200 traces × 5 spans**, identical across every configuration.
+
+Short traces are deliberate. The disagreement evaluator compares each span against up to 12
+prior agents **in its own trace**, so per-span cost grows with position. One long trace would
+make late spans dominate and the measured rate would depend on how far through the run you
+looked. Five-span traces bound priors to at most 4 and keep per-span work flat.
+
+**Machine:** 8 physical / 16 logical cores, 33.6 GB RAM (18.2 GB available), Windows 11.
+Scaling unit is **worker processes**; each worker's internal executor stays at one thread.
+
+### Burst load — maximum throughput
+
+| workers | spans/sec | scaling | efficiency | eval p50 | CPU mean | worker RSS peak |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 1 | 3.88 | 1.00× | 100% | 253.8 ms | 12.3% | 1.29 GB |
+| 2 | 6.81 | 1.76× | 88% | 285.6 ms | 18.7% | 2.58 GB |
+| **4** | **11.96** | **3.08×** | **77%** | 318.1 ms | 31.8% | 5.15 GB |
+| 8 | 12.93 | 3.33× | **42%** | 538.6 ms | 57.6% | 9.58 GB |
+
+### Steady load — offered 5.82 spans/sec (1.5× the 1-worker rate), identical for all configs
+
+| workers | achieved | e2e p50 | e2e p95 | queue wait p95 | keeps up? |
+| ---: | ---: | ---: | ---: | ---: | :--- |
+| 1 | 3.86 | 44,884 ms | 83,657 ms | 83,317 ms | **no — unbounded backlog** |
+| 2 | 5.81 | 649 ms | 1,159 ms | 695 ms | yes |
+| 4 | 5.82 | 478 ms | 820 ms | 374 ms | yes |
+| 8 | 5.83 | 433 ms | 677 ms | 211 ms | yes |
+
+### Answer
+
+> **Maximum sustainable throughput, for this workload on this machine: ~12 spans/sec at 4
+> worker processes.**
+
+Peak is 12.93 spans/sec at 8 workers, but that is **not** the operating point to publish:
+doubling workers from 4 to 8 buys **8% more throughput** for **86% more memory** (5.15 →
+9.58 GB) and **69% worse per-span evaluation latency** (318 → 539 ms). Four workers is where
+the system stops getting meaningfully faster.
+
+Under sustainable load, end-to-end latency is **sub-second** (433–649 ms p50 with 2+
+workers). The multi-second figures in the burst table are a **backlog artefact**, not a
+system property: burst floods the queue, so end-to-end is dominated by queue wait. Reporting
+burst e2e as "latency" would be misleading, which is why the two loads are separated.
+
+### Why scaling stops — evidence, not assumption
+
+Per-worker CPU share declines monotonically as workers are added:
+
+| workers | total CPU | per worker |
+| ---: | ---: | ---: |
+| 1 | 12.3% | 12.28% |
+| 2 | 18.7% | 9.33% |
+| 4 | 31.8% | 7.95% |
+| 8 | 57.6% | 7.20% |
+
+Each worker gets progressively less CPU — the signature of contention. The most consistent
+explanation is **physical-core saturation**: there are 8 physical cores, and the 57.6% figure
+is measured against 16 *logical* cores, so hyperthreading makes a physically saturated
+machine look half idle. A worker that had ~2 logical cores to itself has ~1.15 at eight-way.
+
+**Not isolated:** SQLite write contention is a plausible co-factor — `eval p50` includes the
+result-persisting writes, and it rose 69% at 8 workers. Separating core saturation from
+database contention would need a run with the persistence step stubbed out. Recorded as the
+thing to test first if higher throughput is ever required, and as the first real evidence
+that would justify PostgreSQL — previously that was deferred on assumption, and this is data.
+
+### Cold start, kept separate from steady-state
+
+| | |
+| :--- | :--- |
+| First-ever ONNX load (performs export, writes `model.onnx`) | **~200 s**, once per model cache |
+| Worker ready with a warm cache (spawn → first job processed) | **20.3 – 28.3 s** |
+
+This is deployment latency, not per-span evaluation latency. All throughput figures above are
+warm-cache. The 28.3 s figure at eight workers is higher than the 20.3 s at one because eight
+processes load models simultaneously.
+
+### Correctness under load
+
+Across all 8 runs, **8,000 spans evaluated**:
+
+| | |
+| :--- | ---: |
+| failed / dead-lettered | **0** |
+| retries | **0** |
+| duplicate evaluations | **0** |
+| ingest HTTP errors | **0** |
+
+The durable queue's guarantees held at every concurrency level, including eight workers
+contending for the same SQLite database.
+
+### Finding: the API loads 1.24 GB of models it no longer uses
+
+Every API process holds a constant **1.24 GB** RSS of NLI and embedding models. Since
+evaluation moved to the worker, **no API route uses them** — verified by grep: only comments
+reference the evaluator.
+
+Not fixed here, and not a trivial deletion. `/v1/health` reports `models_loaded()`, and both
+the durability and throughput harnesses gate readiness on it. Removing the load would make
+the API's readiness signal meaningless unless readiness is redefined to report the *worker
+fleet's* state instead. That is a design question for the health/readiness phase, where it
+belongs.
+
+### Scope
+
+Measurement only — no production code changed in this phase. Dashboard and SDK untouched.
+
+---
