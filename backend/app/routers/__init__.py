@@ -6,11 +6,12 @@ import json
 from datetime import datetime, timezone, timedelta
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Response
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select, func, col
 
+from app.config import settings
 from app.database import get_session
 from app.models import (
     AgentRecord,
@@ -439,25 +440,109 @@ async def platform_health():
         return await collect_platform_health(session)
 
 
+@metrics_router.get("/health/live")
+async def liveness_probe():
+    """Liveness: is this process running?
+
+    Consults nothing. A liveness probe that touched the database would restart a
+    perfectly healthy process during a database blip, turning a small outage
+    into a large one. Always 200 if the process can answer at all — which is
+    precisely what "alive" means.
+    """
+    from app.services.readiness import liveness
+
+    return liveness()
+
+
+@metrics_router.get("/health/ready")
+async def readiness_probe(response: Response):
+    """Readiness: can THIS process serve requests?
+
+    Checks the database and nothing else. Models are deliberately excluded: the
+    API performs no inference since evaluation moved to the worker, so gating
+    readiness on model state would hold an API out of a load balancer over a
+    capability it never uses.
+
+    Returns 503 when not ready, so an orchestrator's readiness probe behaves
+    correctly, while the body carries the explicit reason.
+    """
+    from app.services.readiness import api_readiness
+
+    async with get_session() as session:
+        result = await api_readiness(session)
+    if not result["ready"]:
+        response.status_code = 503
+    return result
+
+
+@metrics_router.get("/health/evaluator")
+async def evaluator_probe(response: Response):
+    """Evaluator readiness: can anything evaluate a span right now?
+
+    A property of the worker fleet, not of this process. The API is never
+    counted as an evaluator however many models it has loaded, because it does
+    not claim jobs — counting it would advertise an evaluation capability that
+    does not exist.
+
+    503 when no worker is alive: spans will still be accepted and durably
+    queued, but nothing will process them, and that is worth surfacing.
+    """
+    from app.services.readiness import evaluator_readiness
+
+    async with get_session() as session:
+        result = await evaluator_readiness(session)
+    if not result["ready"]:
+        response.status_code = 503
+    return result
+
+
 @metrics_router.get("/health")
 async def health_check():
-    """Backend health check.
+    """Aggregate health. Backward compatible, extended additively.
 
-    `inference_backend` is reported because a loaded model is not the same as a
-    model running on the configured backend. If ONNX Runtime fails to load, the
-    PyTorch fallback keeps results correct but is materially slower, and
-    `models` alone reports `nli_model: True` either way. `degraded` makes that
-    difference visible to monitoring rather than leaving it in a startup log.
+    `status`, `models` and `version` are preserved with their original types
+    because `dashboard/src/lib/api.ts` declares that shape.
+
+    IMPORTANT CHANGE IN MEANING: `models` reports the models loaded by *this
+    process*. The API no longer loads them by default (see
+    `settings.api_load_models`), so these are normally all false, and that is
+    correct rather than alarming — the API does not evaluate. Evaluator model
+    state lives under `readiness.evaluator`, sourced from worker heartbeats.
+
+    The four states a single status code cannot separate are each reported
+    explicitly: liveness, API readiness, evaluator readiness, and degradation.
     """
     from app.services.grounding import backend_info, models_loaded
+    from app.services.readiness import (
+        api_readiness,
+        evaluator_readiness,
+        liveness,
+        overall_state,
+    )
 
     backend = backend_info()
+
+    async with get_session() as session:
+        api = await api_readiness(session)
+        evaluator = await evaluator_readiness(session)
+
+    verdict = overall_state(api, evaluator, bool(backend["degraded"]))
+
     return {
+        # ─── preserved contract ───────────────────────────────────────
         "status": "healthy",
         "models": models_loaded(),
-        "inference_backend": backend,
-        # Distinct from `status`: the process is healthy and answering, but it
-        # is not running the configuration it was asked to run.
-        "degraded": backend["degraded"],
         "version": "0.1.0",
+        # ─── explicit, machine-readable state ─────────────────────────
+        "state": verdict["state"],
+        "reasons": verdict["reasons"],
+        "liveness": liveness(),
+        "readiness": {"api": api, "evaluator": evaluator},
+        "inference_backend": backend,
+        "degraded": bool(backend["degraded"]) or evaluator["degraded"],
+        "models_required_by_api": settings.api_load_models,
+        "models_note": (
+            "`models` describes THIS process. The API performs no inference; "
+            "evaluator model state is under readiness.evaluator."
+        ),
     }

@@ -136,6 +136,15 @@ def wait_api_ready(timeout: float = 300) -> bool:
         try:
             with urllib.request.urlopen(f"{BASE}/v1/health", timeout=3) as r:
                 body = json.loads(r.read())
+                # The API no longer loads models (it performs no inference), so
+                # `models` is all false by design and is the wrong readiness
+                # signal. What this needs is "can the API serve requests".
+                # Worker readiness is waited for separately by
+                # wait_for_job_activity.
+                api_ready = (body.get("readiness") or {}).get("api") or {}
+                if api_ready.get("ready"):
+                    return True
+                # Fall back for older API revisions without the readiness block.
                 models = body.get("models") or {}
                 if models and all(models.values()):
                     return True

@@ -287,7 +287,7 @@ class TestOperatorVerdict:
                 "registered": alive, "stale": 0}
 
     def test_healthy(self):
-        v = derive_state(models_ready=True, api_degraded=False,
+        v = derive_state(api_ready=True, api_degraded=False,
                          workers=self.fleet(), queue_depth=0)
         assert v["state"] == "healthy"
         assert v["reasons"] == []
@@ -299,32 +299,50 @@ class TestOperatorVerdict:
         evaluated, because no evaluator exists. Reporting this as healthy is
         precisely the silent failure this phase exists to eliminate.
         """
-        v = derive_state(models_ready=True, api_degraded=False,
+        v = derive_state(api_ready=True, api_degraded=False,
                          workers=self.fleet(alive=0), queue_depth=0)
         assert v["state"] == "failing"
         assert any("no evaluation worker" in r for r in v["reasons"])
 
     def test_backlogged(self):
-        v = derive_state(models_ready=True, api_degraded=False,
+        v = derive_state(api_ready=True, api_degraded=False,
                          workers=self.fleet(), queue_depth=BACKLOG_THRESHOLD + 1)
         assert v["state"] == "backlogged"
         assert any("queue depth" in r for r in v["reasons"])
 
     def test_degraded_backend(self):
-        v = derive_state(models_ready=True, api_degraded=False,
+        v = derive_state(api_ready=True, api_degraded=False,
                          workers=self.fleet(degraded=1), queue_depth=0)
         assert v["state"] == "degraded"
         assert any("degraded inference backend" in r for r in v["reasons"])
 
-    def test_models_still_loading_is_starting(self):
-        """Models loading is not failure — it is a distinct, temporary state."""
-        v = derive_state(models_ready=False, api_degraded=False,
-                         workers=self.fleet(), queue_depth=0)
+    def test_models_still_loading_is_starting_only_when_opted_in(self):
+        """Models loading is a distinct, temporary state — but only when this
+        deployment asked the API to load them.
+
+        The API no longer loads models by default, so their absence is the
+        intended configuration rather than a startup phase. An earlier version
+        keyed `starting` on model state directly, which would have reported
+        `starting` forever once the load was removed.
+        """
+        v = derive_state(api_ready=True, api_degraded=False,
+                         workers=self.fleet(), queue_depth=0, models_pending=True)
         assert v["state"] == "starting"
+
+        # Default deployment: no API models, and that is healthy.
+        v = derive_state(api_ready=True, api_degraded=False,
+                         workers=self.fleet(), queue_depth=0, models_pending=False)
+        assert v["state"] == "healthy"
+
+    def test_database_unavailable_is_failing(self):
+        v = derive_state(api_ready=False, api_degraded=False,
+                         workers=self.fleet(), queue_depth=0)
+        assert v["state"] == "failing"
+        assert any("database" in r for r in v["reasons"])
 
     def test_no_worker_outranks_backlog(self):
         """With no worker, a backlog is a symptom, not the problem."""
-        v = derive_state(models_ready=True, api_degraded=False,
+        v = derive_state(api_ready=True, api_degraded=False,
                          workers=self.fleet(alive=0),
                          queue_depth=BACKLOG_THRESHOLD + 500)
         assert v["state"] == "failing"

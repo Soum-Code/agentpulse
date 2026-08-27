@@ -150,6 +150,15 @@ def wait_ready(timeout: float = 300.0) -> bool:
             with urllib.request.urlopen(f"{BASE}/v1/health", timeout=3) as r:
                 if r.status == 200:
                     body = json.loads(r.read())
+                    # The API no longer loads models (it performs no inference),
+                    # so `models` is all false by design and is the wrong
+                    # readiness signal. What these probes actually need is "can
+                    # this process serve requests", which is API readiness.
+                    api_ready = (body.get("readiness") or {}).get("api") or {}
+                    if api_ready.get("ready"):
+                        return True
+                    # Fall back to the pre-readiness-contract signal so this
+                    # harness still works against older revisions of the API.
                     models = body.get("models") or {}
                     if models and all(models.values()):
                         return True

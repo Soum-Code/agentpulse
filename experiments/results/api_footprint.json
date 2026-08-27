@@ -1,0 +1,30 @@
+{
+  "timestamp": "2026-08-27 19:47:29 UTC",
+  "measurements": [
+    {
+      "api_load_models": true,
+      "seconds_to_api_ready": 1.57,
+      "seconds_to_models_loaded": 16.92,
+      "rss_gb": 1.236,
+      "models_reported": {
+        "nli_model": true,
+        "nli_tokenizer": true,
+        "embedding_model": true
+      },
+      "api_ready": true
+    },
+    {
+      "api_load_models": false,
+      "seconds_to_api_ready": 1.53,
+      "seconds_to_models_loaded": null,
+      "rss_gb": 0.102,
+      "models_reported": {
+        "nli_model": false,
+        "nli_tokenizer": false,
+        "embedding_model": false
+      },
+      "api_ready": true
+    }
+  ],
+  "memory_saved_gb": 1.134
+}

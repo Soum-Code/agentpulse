@@ -52,17 +52,40 @@ async def lifespan(app: FastAPI):
     # Init database
     await init_db()
 
-    # Load evaluation models (this may take 30-60s on first run)
-    try:
-        from app.services.grounding import load_models
-        load_models(
-            nli_model_name=settings.nli_model,
-            embedding_model_name=settings.embedding_model,
-            cache_dir=settings.model_cache_dir,
-            use_onnx=settings.use_onnx,
+    # Evaluation models are NOT loaded here by default.
+    #
+    # Evaluation moved to the worker process, and no API route performs
+    # inference -- verified by grep: the only `grounding_score` references in
+    # the routers read stored evaluation COLUMNS. Loading models anyway held
+    # ~1.24 GB resident per API process (measured across every configuration of
+    # the throughput benchmark) and added ~20s to startup, for a capability the
+    # process never uses.
+    #
+    # The readiness contract was defined first and does not require them: API
+    # readiness is "can this process serve requests", which depends on the
+    # database. Evaluator readiness is a property of the worker fleet, read
+    # from heartbeats. Neither asks whether the API has models.
+    #
+    # Kept behind a flag rather than deleted, so the previous behaviour is one
+    # environment variable away if some future API feature needs local
+    # inference: AGENTPULSE_API_LOAD_MODELS=true
+    if settings.api_load_models:
+        try:
+            from app.services.grounding import load_models
+            load_models(
+                nli_model_name=settings.nli_model,
+                embedding_model_name=settings.embedding_model,
+                cache_dir=settings.model_cache_dir,
+                use_onnx=settings.use_onnx,
+            )
+        except Exception as exc:
+            logger.error("Failed to load models: %s", exc)
+    else:
+        logger.info(
+            "API model loading disabled (api_load_models=false). This process "
+            "does not evaluate; the worker does. Set AGENTPULSE_API_LOAD_MODELS=true "
+            "to restore the previous behaviour."
         )
-    except Exception as exc:
-        logger.error("Failed to load models (evaluator will be degraded): %s", exc)
 
     # Create service instances
     drift_detector = DriftDetector(
