@@ -1,0 +1,310 @@
+{
+  "timestamp": "2026-08-27 09:08:50 UTC",
+  "method": "installed-package enumeration plus runnable probes, not documentation",
+  "package": {
+    "name": "mlflow",
+    "version": "3.15.2"
+  },
+  "python": "3.12.13",
+  "first_party_scorers": [
+    {
+      "name": "Completeness",
+      "summary": "Completeness evaluates whether an AI assistant fully addresses all user questions in a single user prompt.",
+      "llm_backed": true,
+      "trace_level": true,
+      "call_signature": "(self, *, inputs: dict[str, typing.Any] | None = None, outputs: typing.Any | None = None, trace: mlflow.entities.trace.Trace | None = None) -> mlflow.entities.assessment.Feedback"
+    },
+    {
+      "name": "ConversationCompleteness",
+      "summary": "ConversationCompleteness evaluates whether an AI assistant fully addresses all user requests by the end of the conversation.",
+      "llm_backed": true,
+      "trace_level": true,
+      "call_signature": "(self, *, session: list[mlflow.entities.trace.Trace] | None = None, expectations: dict[str, typing.Any] | None = None, **kwargs) -> mlflow.entities.assessment.Feedback"
+    },
+    {
+      "name": "ConversationalGuidelines",
+      "summary": "Conversational guidelines evaluates whether the assistant's responses throughout a conversation comply with the provided guidelines.",
+      "llm_backed": true,
+      "trace_level": true,
+      "call_signature": "(self, *, session: list[mlflow.entities.trace.Trace] | None = None, expectations: dict[str, typing.Any] | None = None, **kwargs) -> mlflow.entities.assessment.Feedback"
+    },
+    {
+      "name": "ConversationalRoleAdherence",
+      "summary": "Conversational role adherence evaluates whether an AI assistant maintains its assigned role throughout a conversation.",
+      "llm_backed": true,
+      "trace_level": true,
+      "call_signature": "(self, *, session: list[mlflow.entities.trace.Trace] | None = None, expectations: dict[str, typing.Any] | None = None, **kwargs) -> mlflow.entities.assessment.Feedback"
+    },
+    {
+      "name": "ConversationalSafety",
+      "summary": "Conversational safety evaluates whether the assistant's responses in a conversation are safe. This scorer analyzes the assistant's responses for safety concerns including:",
+      "llm_backed": true,
+      "trace_level": true,
+      "call_signature": "(self, *, session: list[mlflow.entities.trace.Trace] | None = None, expectations: dict[str, typing.Any] | None = None, **kwargs) -> mlflow.entities.assessment.Feedback"
+    },
+    {
+      "name": "ConversationalToolCallEfficiency",
+      "summary": "Conversational tool call efficiency evaluates whether tool usage across a multi-turn conversation session was optimized.",
+      "llm_backed": true,
+      "trace_level": true,
+      "call_signature": "(self, *, session: list[mlflow.entities.trace.Trace] | None = None, expectations: dict[str, typing.Any] | None = None, **kwargs) -> mlflow.entities.assessment.Feedback"
+    },
+    {
+      "name": "Correctness",
+      "summary": "Correctness evaluates whether the model's response supports the expected facts or response. This scorer checks if the facts specified in ``expected_response`` or ``expected_facts``",
+      "llm_backed": true,
+      "trace_level": true,
+      "call_signature": "(self, *, inputs: dict[str, typing.Any] | None = None, outputs: typing.Any | None = None, expectations: dict[str, typing.Any] | None = None, trace: mlflow.entities.trace.Trace | None = None) -> mlflow.entities.assessment"
+    },
+    {
+      "name": "Equivalence",
+      "summary": "Equivalence compares outputs against expected outputs for semantic equivalence. This scorer uses exact matching for numerical types (int, float, bool) and",
+      "llm_backed": true,
+      "trace_level": true,
+      "call_signature": "(self, *, inputs: dict[str, typing.Any] | None = None, outputs: typing.Any | None = None, expectations: dict[str, typing.Any] | None = None, trace: mlflow.entities.trace.Trace | None = None) -> mlflow.entities.assessment"
+    },
+    {
+      "name": "ExpectationsGuidelines",
+      "summary": "This scorer evaluates whether the agent's response follows specific constraints or instructions provided for each row in the input dataset. This scorer is useful when",
+      "llm_backed": true,
+      "trace_level": true,
+      "call_signature": "(self, *, inputs: dict[str, typing.Any] | None = None, outputs: typing.Any | None = None, expectations: dict[str, typing.Any] | None = None, trace: mlflow.entities.trace.Trace | None = None) -> mlflow.entities.assessment"
+    },
+    {
+      "name": "Fluency",
+      "summary": "Fluency evaluates the grammatical correctness, natural flow, and linguistic quality of text. This scorer analyzes text to determine if it is grammatically correct, reads naturally,",
+      "llm_backed": true,
+      "trace_level": true,
+      "call_signature": "(self, *, outputs: typing.Any | None = None, trace: mlflow.entities.trace.Trace | None = None) -> mlflow.entities.assessment.Feedback"
+    },
+    {
+      "name": "Guidelines",
+      "summary": "Guideline adherence evaluates whether the agent's response follows specific constraints or instructions provided in the guidelines.",
+      "llm_backed": true,
+      "trace_level": true,
+      "call_signature": "(self, *, inputs: dict[str, typing.Any] | None = None, outputs: typing.Any | None = None, trace: mlflow.entities.trace.Trace | None = None) -> mlflow.entities.assessment.Feedback"
+    },
+    {
+      "name": "KnowledgeRetention",
+      "summary": "KnowledgeRetention evaluates whether AI responses retain, contradict, or distort information provided by users in earlier conversation turns.",
+      "llm_backed": true,
+      "trace_level": true,
+      "call_signature": "(self, *, session: list[mlflow.entities.trace.Trace] | None = None, expectations: dict[str, typing.Any] | None = None, **kwargs) -> mlflow.entities.assessment.Feedback"
+    },
+    {
+      "name": "PIIDetection",
+      "summary": "PIIDetection checks whether the output contains personally identifiable information. This is a deterministic rule-based scorer that uses regex patterns to flag common",
+      "llm_backed": false,
+      "trace_level": true,
+      "call_signature": "(self, *, outputs: typing.Any | None = None, trace: mlflow.entities.trace.Trace | None = None) -> mlflow.entities.assessment.Feedback"
+    },
+    {
+      "name": "RegexMatch",
+      "summary": "RegexMatch checks whether an output matches a regular expression pattern. This is a deterministic rule-based scorer that runs without an LLM call.",
+      "llm_backed": false,
+      "trace_level": true,
+      "call_signature": "(self, *, outputs: typing.Any | None = None, trace: mlflow.entities.trace.Trace | None = None) -> mlflow.entities.assessment.Feedback"
+    },
+    {
+      "name": "RelevanceToQuery",
+      "summary": "Relevance ensures that the agent's response directly addresses the user's input without deviating into unrelated topics.",
+      "llm_backed": true,
+      "trace_level": true,
+      "call_signature": "(self, *, inputs: dict[str, typing.Any] | None = None, outputs: typing.Any | None = None, trace: mlflow.entities.trace.Trace | None = None) -> mlflow.entities.assessment.Feedback"
+    },
+    {
+      "name": "ResponseLength",
+      "summary": "ResponseLength checks whether an output's length is within a specified range. This is a deterministic rule-based scorer that counts characters or words",
+      "llm_backed": false,
+      "trace_level": true,
+      "call_signature": "(self, *, outputs: typing.Any | None = None, trace: mlflow.entities.trace.Trace | None = None) -> mlflow.entities.assessment.Feedback"
+    },
+    {
+      "name": "RetrievalGroundedness",
+      "summary": "RetrievalGroundedness assesses whether the agent's response is aligned with the information provided in the retrieved context.",
+      "llm_backed": true,
+      "trace_level": true,
+      "call_signature": "(self, *, trace: mlflow.entities.trace.Trace) -> list[mlflow.entities.assessment.Feedback]"
+    },
+    {
+      "name": "RetrievalRelevance",
+      "summary": "Retrieval relevance measures whether each chunk is relevant to the input request. You can invoke the scorer directly with a single input for testing, or pass it to",
+      "llm_backed": true,
+      "trace_level": true,
+      "call_signature": "(self, *, trace: mlflow.entities.trace.Trace) -> mlflow.entities.assessment.Feedback"
+    },
+    {
+      "name": "RetrievalSufficiency",
+      "summary": "Retrieval sufficiency evaluates whether the retrieved documents provide all necessary information to generate the expected response.",
+      "llm_backed": true,
+      "trace_level": true,
+      "call_signature": "(self, *, trace: mlflow.entities.trace.Trace, expectations: dict[str, typing.Any] | None = None) -> list[mlflow.entities.assessment.Feedback]"
+    },
+    {
+      "name": "Safety",
+      "summary": "Safety ensures that the agent's responses do not contain harmful, offensive, or toxic content. You can invoke the scorer directly with a single input for testing, or pass it to",
+      "llm_backed": true,
+      "trace_level": true,
+      "call_signature": "(self, *, outputs: typing.Any | None = None, trace: mlflow.entities.trace.Trace | None = None) -> mlflow.entities.assessment.Feedback"
+    },
+    {
+      "name": "Summarization",
+      "summary": "Summarization evaluates whether a summarization output is factually correct, grounded in the input, and provides reasonably good coverage of the input.",
+      "llm_backed": true,
+      "trace_level": true,
+      "call_signature": "(self, *, inputs: dict[str, typing.Any] | None = None, outputs: typing.Any | None = None, trace: mlflow.entities.trace.Trace | None = None) -> mlflow.entities.assessment.Feedback"
+    },
+    {
+      "name": "ToolCallCorrectness",
+      "summary": "ToolCallCorrectness evaluates whether the tools called and the arguments they are called with are reasonable given the user request.",
+      "llm_backed": true,
+      "trace_level": true,
+      "call_signature": "(self, *, trace: mlflow.entities.trace.Trace, expectations: dict[str, typing.Any] | None = None) -> mlflow.entities.assessment.Feedback"
+    },
+    {
+      "name": "ToolCallEfficiency",
+      "summary": "ToolCallEfficiency evaluates the agent's trajectory for redundancy in tool usage, such as tool calls with the same or similar arguments.",
+      "llm_backed": true,
+      "trace_level": true,
+      "call_signature": "(self, *, trace: mlflow.entities.trace.Trace) -> mlflow.entities.assessment.Feedback"
+    },
+    {
+      "name": "UserFrustration",
+      "summary": "UserFrustration evaluates the user's frustration state throughout the conversation with the AI assistant based on a conversation session.",
+      "llm_backed": true,
+      "trace_level": true,
+      "call_signature": "(self, *, session: list[mlflow.entities.trace.Trace] | None = None, expectations: dict[str, typing.Any] | None = None, **kwargs) -> mlflow.entities.assessment.Feedback"
+    }
+  ],
+  "probes": [
+    {
+      "target": "RegexMatch",
+      "kind": "deterministic first-party",
+      "runnable": true,
+      "result": "Feedback(name='regex_match', source=AssessmentSource(source_type='CODE', source_id='default'), trace_id=None, run_id=None, rationale=\"Output matches pattern '\\\\",
+      "error": null
+    },
+    {
+      "target": "PIIDetection",
+      "kind": "deterministic first-party",
+      "runnable": true,
+      "result": "Feedback(name='pii_detection', source=AssessmentSource(source_type='CODE', source_id='default'), trace_id=None, run_id=None, rationale='Detected PII: email, pho",
+      "error": null
+    },
+    {
+      "target": "ToolCallCorrectness",
+      "kind": "llm-backed first-party",
+      "runnable": false,
+      "result": null,
+      "error": "AttributeError: 'NoneType' object has no attribute 'data'"
+    },
+    {
+      "target": "@scorer custom (deterministic)",
+      "kind": "composable primitive",
+      "runnable": true,
+      "result": "yes",
+      "error": null
+    },
+    {
+      "target": "trulens.LogicalConsistency",
+      "kind": "optional-extra scorer",
+      "runnable": false,
+      "result": null,
+      "error": "MlflowException: TruLens scorers require the 'trulens' package. Install it with: `pip install trulens trulens-providers-litellm`"
+    }
+  ],
+  "namespace_scan": {
+    "drift": [],
+    "baseline": [
+      "mlflow.demo.generators.evaluation.DEMO_DATASET_BASELINE_SESSION_NAME"
+    ],
+    "disagreement": [],
+    "consistency": [
+      "mlflow.genai.scorers.trulens.LogicalConsistency",
+      "mlflow.genai.scorers.trulens.scorers.LogicalConsistency",
+      "mlflow.genai.scorers.trulens.scorers.agent_trace.LogicalConsistency"
+    ],
+    "stability": [],
+    "_modules_walked": [
+      "955"
+    ]
+  },
+  "verdicts": {
+    "tool_verification": {
+      "named_feature": true,
+      "runnable_first_party": true,
+      "evidence": [
+        "ConversationalToolCallEfficiency",
+        "ToolCallCorrectness",
+        "ToolCallEfficiency"
+      ],
+      "verdict": "EXISTS as named feature"
+    },
+    "inter_agent_disagreement": {
+      "named_feature": false,
+      "closest_match": "mlflow.genai.scorers.trulens.LogicalConsistency",
+      "closest_match_runnable": false,
+      "why_not_equivalent": "LogicalConsistency evaluates ONE agent's reasoning coherence across a trace. AgentPulse's engine compares distinct agent identities within a trace for mutual contradiction. Adjacent, not the same question.",
+      "composable": true,
+      "verdict": "NO named feature; buildable via the @scorer primitive"
+    },
+    "drift_stability_baseline": {
+      "named_feature": false,
+      "evidence": {
+        "drift": [],
+        "stability": [],
+        "baseline": [
+          "mlflow.demo.generators.evaluation.DEMO_DATASET_BASELINE_SESSION_NAME"
+        ]
+      },
+      "composable": true,
+      "verdict": "NO named feature and no primitives; buildable only as arbitrary custom code via @scorer"
+    },
+    "trace_level_evaluators": {
+      "named_feature": true,
+      "evidence": [
+        "Completeness",
+        "ConversationCompleteness",
+        "ConversationalGuidelines",
+        "ConversationalRoleAdherence",
+        "ConversationalSafety",
+        "ConversationalToolCallEfficiency",
+        "Correctness",
+        "Equivalence",
+        "ExpectationsGuidelines",
+        "Fluency",
+        "Guidelines",
+        "KnowledgeRetention",
+        "PIIDetection",
+        "RegexMatch",
+        "RelevanceToQuery",
+        "ResponseLength",
+        "RetrievalGroundedness",
+        "RetrievalRelevance",
+        "RetrievalSufficiency",
+        "Safety",
+        "Summarization",
+        "ToolCallCorrectness",
+        "ToolCallEfficiency",
+        "UserFrustration"
+      ],
+      "verdict": "EXISTS"
+    },
+    "deterministic_evaluators": {
+      "named_feature": true,
+      "evidence": [
+        "PIIDetection",
+        "RegexMatch",
+        "ResponseLength"
+      ],
+      "runnable_without_llm": true,
+      "verdict": "EXISTS and confirmed runnable without an LLM"
+    }
+  },
+  "scope_limits": [
+    "base `mlflow` install only; optional extras (trulens, dspy) not installed",
+    "MLflow on Databricks is a separate managed product and was not audited",
+    "catalog and runnability audit: establishes what exists and whether it executes, not how well it performs",
+    "Datadog is not installable and cannot be audited this way"
+  ]
+}
