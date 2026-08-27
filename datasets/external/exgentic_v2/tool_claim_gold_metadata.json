@@ -1,0 +1,71 @@
+{
+  "dataset_name": "agentpulse_tool_claim_gold",
+  "data_class": "EXTERNAL_REAL_DATA, LLM_LABELLED",
+  "label_provenance": {
+    "method": "two LLM evaluation passes, different prompt framings and seeds",
+    "judge_model": "Qwen/Qwen3-8B-GGUF:Q4_K_M",
+    "human_reviewed": false,
+    "protocol_source": "LABEL_AGREEMENT_REPORT.md",
+    "deliberate_deviation": "LABEL_AGREEMENT_REPORT.md \u00a71 item 4 fed the judge AgentPulse's own NLI output. That is circular for a set AgentPulse will be scored against, so the judge here sees only the agent summary and structured tool evidence.",
+    "agreement_is_upper_bound": "Both passes use the SAME model. This measures prompt-robustness, not independent judgement -- correlated errors survive both passes. A second model would be required for genuine independence."
+  },
+  "source": {
+    "dataset_id": "Exgentic/agent-llm-traces-v2",
+    "dataset_url": "https://huggingface.co/datasets/Exgentic/agent-llm-traces-v2",
+    "revision": "4b8ad4ab198438e5a170f9171c19c6a2cf7c1814",
+    "retrieved_at": "2026-08-27T07:55:07Z",
+    "shards_read": [
+      0,
+      5
+    ],
+    "sessions_per_cell": 40
+  },
+  "sampling": {
+    "size": 106,
+    "seed": 20260827,
+    "stratified_by": [
+      "benchmark",
+      "harness"
+    ],
+    "filtered_to_checkable_cases": false
+  },
+  "taxonomy": [
+    "NO_MISMATCH",
+    "FABRICATED_TOOL",
+    "WRONG_COUNT",
+    "RESULT_DISTORTION",
+    "UNVERIFIABLE"
+  ],
+  "agreement": {
+    "n": 106,
+    "observed_agreement": 0.5377,
+    "expected_chance_agreement": 0.4033,
+    "kappa": 0.2252
+  },
+  "counts": {
+    "sampled": 106,
+    "unparseable_either_pass": 0,
+    "agreed": 57,
+    "unresolved_excluded": 49,
+    "gold_label_distribution": {
+      "RESULT_DISTORTION": 12,
+      "NO_MISMATCH": 43,
+      "UNVERIFIABLE": 2
+    },
+    "pass_A_distribution": {
+      "RESULT_DISTORTION": 24,
+      "UNVERIFIABLE": 29,
+      "FABRICATED_TOOL": 2,
+      "WRONG_COUNT": 2,
+      "NO_MISMATCH": 49
+    },
+    "pass_B_distribution": {
+      "RESULT_DISTORTION": 23,
+      "NO_MISMATCH": 80,
+      "FABRICATED_TOOL": 1,
+      "UNVERIFIABLE": 2
+    }
+  },
+  "degenerate_distribution": false,
+  "wall_time_seconds": 1851.0
+}
