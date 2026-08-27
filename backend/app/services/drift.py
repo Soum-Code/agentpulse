@@ -34,6 +34,22 @@ class DriftResult:
     """Result of drift analysis for a single span."""
 
     centroid_distance: Optional[float] = None
+    # Distance between the baseline window mean and the current window mean.
+    #
+    # `centroid_distance` above compares ONE output against an EMA centroid,
+    # which measures a multi-step agent's normal step-to-step variety far more
+    # than it measures drift: on 500 real agent sessions it flagged 91.7% of
+    # unchanged operation at the 0.30 threshold. Comparing window means instead
+    # averages that variety out -- same threshold, same embedding, 6.8% false
+    # alarms and AUC 0.9532 against real content change.
+    # See DRIFT_REAL_TEXT_DIAGNOSIS_REPORT.md sections 6 and 10.
+    #
+    # The two are kept side by side because they detect different things.
+    # Pooling deliberately absorbs a single sharp output -- one embedding in the
+    # opposite direction scores 2.0 here and ~0.0 under the window mean -- so
+    # `centroid_distance` remains the spike signal and this is the sustained
+    # shift signal. Neither replaces the other.
+    window_centroid_distance: Optional[float] = None
     tool_drift: Optional[float] = None
     quality_drift: Optional[float] = None
     error_rate_delta: Optional[float] = None
@@ -54,14 +70,33 @@ class DriftDetector:
         min_samples_for_alert: int = 20,
         drift_threshold: float = 0.3,
         ema_alpha: float = 0.05,
+        # Selected on the development split of an external real-trace corpus
+        # and validated once on held-out: false alarms 1.5%, detection 92%,
+        # AUC 0.991 at the shipped 0.30 threshold. The threshold itself was
+        # not tuned. See experiments/drift_production_validation.py and
+        # DRIFT_REAL_TEXT_DIAGNOSIS_REPORT.md section 11.
+        mean_window: int = 12,
     ) -> None:
         self._window_size = window_size
         self._min_samples_for_alert = min_samples_for_alert
         self._drift_threshold = drift_threshold
         self._ema_alpha = ema_alpha
 
+        # Size of the current window for the windowed-mean comparison. Kept
+        # separate from `min_samples_for_alert`: that governs how much history
+        # the BASELINE needs, this governs how many recent outputs define
+        # CURRENT behaviour, and tying them together starves short traces (at
+        # 20 only 37 of 500 real sessions ever accumulated a full window).
+        self._mean_window = mean_window
+
         # Per-agent state
         self._centroids: dict[str, np.ndarray] = {}
+        # Baseline window: running sum + count over the bootstrap period, then
+        # frozen. Kept as a sum so the mean is exact rather than EMA-weighted.
+        self._baseline_sums: dict[str, np.ndarray] = {}
+        self._baseline_counts: dict[str, int] = {}
+        # Rolling window of the most recent embeddings, for the current mean.
+        self._recent_embeddings: dict[str, list[np.ndarray]] = {}
         self._sample_counts: dict[str, int] = {}
         self._risk_history: dict[str, list[float]] = {}
         self._tool_distributions: dict[str, dict[str, int]] = {}
@@ -97,6 +132,9 @@ class DriftDetector:
 
     def _reset_baseline_locked(self, agent_id: str) -> None:
         self._centroids.pop(agent_id, None)
+        self._baseline_sums.pop(agent_id, None)
+        self._baseline_counts.pop(agent_id, None)
+        self._recent_embeddings.pop(agent_id, None)
         self._sample_counts[agent_id] = 0
         self._risk_history.pop(agent_id, None)
         self._tool_distributions.pop(agent_id, None)
@@ -136,6 +174,9 @@ class DriftDetector:
             # 1. Embedding drift
             if embedding is not None:
                 result.centroid_distance = self._update_embedding_drift(
+                    agent_id, embedding, is_frozen=is_frozen
+                )
+                result.window_centroid_distance = self._update_window_drift(
                     agent_id, embedding, is_frozen=is_frozen
                 )
 
@@ -201,6 +242,70 @@ class DriftDetector:
             )
 
         return round(distance, 6)
+
+    def _update_window_drift(
+        self,
+        agent_id: str,
+        embedding: np.ndarray,
+        is_frozen: bool = False,
+    ) -> float | None:
+        """Distance between the baseline window mean and the current window mean.
+
+        Both sides are plain means, not EMA-weighted, matching the
+        `pooled_session` construction validated in
+        DRIFT_REAL_TEXT_DIAGNOSIS_REPORT.md section 10.
+
+        Returns None until BOTH pools are ready. Two conditions, each of which
+        was a measured bug before it was added:
+
+        1. The baseline window must be full. Reporting 0.0 while it fills is
+           indistinguishable from a genuine no-drift measurement.
+        2. The current window must be full. A "mean" over one or two samples is
+           just an individual output, which is the per-output noise this metric
+           exists to remove -- reporting partial windows measured a 26% false
+           alarm rate against 5% once they were withheld.
+
+        The two pools are DISJOINT: baseline embeddings never enter the current
+        window. Sharing them dilutes the current mean toward the baseline and
+        suppresses real drift, which is what the validated `pooled_session`
+        construction avoided by pooling the two sides separately.
+        """
+        embedding = embedding.flatten()
+
+        baseline_count = self._baseline_counts.get(agent_id, 0)
+
+        # Phase 1: fill the baseline. A frozen agent stops accumulating, so
+        # whatever it had is what it keeps.
+        if baseline_count < self._min_samples_for_alert and not is_frozen:
+            if agent_id not in self._baseline_sums:
+                self._baseline_sums[agent_id] = embedding.astype(np.float64).copy()
+            else:
+                self._baseline_sums[agent_id] += embedding
+            self._baseline_counts[agent_id] = baseline_count + 1
+            return None
+
+        if baseline_count == 0:
+            return None
+
+        # Phase 2: accumulate post-baseline outputs only.
+        recent = self._recent_embeddings.setdefault(agent_id, [])
+        recent.append(embedding.copy())
+        if len(recent) > self._mean_window:
+            del recent[:-self._mean_window]
+
+        if len(recent) < self._mean_window:
+            return None
+
+        baseline_mean = self._baseline_sums[agent_id] / baseline_count
+        current_mean = np.mean(recent, axis=0)
+
+        norm_b = np.linalg.norm(baseline_mean)
+        norm_c = np.linalg.norm(current_mean)
+        if norm_b == 0 or norm_c == 0:
+            return 1.0
+
+        similarity = float(np.dot(baseline_mean, current_mean) / (norm_b * norm_c))
+        return round(1.0 - float(np.clip(similarity, -1.0, 1.0)), 6)
 
     def _update_quality_drift(
         self,

@@ -201,6 +201,9 @@ class EvaluationPipeline:
             centroid_distance=(
                 result.drift.centroid_distance if result.drift else None
             ),
+            window_centroid_distance=(
+                result.drift.window_centroid_distance if result.drift else None
+            ),
             stability_index=(
                 result.drift.stability_index if result.drift else None
             ),
