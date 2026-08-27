@@ -295,7 +295,7 @@ This does not weaken the data-integrity result above: those digests bracketed th
 operation specifically and were byte-identical. The row growth came from separate pytest
 runs.
 
-### Phase 4A exit state
+### Phase 4A exit state (superseded by Phase 2 below)
 
 - Tests **136/136**
 - `backend/app/` and `sdk/` unmodified
@@ -305,5 +305,136 @@ runs.
 - `create_all()` retained, with its replacement blocked on a documented and tested reason
 - **No jobs table, no queue, no workers, no retries, no idempotency** — all deferred to the
   durable-execution phase as instructed
+
+---
+
+## Phase 2 — durable evaluation execution
+
+Goal: evaluation work survives process death. Replaces FastAPI `BackgroundTasks`
+(an in-memory list inside the API process) with a durable jobs table, a
+compare-and-swap claim, lease-based recovery, retry with backoff, and a worker
+process separate from the API.
+
+**Schema arrived via migration, never `create_all()`** — revision `8d86fee0d663`,
+`evaluation_jobs` plus 5 indexes.
+
+### Measured before vs after
+
+Both numbers come from `scripts/measure_durability.py`, which starts real processes,
+SIGKILLs them (`taskkill /F`, not `terminate()` — the power-cut case, where no Python
+cleanup runs), and counts rows afterwards. Nothing here is inferred from reading code.
+
+| Measure | Before | After |
+| :--- | ---: | ---: |
+| Evaluations lost to a SIGKILL mid-batch | **36 of 40** | **0 of 40** |
+| Recovered after restart | 0 | **37** |
+| Duplicate submission, HTTP statuses | `202, 500, 500` | `202, 202, 202` |
+| Duplicate evaluations for a re-submitted span | 0 | 0 |
+| Job rows recording outstanding work | none (no table) | 40 |
+
+Job states at the instant of the kill: `{queued: 36, running: 1, succeeded: 3}`.
+After restarting only the worker: `{succeeded: 40}`. The one job that was mid-flight
+when its worker died was reclaimed by lease expiry, not by anything the dead worker
+reported.
+
+**The duplicate-submission 500 was worse than it looks.** Re-POSTing a span violated the
+primary key, and because SQLAlchemy flushes at commit, the *whole batch* failed — so a
+retrying SDK could destroy a batch of unrelated spans. Now a known span is simply not
+re-inserted and its job is deduplicated by `job_key`.
+
+### Design decisions
+
+- **Claim is a compare-and-swap.** `UPDATE … WHERE status='queued'` with a row-count
+  check. Two workers racing on the same candidate: exactly one UPDATE matches, the loser
+  moves on. A SELECT-then-UPDATE would let both evaluate the same span.
+- **Recovery is lease-based, not heartbeat-based.** A SIGKILLed worker reports nothing, so
+  liveness cannot be inferred from the worker. A `running` job past `lease_expires_at` is
+  assumed abandoned. The trade-off is explicit: a merely-slow worker can have its job
+  reclaimed, so the lease (120s) must exceed worst-case evaluation time **and** job effects
+  must be idempotent.
+- **Idempotence is the load-bearing part.** A durable queue gives at-*least*-once delivery.
+  A worker can write results and die before marking the job succeeded; the job then re-runs.
+  `persist_results` checks for an existing evaluation and skips, so *execution* may repeat
+  while *effect* is exactly-once. `test_recovery_is_idempotent_when_results_already_written`
+  exercises precisely that ordering.
+- **Backoff is stored, not slept.** `available_at` is pushed into the future, so the delay
+  survives a worker restart and does not block the worker meanwhile.
+- **`failed` and `dead_letter` are distinct.** A malformed payload is still malformed on
+  attempt three, so it fails permanently without burning retries; `dead_letter` means
+  something looked transient and kept failing. Collapsing them would hide which happened.
+- **`attempts` is not decremented on recovery.** A job whose worker died has genuinely
+  consumed an attempt; pretending otherwise lets a job that reliably kills workers retry
+  forever.
+
+### Tests: 136 → 148
+
+`tests/test_durable_queue.py`, 12 tests. Every crash case spawns a **real process** and
+kills it — an in-process "simulated crash" would let Python run cleanup a real crash never
+runs, testing the simulation rather than the system.
+
+Headline: `test_worker_killed_mid_evaluation_recovers_exactly_once` — SIGKILL a worker
+holding a claimed job, assert the job survives in `running`, assert no evaluation was
+written, wait for lease expiry, recover, complete with a fresh worker, and assert **exactly
+one** evaluation exists. Not zero (lost), not two (duplicated).
+
+Also covered: duplicate enqueue, deterministic job keys, retry-then-dead-letter, malformed
+payload permanence, missing-field permanence, worker restart, queue survival with no worker,
+unexpired leases not being stolen, backoff growth and cap, and the worker process entry point.
+
+### Four bugs the verification caught
+
+1. **`MissingGreenlet`.** `claim_next` returned an ORM instance; the worker read its
+   attributes after the session closed, triggering a lazy refresh on a dead session. Fixed
+   architecturally — the queue now returns a frozen `ClaimedJob` snapshot, so a job's
+   lifetime is independent of any session's.
+2. **Worker entry point was dead on arrival.** `_amain` imported `Evaluator`; the class is
+   `EvaluationPipeline`. Every queue test drove `EvaluationWorker` directly with a stub, so
+   nothing exercised `python -m app.worker`. Now covered by
+   `test_worker_module_starts_and_loads_models`.
+3. **Worker did not restore drift baselines.** The API used to do this because the API used
+   to evaluate. Without it, every worker restart would cold-start every agent's baseline and
+   drift would go quiet exactly after a restart. The worker now mirrors the API's
+   construction, settings included.
+4. **A flaky retry test.** The first version slept out the real backoff and failed on
+   wall-clock margin. Rewritten to assert backoff was *scheduled* and then fast-forward it.
+   A durability test that fails at random is one people learn to ignore.
+
+### Two measurement bugs worth recording
+
+The harness itself was wrong twice before it produced a usable number, and both failures
+would have been reported as findings:
+
+- **A stale server held the probe port.** `wait_ready()` connected to a leftover process
+  from a crashed run, pointing at a deleted database, and the probe reported "0 spans
+  ingested". Now `assert_port_free()` aborts instead.
+- **The probe measured evaluation that never happened.** `main.py` calls `load_models()`
+  *without* `sync=True`, so `/v1/health` returns 200 while models are still loading on a
+  background thread. Waiting only for HTTP 200 measured "60 spans evaluated in 1.5s" —
+  fast because nothing was being evaluated. Readiness now means `models_loaded()` is all
+  true.
+
+That second one is a live confirmation of the health-vs-readiness gap flagged in Phase 0
+item 3: **process alive ≠ system ready**, and the current `/v1/health` does not distinguish
+them. It belongs to the health/readiness phase.
+
+### Scope
+
+Unchanged: SDK, dashboard, evaluator algorithms, drift/disagreement/tool-claim logic.
+`git status` confirms `sdk/` and `dashboard/` untouched. The evaluation orchestration moved
+from `routers/ingest.py` to `services/evaluation_runner.py` verbatim so the worker can run
+it without importing the router; argument construction is identical.
+
+**`create_all()` still present and still called.** Phase 4A established it cannot yet be
+removed, and this phase did not change that. It remains a safe no-op on a migrated database.
+
+### Phase 2 exit state
+
+- Tests **148/148**
+- Durable queue measured, not asserted: **36 → 0 evaluations lost**, 37 recovered
+- Duplicate submission no longer errors and does not duplicate work
+- Worker runs as a separate process (`python -m app.worker`)
+- Schema change delivered by migration
+- Concurrency deliberately **not** tuned — next is the ONNX defect, then throughput, in
+  that order, so architecture and evaluator speed do not change together
 
 ---

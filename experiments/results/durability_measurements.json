@@ -1,0 +1,54 @@
+[
+  {
+    "label": "before",
+    "timestamp": "2026-08-27 13:09:27 UTC",
+    "method": "real uvicorn process, SIGKILL, throwaway database",
+    "crash_and_recovery": {
+      "spans_ingested": 40,
+      "evaluated_immediately_after_kill": 4,
+      "job_rows_after_kill": -1,
+      "job_status_after_kill": null,
+      "evaluated_after_restart": 4,
+      "lost_evaluations": 36,
+      "recovered_after_restart": 0,
+      "job_status_after_restart": null
+    },
+    "duplicate_submission": {
+      "error": "server did not become ready"
+    }
+  },
+  {
+    "label": "after",
+    "timestamp": "2026-08-27 16:54:57 UTC",
+    "method": "real uvicorn process, SIGKILL, throwaway database",
+    "crash_and_recovery": {
+      "architecture": "durable_queue",
+      "spans_ingested": 40,
+      "evaluated_immediately_after_kill": 3,
+      "job_rows_after_kill": 40,
+      "job_status_after_kill": {
+        "queued": 36,
+        "running": 1,
+        "succeeded": 3
+      },
+      "evaluated_after_restart": 40,
+      "lost_evaluations": 0,
+      "recovered_after_restart": 37,
+      "job_status_after_restart": {
+        "succeeded": 40
+      },
+      "duplicate_evaluations": 0
+    },
+    "duplicate_submission": {
+      "submissions": 3,
+      "http_statuses": [
+        202,
+        202,
+        202
+      ],
+      "evaluation_rows_for_that_span": 1,
+      "duplicate_evaluations": 0,
+      "job_rows": 1
+    }
+  }
+]
