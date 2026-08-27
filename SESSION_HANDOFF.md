@@ -1,6 +1,6 @@
 # Session Handoff — AgentPulse Work Log
 
-**Written:** 2026-08-23. **Rewritten clean:** 2026-08-26. **Updated:** 2026-08-27 (Sections 7–9 added for the disagreement/benchmark/positioning work; Section 10 for the drift diagnosis and fix; Section 11 for the tool-claim external test).
+**Written:** 2026-08-23. **Rewritten clean:** 2026-08-26. **Updated:** 2026-08-27 (Sections 7–9 for the disagreement/benchmark/positioning work; 10 for the drift diagnosis and fix; 11 for the tool-claim external test; 12 for the blocked redesign; 13 for the competitor capability audits).
 
 **Project:** AgentPulse — self-hostable observability SDK for grounding-risk and drift monitoring in multi-agent LLM systems. M.Tech project. Working directory: `C:\MLOPs\3rd sem project\project one agent`.
 
@@ -15,11 +15,12 @@
 - **Both reasoning-strategy benchmarks are DONE, real, and compared** — see Section 1 and `GPU_VS_CPU_BENCHMARK_REPORT.md`.
 - **Inter-agent disagreement engine rebuilt and wired into production this session** — the project's largest claim-vs-reality gap is closed. See Section 7.
 - **Two head-to-head benchmarks written, and both contradicted their own hypothesis** — reported that way rather than smoothed. See Sections 7 and 8.
-- **Competitive positioning documented** (`COMPETITIVE_POSITIONING.md`) after reading MLflow/Arize/Datadog docs live. Verdict: breadth is unwinnable; the defensible niche is the three signals none of them ships as a named feature. See Section 8.
+- **Competitive positioning documented** (`COMPETITIVE_POSITIONING.md`). Verdict: breadth is unwinnable. The defensible niche was originally "three signals none of them ships" — **that is now two, and they are not equally strong**; see Sections 8 and 13.
 - **A real documentation defect was found and corrected**: `DRIFT_EXPERIMENT_REPORT.md`'s prose contradicted its own data table, and the same errors had propagated into `PROJECT_REPORT.md` §7. See Section 9.
 - **⚠️ The tool-claim validator extracts NOTHING from real agent output** — zero claims across 8,353 prose spans, all 5 models, and **F1 0.000** on a real-data benchmark against its own 0.842. Its 19-case benchmark tested the regex against its own phrasing and could not have caught this. Sections 11 and 12. `COMPETITIVE_POSITIONING.md` §5.1/§5.4 have been revised accordingly.
 - **The tool-claim redesign is BLOCKED on labelling, not engineering** (Section 12). A labelling attempt reached only kappa 0.225 and produced zero examples for two of the four target classes. Read §12.3 before restarting it — the failure mode is a question that isn't well-posed, not a prompt that needs tuning.
-- Repo pushed through commit `7c4196f`. **Only uncommitted work is the dashboard** (6 files, ~1750 insertions) — see Section 2.
+- **⚠️ Competitor audits refuted a positioning claim.** Phoenix and MLflow were both installed and probed: **both ship tool-call verification**, so that differentiator is finished. Disagreement holds only as "no named feature" (MLflow's `@scorer` can build it); **drift is the strongest surviving claim**. Section 13; `COMPETITIVE_POSITIONING.md` has been revised accordingly.
+- Repo pushed through commit `bb0e001`. **Only uncommitted work is the dashboard** (6 files, ~1750 insertions) — see Section 2.
 - Docker, GitHub, and dev-server setup are all previously verified working — see Section 4 for exact commands, not re-derived here.
 
 ---
@@ -168,11 +169,12 @@ The recommendation given to the user, and the reasoning, is in Section 9. Short 
 1. ~~Diagnose drift~~ — **done, and fixed.** See Section 10.
 2. ~~Test the tool-claim validator on the external corpus~~ — **done, and the result was worse than expected.** See Section 11.
 3. ~~Redesign tool-claim extraction~~ — **attempted and blocked on labelling, not engineering.** See Section 12. Restarting it means first making the labelling question well-posed (§12.4), not rewriting the extractor. Do not ship on firing-rate alone (§12.5).
-4. **Install Arize Phoenix and run a real head-to-head** — open source, one command (`uvx arize-phoenix serve`). Converts every "none of them ships X" claim in `COMPETITIVE_POSITIONING.md` from doc-reading into measurement. Still the single weakest part of the positioning, and now the highest-value item that is **not** blocked.
-5. **Correct `DRIFT_EXPERIMENT_REPORT.md` §3** — it still says the centroid detector "never fired at all", which was refuted (Section 9). Small, and note the regeneration trap before touching it.
-6. **Decide what to do with the uncommitted dashboard work** (Section 2 callout) — verify it, then commit or discard deliberately. Then the remaining dashboard items: Replay Debugger still renders `SAMPLE_REPLAY_STEPS` (fully fabricated), and `DatasetsView` still hardcodes a stale curated-case count.
-7. **Re-run ablation Configs D, E and F.** All three `THRESHOLD_ANALYSIS.md` claims are now stale in different ways: Config D includes tool-claim validation, which Section 11 shows contributes nothing on real agents; Config E ("disagreement never changed a decision") predates the multi-agent dataset; Config F uses `centroid_distance > 0.30`, which is now the *spike* signal rather than the drift signal.
-8. Whenever picked up: the branch/PR question (Section 5) and the standing `gradient-text` hook suppression (Section 2) are both one-line user decisions away from being closed out.
+4. ~~Install Phoenix and audit the competitive claims~~ — **done, for Phoenix *and* MLflow, and two claims were refuted.** See Section 13. What remains unaudited is Datadog, which is not installable; and neither audit measured *quality*, only existence and runnability.
+5. **Externally validate inter-agent disagreement** — now the weakest surviving differentiator (§13.3). Its F1 0.960 rests on 22 self-authored cases, and two of the other three signals were overturned the moment external data was applied. The Exgentic corpus **cannot** supply this (one agent identity per session, §10), so it needs a different corpus or a constructed multi-agent one.
+6. **Correct `DRIFT_EXPERIMENT_REPORT.md` §3** — it still says the centroid detector "never fired at all", which was refuted (Section 9). Small, and note the regeneration trap before touching it.
+7. **Decide what to do with the uncommitted dashboard work** (Section 2 callout) — verify it, then commit or discard deliberately. Then the remaining dashboard items: Replay Debugger still renders `SAMPLE_REPLAY_STEPS` (fully fabricated), and `DatasetsView` still hardcodes a stale curated-case count.
+8. **Re-run ablation Configs D, E and F.** All three `THRESHOLD_ANALYSIS.md` claims are now stale in different ways: Config D includes tool-claim validation, which Section 11 shows contributes nothing on real agents; Config E ("disagreement never changed a decision") predates the multi-agent dataset; Config F uses `centroid_distance > 0.30`, which is now the *spike* signal rather than the drift signal.
+9. Whenever picked up: the branch/PR question (Section 5) and the standing `gradient-text` hook suppression (Section 2) are both one-line user decisions away from being closed out.
 
 **Deliberately NOT next:** production hardening (durable evaluation queue, real auth, retention, Postgres). Those are real gaps — see Section 8 — but they are "if users arrive" problems, and there are no users yet. Doing them now would displace the items above, which serve the project's actual stated goal.
 
@@ -482,3 +484,82 @@ only `extract_claims()` is text-only.
 - Labelling runs are expensive: ~31 minutes for 240 CPU inference calls, because full
   summaries dominate prompt processing. Size future runs accordingly, and add incremental
   saves — the current script writes only at the end.
+
+---
+
+## 13. Competitor capability audits — two claims refuted by installing the products (2026-08-27)
+
+`COMPETITIVE_POSITIONING.md` §9 named its own weakest link: every "none of them ships X"
+claim came from reading vendor marketing, not from using the products. Both auditable
+platforms have now been installed and probed.
+
+**Reports:** `PHOENIX_CAPABILITY_AUDIT.md`, `MLFLOW_CAPABILITY_AUDIT.md`
+**Scripts:** `experiments/phoenix_capability_audit.py`, `experiments/mlflow_capability_audit.py`
+
+### 13.1 Verdicts
+
+| Claim | Arize Phoenix | MLflow 3.15.2 | Datadog |
+| :--- | :--- | :--- | :--- |
+| Tool-call verification absent | ❌ **refuted** — 3 evaluators | ❌ **refuted** — `ToolCallCorrectness`, `ToolCallEfficiency` | unaudited |
+| Inter-agent disagreement absent | ✅ holds | ⚠️ holds *as named feature only*; composable via `@scorer` | unaudited |
+| Drift absent | ✅ holds | ✅ **holds strongest** — no named feature *and* no primitives | unaudited |
+
+**Tool-call verification is finished as a differentiator.** Present in both platforms where
+it could be checked, while AgentPulse's own implementation measures F1 0.000 on real traces
+(§11). Phoenix's `ToolResponseHandlingEvaluator` — *"what happens AFTER the tool returns"* —
+is the exact reformulation §11 identified as AgentPulse's way forward, already shipped.
+
+**Datadog is not installable**, so its column cannot be audited this way. Given that
+installation refuted the claim for *both* platforms where it was possible, treat Datadog's
+cells as the least reliable in the matrix, not as equally established.
+
+### 13.2 Three methodological points worth carrying forward
+
+**Present ≠ runnable.** MLflow's TruLens scorers (`LogicalConsistency`, `ToolCalling`,
+`ToolSelection`, `PlanAdherence`) appear in the namespace but **fail at construction**
+without an optional install. An import-only audit would have credited MLflow with
+capability it does not ship working. Runnable probes were required to catch it. First-party
+scorers behaved oppositely — failing only on missing input data, not dependencies.
+
+**"No named feature" ≠ "cannot do this."** MLflow's `@scorer` decorator was probed and
+**runs**, taking arbitrary Python over inputs, outputs and traces. Cross-agent contradiction
+checking is plainly implementable there. The disagreement claim is therefore stated only in
+the narrow named-feature sense — anything stronger is unsupported. The closest built-in,
+`LogicalConsistency`, evaluates **one** agent's reasoning coherence, not contradiction
+between distinct agents: adjacent, not equivalent.
+
+**Deterministic evaluation is not unique to AgentPulse.** MLflow ships `RegexMatch` and
+`PIIDetection`, both confirmed running with no LLM and no API key, marked
+`source_type='CODE'`. After the Phoenix audit the surviving tool-claim differentiator had
+been narrowed to "cost and determinism"; that narrowing did **not** survive MLflow. What
+precisely survives: neither platform ships a *deterministic tool-claim* check, and MLflow's
+tool scorers ask about **action quality** (right tools, right arguments, efficient
+trajectory) where AgentPulse asks about **honesty of reporting**.
+
+### 13.3 Positioning is now final for this round
+
+`COMPETITIVE_POSITIONING.md` §3, §5.1, §5.4 and §9 were all revised after both audits
+completed — deliberately not before, so the wording followed the evidence.
+
+The most important change is in §5.4: the two remaining signals are **no longer presented
+as equally strong**.
+
+- **Drift is the strongest claim** — absent everywhere audited, no adjacent primitives, and
+  the one capability AgentPulse has rebuilt and validated on external data (§10).
+- **Disagreement is the weaker one** — holds only as "no named feature", and its F1 0.960
+  still rests on 22 self-authored cases that have never been externally validated. The
+  Exgentic corpus cannot supply that validation (one agent identity per session, §10).
+
+### 13.4 Rules for any future audit of this kind
+
+- **Install into a throwaway `uv` venv, never the project venv.** Both audit scripts refuse
+  to run if they detect the project environment. Project pins were verified unchanged after
+  each (numpy 2.5.2, torch 2.13.0+cpu, transformers 4.53.3) and both probes deleted. See §3
+  for why this matters.
+- **Enumerate, then probe.** Enumeration alone overcounts (§13.2).
+- **Walking `mlflow` with `pkgutil` needs care** — CLI/server modules execute a click group
+  on import and must be skipped, and optional extras raise on import, needing an `onerror`
+  handler. Both are handled in `experiments/mlflow_capability_audit.py`.
+- **Record scope limits.** Neither audit measured *quality* — only what exists and whether
+  it runs. Arize AX (Signal, Alyx, Patterns) and MLflow on Databricks are separate
+  commercial products and were not audited.
