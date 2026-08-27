@@ -1,6 +1,6 @@
 # Session Handoff — AgentPulse Work Log
 
-**Written:** 2026-08-23. **Rewritten clean:** 2026-08-26. **Updated:** 2026-08-27 (Sections 0, 2, 4, 6 revised; Sections 7–9 added for the disagreement/benchmark/positioning work).
+**Written:** 2026-08-23. **Rewritten clean:** 2026-08-26. **Updated:** 2026-08-27 (Sections 7–9 added for the disagreement/benchmark/positioning work; Section 10 added for the drift diagnosis and fix).
 
 **Project:** AgentPulse — self-hostable observability SDK for grounding-risk and drift monitoring in multi-agent LLM systems. M.Tech project. Working directory: `C:\MLOPs\3rd sem project\project one agent`.
 
@@ -10,14 +10,14 @@
 
 ## 0. TL;DR
 
-- **Backend + evaluation pipeline: real, tested, working.** 121/121 tests passing (`pytest tests/ -q`). Security audit complete. Real model inference (Qwen3-8B via llama.cpp), not stub fallbacks.
+- **Backend + evaluation pipeline: real, tested, working.** 130/130 tests passing (`pytest tests/ -q`). Security audit complete. Real model inference (Qwen3-8B via llama.cpp), not stub fallbacks.
+- **Drift was diagnosed and fixed** against an external real-trace corpus — false alarms on unchanged operation went from **91.7% → 1.5%**, detection 92%, AUC 0.991 on a held-out split. The 0.30 threshold was never the problem; the aggregation was. **But coverage is only 24.5%** — see Section 10, and do not quote the accuracy without the coverage.
 - **Both reasoning-strategy benchmarks are DONE, real, and compared** — see Section 1 and `GPU_VS_CPU_BENCHMARK_REPORT.md`.
 - **Inter-agent disagreement engine rebuilt and wired into production this session** — the project's largest claim-vs-reality gap is closed. See Section 7.
 - **Two head-to-head benchmarks written, and both contradicted their own hypothesis** — reported that way rather than smoothed. See Sections 7 and 8.
 - **Competitive positioning documented** (`COMPETITIVE_POSITIONING.md`) after reading MLflow/Arize/Datadog docs live. Verdict: breadth is unwinnable; the defensible niche is the three signals none of them ships as a named feature. See Section 8.
 - **A real documentation defect was found and corrected**: `DRIFT_EXPERIMENT_REPORT.md`'s prose contradicted its own data table, and the same errors had propagated into `PROJECT_REPORT.md` §7. See Section 9.
-- **Known honest gap: drift is the weakest of the four stated capabilities** (recall 0.400, and the embedding-centroid detector never fired at all). Section 9 has the diagnosis plan.
-- Repo pushed through commit `19cde3a`. **Only uncommitted work is the dashboard** (6 files, ~1750 insertions) — see Section 2.
+- Repo pushed through commit `dc1377e`. **Only uncommitted work is the dashboard** (6 files, ~1750 insertions) — see Section 2.
 - Docker, GitHub, and dev-server setup are all previously verified working — see Section 4 for exact commands, not re-derived here.
 
 ---
@@ -145,7 +145,8 @@ The Llama GPU run (Section 1) succeeded on kernel version 12 after **4 failed at
 - Dev servers via `.claude/launch.json`: `agentpulse-backend` (uvicorn, port 8000), `agentpulse-dashboard` (vite, port 5173). `dashboard/.env` (gitignored) needs `VITE_API_KEY=change-me-to-a-secure-key` for any local write action to work (curate-case, etc.) — recreate it if missing after a fresh checkout.
 - `scripts/e2e_dashboard_demo.py` pushes a real mixed-risk trace through the actual SDK — the standard way to get real data into a fresh dashboard for testing, rather than trusting whatever's already in the DB. **Note:** it stamps every span with the *same* `start_time` (line 38), which is unrealistic — the real SDK stamps each span separately. This masked an ordering bug for a while; see Section 7.
 - Docker (`docker compose up --build`) was verified working end-to-end earlier in the broader session; 4 real bugs were found and fixed then (missing README in build context, CUDA-bloat torch index, SQLite URL slash count, WAL mode needing a named volume on Windows). Not re-verified this session, but nothing since should have broken it.
-- Test suite: `pytest tests/ -q` — **121/121 passing** as of 2026-08-27, ~2.3s.
+- Test suite: `pytest tests/ -q` — **130/130 passing** as of 2026-08-27, ~2.3s.
+- **Reading the HuggingFace corpus without downloading 231 MB:** `pyarrow` cannot read `https://` directly. Use `huggingface_hub.HfFileSystem` + `pyarrow.parquet.read_table(fh, columns=[...])` — column projection over range requests. Project the cheap run-level columns to locate a target cell, then read the huge `spans` column from only the shards that contain it. The datasets-server `/statistics` endpoint returns a permission error for this dataset; `/rows` works.
 - **Two SQLite DB files exist and they are not the same one.** `./data/agentpulse.db` and `./backend/data/agentpulse.db`. The path in `.env` is relative (`sqlite+aiosqlite:///./data/agentpulse.db`), so which one the backend uses depends on its working directory — as launched, it writes to **`backend/data/agentpulse.db`**. Query that one when verifying, not the root one. This cost real debugging time once.
 - **The backend auto-restarts when killed.** Something supervises it (not `--reload`, and not `.claude/launch.json`), so `Stop-Process` on the port-8000 PID results in a fresh process within seconds — which conveniently picks up code changes, but means you cannot simply stop it. Health is at `/v1/health`, **not** `/health`. Allow ~10s after restart for the evaluation models to load; `/v1/health` reports `models: {nli_model: false, ...}` until they do, and evaluation silently does nothing in that window.
 - The ingest API requires `X-API-Key: change-me-to-a-secure-key` (from `.env`); requests without it get a 401 with no other clue.
@@ -162,12 +163,15 @@ This repo has only ever had a `main` branch; every commit across every session h
 
 The recommendation given to the user, and the reasoning, is in Section 9. Short version:
 
-1. **Diagnose drift** (Section 9) — the one stated capability that isn't delivering, and nobody currently knows whether the detector or the test harness is at fault. Roughly half a day, and it settles a question the reports currently leave open.
-2. **Install Arize Phoenix and run a real head-to-head** — it is open source and one command (`uvx arize-phoenix serve`). This converts every "none of them ships X" claim in `COMPETITIVE_POSITIONING.md` from doc-reading into measurement. Currently the single weakest part of the positioning.
-3. **Get evaluation cases written by someone other than the person who wrote the code.** Every benchmark dataset here is self-authored and small (19 tool-claim, 22 disagreement, 11 drift). `DISAGREEMENT_BENCHMARK_REPORT.md` §6 already admits this is a dataset weakness rather than an engine strength.
-4. **Decide what to do with the uncommitted dashboard work** (Section 2 callout) — verify it, then commit or discard deliberately.
-5. Then the remaining dashboard items: Replay Debugger still renders `SAMPLE_REPLAY_STEPS` (fully fabricated), and `DatasetsView` still hardcodes a stale curated-case count.
-6. Whenever picked up: the branch/PR question (Section 5) and the standing `gradient-text` hook suppression (Section 2) are both one-line user decisions away from being closed out.
+1. ~~Diagnose drift~~ — **done, and fixed.** See Section 10.
+2. **Test the tool-claim validator on the external corpus.** It is currently validated only on 19 hand-written cases by the same person who wrote the code. `Exgentic/agent-llm-traces-v2` contains real `tool_call` *and* `tool_call_response` pairs, the ingestion path already exists, and this is the most obvious unexploited opportunity in that corpus (Section 10).
+3. **Install Arize Phoenix and run a real head-to-head** — open source, one command (`uvx arize-phoenix serve`). Converts every "none of them ships X" claim in `COMPETITIVE_POSITIONING.md` from doc-reading into measurement. Still the single weakest part of the positioning.
+4. **Correct `DRIFT_EXPERIMENT_REPORT.md` §3** — it still says the centroid detector "never fired at all", which was refuted (Section 9). Small, and note the regeneration trap before touching it.
+5. **Decide what to do with the uncommitted dashboard work** (Section 2 callout) — verify it, then commit or discard deliberately. Then the remaining dashboard items: Replay Debugger still renders `SAMPLE_REPLAY_STEPS` (fully fabricated), and `DatasetsView` still hardcodes a stale curated-case count.
+6. **Re-run ablation Config E and F.** Config E ("disagreement never changed a decision") predates the multi-agent dataset; Config F uses `centroid_distance > 0.30`, which is now the *spike* signal rather than the drift signal. Both `THRESHOLD_ANALYSIS.md` claims are stale in different ways.
+7. Whenever picked up: the branch/PR question (Section 5) and the standing `gradient-text` hook suppression (Section 2) are both one-line user decisions away from being closed out.
+
+**Still deliberately NOT next:** production hardening (durable evaluation queue, real auth, retention, Postgres). Real gaps — see Section 8 — but "if users arrive" problems, and there are no users.
 
 **Deliberately NOT next:** production hardening (durable evaluation queue, real auth, retention, Postgres). Those are real gaps — see Section 8 — but they are "if users arrive" problems, and there are no users yet. Doing them now would displace items 1–3, which serve the project's actual stated goal.
 
@@ -223,7 +227,7 @@ Full detail in `DISAGREEMENT_BENCHMARK_REPORT.md` (9 sections). Summary of what 
 
 ---
 
-## 9. Drift is the weakest capability, and a real doc defect was found there
+## 9. The drift documentation defect (historical — the capability itself is fixed, see Section 10)
 
 **The defect.** `DRIFT_EXPERIMENT_REPORT.md` §2 claimed *"shifts at 50% and above… were detected within 1-2 spans"* while its own §1 table marked those exact rows `Detected: No`. Verified against `experiments/results/drift_experiment_results.json`: **the table was right**. Three separate errors, now corrected with a §4 correction notice, and corrected in `PROJECT_REPORT.md` §7 where all three had propagated:
 
@@ -233,10 +237,87 @@ Full detail in `DISAGREEMENT_BENCHMARK_REPORT.md` (9 sections). Summary of what 
 
 **The bigger finding the mislabel was hiding:** no scenario's measured centroid distance ever exceeded **0.099** against a 0.30 threshold. So the embedding-centroid detector — the signal that most distinguishes this feature — **never fired for anything**. Both detections came via the ASI branch, from tool-entropy and quality-regression. And the three misses are exactly the semantic output drift the centroid signal exists to catch.
 
-**What is genuinely unknown, and the reports say so rather than guessing:** whether that reflects a broken detector or broken test construction. `experiments/drift_scenarios.py` builds embedding vectors directly (`vec[1] = shift_level`) rather than embedding real drifted text, so a "50% shift" may simply not translate into comparable embedding-space displacement.
+**One claim in that correction was itself wrong, and is superseded.** The §3 statement that "the embedding-centroid detector never fired at all" came from reading `final_centroid_dist` — the value *after* the EMA centroid has converged and the distance decayed. Peak distances were 0.4453 and 0.6838; the centroid branch did fire. Same class of error as the one being corrected. `DRIFT_REAL_TEXT_DIAGNOSIS_REPORT.md` §3 records this; `DRIFT_EXPERIMENT_REPORT.md` §3 still carries the wrong sentence and **should be corrected** — the only drift doc item still outstanding.
 
-**The diagnosis to run (Section 6 item 1), roughly half a day:** replace the synthetic vectors with **real embedded text** — take a baseline set of agent outputs, then genuinely drifted ones (a prompt rewrite, or outputs from a different model; the Llama GPU run's outputs are already in the repo), and measure actual centroid distance. Either answer is valuable:
-- Real drift reaches 0.30+ → the detector is fine and the synthetic scenarios were the problem; the threshold gets validated.
-- Real drift also stays near 0.05 → the threshold or the centroid approach itself is wrong for this use case.
+**⚠️ `experiments/drift_scenarios.py` regenerates `DRIFT_EXPERIMENT_REPORT.md` from a hardcoded template** (lines ~141-163) containing the original false prose. Running that script silently reverts commit `19cde3a`. This is *why* the contradiction existed: the table is generated from data, the §2 prose is a static string nobody re-derived. If you re-run it, restore the report afterwards (`git checkout -- DRIFT_EXPERIMENT_REPORT.md`).
 
-Right now the answer is "unknown", which is the worst position to be in about a capability the project claims. Note also that the 0.30 threshold **cannot currently be described as validated** — nothing in that experiment ever approached it.
+---
+
+## 10. Drift: diagnosed and FIXED (2026-08-27)
+
+Section 9's open question is answered and the capability now works. Full evidence in
+`DRIFT_REAL_TEXT_DIAGNOSIS_REPORT.md` §§1-11 — summary of what a future session needs:
+
+**The answer was "both, and the benchmark was hiding the detector's fault."** The synthetic
+scenarios never moved the embedding (max 0.099, analytically bounded by `shift_level`). But
+on real text the shipped metric fired on **91.7% of unchanged operation** — over-sensitive
+and uninformative, the opposite of what the synthetic test suggested.
+
+**Root cause:** `centroid_distance` compares *one output* against an EMA centroid *within
+one run*. A multi-step agent legitimately says something different at every step (median
+distance between consecutive normal steps: 0.2565), so 0.30 sat inside ordinary variance.
+**The threshold was never the problem.**
+
+**The fix:** `DriftResult.window_centroid_distance` — baseline window mean vs current
+window mean, added **alongside** `centroid_distance`, not replacing it. Pooling absorbs a
+lone outlier by design, so the old field stays the *spike* signal and the new one is the
+*sustained shift* signal. Replacing would have broken `test_high_drift_detection` and
+silently changed ablation Config F (a published `THRESHOLD_ANALYSIS.md` result).
+
+**Two implementation bugs the validation step caught before anything shipped** — the
+production version first measured AUC 0.7148 against the standalone metric's 0.9532:
+1. Pools were not disjoint — baseline embeddings stayed in the rolling window, pulling the
+   current mean back toward baseline. Only 37 of 500 sessions ever cleared it.
+2. Partial windows were reported — the first "window mean" was a one-sample mean, i.e. the
+   per-output noise the metric exists to remove. Fixing (1) alone gave 26% false alarms.
+
+Both fixes are structural, not fitted. The field returns `None` until both windows fill.
+
+**Calibration was done properly.** `mean_window` selected on the **89 dev tasks** with a
+criterion fixed beforehand (FA ≤ 0.10, coverage ≥ 0.25, maximise detection), then measured
+**once** on **111 held-out** tasks. The 0.30 threshold was not tuned.
+
+| Held-out at `mean_window=12` | |
+| :--- | ---: |
+| False alarms @0.30 | **0.0152** |
+| Detection @0.30 | **0.9192** |
+| AUC content-change vs no-shift | **0.991** |
+| Control coverage | 0.2454 |
+
+Medians form a sensible gradient: `no_shift 0.089 < model_shift 0.190 < content_change 0.486`.
+**This softens `DRIFT_REAL_TEXT_DIAGNOSIS_REPORT.md` §7**, which claimed model swap is
+undetectable — with the corrected representation it is partly detectable (AUC 0.849).
+
+**Wired to alerting.** `DRIFT_DETECTED` now reads `window_centroid_distance` at the same
+0.30 threshold. Verified end-to-end through `/v1/ingest`: 40 spans (24 one topic, 16
+another) produced exactly **one** alert at `distance=0.537`, not a per-span storm.
+
+**⚠️ The cost, which must not be read past: coverage is 24.5%.** A `None` metric skips the
+rule, so no drift alert is raised on roughly three quarters of sessions, and the 1.5%
+false-alarm figure is measured only on the longer sessions that do report — whose halves
+are more similar. Honest framing: **when this detector speaks it is accurate; it stays
+silent often.** Not persisted to `DriftRecord` either — a new column is a schema change
+with no migration path (`create_all` only) and would break existing databases; the value
+reaches operators through the alert `details` payload.
+
+### External corpus now available for evaluation work
+
+`Exgentic/agent-llm-traces-v2` (pinned revision `4b8ad4ab`), ingested via
+`experiments/external_exgentic_ingest.py`. 10,056 sessions, 6 benchmarks, 5 harnesses,
+5 models. Provenance in `datasets/external/exgentic_v2/`; the 7.4 MB derived pairs file and
+the 11 MB embedding cache are gitignored and regenerable.
+
+Things a future session should know before reusing it:
+- **Task prompts are byte-identical across models**, which is what makes controlled
+  comparison possible.
+- **One model and one agent identity per session** — it **cannot** support inter-agent
+  disagreement evaluation. Do not try.
+- **It carries no labels for anything.** Model identity is a controlled variable, not a
+  drift annotation.
+- **Prose availability is harness-dependent.** In `browsecompplus/tool_calling`,
+  `claude-opus-4-5` emits prose in 0/100 sessions and `gpt-5.2` in 1/100 — a text-based
+  extraction there silently drops two of five models. `browsecompplus/smolagents_code` is
+  the surveyed cell where all five models produce prose in 100/100.
+- `tool_call` **and** `tool_call_response` are both present (560/528 in one run), so this
+  corpus is a genuine candidate for testing the tool-claim validator on real data — the
+  most obvious unexploited opportunity in it.
