@@ -17,8 +17,9 @@
 - **Two head-to-head benchmarks written, and both contradicted their own hypothesis** — reported that way rather than smoothed. See Sections 7 and 8.
 - **Competitive positioning documented** (`COMPETITIVE_POSITIONING.md`) after reading MLflow/Arize/Datadog docs live. Verdict: breadth is unwinnable; the defensible niche is the three signals none of them ships as a named feature. See Section 8.
 - **A real documentation defect was found and corrected**: `DRIFT_EXPERIMENT_REPORT.md`'s prose contradicted its own data table, and the same errors had propagated into `PROJECT_REPORT.md` §7. See Section 9.
-- **⚠️ The tool-claim validator extracts NOTHING from real agent output** — zero claims across 8,353 prose spans, all 5 models. Its 19-case benchmark (P=1.000) tested the regex against its own phrasing and could not have caught this. Section 11; this weakens a claim in `COMPETITIVE_POSITIONING.md` §5.1 that has not yet been revised.
-- Repo pushed through commit `fcdea39`. **Only uncommitted work is the dashboard** (6 files, ~1750 insertions) — see Section 2.
+- **⚠️ The tool-claim validator extracts NOTHING from real agent output** — zero claims across 8,353 prose spans, all 5 models, and **F1 0.000** on a real-data benchmark against its own 0.842. Its 19-case benchmark tested the regex against its own phrasing and could not have caught this. Sections 11 and 12. `COMPETITIVE_POSITIONING.md` §5.1/§5.4 have been revised accordingly.
+- **The tool-claim redesign is BLOCKED on labelling, not engineering** (Section 12). A labelling attempt reached only kappa 0.225 and produced zero examples for two of the four target classes. Read §12.3 before restarting it — the failure mode is a question that isn't well-posed, not a prompt that needs tuning.
+- Repo pushed through commit `7c4196f`. **Only uncommitted work is the dashboard** (6 files, ~1750 insertions) — see Section 2.
 - Docker, GitHub, and dev-server setup are all previously verified working — see Section 4 for exact commands, not re-derived here.
 
 ---
@@ -166,8 +167,8 @@ The recommendation given to the user, and the reasoning, is in Section 9. Short 
 
 1. ~~Diagnose drift~~ — **done, and fixed.** See Section 10.
 2. ~~Test the tool-claim validator on the external corpus~~ — **done, and the result was worse than expected.** See Section 11.
-3. **Redesign tool-claim extraction to read structured `tool_call` parts** (Section 11). The current text-only extractor is inert on real agents. This is the highest-value remaining engineering item, and Section 11 explains why the productive question is *"do the agent's statements about tool **results** match those results"* rather than *"which tools does it say it used"*.
-4. **Install Arize Phoenix and run a real head-to-head** — open source, one command (`uvx arize-phoenix serve`). Converts every "none of them ships X" claim in `COMPETITIVE_POSITIONING.md` from doc-reading into measurement. Still the single weakest part of the positioning.
+3. ~~Redesign tool-claim extraction~~ — **attempted and blocked on labelling, not engineering.** See Section 12. Restarting it means first making the labelling question well-posed (§12.4), not rewriting the extractor. Do not ship on firing-rate alone (§12.5).
+4. **Install Arize Phoenix and run a real head-to-head** — open source, one command (`uvx arize-phoenix serve`). Converts every "none of them ships X" claim in `COMPETITIVE_POSITIONING.md` from doc-reading into measurement. Still the single weakest part of the positioning, and now the highest-value item that is **not** blocked.
 5. **Correct `DRIFT_EXPERIMENT_REPORT.md` §3** — it still says the centroid detector "never fired at all", which was refuted (Section 9). Small, and note the regeneration trap before touching it.
 6. **Decide what to do with the uncommitted dashboard work** (Section 2 callout) — verify it, then commit or discard deliberately. Then the remaining dashboard items: Replay Debugger still renders `SAMPLE_REPLAY_STEPS` (fully fabricated), and `DatasetsView` still hardcodes a stale curated-case count.
 7. **Re-run ablation Configs D, E and F.** All three `THRESHOLD_ANALYSIS.md` claims are now stale in different ways: Config D includes tool-claim validation, which Section 11 shows contributes nothing on real agents; Config E ("disagreement never changed a decision") predates the multi-agent dataset; Config F uses `centroid_distance > 0.30`, which is now the *spike* signal rather than the drift signal.
@@ -379,3 +380,105 @@ knowing if reusing that code: tool responses were counted once per span despite 
 conversation being cumulative (inflating 4,228 → 96,644), and the countable-result check
 accepted any JSON list, marking 100% of responses countable by matching the
 `[{"type":"text",...}]` wrapper rather than the payload.
+
+---
+
+## 12. Tool-claim redesign: BLOCKED on labelling, not engineering (2026-08-27)
+
+The redesign was attempted through the agreed sequence — inspect telemetry → define what a
+claim is → build a real-data benchmark → baseline → label → redesign. **It stopped at
+labelling.** A future session should not restart this without reading §12.3.
+
+### 12.1 A real benchmark exists, and the baseline is measured
+
+`experiments/tool_claim_benchmark_build.py` → 574 cases from real traces, stratified over
+6 cells and all 5 models. `datasets/external/exgentic_v2/derived/tool_claim_cases.json`
+(gitignored, regenerable; provenance tracked).
+
+`experiments/tool_claim_baseline_run.py` scored the **current** validator on it:
+
+| | Own 19-case benchmark | Real-data benchmark |
+| :--- | ---: | ---: |
+| Precision / Recall / F1 | 1.000 / 0.727 / 0.842 | **0.000 / 0.000 / 0.000** |
+
+Extraction on 1 of 574 cases. Confusion matrix TP=0, FP=0, FN=63, TN=61. **Accuracy reads
+0.4919 and is meaningless** — it is the class balance, not skill; the script flags the
+detector as degenerate so that number can't be misread as partial competence.
+
+### 12.2 What a "claim" is, established from the data
+
+Per-step agent prose is **intent** ("Let me search the messages"). The verifiable claim is
+the **retrospective final summary**, which carries success assertions, numeric assertions
+and action mentions at once while structured telemetry says what actually ran. 91% of
+sessions have one.
+
+Also established, and it constrains everything: **tool execution success/failure is NOT a
+structured field.** OTel span `status`/`error.type` describe the *LLM call*
+(`RateLimitError`, `BadRequestError`). Tool failure appears only as the word "error" inside
+result text. And 359/406 results are a single-element `[{"type":"text",...}]` wrapper — no
+typed counts.
+
+### 12.3 ⛔ Why it is blocked — do not simply retry this
+
+**No labelled accuracy target exists in this corpus.** All four candidate targets were
+tested and all four failed:
+
+| Target | Why not |
+| :--- | :--- |
+| Task-level overclaim | Labelled, but not derivable from the trace — error markers in 79% of overclaims vs 69% of consistent |
+| `WRONG_COUNT` | Summary numbers are IDs, dates, domain quantities — not result counts. 6/54 overlap, coincidental |
+| `RESULT_DISTORTION` | 2 of 137 sessions (1%) |
+| `FABRICATED_TOOL` | Needs judgement; no structural label |
+
+**The labelling attempt to fix this also failed** (`TOOL_CLAIM_LABEL_AGREEMENT_REPORT.md`):
+
+| | This attempt | Original 50 cases |
+| :--- | ---: | ---: |
+| Cohen's kappa | **0.2252** | 0.922 |
+| Disagreements excluded | 49 of 106 (46%) | — |
+| Gold set | 57 cases | 50 |
+
+Disqualifying three ways: kappa that low measures labelling noise; `FABRICATED_TOOL` and
+`WRONG_COUNT` got **zero** gold examples; 75% of the set is one class.
+
+**The informative part — and the thing not to repeat.** The disagreement was *systematic*,
+not noise. Same model, same data, different prompt wording: pass A returned `UNVERIFIABLE`
+**29** times, pass B **2** times. 22 cases went `UNVERIFIABLE → NO_MISMATCH`, 12 went
+`RESULT_DISTORTION → NO_MISMATCH`. Pass B asked *"does the summary misrepresent the
+telemetry?"* — a yes/no question defaulting to no. Pass A asked *"classify the summary
+against the record"* — no default. **The framing supplied the answer more often than the
+data did.**
+
+That is not a prompt-tuning problem. The question *"does this multi-claim summary
+misrepresent aggregate telemetry"* is **not well-posed on this data**, which is consistent
+with the whole investigation: real agent summaries mostly are not checkable against their
+traces. The original protocol reached kappa 0.922 because its task was tight — one explicit
+claim against one explicit premise.
+
+### 12.4 The way forward, and the ordering problem in it
+
+Narrow the question rather than retry it: extract individual assertions first, then label
+each against **the single tool result it refers to**. Same shape as the task that produced
+stable labels before.
+
+This creates a circularity worth naming: **the extractor is needed to produce labellable
+units, and labels are needed to validate the extractor.** Resolve it by using extraction
+only to *segment* claims, never to judge them, so the component under validation never
+supplies its own verdict.
+
+**The redesign itself is not discredited.** Reading structured `tool_call` telemetry rather
+than regex-matching prose is still more correct than what ships. Validation is blocked, not
+the design. `SpanInput.tool_name` and `ToolCallRecord` already model the structured side;
+only `extract_claims()` is text-only.
+
+### 12.5 Standing rules on this thread
+
+- **Do not delete or rewrite the 19-case benchmark** (`experiments/tool_claim_benchmark.py`).
+  It is preserved as evidence of why a self-authored benchmark was insufficient. Untouched
+  throughout.
+- **Do not integrate into production** until an accuracy figure exists. Firing rate alone
+  is not sufficient — a detector that fires often but wrongly is worse than one that is
+  silent, and that is exactly the trap the 19-case benchmark set.
+- Labelling runs are expensive: ~31 minutes for 240 CPU inference calls, because full
+  summaries dominate prompt processing. Size future runs accordingly, and add incremental
+  saves — the current script writes only at the end.
