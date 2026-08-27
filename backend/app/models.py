@@ -250,6 +250,88 @@ class DatasetCase(SQLModel, table=True):
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
+class EvaluationJob(SQLModel, table=True):
+    """A durable unit of evaluation work.
+
+    Before this table existed, evaluation was queued via FastAPI BackgroundTasks
+    — an in-memory list inside the API process. If the process died, every
+    pending evaluation vanished with no record that it had ever been owed, and a
+    failing evaluation was caught, logged and dropped. Measured on the previous
+    architecture, a SIGKILL mid-batch lost every un-started evaluation
+    permanently (see experiments/results/durability_measurements.json).
+
+    STATE MACHINE
+
+        queued ──claim──> running ──ok───> succeeded
+           ^                 │
+           │                 ├──retryable failure, attempts < max──┐
+           └─────────────────┘                                     │
+           (backoff via available_at) <───────────────────────────-┘
+                             │
+                             ├──retryable failure, attempts >= max──> dead_letter
+                             └──permanently unprocessable ──────────> failed
+
+    `failed` and `dead_letter` are deliberately distinct: `failed` means the job
+    can never succeed (a malformed payload retried ten times is still
+    malformed), while `dead_letter` means it kept failing for reasons that
+    looked transient. Collapsing them would hide which of the two happened.
+
+    CRASH RECOVERY relies on `lease_expires_at` rather than on the worker
+    reporting its own death, because a killed worker reports nothing. A job in
+    `running` whose lease has expired is assumed abandoned and returned to
+    `queued`.
+
+    IDEMPOTENCY relies on `job_key`, a deterministic function of the span, with
+    a UNIQUE constraint. Re-submitting the same span cannot create a second job.
+    """
+
+    __tablename__ = "evaluation_jobs"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    # Deterministic identity. UNIQUE is what makes duplicate submission a no-op
+    # at the database level rather than something application code must remember
+    # to check.
+    job_key: str = Field(unique=True, index=True, max_length=128)
+
+    span_id: str = Field(index=True, max_length=64)
+    trace_id: str = Field(index=True, max_length=64)
+    agent_id: str = Field(max_length=128)
+
+    # The job carries everything needed to run it. A worker must not have to
+    # reconstruct the request from other tables, or the job stops being a
+    # self-contained unit of work.
+    payload_json: str = Field(sa_column=Column(Text, nullable=False))
+
+    status: str = Field(default="queued", index=True)
+    attempts: int = Field(default=0)
+    max_attempts: int = Field(default=3)
+
+    # Earliest time this job may be claimed. Retry backoff is expressed by
+    # pushing this into the future rather than by sleeping in a worker, so the
+    # delay survives a worker restart.
+    available_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc).replace(tzinfo=None),
+        sa_column=Column(sa.DateTime, nullable=False, index=True),
+    )
+    lease_expires_at: Optional[datetime] = Field(
+        default=None, sa_column=Column(sa.DateTime, nullable=True)
+    )
+    worker_id: Optional[str] = Field(default=None, max_length=128)
+
+    last_error: Optional[str] = Field(default=None, sa_column=Column(Text))
+
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc).replace(tzinfo=None),
+        sa_column=Column(sa.DateTime, nullable=False),
+    )
+    started_at: Optional[datetime] = Field(
+        default=None, sa_column=Column(sa.DateTime, nullable=True)
+    )
+    completed_at: Optional[datetime] = Field(
+        default=None, sa_column=Column(sa.DateTime, nullable=True)
+    )
+
+
 class ExperimentRun(SQLModel, table=True):
     """Recorded metrics and metadata from a reproducible experiment run."""
 

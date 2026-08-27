@@ -2,43 +2,35 @@
 
 from __future__ import annotations
 
-import asyncio
-import functools
 import json
 import logging
-from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
-from sqlalchemy import literal_column
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
 from app.database import get_session
 from app.models import (
-    Alert,
     AgentRecord,
-    Baseline,
-    DriftRecord,
-    Evaluation,
     Span,
     Trace,
 )
+from app.services.job_queue import enqueue_job
 
-# Dedicated thread pool for the synchronous, CPU-bound evaluation pipeline
-# (DeBERTa NLI + MiniLM embedding forward passes, ~90-190ms/span). Moving it
-# off the event loop is what stops evaluation from blocking REST/WebSocket
-# traffic — but empirically, MORE worker threads made throughput *worse*, not
-# better: this workload's small-model inference spends much of its time in
-# Python-level tokenization/tensor-prep, not GIL-released C compute, so extra
-# threads just add GIL-contention overhead. Measured on a 16-core machine:
-# 1 worker ~95 req/s, 4 workers ~63 req/s, 8 workers ~39 req/s. A single
-# worker serializes evaluation (a backlog queues rather than executing
-# concurrently) but keeps ingest itself fast and non-blocking either way.
-_eval_executor = ThreadPoolExecutor(
-    max_workers=1,
-    thread_name_prefix="agentpulse-eval",
-)
+# Evaluation no longer runs in this process. Ingest persists spans, enqueues a
+# durable job per span, and returns; a separate worker process
+# (`python -m app.worker`) drains the queue.
+#
+# What this replaced: `background_tasks.add_task(_evaluate_spans_background, …)`
+# held pending evaluations in a list inside the API process. Measured on that
+# design, a SIGKILL mid-batch lost every un-started evaluation with no record
+# that it had been owed, and a failing evaluation was caught, logged and
+# dropped. See experiments/results/durability_measurements.json.
+#
+# The evaluation orchestration itself moved verbatim to
+# app/services/evaluation_runner.py so the worker can call it without importing
+# this router. Evaluator logic is unchanged.
 
 logger = logging.getLogger("agentpulse.router.ingest")
 router = APIRouter(prefix="/v1", tags=["ingest"])
@@ -96,19 +88,43 @@ async def ingest_spans(
     request: Request,
 ):
     """Receive spans from the AgentPulse SDK.
-    
-    Persists spans immediately, then queues evaluation as a background task.
-    Returns 202 Accepted so the SDK doesn't wait for evaluation.
+
+    Persists spans, then enqueues one durable evaluation job per span. Returns
+    202 Accepted; a separate worker process performs the evaluation, so nothing
+    in this request path depends on evaluation succeeding or on this process
+    staying alive.
+
+    Re-submitting a span is a no-op rather than an error: the span is not
+    re-inserted and the job is deduplicated by `job_key`.
     """
     accepted = 0
     failed = 0
+    duplicates = 0
     errors = []
+    enqueue_targets: list[SpanInput] = []
 
     async with get_session() as session:
         for span_input in payload.spans:
             try:
                 # Ensure trace exists
                 await _ensure_trace(session, span_input, payload.service_name)
+
+                # Idempotent re-submission. Previously a repeat POST of the same
+                # span_id violated the primary key, and because the flush happens
+                # at commit the WHOLE batch failed with HTTP 500 -- measured as
+                # [202, 500, 500] across three identical submissions. A retrying
+                # SDK could therefore destroy an entire batch of unrelated spans.
+                # An already-known span is now simply not re-inserted; it still
+                # gets an evaluation job, which the job_key UNIQUE constraint
+                # deduplicates.
+                existing = await session.execute(
+                    select(Span.span_id).where(Span.span_id == span_input.span_id)
+                )
+                if existing.first() is not None:
+                    duplicates += 1
+                    accepted += 1
+                    enqueue_targets.append(span_input)
+                    continue
 
                 # Create span record
                 span = Span(
@@ -143,6 +159,7 @@ async def ingest_spans(
                 await _update_agent_record(session, span_input)
 
                 accepted += 1
+                enqueue_targets.append(span_input)
 
             except Exception as exc:
                 failed += 1
@@ -151,12 +168,36 @@ async def ingest_spans(
 
         await session.commit()
 
-    # Queue background evaluation for all accepted spans
-    if accepted > 0 and hasattr(request.app.state, "evaluator"):
-        background_tasks.add_task(
-            _evaluate_spans_background,
-            [s for s in payload.spans],
-            request.app.state.evaluator,
+    # Enqueue durable evaluation jobs. This is a SEPARATE transaction from the
+    # span writes above, and deliberately so: spans are the record of what
+    # happened and must persist even if enqueueing fails. The reverse ordering
+    # would risk a job referencing a span that was never committed.
+    #
+    # A failure here is logged but does not fail the request -- the spans are
+    # safely stored, and the job can be re-created by re-submitting. Losing the
+    # 202 would make an SDK retry the whole batch, which is worse.
+    queued = 0
+    if enqueue_targets:
+        try:
+            async with get_session() as session:
+                for span_input in enqueue_targets:
+                    created = await enqueue_job(
+                        session,
+                        trace_id=span_input.trace_id,
+                        span_id=span_input.span_id,
+                        agent_id=span_input.agent_id,
+                        payload=span_input.model_dump(mode="json"),
+                    )
+                    if created:
+                        queued += 1
+                await session.commit()
+        except Exception as exc:
+            logger.error("Failed to enqueue evaluation jobs: %s", exc, exc_info=True)
+
+    if duplicates:
+        logger.info(
+            "Ingest saw %d already-known span(s); re-insertion skipped and "
+            "evaluation jobs deduplicated by job_key", duplicates,
         )
 
     # Notify WebSocket clients
@@ -350,238 +391,7 @@ async def _update_agent_record(
                 agent.avg_latency_ms = span.latency_ms
 
 
-async def _fetch_prior_agent_outputs(
-    span: SpanInput,
-    limit: int = 12,
-) -> list[tuple[str, str]]:
-    """Load earlier agents of this span's trace, for cross-agent comparison.
-
-    Scoped to `span.trace_id` and restricted to spans that order *before* this
-    one. Both constraints matter:
-
-    - Trace scoping is what makes the comparison meaningful. The previous
-      implementation used "the previous span in the batch", but the SDK batches
-      a flat buffer with no trace grouping (sdk/transport.py), so a batch
-      carrying two interleaved traces compared an agent against an agent from a
-      different trace entirely.
-    - The before-only restriction prevents double work. Every span in the batch
-      is already committed by the time this runs, so an unscoped query would
-      also return later spans and each pair would be evaluated twice — once
-      from each side.
-
-    Ordering is (start_time, rowid). start_time is the trace's real order, but
-    it can tie: clock granularity groups fast spans into the same timestamp,
-    and some producers stamp a whole trace once (scripts/e2e_dashboard_demo.py
-    does exactly that). `span_id` is a random hex string, so using it as the
-    tiebreak would order tied spans alphabetically — arbitrary, and unrelated
-    to execution order. SQLite's rowid is insertion order, which for a trace is
-    the order the SDK emitted its spans, so it breaks ties meaningfully.
-
-    Coverage is unaffected either way: any consistent total order evaluates each
-    pair exactly once. The tiebreak only decides which agent is the premise.
-    """
-    async with get_session() as session:
-        rows = await session.execute(
-            select(Span.span_id, Span.agent_id, Span.output_summary)
-            .where(Span.trace_id == span.trace_id)
-            .order_by(Span.start_time, literal_column("rowid"))
-        )
-        ordered = rows.all()
-
-    # Everything ahead of this span in trace order. Locating the span by id
-    # rather than comparing timestamps keeps this correct when they tie.
-    position = next(
-        (i for i, (span_id, _, _) in enumerate(ordered) if span_id == span.span_id),
-        len(ordered),
-    )
-
-    priors = [
-        (agent_id, output_summary)
-        for _, agent_id, output_summary in ordered[:position]
-        if output_summary
-    ]
-
-    # Keep the most recent within budget; evaluate_against_prior_agents applies
-    # its own cap too, but trimming here also bounds the rows carried around.
-    return priors[-limit:]
-
-
-async def _evaluate_spans_background(
-    spans: list[SpanInput],
-    evaluator,
-) -> None:
-    """Background task: evaluate spans and persist results.
-
-    `evaluator.evaluate_span` is synchronous and CPU-bound (NLI + embedding
-    inference), so it's dispatched to `_eval_executor` instead of being
-    called directly on the event loop — otherwise a single evaluation would
-    stall every other request this worker is serving for its full duration.
-    """
-    loop = asyncio.get_running_loop()
-    touched_agent_ids: set[str] = set()
-
-    for span in spans:
-        try:
-            # Earlier agents in this span's own trace. Supplying these switches
-            # the disagreement step from immediate-upstream-only to comparing
-            # against every prior agent, which is what allows a contradiction
-            # between non-adjacent agents to be detected at all.
-            prior_agent_outputs = await _fetch_prior_agent_outputs(span)
-
-            result = await loop.run_in_executor(
-                _eval_executor,
-                functools.partial(
-                    evaluator.evaluate_span,
-                    span_id=span.span_id,
-                    trace_id=span.trace_id,
-                    agent_id=span.agent_id,
-                    input_text=span.input_summary,
-                    output_text=span.output_summary,
-                    upstream_agent_id=(
-                        prior_agent_outputs[-1][0] if prior_agent_outputs else None
-                    ),
-                    upstream_output=(
-                        prior_agent_outputs[-1][1] if prior_agent_outputs else None
-                    ),
-                    prior_agent_outputs=prior_agent_outputs or None,
-                    tool_calls=(
-                        [{"tool_name": span.tool_name, "result_summary": span.tool_result_summary}]
-                        if span.tool_name
-                        else None
-                    ),
-                    status=span.status,
-                ),
-            )
-            touched_agent_ids.add(span.agent_id)
-
-            # Persist evaluation
-            async with get_session() as session:
-                evaluation = Evaluation(
-                    span_id=span.span_id,
-                    trace_id=span.trace_id,
-                    grounding_score=(
-                        result.grounding.grounding_score if result.grounding else None
-                    ),
-                    entailment_prob=(
-                        result.grounding.entailment_prob if result.grounding else None
-                    ),
-                    contradiction_prob=(
-                        result.grounding.contradiction_prob if result.grounding else None
-                    ),
-                    neutral_prob=(
-                        result.grounding.neutral_prob if result.grounding else None
-                    ),
-                    tool_claim_score=(
-                        result.tool_claim.tool_claim_score if result.tool_claim else None
-                    ),
-                    disagreement_score=(
-                        result.disagreement.disagreement_score if result.disagreement else None
-                    ),
-                    overall_risk_score=result.overall_risk_score,
-                    label=result.risk_label,
-                    evaluation_stage=(
-                        result.grounding.evaluation_stage if result.grounding else "skipped"
-                    ),
-                    evaluator_name=result.evaluator_name,
-                    model_name=result.model_name,
-                    model_version=result.model_version,
-                    config_version=result.config_version,
-                    threshold_version=result.threshold_version,
-                )
-                session.add(evaluation)
-
-                # Persist drift record
-                if result.drift:
-                    drift_record = DriftRecord(
-                        agent_id=span.agent_id,
-                        node_name=span.agent_id,
-                        span_id=span.span_id,
-                        centroid_distance=result.drift.centroid_distance,
-                        tool_drift=result.drift.tool_drift,
-                        quality_drift=result.drift.quality_drift,
-                        error_rate_delta=result.drift.error_rate_delta,
-                        stability_index=result.drift.stability_index,
-                        baseline_size=result.drift.baseline_size,
-                    )
-                    session.add(drift_record)
-
-                # Persist alerts
-                for alert in result.alerts:
-                    alert_record = Alert(
-                        trace_id=alert.trace_id,
-                        span_id=alert.span_id,
-                        agent_id=alert.agent_id,
-                        alert_type=alert.alert_type,
-                        severity=alert.severity,
-                        message=alert.message,
-                        details_json=json.dumps(alert.details),
-                    )
-                    session.add(alert_record)
-
-                # Update agent risk score
-                if result.overall_risk_score is not None:
-                    agent_result = await session.execute(
-                        select(AgentRecord).where(AgentRecord.agent_id == span.agent_id)
-                    )
-                    agent = agent_result.scalar_one_or_none()
-                    if agent:
-                        if agent.avg_risk_score is not None:
-                            agent.avg_risk_score = (
-                                agent.avg_risk_score * 0.95 + result.overall_risk_score * 0.05
-                            )
-                        else:
-                            agent.avg_risk_score = result.overall_risk_score
-                        if result.drift and result.drift.stability_index is not None:
-                            agent.current_asi = result.drift.stability_index
-
-                await session.commit()
-
-        except Exception as exc:
-            logger.error(
-                "Background evaluation failed for span %s: %s",
-                span.span_id, exc, exc_info=True,
-            )
-
-    if touched_agent_ids:
-        await _persist_drift_baselines(evaluator.drift_detector, touched_agent_ids)
-
-
-async def _persist_drift_baselines(drift_detector, agent_ids: set[str]) -> None:
-    """Upsert embedding-centroid baselines for agents evaluated in this batch.
-
-    Runs once per ingest batch (not per span) so write volume scales with
-    distinct agents, not request volume. Serialization/dict access is cheap
-    (numpy .tobytes()), so no thread offload needed here.
-    """
-    agent_ids = drift_detector.touched_agent_ids(agent_ids)
-    if not agent_ids:
-        return
-
-    async with get_session() as session:
-        for agent_id in agent_ids:
-            data = drift_detector.serialize_centroid(agent_id)
-            if data is None:
-                continue
-            info = drift_detector.get_baseline_info(agent_id)
-
-            result = await session.execute(
-                select(Baseline).where(
-                    Baseline.agent_id == agent_id,
-                    Baseline.baseline_type == "embedding_centroid",
-                )
-            )
-            baseline = result.scalar_one_or_none()
-            if baseline is None:
-                baseline = Baseline(
-                    agent_id=agent_id,
-                    baseline_type="embedding_centroid",
-                    data=data,
-                    sample_count=info["sample_count"],
-                )
-                session.add(baseline)
-            else:
-                baseline.data = data
-                baseline.sample_count = info["sample_count"]
-                baseline.updated_at = datetime.now(timezone.utc)
-
-        await session.commit()
+# _fetch_prior_agent_outputs, _evaluate_spans_background and
+# _persist_drift_baselines moved to app/services/evaluation_runner.py so the
+# worker process can run them without importing this router. Their logic is
+# unchanged; only their home moved.
