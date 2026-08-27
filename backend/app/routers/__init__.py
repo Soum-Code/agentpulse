@@ -416,10 +416,23 @@ async def get_metrics():
 
 @metrics_router.get("/health")
 async def health_check():
-    """Backend health check."""
-    from app.services.grounding import models_loaded
+    """Backend health check.
+
+    `inference_backend` is reported because a loaded model is not the same as a
+    model running on the configured backend. If ONNX Runtime fails to load, the
+    PyTorch fallback keeps results correct but is materially slower, and
+    `models` alone reports `nli_model: True` either way. `degraded` makes that
+    difference visible to monitoring rather than leaving it in a startup log.
+    """
+    from app.services.grounding import backend_info, models_loaded
+
+    backend = backend_info()
     return {
         "status": "healthy",
         "models": models_loaded(),
+        "inference_backend": backend,
+        # Distinct from `status`: the process is healthy and answering, but it
+        # is not running the configuration it was asked to run.
+        "degraded": backend["degraded"],
         "version": "0.1.0",
     }

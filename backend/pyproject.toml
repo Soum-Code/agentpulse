@@ -18,7 +18,15 @@ dependencies = [
     "numpy>=1.26,<3.0",
     "sentence-transformers>=3.0,<4.0",
     "transformers>=4.40,<5.0",
-    "optimum[onnxruntime]>=1.19,<2.0",
+    # optimum 2.x split the ONNX Runtime integration into a separate package.
+    # The old `optimum[onnxruntime]<2.0` pin held optimum at 1.27, whose
+    # exporters import `_attention_scale` from torch.onnx.symbolic_opset14 --
+    # removed in torch 2.13. The ONNX path therefore failed to load and silently
+    # fell back to PyTorch on every start. Verified in an isolated environment
+    # before changing this: identical inference (worst probability difference
+    # 1.2e-08) at 1.97x the speed.
+    "optimum~=2.1.0",
+    "optimum-onnx[onnxruntime]~=0.1.0",
     "python-dotenv>=1.0,<2.0",
     "python-multipart>=0.0.9",
 ]

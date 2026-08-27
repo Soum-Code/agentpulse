@@ -16,7 +16,7 @@ from __future__ import annotations
 import logging
 import time
 from dataclasses import dataclass
-from typing import Optional
+from typing import Any, Optional
 
 import numpy as np
 
@@ -26,6 +26,21 @@ logger = logging.getLogger("agentpulse.evaluator.grounding")
 _nli_model = None
 _nli_tokenizer = None
 _embedding_model = None
+
+# Which inference backend the NLI model is ACTUALLY running on, as opposed to
+# which one was asked for.
+#
+# This exists because `models_loaded()` reports `nli_model: True` whether the
+# ONNX Runtime path loaded or the PyTorch fallback did. The system therefore
+# ran a slower backend than configured with no observable signal beyond one
+# log line at startup -- for a platform whose purpose is observability, not
+# observing its own degraded execution mode is a defect in itself, separate
+# from the performance cost.
+#
+# Values: "onnx" | "pytorch" | None (not loaded).
+_nli_backend: Optional[str] = None
+_nli_backend_requested: Optional[str] = None
+_nli_backend_fallback_reason: Optional[str] = None
 
 
 @dataclass
@@ -215,8 +230,12 @@ def load_models(
     """
     import threading
 
+    global _nli_backend_requested
+    _nli_backend_requested = "onnx" if use_onnx else "pytorch"
+
     def _do_load():
         global _nli_model, _nli_tokenizer, _embedding_model
+        global _nli_backend, _nli_backend_fallback_reason
 
         logger.info("Loading evaluation models...")
 
@@ -246,22 +265,35 @@ def load_models(
                         cache_dir=cache_dir,
                         session_options=session_options,
                     )
+                    _nli_backend = "onnx"
+                    _nli_backend_fallback_reason = None
                     logger.info("Loaded NLI model (ONNX): %s", nli_model_name)
                 except Exception as e:
-                    logger.warning("ONNX Runtime load skipped (%s), falling back to PyTorch", e)
+                    # Recorded, not just logged. A log line scrolls away; this is
+                    # queryable via backend_info() and surfaced on /v1/health so
+                    # the degraded mode is observable rather than folklore.
+                    _nli_backend_fallback_reason = f"{type(e).__name__}: {e}"
+                    logger.warning(
+                        "ONNX Runtime unavailable (%s); falling back to PyTorch. "
+                        "The NLI backend is DEGRADED relative to configuration "
+                        "(use_onnx=True).", e,
+                    )
                     from transformers import AutoModelForSequenceClassification
                     _nli_model = AutoModelForSequenceClassification.from_pretrained(
                         nli_model_name,
                         cache_dir=cache_dir,
                     )
-                    logger.info("Loaded NLI model (PyTorch): %s", nli_model_name)
+                    _nli_backend = "pytorch"
+                    logger.info("Loaded NLI model (PyTorch fallback): %s", nli_model_name)
             else:
                 from transformers import AutoModelForSequenceClassification
                 _nli_model = AutoModelForSequenceClassification.from_pretrained(
                     nli_model_name,
                     cache_dir=cache_dir,
                 )
-                logger.info("Loaded NLI model (PyTorch): %s", nli_model_name)
+                _nli_backend = "pytorch"
+                _nli_backend_fallback_reason = None
+                logger.info("Loaded NLI model (PyTorch, as configured): %s", nli_model_name)
 
             from transformers import AutoTokenizer
             _nli_tokenizer = AutoTokenizer.from_pretrained(
@@ -309,9 +341,44 @@ def get_embedding(text: str) -> Optional[np.ndarray]:
 
 
 def models_loaded() -> dict[str, bool]:
-    """Check which models are loaded."""
+    """Check which models are loaded.
+
+    Deliberately still bool-only. Callers do `all(models_loaded().values())` to
+    gate readiness (app/worker.py, scripts/measure_durability.py); mixing a
+    string in here would make that check silently wrong. Backend identity lives
+    in `backend_info()` instead.
+    """
     return {
         "nli_model": _nli_model is not None,
         "nli_tokenizer": _nli_tokenizer is not None,
         "embedding_model": _embedding_model is not None,
+    }
+
+
+def backend_info() -> dict[str, Any]:
+    """Which inference backend is ACTUALLY active, versus what was configured.
+
+    `models_loaded()` answers "did a model load?" and returns True whether ONNX
+    Runtime or the PyTorch fallback was used. That is not enough: the system can
+    run a materially slower backend than configured while reporting itself
+    healthy. This reports the difference explicitly, so a degraded execution mode
+    is visible to monitoring instead of being buried in one startup log line.
+
+    `degraded` is the field that matters: True means ONNX was requested and did
+    not load. It is deliberately not an error -- the fallback is correct
+    behaviour and inference results are unchanged -- but it must be *visible*.
+    """
+    degraded = (
+        _nli_backend_requested == "onnx"
+        and _nli_backend is not None
+        and _nli_backend != "onnx"
+    )
+    return {
+        "nli_backend": _nli_backend,
+        "nli_backend_requested": _nli_backend_requested,
+        "degraded": degraded,
+        "fallback_reason": _nli_backend_fallback_reason,
+        # The embedding model has no ONNX path in this codebase; SentenceTransformer
+        # is loaded directly. Stated so the absence is not read as a failure.
+        "embedding_backend": "pytorch" if _embedding_model is not None else None,
     }
