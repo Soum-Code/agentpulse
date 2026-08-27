@@ -1,6 +1,6 @@
 # Session Handoff — AgentPulse Work Log
 
-**Written:** 2026-08-23. **Rewritten clean:** 2026-08-26. **Updated:** 2026-08-27 (Sections 7–9 added for the disagreement/benchmark/positioning work; Section 10 added for the drift diagnosis and fix).
+**Written:** 2026-08-23. **Rewritten clean:** 2026-08-26. **Updated:** 2026-08-27 (Sections 7–9 added for the disagreement/benchmark/positioning work; Section 10 for the drift diagnosis and fix; Section 11 for the tool-claim external test).
 
 **Project:** AgentPulse — self-hostable observability SDK for grounding-risk and drift monitoring in multi-agent LLM systems. M.Tech project. Working directory: `C:\MLOPs\3rd sem project\project one agent`.
 
@@ -17,7 +17,8 @@
 - **Two head-to-head benchmarks written, and both contradicted their own hypothesis** — reported that way rather than smoothed. See Sections 7 and 8.
 - **Competitive positioning documented** (`COMPETITIVE_POSITIONING.md`) after reading MLflow/Arize/Datadog docs live. Verdict: breadth is unwinnable; the defensible niche is the three signals none of them ships as a named feature. See Section 8.
 - **A real documentation defect was found and corrected**: `DRIFT_EXPERIMENT_REPORT.md`'s prose contradicted its own data table, and the same errors had propagated into `PROJECT_REPORT.md` §7. See Section 9.
-- Repo pushed through commit `dc1377e`. **Only uncommitted work is the dashboard** (6 files, ~1750 insertions) — see Section 2.
+- **⚠️ The tool-claim validator extracts NOTHING from real agent output** — zero claims across 8,353 prose spans, all 5 models. Its 19-case benchmark (P=1.000) tested the regex against its own phrasing and could not have caught this. Section 11; this weakens a claim in `COMPETITIVE_POSITIONING.md` §5.1 that has not yet been revised.
+- Repo pushed through commit `fcdea39`. **Only uncommitted work is the dashboard** (6 files, ~1750 insertions) — see Section 2.
 - Docker, GitHub, and dev-server setup are all previously verified working — see Section 4 for exact commands, not re-derived here.
 
 ---
@@ -164,16 +165,15 @@ This repo has only ever had a `main` branch; every commit across every session h
 The recommendation given to the user, and the reasoning, is in Section 9. Short version:
 
 1. ~~Diagnose drift~~ — **done, and fixed.** See Section 10.
-2. **Test the tool-claim validator on the external corpus.** It is currently validated only on 19 hand-written cases by the same person who wrote the code. `Exgentic/agent-llm-traces-v2` contains real `tool_call` *and* `tool_call_response` pairs, the ingestion path already exists, and this is the most obvious unexploited opportunity in that corpus (Section 10).
-3. **Install Arize Phoenix and run a real head-to-head** — open source, one command (`uvx arize-phoenix serve`). Converts every "none of them ships X" claim in `COMPETITIVE_POSITIONING.md` from doc-reading into measurement. Still the single weakest part of the positioning.
-4. **Correct `DRIFT_EXPERIMENT_REPORT.md` §3** — it still says the centroid detector "never fired at all", which was refuted (Section 9). Small, and note the regeneration trap before touching it.
-5. **Decide what to do with the uncommitted dashboard work** (Section 2 callout) — verify it, then commit or discard deliberately. Then the remaining dashboard items: Replay Debugger still renders `SAMPLE_REPLAY_STEPS` (fully fabricated), and `DatasetsView` still hardcodes a stale curated-case count.
-6. **Re-run ablation Config E and F.** Config E ("disagreement never changed a decision") predates the multi-agent dataset; Config F uses `centroid_distance > 0.30`, which is now the *spike* signal rather than the drift signal. Both `THRESHOLD_ANALYSIS.md` claims are stale in different ways.
-7. Whenever picked up: the branch/PR question (Section 5) and the standing `gradient-text` hook suppression (Section 2) are both one-line user decisions away from being closed out.
+2. ~~Test the tool-claim validator on the external corpus~~ — **done, and the result was worse than expected.** See Section 11.
+3. **Redesign tool-claim extraction to read structured `tool_call` parts** (Section 11). The current text-only extractor is inert on real agents. This is the highest-value remaining engineering item, and Section 11 explains why the productive question is *"do the agent's statements about tool **results** match those results"* rather than *"which tools does it say it used"*.
+4. **Install Arize Phoenix and run a real head-to-head** — open source, one command (`uvx arize-phoenix serve`). Converts every "none of them ships X" claim in `COMPETITIVE_POSITIONING.md` from doc-reading into measurement. Still the single weakest part of the positioning.
+5. **Correct `DRIFT_EXPERIMENT_REPORT.md` §3** — it still says the centroid detector "never fired at all", which was refuted (Section 9). Small, and note the regeneration trap before touching it.
+6. **Decide what to do with the uncommitted dashboard work** (Section 2 callout) — verify it, then commit or discard deliberately. Then the remaining dashboard items: Replay Debugger still renders `SAMPLE_REPLAY_STEPS` (fully fabricated), and `DatasetsView` still hardcodes a stale curated-case count.
+7. **Re-run ablation Configs D, E and F.** All three `THRESHOLD_ANALYSIS.md` claims are now stale in different ways: Config D includes tool-claim validation, which Section 11 shows contributes nothing on real agents; Config E ("disagreement never changed a decision") predates the multi-agent dataset; Config F uses `centroid_distance > 0.30`, which is now the *spike* signal rather than the drift signal.
+8. Whenever picked up: the branch/PR question (Section 5) and the standing `gradient-text` hook suppression (Section 2) are both one-line user decisions away from being closed out.
 
-**Still deliberately NOT next:** production hardening (durable evaluation queue, real auth, retention, Postgres). Real gaps — see Section 8 — but "if users arrive" problems, and there are no users.
-
-**Deliberately NOT next:** production hardening (durable evaluation queue, real auth, retention, Postgres). Those are real gaps — see Section 8 — but they are "if users arrive" problems, and there are no users yet. Doing them now would displace items 1–3, which serve the project's actual stated goal.
+**Deliberately NOT next:** production hardening (durable evaluation queue, real auth, retention, Postgres). Those are real gaps — see Section 8 — but they are "if users arrive" problems, and there are no users yet. Doing them now would displace the items above, which serve the project's actual stated goal.
 
 ---
 
@@ -318,6 +318,64 @@ Things a future session should know before reusing it:
   `claude-opus-4-5` emits prose in 0/100 sessions and `gpt-5.2` in 1/100 — a text-based
   extraction there silently drops two of five models. `browsecompplus/smolagents_code` is
   the surveyed cell where all five models produce prose in 100/100.
-- `tool_call` **and** `tool_call_response` are both present (560/528 in one run), so this
-  corpus is a genuine candidate for testing the tool-claim validator on real data — the
-  most obvious unexploited opportunity in it.
+- `tool_call` **and** `tool_call_response` are both present (560/528 in one run). This was
+  used to test the tool-claim validator — see Section 11.
+
+---
+
+## 11. Tool-claim validator extracts NOTHING from real agents (2026-08-27)
+
+Full detail in `TOOL_CLAIM_EXTERNAL_TEST_REPORT.md`. This is the most consequential
+finding of the session and a future session should not re-derive it.
+
+**The result: zero claims extracted from 8,353 real agent prose spans** — 500 sessions
+stratified across 3 benchmarks, 4 harnesses and all 5 models. Not a low score. Nothing at
+all, in every single cell.
+
+`TOOL_CLAIM_VALIDATOR_REPORT.md` reports precision 1.000 / recall 0.727. Those figures are
+a correct measurement *of what they measured*, and the validator is **not broken on its own
+terms** — a positive control using its own benchmark phrasing passes. What the 19-case
+benchmark does not establish is **applicability**: every case in it was hand-written in the
+phrasing the regex expects, making it a test of the regex against itself. It could not have
+surfaced this.
+
+**Cause — a design-premise mismatch, not a tuning gap.** `TOOL_PATTERNS` requires the agent
+to *narrate* tool use ("I used the X tool"). In structured-tool-calling harnesses the agent
+never narrates it, because invocation is a `tool_call` field:
+
+| Agent prose (what the regex reads) | Structured `tool_call` |
+| :--- | :--- |
+| "First, I need to get the supervisor's profile and credentials" | `mcp__environment__supervisor__show_profile` |
+| `"\n\n"` | `mcp__environment__supervisor__show_account_passwords` |
+
+Prose narrates intent; structure records action. The tool name the regex hunts for sits in
+a field the validator never reads. **Expanding the regex cannot fix this** — the
+information is not in the text.
+
+**Consequences that are now open items:**
+- Ablation **Config D** in `THRESHOLD_ANALYSIS.md` includes tool-claim validation. On real
+  agents that component contributes nothing, so Config D's standing is questionable
+  (Section 6 item 7).
+- `COMPETITIVE_POSITIONING.md` §5.1 presents deterministic tool-claim validation as a live
+  differentiator with measured evidence. That evidence is the 19-case benchmark. **The
+  section needs revisiting** — the capability is real in principle but currently inert on
+  modern agent traces. It has not been edited yet.
+
+**The productive reformulation (Section 6 item 3), and why:** stop asking *"which tools did
+the agent say it used"* — that is structurally known from `tool_call` names, no inference
+needed. Ask instead *"do the agent's statements about tool **results** match those
+results"*, which is where fabrication actually causes harm. `SpanInput.tool_name` and
+`ToolCallRecord` already model the structured side, so the pipeline shape exists; only
+`extract_claims()` is text-only. This is an extraction-stage redesign needing its own
+controlled test, not a regex change.
+
+**Smaller finding worth keeping:** even with working extraction, count-checking has little
+to work with in this corpus — only **146 of 10,422** tool responses carry a genuine
+countable result set; most results are free text. The `FABRICATED_TOOL` path is far better
+served, with **7,344** structured tool calls available to check against.
+
+**Two measurement bugs were caught in the experiment script before reporting** — both worth
+knowing if reusing that code: tool responses were counted once per span despite the
+conversation being cumulative (inflating 4,228 → 96,644), and the countable-result check
+accepted any JSON list, marking 100% of responses countable by matching the
+`[{"type":"text",...}]` wrapper rather than the payload.
