@@ -152,3 +152,85 @@ where fabrication actually causes harm.
 That is a redesign of the extraction stage, not a regex change, and it needs its own
 controlled test before any production change. **No production code was modified by this
 work.** Test suite unchanged at 130/130.
+
+---
+
+## 9. A real-data benchmark now exists (2026-08-27)
+
+§8 said the redesign "needs its own controlled test". That test set has been built:
+`experiments/tool_claim_benchmark_build.py` →
+`datasets/external/exgentic_v2/derived/tool_claim_cases.json` (gitignored, regenerable;
+provenance tracked in `tool_claim_cases_metadata.json`).
+
+**574 cases** from real traces, stratified across 6 benchmark/harness cells and all 5
+models.
+
+| Tier | Cases | Label source |
+| :--- | ---: | :--- |
+| `tier_1_external` | **124** | The corpus's own `success` field, computed by the benchmark harness independently of AgentPulse |
+| `tier_2_candidate` | 54 | Numeric assertion with countable evidence — **deliberately unlabelled** |
+| `unlabelled` | 396 | Behavioural measurement only |
+
+Tier 1 is near-balanced — **63 overclaims / 61 consistent** — so a detector cannot score
+well by always guessing one class.
+
+### 9.1 What a case is
+
+Per §5, per-step prose is *intent*. A case therefore pairs the **retrospective final
+summary** against the **structured evidence** of what actually ran:
+
+> *"Perfect! I have **successfully**: 1. Logged into Spotify… 4. Added all recommended
+> songs to the queue (5 songs)… 6. Started playing the music"*
+> — `success=False`, `status=unfinished`, `score=0.667`
+
+### 9.2 The label's limit, recorded in the artifact rather than only in prose
+
+`score=0.667` on that example is the point: the agent genuinely did most of the work. An
+overclaim label means **"asserted completion on an objectively failed run"**, *not* "every
+statement is false". It measures overclaiming — real, externally labelled, and adjacent to
+tool-claim correctness without being identical to it.
+
+### 9.3 Three guards against repeating the 19-case failure
+
+1. **The validator was never consulted during construction.** Selecting cases with the
+   detector's own patterns would have produced a benchmark of exactly what it can already
+   see — which is precisely how the 19-case set went wrong.
+2. **The completion matcher is broader than, and written independently of,**
+   `tool_claim.py`'s `SUCCESS_CLAIM_PATTERNS`.
+3. **Sampling is stratified by harness.** Harness variation has misled this project twice:
+   `smolagents_code` emits zero structured tool calls, and in `tool_calling` two of five
+   models emit no prose at all.
+
+The 19-case benchmark is **deliberately preserved and untouched**. It is useful evidence
+of why the old methodology was insufficient.
+
+## 10. Baseline: the current validator scores F1 0.000
+
+Run with `experiments/tool_claim_baseline_run.py`. The shipped validator, unmodified,
+against the benchmark above.
+
+| | Own 19-case benchmark | **Real-data benchmark** |
+| :--- | ---: | ---: |
+| Precision | 1.000 | **0.000** |
+| Recall | 0.727 | **0.000** |
+| F1 | 0.842 | **0.000** |
+
+Extraction: the validator found anything to check in **1 of 574 cases (0.2%)**, and
+flagged **zero**. Confusion matrix on the 124 labelled cases: **TP=0, FP=0, FN=63, TN=61**.
+
+**Accuracy reads 0.4919, and that number is meaningless here.** It is just the class
+balance (61/124) — the detector never predicted the positive class at all. The script
+flags this explicitly as a degenerate detector rather than letting a mid-looking accuracy
+imply partial skill. Reporting F1 alone would have hidden it too.
+
+This is the "before" figure. It is deliberately established *before* any redesign, so the
+redesign has something honest to beat, and so the benchmark is proven usable rather than
+assumed to be.
+
+**Nothing in this section is a new criticism of the validator.** It confirms §4 on a
+labelled set: the component works as designed, its design premise does not hold for these
+agents, and the consequence is now expressed in the same units the original report used.
+
+**Next: step 3 of the redesign** — build extraction that reads structured `tool_call`
+telemetry plus the retrospective summary, and measure it against this same benchmark. No
+production code has been modified. Tests remain at 130/130.
