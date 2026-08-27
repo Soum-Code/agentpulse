@@ -281,3 +281,108 @@ That work is **not** attempted here; this report establishes the evidence for it
   be the honest basis for any calibration.
 - Still one benchmark, one harness, one embedding model.
 - The `no_shift` control remains imperfect for the reason given in §8.
+
+---
+
+## 11. The fix, implemented and validated (2026-08-27)
+
+§10 established *what* to change. This section records the change, two implementation
+bugs the validation caught, and the held-out result.
+
+**Code:** `backend/app/services/drift.py` (`window_centroid_distance`),
+`backend/app/services/alerting.py` (`DRIFT_DETECTED` rule),
+`backend/app/services/evaluator.py` (plumbing).
+**Validation:** `experiments/drift_production_validation.py` →
+`experiments/results/drift_production_validation.json`.
+
+### 11.1 Added alongside, not as a replacement
+
+`DriftResult.window_centroid_distance` compares the **baseline window mean** against the
+**current window mean**. `centroid_distance` is unchanged and still reported.
+
+Keeping both is deliberate. Pooling deliberately absorbs a lone outlier — one embedding in
+the opposite direction scores 2.0 under the old field and ~0.0 under a window mean. So the
+old field remains the **spike** signal and the new one is the **sustained shift** signal.
+Replacing would have deleted the spike signal, broken
+`tests/test_services.py::test_high_drift_detection` (which encodes that expectation), and
+silently changed `experiments/ablation.py` Config F, a published result in
+`THRESHOLD_ANALYSIS.md`.
+
+### 11.2 Two bugs the validation caught
+
+The first production implementation measured **AUC 0.7148**, well short of §10's 0.9532.
+Because the validation step existed, this was caught before the alert rule was rewired.
+
+1. **The pools were not disjoint.** Baseline embeddings stayed in the rolling window, so
+   the current mean was pulled back toward the baseline and real drift was suppressed. At
+   the production window size only **37 of 500** sessions ever accumulated a clean window.
+   The validated `pooled_session` construction avoided this by pooling each side
+   separately.
+2. **Partial windows were reported.** Fixing (1) raised AUC to 0.955 but pushed false
+   alarms to **26%** — the first "window mean" was a one-sample mean, i.e. exactly the
+   per-output noise this metric exists to remove.
+
+Both fixes are structural rather than fitted: two pools that overlap are not two pools,
+and a mean over one sample is not a mean. The field now returns `None` until **both**
+windows are full.
+
+### 11.3 Calibration — dev only, then held-out once
+
+`mean_window` is a genuine tuning parameter, so it was selected on the **89 dev tasks**
+and measured once on the **111 held-out tasks**. The split is deterministic by task hash,
+was written at ingestion time, and was untouched until this step. **The 0.30 threshold was
+not tuned** — it is the shipped value.
+
+Criterion, fixed before any result was seen: *false alarms ≤ 0.10 **and** coverage ≥ 0.25;
+maximise detection; tie-break to the smaller window.* Coverage is a constraint because a
+detector that is silent on almost everything is not useful however accurate it is when it
+speaks.
+
+Selected: **`mean_window = 12`**.
+
+| | Dev (selection) | **Held-out (measured once)** |
+| :--- | ---: | ---: |
+| Control coverage | 0.256 | **0.2454** |
+| False alarms @0.30 | 0.054 | **0.0152** |
+| Detection @0.30 | 0.930 | **0.9192** |
+| AUC content-change vs no-shift | 0.9885 | **0.991** |
+| AUC model-shift vs no-shift | — | 0.8494 |
+
+Held-out medians form a sensible monotonic gradient:
+
+```
+no_shift 0.0888   <   model_shift 0.1897   <   content_change 0.4856
+```
+
+**This softens §7.** That section concluded model swap is undetectable. With the corrected
+representation it *is* partly detectable (AUC 0.8494) — the earlier metrics were simply too
+noisy to resolve a real but modest difference. §7's stronger claim does not survive.
+
+### 11.4 Wired into alerting
+
+The `DRIFT_DETECTED` rule now reads `window_centroid_distance` instead of
+`centroid_distance`, at the same 0.30 threshold. Without this the fix would have changed
+nothing operationally — the rule was firing on a signal measured at **91.7% false alarms**
+on unchanged operation.
+
+Verified end-to-end through the real `/v1/ingest`: 40 spans, 24 on one topic then 16 on an
+unrelated one, produced exactly **one** `DRIFT_DETECTED` at `distance=0.537` — one alert
+for the drift, not a per-span storm.
+
+### 11.5 The cost: the detector is silent most of the time
+
+**Coverage is 24.5%.** The field is `None` until both windows fill, and a `None` metric
+skips the rule, so no alert is raised on roughly three quarters of the sessions in this
+corpus. That is defensible — claiming drift from three samples would be worse — but it is a
+real reduction in coverage and should not be read past.
+
+The 1.5% false-alarm figure is measured **only on sessions that report**, which are the
+longer ones. Longer sessions have more similar halves, so the control population is biased
+favourably. The honest statement is: **when this detector speaks it is accurate; it stays
+silent often.**
+
+Not persisted to `DriftRecord`: adding a column would be a schema change with no migration
+path (`create_all` only), which would break existing databases. The value reaches operators
+through the alert's `details` payload instead.
+
+Tests: 121 → **130**.

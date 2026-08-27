@@ -96,6 +96,122 @@ class TestDriftDetector:
         assert result.error_rate_delta >= 0
 
 
+class TestWindowCentroidDistance:
+    """The windowed-mean drift signal.
+
+    `centroid_distance` compares one output against an EMA centroid, which on
+    real agent traces flagged 91.7% of unchanged operation at the 0.30
+    threshold -- a multi-step agent legitimately says something different at
+    every step. Comparing window means instead measured 6.8% false alarms and
+    AUC 0.9532 against real content change. See
+    DRIFT_REAL_TEXT_DIAGNOSIS_REPORT.md sections 6 and 10.
+    """
+
+    BASELINE_N = 5
+    WINDOW_N = 4
+
+    @staticmethod
+    def _unit(seed_value: float) -> np.ndarray:
+        vec = np.full(384, seed_value, dtype=np.float32)
+        return vec / np.linalg.norm(vec)
+
+    def _detector(self) -> DriftDetector:
+        """Both window sizes set explicitly — they are independent knobs."""
+        return DriftDetector(
+            min_samples_for_alert=self.BASELINE_N, mean_window=self.WINDOW_N
+        )
+
+    def _feed(self, detector, embedding, times):
+        result = None
+        for _ in range(times):
+            result = detector.analyze("agent1", embedding=embedding)
+        return result
+
+    def test_none_while_baseline_fills(self):
+        """No baseline yet means no comparison — not a zero-drift reading."""
+        detector = self._detector()
+        emb = self._unit(1.0)
+        for _ in range(self.BASELINE_N):
+            assert detector.analyze("agent1", embedding=emb).window_centroid_distance is None
+
+    def test_none_until_current_window_is_full(self):
+        """A mean over one sample is an individual output, not a window mean.
+
+        Reporting partial windows measured a 26% false-alarm rate against 5%
+        once withheld — see DRIFT_REAL_TEXT_DIAGNOSIS_REPORT.md §10.
+        """
+        detector = self._detector()
+        emb = self._unit(1.0)
+        self._feed(detector, emb, self.BASELINE_N)
+        for _ in range(self.WINDOW_N - 1):
+            assert detector.analyze("agent1", embedding=emb).window_centroid_distance is None
+        assert detector.analyze("agent1", embedding=emb).window_centroid_distance is not None
+
+    def test_stable_content_stays_near_zero(self):
+        detector = self._detector()
+        emb = self._unit(1.0)
+        result = self._feed(detector, emb, self.BASELINE_N + self.WINDOW_N)
+        assert result.window_centroid_distance is not None
+        assert result.window_centroid_distance < 0.05
+
+    def test_sustained_shift_is_detected(self):
+        detector = self._detector()
+        baseline, shifted = self._unit(1.0), -self._unit(1.0)
+        self._feed(detector, baseline, self.BASELINE_N)
+        result = self._feed(detector, shifted, self.WINDOW_N)
+        assert result.window_centroid_distance > 0.5
+
+    def test_baseline_outputs_never_enter_the_current_window(self):
+        """The two pools must stay disjoint.
+
+        When baseline embeddings leaked into the current window, the current
+        mean was pulled back toward the baseline and real drift was suppressed
+        — at the production window size only 37 of 500 real sessions ever
+        accumulated a clean window.
+        """
+        detector = self._detector()
+        baseline, shifted = self._unit(1.0), -self._unit(1.0)
+        self._feed(detector, baseline, self.BASELINE_N)
+        result = self._feed(detector, shifted, self.WINDOW_N)
+        # A shared window would average baseline and shifted toward ~0.
+        assert result.window_centroid_distance == pytest.approx(2.0, abs=0.01)
+
+    def test_single_spike_is_absorbed_by_design(self):
+        """Documents the trade-off rather than treating it as a defect.
+
+        Pooling averages a lone outlier away, which is why this signal is added
+        alongside `centroid_distance` rather than replacing it: the old field
+        stays responsible for single-output spikes, and still catches this one.
+        """
+        detector = self._detector()
+        baseline, spike = self._unit(1.0), -self._unit(1.0)
+        self._feed(detector, baseline, self.BASELINE_N)
+        self._feed(detector, baseline, self.WINDOW_N)
+
+        result = detector.analyze("agent1", embedding=spike)
+        assert result.window_centroid_distance < 0.9   # absorbed by the window mean
+        assert result.centroid_distance > 0.5          # still caught by the spike signal
+
+    def test_reset_clears_window_state(self):
+        detector = self._detector()
+        emb = self._unit(1.0)
+        result = self._feed(detector, emb, self.BASELINE_N + self.WINDOW_N)
+        assert result.window_centroid_distance is not None
+
+        detector.reset_baseline("agent1")
+        assert detector.analyze("agent1", embedding=emb).window_centroid_distance is None
+
+    def test_frozen_baseline_still_measures_drift(self):
+        """Freezing locks the baseline; the current window keeps moving."""
+        detector = self._detector()
+        baseline, shifted = self._unit(1.0), -self._unit(1.0)
+        self._feed(detector, baseline, self.BASELINE_N)
+        detector.freeze_baseline("agent1")
+
+        result = self._feed(detector, shifted, self.WINDOW_N)
+        assert result.window_centroid_distance > 0.5
+
+
 # ─── Alert Engine Tests ───────────────────────────────────────────────
 
 class TestAlertEngine:
@@ -134,14 +250,35 @@ class TestAlertEngine:
         assert len(hallucination_alerts) == 0
 
     def test_drift_alert(self):
+        """DRIFT_DETECTED fires on the windowed-mean field.
+
+        It used to fire on `centroid_distance`, which flagged 91.7% of
+        unchanged operation on real traces at this same threshold. See
+        DRIFT_REAL_TEXT_DIAGNOSIS_REPORT.md §11.
+        """
         engine = AlertEngine(drift_threshold=0.3)
         alerts = engine.evaluate(
             trace_id="t1",
             agent_id="a1",
-            centroid_distance=0.5,
+            window_centroid_distance=0.5,
         )
         drift_alerts = [a for a in alerts if a.alert_type == "DRIFT_DETECTED"]
         assert len(drift_alerts) >= 1
+
+    def test_drift_alert_silent_when_windows_not_full(self):
+        """No measurement means no alert, even with a large single-output spike.
+
+        `window_centroid_distance` is None until both windows fill. The
+        detector staying silent on short traces is deliberate, not a gap.
+        """
+        engine = AlertEngine(drift_threshold=0.3)
+        alerts = engine.evaluate(
+            trace_id="t1",
+            agent_id="a1",
+            centroid_distance=1.9,
+            window_centroid_distance=None,
+        )
+        assert [a for a in alerts if a.alert_type == "DRIFT_DETECTED"] == []
 
     def test_asi_drop_alert(self):
         engine = AlertEngine(asi_low_threshold=50.0)

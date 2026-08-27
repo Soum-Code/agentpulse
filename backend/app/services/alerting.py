@@ -85,6 +85,7 @@ class AlertEngine:
         grounding_score: float | None = None,
         tool_claim_score: float | None = None,
         centroid_distance: float | None = None,
+        window_centroid_distance: float | None = None,
         stability_index: float | None = None,
         error_rate_delta: float | None = None,
         disagreement_score: float | None = None,
@@ -104,6 +105,7 @@ class AlertEngine:
             "grounding_score": grounding_score,
             "tool_claim_score": tool_claim_score,
             "centroid_distance": centroid_distance,
+            "window_centroid_distance": window_centroid_distance,
             "stability_index": stability_index,
             "error_rate_delta": error_rate_delta,
             "disagreement_score": disagreement_score,
@@ -238,10 +240,28 @@ class AlertEngine:
                 comparison="gt",
                 message_template="Tool-claim mismatch for agent '{agent_id}': mismatch_rate={value} (threshold={threshold})",
             ),
+            # Fires on `window_centroid_distance`, not `centroid_distance`.
+            #
+            # `centroid_distance` compares a single output against an EMA
+            # centroid, which on 500 real agent sessions flagged 91.7% of
+            # UNCHANGED operation at this same threshold -- a multi-step agent
+            # legitimately says something different at every step, so the rule
+            # was close to always firing. The windowed-mean field compares
+            # pooled baseline against pooled recent behaviour: measured once on
+            # a held-out split, 1.5% false alarms and 92% detection at this
+            # threshold, AUC 0.991.
+            #
+            # The threshold is unchanged -- it was never the problem.
+            #
+            # `window_centroid_distance` is None until both windows fill, and a
+            # None metric skips the rule, so the detector stays silent rather
+            # than guessing on short traces. That is deliberate: it means no
+            # alert on roughly 75% of sessions in the corpus measured.
+            # See DRIFT_REAL_TEXT_DIAGNOSIS_REPORT.md section 11.
             AlertRule(
                 alert_type="DRIFT_DETECTED",
                 severity="MEDIUM",
-                condition_field="centroid_distance",
+                condition_field="window_centroid_distance",
                 threshold=drift_threshold,
                 comparison="gt",
                 message_template="Drift detected for agent '{agent_id}': distance={value} (threshold={threshold})",
