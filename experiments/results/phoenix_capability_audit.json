@@ -1,0 +1,143 @@
+{
+  "timestamp": "2026-08-27 08:58:32 UTC",
+  "method": "programmatic enumeration of the installed package, not documentation",
+  "package": {
+    "name": "arize-phoenix-evals",
+    "version": "3.5.1"
+  },
+  "python": "3.12.13",
+  "evaluators": [
+    {
+      "name": "ConcisenessEvaluator",
+      "summary": "An evaluator for assessing whether model outputs are concise and free of unnecessary content.",
+      "requires_llm": true
+    },
+    {
+      "name": "CorrectnessEvaluator",
+      "summary": "An evaluator for assessing factual accuracy and completeness of model outputs.",
+      "requires_llm": true
+    },
+    {
+      "name": "DocumentRelevanceEvaluator",
+      "summary": "A specialized evaluator for determining document relevance to a given question.",
+      "requires_llm": true
+    },
+    {
+      "name": "FaithfulnessEvaluator",
+      "summary": "A specialized evaluator for detecting faithfulness in grounded LLM responses.",
+      "requires_llm": true
+    },
+    {
+      "name": "HallucinationEvaluator",
+      "summary": "An evaluator for detecting hallucinations in an assistant's latest response, judged against the conversation it was produced in.",
+      "requires_llm": true
+    },
+    {
+      "name": "RefusalEvaluator",
+      "summary": "An evaluator for detecting when an LLM refuses or declines to answer a query.",
+      "requires_llm": true
+    },
+    {
+      "name": "RetrievalRelevanceEvaluator",
+      "summary": "An evaluator for whether the external information retrieved during a step is relevant to the request it was serving.",
+      "requires_llm": true
+    },
+    {
+      "name": "ToolInvocationEvaluator",
+      "summary": "Determines if a tool was invoked correctly with proper arguments, formatting, and safe content.",
+      "requires_llm": true
+    },
+    {
+      "name": "ToolResponseHandlingEvaluator",
+      "summary": "Determines if an AI agent properly handled a tool's response, including error handling, data extraction, transformation, and safe information disclosure.",
+      "requires_llm": true
+    },
+    {
+      "name": "ToolSelectionEvaluator",
+      "summary": "A specialized evaluator for determining if the correct tool was selected for a given context.",
+      "requires_llm": true
+    },
+    {
+      "name": "ToxicityEvaluator",
+      "summary": "An evaluator for detecting toxic text \u2014 hateful, demeaning, abusive, or threatening.",
+      "requires_llm": true
+    },
+    {
+      "name": "UserFrictionEvaluator",
+      "summary": "An evaluator for detecting when a user expresses friction with an assistant's preceding behavior.",
+      "requires_llm": true
+    }
+  ],
+  "evaluator_count": 12,
+  "all_require_llm": true,
+  "non_llm_helpers": [
+    "MatchesRegex",
+    "PrecisionRecallFScore",
+    "exact_match",
+    "matches_regex",
+    "precision_recall"
+  ],
+  "namespace_scan": {
+    "tool_verification": [
+      "module:phoenix.evals.__generated__.classification_evaluator_configs._tool_invocation_classification_evaluator_config",
+      "module:phoenix.evals.__generated__.classification_evaluator_configs._tool_response_handling_classification_evaluator_config",
+      "module:phoenix.evals.__generated__.classification_evaluator_configs._tool_selection_classification_evaluator_config",
+      "module:phoenix.evals.metrics.tool_invocation",
+      "module:phoenix.evals.metrics.tool_response_handling",
+      "module:phoenix.evals.metrics.tool_selection",
+      "phoenix.evals.ToolSchema",
+      "phoenix.evals.__generated__.classification_evaluator_configs.TOOL_INVOCATION_CLASSIFICATION_EVALUATOR_CONFIG",
+      "phoenix.evals.__generated__.classification_evaluator_configs.TOOL_RESPONSE_HANDLING_CLASSIFICATION_EVALUATOR_CONFIG",
+      "phoenix.evals.__generated__.classification_evaluator_configs.TOOL_SELECTION_CLASSIFICATION_EVALUATOR_CONFIG",
+      "phoenix.evals.__generated__.classification_evaluator_configs._tool_invocation_classification_evaluator_config.TOOL_INVOCATION_CLASSIFICATION_EVALUATOR_CONFIG",
+      "phoenix.evals.__generated__.classification_evaluator_configs._tool_response_handling_classification_evaluator_config.TOOL_RESPONSE_HANDLING_CLASSIFICATION_EVALUATOR_CONFIG",
+      "phoenix.evals.__generated__.classification_evaluator_configs._tool_selection_classification_evaluator_config.TOOL_SELECTION_CLASSIFICATION_EVALUATOR_CONFIG",
+      "phoenix.evals.evaluators.ToolSchema",
+      "phoenix.evals.evaluators.itertools",
+      "phoenix.evals.llm.wrapper.functools",
+      "phoenix.evals.metrics.ToolInvocationEvaluator",
+      "phoenix.evals.metrics.ToolResponseHandlingEvaluator",
+      "phoenix.evals.metrics.ToolSelectionEvaluator",
+      "phoenix.evals.metrics.tool_invocation",
+      "phoenix.evals.metrics.tool_invocation.TOOL_INVOCATION_CLASSIFICATION_EVALUATOR_CONFIG",
+      "phoenix.evals.metrics.tool_invocation.ToolInvocationEvaluator",
+      "phoenix.evals.metrics.tool_response_handling",
+      "phoenix.evals.metrics.tool_response_handling.TOOL_RESPONSE_HANDLING_CLASSIFICATION_EVALUATOR_CONFIG",
+      "phoenix.evals.metrics.tool_response_handling.ToolResponseHandlingEvaluator",
+      "phoenix.evals.metrics.tool_selection",
+      "phoenix.evals.metrics.tool_selection.TOOL_SELECTION_CLASSIFICATION_EVALUATOR_CONFIG",
+      "phoenix.evals.metrics.tool_selection.ToolSelectionEvaluator",
+      "phoenix.evals.utils.functools"
+    ],
+    "inter_agent_disagreement": [],
+    "drift": []
+  },
+  "verdicts": {
+    "tool_verification": {
+      "claim": "Arize ships no dedicated tool-call verification",
+      "verdict": "REFUTED",
+      "evidence": [
+        "ToolInvocationEvaluator",
+        "ToolResponseHandlingEvaluator",
+        "ToolSelectionEvaluator"
+      ]
+    },
+    "inter_agent_disagreement": {
+      "claim": "Arize ships no dedicated inter-agent disagreement detection",
+      "verdict": "HOLDS",
+      "evidence": []
+    },
+    "drift": {
+      "claim": "Arize ships no dedicated drift detection",
+      "verdict": "HOLDS",
+      "evidence": [],
+      "scope_limit": "arize-phoenix-evals only; the server package and the commercial Arize AX product were not audited"
+    }
+  },
+  "scope_limits": [
+    "arize-phoenix-evals only -- not the full arize-phoenix server package",
+    "the commercial Arize AX product (Signal, Alyx, Patterns) was not audited",
+    "catalog audit only: establishes that evaluators exist and what they claim, not how well they perform",
+    "MLflow and Datadog were not audited this way; their equivalent claims remain documentation-based and carry the same risk"
+  ]
+}

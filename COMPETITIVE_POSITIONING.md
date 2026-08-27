@@ -107,7 +107,7 @@ monitoring), so agent traces sit alongside everything else in the same system.
 | Tracing standard | OpenTelemetry + GenAI conventions | OpenInference on OTel | OTel GenAI conventions | W3C-compatible custom context |
 | Automatic issue detection | AI-powered issue detection | **Signal** — ranked issues + proposed fix | **Insights** + **Patterns** | None — threshold alerting only |
 | Evaluation approach | Scorers, 50+ built-in metrics/judges | Evaluators with human alignment | Built-in quality/safety/privacy evals | **NLI cascade** (MiniLM → DeBERTa), no LLM judge |
-| Tool-call verification | Not a dedicated feature | Not a dedicated feature | Not a dedicated feature | Dedicated deterministic validator — **but inert on real traces, see §5.1** |
+| Tool-call verification | Not a dedicated feature *(doc-based, unaudited)* | **Ships 3 dedicated evaluators** — audited, see §5.1 | Not a dedicated feature *(doc-based, unaudited)* | Dedicated deterministic validator — **but inert on real traces, see §5.1** |
 | Multi-agent disagreement | Not a dedicated feature | Not a dedicated feature | Not a dedicated feature | **Dedicated engine** (see §5.2 for real status) |
 | Drift detection | Not offered for LLM/agents | Indirect via Signal/Patterns | Indirect via Insights | **Dedicated 4-signal + ASI** (see §5.3) |
 | Fix-proving loop | Prompt optimization | **Experiments** — prove before shipping | Not a focus | None |
@@ -173,12 +173,37 @@ harnesses the agent never narrates it, because invocation is a `tool_call` field
 prose narrates intent instead. The tool name the regex hunts for is in a field the
 validator never reads, so expanding the patterns cannot fix it.
 
-**Honest current status:** the *capability* is real and remains a genuine gap in the three
-platforms — none ships tool-claim verification as a named feature, and the cost argument
-(sub-millisecond and deterministic, against a model call for an LLM-judge equivalent) still
-holds. But AgentPulse does not currently deliver it on modern agent traces. It should be
-described as **a designed capability pending a working extraction stage**, not as a
-measured advantage.
+**⚠️ The "none of them ships this" half of that claim has been measured and is FALSE for
+Arize** (`PHOENIX_CAPABILITY_AUDIT.md`, 2026-08-27). Phoenix was installed and its package
+enumerated. It ships **three dedicated tool evaluators**:
+
+- `ToolSelectionEvaluator` — was the correct tool selected
+- `ToolInvocationEvaluator` — was it invoked correctly (arguments, formatting, safety)
+- **`ToolResponseHandlingEvaluator`** — *"whether the agent properly handled a tool's
+  response, including error handling, data extraction, transformation"*
+
+That last one is the **exact reformulation** `TOOL_CLAIM_EXTERNAL_TEST_REPORT.md` §8
+proposed as AgentPulse's way forward — asking whether the agent's statements about tool
+*results* match those results. Arize already ships it as a named feature.
+
+§9 of this document predicted this precise failure: *"'None of them ships first-class
+tool-claim validation' comes from reading docs. Any of the three could add it, or already
+support it through a mechanism not surfaced in their documentation."* It did.
+
+**What survives the audit:** all twelve Phoenix evaluators require an LLM — verified by
+inspecting every constructor signature. AgentPulse's validator is deterministic and
+regex-based at 0.07 ms with no model call. So the surviving differentiator is **cost and
+determinism, not existence** — a much narrower claim, and one that currently comes with its
+own problem: a cheap check measuring F1 0.000 on real traces is not cheaper *at the same
+job*, it is cheaper at not doing the job.
+
+**Honest current status:** AgentPulse has an **inert implementation of a capability Arize
+ships working**. It should be described as a designed capability pending a working
+extraction stage, not as a measured advantage or a gap in the market.
+
+**Note on the other two columns:** the same claim for MLflow and Datadog is still
+documentation-based and unaudited. MLflow is open source and installable, so it carries the
+identical risk that just materialised here.
 
 The productive reformulation is identified but not built: stop asking *"which tools did the
 agent say it used"* (structurally known from `tool_call` names, no inference required) and
@@ -250,11 +275,12 @@ The credible pitch is **not** "better than MLflow." It is narrower and defensibl
 > deterministic and model-based checks rather than an LLM judge, at a fraction of the
 > per-call cost.
 
-**Two signals, not three, as of 2026-08-27.** Tool-claim validation was previously counted
-here. It is a designed capability and the platforms genuinely do not ship an equivalent,
-but §5.1 records that it extracts nothing from real agent traces, so it cannot be pitched
-as something AgentPulse currently does. It returns to this list when the extraction stage
-is rebuilt.
+**Two signals, not three, as of 2026-08-27, and for two independent reasons.** Tool-claim
+validation was previously counted here. It is out on both counts: §5.1 records that it
+extracts nothing from real agent traces (F1 0.000), **and** the audit in
+`PHOENIX_CAPABILITY_AUDIT.md` shows Arize already ships three dedicated tool evaluators —
+so it is neither working nor unique. It does not return to this list by rebuilding
+extraction alone; that would only make it working.
 
 The evaluation approach is the strongest structural argument. Where the three platforms
 default to LLM judges (which cost a model call per evaluation and vary between runs),
@@ -380,15 +406,24 @@ benchmark rather than an assertion.
 
 ## 9. What would invalidate this analysis
 
-- **The comparison rests on vendor self-description.** None of the three products was
-  used. Installing Phoenix (open source, one command) and running it against the same
-  dataset would replace a documentation-based comparison with a measured one, and is the
-  obvious next step if this analysis needs to be load-bearing.
+- **⚠️ This section's own warning has already come true once.** The bullet below predicted
+  that a doc-based absence claim might be wrong. On 2026-08-27 Phoenix was installed and
+  enumerated (`PHOENIX_CAPABILITY_AUDIT.md`), and the tool-verification claim for Arize was
+  **refuted** — it ships three dedicated tool evaluators, including the exact reformulation
+  this project had identified as its own way forward. Treat the remaining unaudited claims
+  accordingly.
+- **The comparison still rests on vendor self-description for two of three vendors.** Only
+  Arize has been audited by installation. **MLflow is open source and installable and has
+  not been**, so its column carries the identical risk that just materialised. Datadog is
+  not installable and its column cannot be audited this way at all.
 - **The Dynatrace acquisition of Arize is three weeks old.** Its product direction could
   change substantially, in either direction.
-- **The differentiator claim is an absence-of-evidence claim.** "None of them ships
-  first-class tool-claim validation" comes from reading docs. Any of the three could add
-  it, or already support it through a mechanism not surfaced in their documentation.
+- **Absence-of-evidence claims are the weakest thing in this document.** "None of them
+  ships first-class X" comes from reading docs. Any vendor could add it, or already support
+  it through a mechanism their documentation does not surface — which is exactly what
+  happened above. The two surviving claims (inter-agent disagreement, drift) are audited
+  only against `arize-phoenix-evals`, not against MLflow, Datadog, or Arize's commercial AX
+  product.
 - **AgentPulse's own internal numbers come from small, hand-constructed datasets** — 19
   tool-claim cases, 22 disagreement cases, 11 drift scenarios. They measure the components
   against their authors' intent, not against production traffic.
