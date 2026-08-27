@@ -663,3 +663,130 @@ belongs.
 Measurement only — no production code changed in this phase. Dashboard and SDK untouched.
 
 ---
+
+## Retention — `retention_days` now actually deletes
+
+`settings.retention_days = 30` existed and was env-configurable, but **nothing read it**, so
+the database grew without bound.
+
+### Baseline before implementing
+
+| table | rows | oldest | newest |
+| :--- | ---: | :--- | :--- |
+| traces | 20,570 | 2026-08-23 08:31 | 2026-08-27 18:41 |
+| spans | 20,674 | 2026-08-23 08:31 | 2026-08-27 18:41 |
+| evaluations | 1,248 | 2026-08-23 08:31 | 2026-08-24 17:40 |
+| drift_records | 1,248 | 2026-08-23 08:31 | 2026-08-24 17:40 |
+| alerts | 92 | 2026-08-23 08:33 | 2026-08-24 17:40 |
+| evaluation_jobs | 24 (**all `queued`**) | 2026-08-27 14:45 | 2026-08-27 18:41 |
+| agent_records | 48 | — | — |
+| baselines | 48 | — | — |
+| dataset_cases | 69 (all `v1.0_curated`) | — | — |
+| experiment_runs | 0 | — | — |
+
+Configured retention: **30 days**. All live data is under 5 days old, so a 30-day run
+deletes nothing — confirmed by dry run. Existing orphans: **zero**.
+
+### A finding that shaped the design
+
+**`PRAGMA foreign_keys = 0`.** SQLite is not enforcing foreign keys and the application never
+enables it — `database.py` sets `journal_mode`, `busy_timeout` and `synchronous`, but not
+this. The database will happily let a purge orphan every span of a deleted trace.
+
+Enforcement was **not** switched on here: that is a behaviour change with unknown blast
+radius on existing data, and it belongs to its own change. Instead retention is written so
+ordering guarantees integrity, and every destructive test asserts zero orphans afterwards
+rather than trusting the database to have prevented them.
+
+### The contract
+
+Retention is **trace-driven**: a trace and everything derived from it age together, children
+deleted before parents. Driving from trace membership rather than each table's own timestamp
+is what makes orphans impossible — a span is deleted *because its trace expired*, not because
+of its own clock, so it cannot outlive its parent.
+
+| Entity | Ages by | Deletable | Reason |
+| :--- | :--- | :--- | :--- |
+| `traces` | `start_time` | yes | root of the cascade |
+| `spans` | parent trace | yes | deleted with their trace |
+| `evaluations` | parent span | yes | deleted with their span |
+| `drift_records` | parent span | yes | deleted with their span |
+| `alerts` | parent trace | yes | deleted with their trace |
+| `evaluation_jobs` | `created_at` | **terminal only** | see below |
+| `agent_records` | — | **no** | registry keyed by identity; bounded by agent count, not traffic |
+| `baselines` | — | **no** | deleting them cold-starts every agent's drift detection |
+| `dataset_cases` | — | **no** | curated evaluation cases promoted from real incidents |
+| `experiment_runs` | — | **no** | recorded experiment results |
+
+**Evaluation jobs are the dangerous entity.** Only `succeeded`, `failed` and `dead_letter`
+are eligible. A `queued` or `running` job is outstanding work, and deleting it would silently
+discard an evaluation the durable-queue phase exists to guarantee. The live database holds
+**24 queued jobs**, so this is not hypothetical — and the real-data verification below shows
+all 24 surviving a purge that removed 43,000 other rows.
+
+**Exemptions are decisions, not omissions.** Neither `dataset_cases` nor `baselines` grows
+with traffic, so neither is a reason the database expands; ageing them out would destroy
+research inputs and cold-start drift to save nothing.
+
+### Safety properties
+
+- **Deterministic cutoff** — computed once and passed down. Recomputing "now" per query would
+  let a long purge move its own boundary and delete rows that were inside the window when it
+  started.
+- **Batched** — traces processed in batches (default 500), each in its own transaction, so a
+  large purge never becomes one enormous lock.
+- **Idempotent** — a second run finds nothing older and deletes nothing.
+- **Dry-run** — `--dry-run` counts without touching, and a test asserts the plan matches what
+  a real run then deletes, so an operator cannot approve a purge larger than the one shown.
+
+### Verified, not inspected
+
+**Controlled database** (`tests/test_retention.py`, 10 tests): old and recent traces each with
+a full dependent set, jobs in all five statuses on both sides of the cutoff, and all four
+exempt entities seeded 60 days old so their survival proves the exemption rather than luck.
+Covers deletion, retention of newer rows, exemptions, pending-job safety, idempotency,
+batch-size invariance, the disable switch, a boundary row one minute inside the window, and
+plan-versus-apply agreement.
+
+**Real data** — a clean copy of the live database (20,570 traces) purged at
+`--retention-days 3`:
+
+| | before | after |
+| :--- | ---: | ---: |
+| traces | 20,570 | 53 |
+| spans | 20,674 | 106 |
+| evaluations | 1,248 | 0 |
+| drift_records | 1,248 | 0 |
+| alerts | 92 | 0 |
+| **evaluation_jobs (all queued)** | **24** | **24** |
+| dataset_cases | 69 | 69 |
+| baselines | 48 | 48 |
+| agent_records | 48 | 48 |
+
+42 batches, ~43,000 rows deleted. **Orphans afterwards: 0 spans, 0 evaluations, 0 alerts,
+0 drift records.** Oldest surviving trace 2026-08-26, cutoff 2026-08-24 18:48 — nothing
+inside the window was touched. A second run deleted **0** rows.
+
+### Stated boundary: not yet scheduled automatically
+
+Retention ships as `python -m app.retention_cli`, intended for cron / Task Scheduler / a
+CronJob. It is deliberately **not** a timer inside the API or the worker: deletion is the one
+irreversible operation here, and it should be something an operator schedules explicitly and
+can read the output of, not a side effect of a process that exists for another reason.
+
+The growth problem is therefore *solvable* rather than *solved by default* — enabling it is a
+scheduler entry away. `--dry-run` first is recommended on any long-lived database, since a
+first run there may delete a great deal.
+
+### Scope
+
+Dashboard, SDK, evaluator algorithms, disagreement, tool-claim, drift logic and throughput
+configuration all untouched. No schema change, so no migration. Tests **154 → 164**.
+
+### Backlog (for the health/readiness phase, not mixed in here)
+
+The throughput phase established that **the API loads ~1.24 GB of models it no longer uses**,
+since evaluation moved to the worker. Splitting *API health* from *worker/evaluator readiness*
+is that phase's task; it is recorded here so it is not lost, and deliberately not acted on.
+
+---
