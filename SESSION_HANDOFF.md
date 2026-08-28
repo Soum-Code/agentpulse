@@ -1,6 +1,6 @@
 # Session Handoff — AgentPulse Work Log
 
-**Written:** 2026-08-23. **Rewritten clean:** 2026-08-26. **Updated:** 2026-08-27 (Sections 7–9 for the disagreement/benchmark/positioning work; 10 for the drift diagnosis and fix; 11 for the tool-claim external test; 12 for the blocked redesign; 13 for the competitor capability audits).
+**Written:** 2026-08-23. **Rewritten clean:** 2026-08-26. **Updated:** 2026-08-27 (Sections 7–9 disagreement/benchmark/positioning; 10 drift diagnosis and fix; 11 tool-claim external test; 12 blocked redesign; 13 competitor audits). **Updated:** 2026-08-28 (Section 14 — external disagreement validation, the last of the three signals to be checked and the third to fail; Section 15 — the productization arc, seven phases from migrations through health/readiness).
 
 **Project:** AgentPulse — self-hostable observability SDK for grounding-risk and drift monitoring in multi-agent LLM systems. M.Tech project. Working directory: `C:\MLOPs\3rd sem project\project one agent`.
 
@@ -10,7 +10,10 @@
 
 ## 0. TL;DR
 
-- **Backend + evaluation pipeline: real, tested, working.** 130/130 tests passing (`pytest tests/ -q`). Security audit complete. Real model inference (Qwen3-8B via llama.cpp), not stub fallbacks.
+- **Backend + evaluation pipeline: real, tested, working.** **209/209 tests passing** (`pytest tests/ -q`; was 130 before the productization arc). Security audit complete. Real model inference, not stub fallbacks.
+- **⚠️ Inter-agent disagreement failed its external check too — that is now three for three.** On real multi-agent traces the shipped configuration detects **0 of 10** independently labelled contradictions. The fix that recovers 6 of 10 does **not generalize**. Section 14; `COMPETITIVE_POSITIONING.md` revised. Every internal benchmark this project has checked against external data has broken or narrowed: drift, tool-claim, and now disagreement.
+- **The evidence-partition problem is the more interesting finding** and is now the real research question for disagreement: agents holding different evidence produce apparent contradictions that are not faults, and an NLI score cannot tell the two apart. Section 14.
+- **Production hardening happened, and is no longer "deliberately not next".** Seven phases: migrations, durable queue, ONNX fix, throughput measurement, retention, self-monitoring, health/readiness. All measured, not asserted. Section 15 and `PRODUCTIZATION_LOG.md`.
 - **Drift was diagnosed and fixed** against an external real-trace corpus — false alarms on unchanged operation went from **91.7% → 1.5%**, detection 92%, AUC 0.991 on a held-out split. The 0.30 threshold was never the problem; the aggregation was. **But coverage is only 24.5%** — see Section 10, and do not quote the accuracy without the coverage.
 - **Both reasoning-strategy benchmarks are DONE, real, and compared** — see Section 1 and `GPU_VS_CPU_BENCHMARK_REPORT.md`.
 - **Inter-agent disagreement engine rebuilt and wired into production this session** — the project's largest claim-vs-reality gap is closed. See Section 7.
@@ -20,7 +23,7 @@
 - **⚠️ The tool-claim validator extracts NOTHING from real agent output** — zero claims across 8,353 prose spans, all 5 models, and **F1 0.000** on a real-data benchmark against its own 0.842. Its 19-case benchmark tested the regex against its own phrasing and could not have caught this. Sections 11 and 12. `COMPETITIVE_POSITIONING.md` §5.1/§5.4 have been revised accordingly.
 - **The tool-claim redesign is BLOCKED on labelling, not engineering** (Section 12). A labelling attempt reached only kappa 0.225 and produced zero examples for two of the four target classes. Read §12.3 before restarting it — the failure mode is a question that isn't well-posed, not a prompt that needs tuning.
 - **⚠️ Competitor audits refuted a positioning claim.** Phoenix and MLflow were both installed and probed: **both ship tool-call verification**, so that differentiator is finished. Disagreement holds only as "no named feature" (MLflow's `@scorer` can build it); **drift is the strongest surviving claim**. Section 13; `COMPETITIVE_POSITIONING.md` has been revised accordingly.
-- Repo pushed through commit `bb0e001`. **Only uncommitted work is the dashboard** (6 files, ~1750 insertions) — see Section 2.
+- **Repo pushed through commit `3cd1080`; working tree clean, `origin/main` in sync.** The dashboard work that used to sit uncommitted was reviewed and checkpointed (`8a93558`) with three known gaps recorded — see Section 15.
 - Docker, GitHub, and dev-server setup are all previously verified working — see Section 4 for exact commands, not re-derived here.
 
 ---
@@ -148,10 +151,21 @@ The Llama GPU run (Section 1) succeeded on kernel version 12 after **4 failed at
 - Dev servers via `.claude/launch.json`: `agentpulse-backend` (uvicorn, port 8000), `agentpulse-dashboard` (vite, port 5173). `dashboard/.env` (gitignored) needs `VITE_API_KEY=change-me-to-a-secure-key` for any local write action to work (curate-case, etc.) — recreate it if missing after a fresh checkout.
 - `scripts/e2e_dashboard_demo.py` pushes a real mixed-risk trace through the actual SDK — the standard way to get real data into a fresh dashboard for testing, rather than trusting whatever's already in the DB. **Note:** it stamps every span with the *same* `start_time` (line 38), which is unrealistic — the real SDK stamps each span separately. This masked an ordering bug for a while; see Section 7.
 - Docker (`docker compose up --build`) was verified working end-to-end earlier in the broader session; 4 real bugs were found and fixed then (missing README in build context, CUDA-bloat torch index, SQLite URL slash count, WAL mode needing a named volume on Windows). Not re-verified this session, but nothing since should have broken it.
-- Test suite: `pytest tests/ -q` — **130/130 passing** as of 2026-08-27, ~2.3s.
+- Test suite: `pytest tests/ -q` — **209/209 passing** as of 2026-08-28. **Runtime is now ~2m30s, not 2.3s**: the durability, migration and inference-backend suites spawn real subprocesses and load real models, because the failures they guard against (SIGKILL mid-job, a migration that only breaks on first use, a silently degraded backend) are invisible to in-process tests. Slow on purpose.
 - **Reading the HuggingFace corpus without downloading 231 MB:** `pyarrow` cannot read `https://` directly. Use `huggingface_hub.HfFileSystem` + `pyarrow.parquet.read_table(fh, columns=[...])` — column projection over range requests. Project the cheap run-level columns to locate a target cell, then read the huge `spans` column from only the shards that contain it. The datasets-server `/statistics` endpoint returns a permission error for this dataset; `/rows` works.
 - **Two SQLite DB files exist and they are not the same one.** `./data/agentpulse.db` and `./backend/data/agentpulse.db`. The path in `.env` is relative (`sqlite+aiosqlite:///./data/agentpulse.db`), so which one the backend uses depends on its working directory — as launched, it writes to **`backend/data/agentpulse.db`**. Query that one when verifying, not the root one. This cost real debugging time once.
-- **The backend auto-restarts when killed.** Something supervises it (not `--reload`, and not `.claude/launch.json`), so `Stop-Process` on the port-8000 PID results in a fresh process within seconds — which conveniently picks up code changes, but means you cannot simply stop it. Health is at `/v1/health`, **not** `/health`. Allow ~10s after restart for the evaluation models to load; `/v1/health` reports `models: {nli_model: false, ...}` until they do, and evaluation silently does nothing in that window.
+- **The backend auto-restarts when killed.** Something supervises it (not `--reload`, and not `.claude/launch.json`), so `Stop-Process` on the port-8000 PID results in a fresh process within seconds — which conveniently picks up code changes, but means you cannot simply stop it. Health is at `/v1/health`, **not** `/health`.
+
+  **⚠️ This next part changed on 2026-08-28 — the old advice is now wrong.** It used to say
+  "allow ~10s for models to load; `/v1/health` reports `models: {nli_model: false, ...}`
+  until they do". The API **no longer loads models at all** (it performs no inference), so
+  `models` is permanently all-false and that is correct. Do not wait on it.
+  - The API is ready as soon as `/v1/health/ready` returns 200 (~1.5s) — that checks the
+    database, its only dependency.
+  - **Evaluation requires a separate worker process: `python -m app.worker`.** Without it,
+    spans are accepted and durably queued but nothing evaluates them. `/v1/health/evaluator`
+    returns 503 and `/v1/platform` reports `state: failing` in that situation.
+  - Restore the old behaviour with `AGENTPULSE_API_LOAD_MODELS=true` if ever needed.
 - The ingest API requires `X-API-Key: change-me-to-a-secure-key` (from `.env`); requests without it get a 401 with no other clue.
 
 ---
@@ -170,13 +184,19 @@ The recommendation given to the user, and the reasoning, is in Section 9. Short 
 2. ~~Test the tool-claim validator on the external corpus~~ — **done, and the result was worse than expected.** See Section 11.
 3. ~~Redesign tool-claim extraction~~ — **attempted and blocked on labelling, not engineering.** See Section 12. Restarting it means first making the labelling question well-posed (§12.4), not rewriting the extractor. Do not ship on firing-rate alone (§12.5).
 4. ~~Install Phoenix and audit the competitive claims~~ — **done, for Phoenix *and* MLflow, and two claims were refuted.** See Section 13. What remains unaudited is Datadog, which is not installable; and neither audit measured *quality*, only existence and runnability.
-5. **Externally validate inter-agent disagreement** — now the weakest surviving differentiator (§13.3). Its F1 0.960 rests on 22 self-authored cases, and two of the other three signals were overturned the moment external data was applied. The Exgentic corpus **cannot** supply this (one agent identity per session, §10), so it needs a different corpus or a constructed multi-agent one.
-6. **Correct `DRIFT_EXPERIMENT_REPORT.md` §3** — it still says the centroid detector "never fired at all", which was refuted (Section 9). Small, and note the regeneration trap before touching it.
-7. **Decide what to do with the uncommitted dashboard work** (Section 2 callout) — verify it, then commit or discard deliberately. Then the remaining dashboard items: Replay Debugger still renders `SAMPLE_REPLAY_STEPS` (fully fabricated), and `DatasetsView` still hardcodes a stale curated-case count.
-8. **Re-run ablation Configs D, E and F.** All three `THRESHOLD_ANALYSIS.md` claims are now stale in different ways: Config D includes tool-claim validation, which Section 11 shows contributes nothing on real agents; Config E ("disagreement never changed a decision") predates the multi-agent dataset; Config F uses `centroid_distance > 0.30`, which is now the *spike* signal rather than the drift signal.
-9. Whenever picked up: the branch/PR question (Section 5) and the standing `gradient-text` hook suppression (Section 2) are both one-line user decisions away from being closed out.
+5. ~~Externally validate inter-agent disagreement~~ — **done, and it failed.** Section 14. Three for three.
+6. ~~Correct `DRIFT_EXPERIMENT_REPORT.md` §3~~ — **investigated, and the premise was wrong.** §3 is correctly scoped and already carried a correction notice; the misremembered error was in the real-text diagnosis and had been fixed there. **The real hazard was the regeneration trap**, which was live: `drift_scenarios.py` rewrote the curated report from a template that still contained all three documented errors. Fixed in `78697c5`.
+7. ~~Decide what to do with the uncommitted dashboard work~~ — **reviewed and checkpointed** (`8a93558`). Three gaps recorded for the dashboard phase; see Section 15.
+8. **Re-run ablation Configs D, E and F.** Still open, and now more stale: `ablation_results.json` is dated 2026-08-23, before the disagreement rewiring, the drift rebuild, and the ONNX fix that halved NLI latency. The dashboard displays these numbers.
+9. Whenever picked up: the branch/PR question (Section 5) and the standing `gradient-text` hook suppression (Section 2) are both one-line user decisions away.
 
-**Deliberately NOT next:** production hardening (durable evaluation queue, real auth, retention, Postgres). Those are real gaps — see Section 8 — but they are "if users arrive" problems, and there are no users yet. Doing them now would displace the items above, which serve the project's actual stated goal.
+### What is actually next
+
+1. **Capability tiers** — published in Phase 0 (drift Beta, grounding Beta, disagreement Experimental, tool-claim Experimental). Nothing measured since has changed them, so this is a re-confirm or a skip.
+2. **Dashboard, last** — the remaining work. It now has considerably more real data available than when it was frozen: `/v1/platform`, `/v1/health` readiness, worker fleet state and queue depth are all live endpoints that did not exist when that UI was written.
+3. **The disagreement research question**, if the project wants to keep pulling that thread: how to distinguish true contradiction from legitimate disagreement caused by partial evidence (§14). Do **not** improve claim extraction before answering it — that optimises the wrong objective.
+
+**No longer "deliberately not next".** The previous handoff deferred production hardening as an "if users arrive" problem. That call was reversed deliberately by the user and the work is done (Section 15) — with scope held to a thin vertical rather than the full SaaS substrate, so the research contribution was not displaced.
 
 ---
 
@@ -563,3 +583,163 @@ as equally strong**.
 - **Record scope limits.** Neither audit measured *quality* — only what exists and whether
   it runs. Arize AX (Signal, Alyx, Patterns) and MLflow on Databricks are separate
   commercial products and were not audited.
+
+---
+
+## 14. Inter-agent disagreement — externally validated, and it failed (2026-08-28)
+
+The last of the three signals to be checked against external data, and the third to break.
+Full detail in `DISAGREEMENT_FORMULATION_DIAGNOSIS_REPORT.md` and
+`DISAGREEMENT_EXTRACTION_GENERALIZATION_REPORT.md`.
+
+### 14.1 The result
+
+| | |
+| :--- | :--- |
+| Internal benchmark (22 self-authored cases) | F1 **0.960** |
+| External real multi-agent traces | **0 of 10** labelled contradictions detected |
+| Max contradiction probability across all 10 positives | **0.0414** against a 0.6 threshold |
+
+Not near-misses. Approximately zero. No threshold setting recovers them.
+
+### 14.2 Why — the internal benchmark was measuring the wrong shape
+
+The 22 internal cases have agent outputs of **median 10 words**:
+
+```
+"The customer's account is currently active and in good standing."
+"The customer's account has been suspended and is not in good standing."
+```
+
+That is an SNLI minimal pair — one sentence frame, one negated proposition, exactly what
+`cross-encoder/nli-deberta-v3-small` was trained on. The benchmark handed the detector
+**pre-extracted claims**, so the absence of a claim-extraction stage was invisible to it.
+Real DEBATE turns run ~2,100–2,600 characters of hedged, self-referential discourse.
+
+**Truncation was tested first and refuted** — short pairs fail identically, and the
+untruncated condition already retained both conclusions in 10/10 cases.
+
+### 14.3 The fix works on one corpus and does not generalize
+
+Supplying each agent's concluding assertion instead of its whole turn lifts recall
+**0.00 → 0.60 at 0% false positives** on DEBATE. On a second, marker-free corpus
+(`siddharthmb/multiagent-verification-failure-modes`) the same rule achieves **31.2%**
+assertion-extraction correctness, moves recall 0.12 → 0.25 within fully overlapping
+confidence intervals, and **doubles** false positives.
+
+Cause: DEBATE mandates an `A) Yes / B) No` marker that is terminal by construction. In the
+marker-free corpus **68% of assertions sit in the first third of the answer**, where a
+last-sentence rule cannot reach.
+
+**A first-sentence rule was deliberately not written.** It would be tuning against the
+evaluation corpus, and it would fail on DEBATE exactly as the current rule fails here —
+relocating the brittleness rather than removing it.
+
+### 14.4 The finding that matters more than the failure
+
+Real multi-agent systems **distribute evidence across agents**. So this exchange:
+
+```
+subagent_1: "Your documents do not include a direct quote from Mike Pence..."
+subagent_2: "Your documents include a statement by Mike Pence (Excerpt [1])..."
+```
+
+reads as a flat contradiction and **is not one** — both agents are correct about their own
+partition. Six of 40 labelled cases were of this form.
+
+An NLI score compares two strings and has no representation of what each agent could see, so
+**it cannot separate a genuine fault from legitimate disagreement caused by partial
+evidence.** That gap widens as context distribution increases — precisely the regime this
+project targets. It is a design constraint, independent of NLI quality or any extraction
+method, and it is the real open research question here.
+
+### 14.5 Standing rules from this thread
+
+- The corpus's own structured fields (`solution`, `agreement`) were used **only for
+  sampling**, never as labels. Scored as a label, `solution` mismatch gives precision 0.500 —
+  a good screen, a useless label. Taking it as ground truth would have injected 50% noise.
+- MALLM embeds literal `[AGREE]`/`[DISAGREE]` tokens in agent messages — present in **100%**
+  of sampled pairs. Stripped before labelling and before detection; leaving them in would let
+  both annotator and detector read the answer off the input.
+- All labels here are **single-pass, single-annotator LLM labels with no kappa**. Adequate
+  for diagnosis; explicitly **not** benchmark ground truth. The two-judge protocol
+  (Qwen3-8B second pass) was designed and **not run**.
+- The 370-row benchmark was sized (`experiments/disagreement_power_analysis.py`) and
+  deliberately **not run** — measuring a detector at 0.00 recall more precisely was not worth
+  the labelling cost.
+
+---
+
+## 15. Productization — seven phases, measured not asserted (2026-08-28)
+
+Running record with evidence per phase: **`PRODUCTIZATION_LOG.md`**. That file, not this
+section, is the authority.
+
+**Scope decision:** thin vertical, not full SaaS. Target claim is *"self-hosted,
+single-tenant, durable evaluation at a measured spans/sec, with self-monitoring and honest
+capability tiers"*. The phrase **"production ready" is deliberately avoided** — binary and
+unfalsifiable. Postgres, multi-tenancy, DR, rate limiting, OTLP and scale tiers 2–3 are
+**deferred with stated reasons**, not overlooked.
+
+### 15.1 What shipped
+
+| Phase | Commit | Headline |
+| :--- | :--- | :--- |
+| Phase 0 freeze | `8a93558` `78697c5` `d1b5716` | dashboard checkpointed; report-regeneration hazard removed; capability tiers published |
+| Migrations | `3ba2bb2` | schema under Alembic at `60a86ca23d8c`; 43,941 rows verified byte-identical after stamping |
+| Durable queue | `6337a38` | SIGKILL mid-evaluation → job recovered, evaluated **exactly once** |
+| ONNX fix | `f65d58b` | dead ONNX path repaired **and** backend made observable |
+| Throughput | `a26fb11` | **~12 spans/sec at 4 workers**, measured |
+| Retention | `b224c55` | `retention_days` actually deletes; 43,000 rows purged with 0 orphans |
+| Self-monitoring | `baf485e` | platform state from real runtime signals |
+| Health/readiness | `3cd1080` | explicit contract; **1.134 GB saved** per API process |
+
+### 15.2 The numbers worth remembering
+
+- **Durability, before:** SIGKILL during a 40-span batch lost **36 of 40** evaluations
+  permanently, zero recovered. Nothing on disk recorded the work had been owed.
+- **Durability, after:** 8,000 spans across 8 benchmark runs — **0 failed, 0 retries,
+  0 duplicate evaluations**, at every concurrency level including 8 workers on one SQLite
+  database.
+- **ONNX:** worst probability difference between backends **1.2e-08** (identical), at
+  **1.97× the speed**. First load performs the export (~200s, once per cache); subsequent
+  loads 3.8s.
+- **Throughput:** 4 workers is the operating point. 8 workers buys **8% more throughput for
+  86% more memory** and 69% worse per-span latency. Per-worker CPU falls monotonically
+  (12.28% → 7.20%) — physical-core saturation, with SQLite write contention an unisolated
+  co-factor.
+- **API footprint:** 1.236 GB → **0.102 GB**. Time-to-ready unchanged (~1.5s) — model loading
+  was always on a background thread, so it never delayed readiness; it just held memory.
+
+### 15.3 Standing facts that will bite if forgotten
+
+- **`PRAGMA foreign_keys = 0`.** SQLite is not enforcing FKs and the app never enables it.
+  Retention's correctness depends on **deletion ordering**, not on the database. Every
+  destructive test asserts zero orphans rather than trusting it.
+- **`load_models()` cannot be called twice in one process.** The second load strands torch
+  tensors on the `meta` device. Any test that loads models must use a subprocess.
+- **`models_loaded()` returns a dict, and `load_models()` defaults to `sync=False`.**
+  `if not models_loaded()` can never fire (non-empty dict is truthy) and the default returns
+  before models exist. Both caused a silent bug already.
+- **The test suite writes to the production database** — one `pytest` run moves spans by ~2.
+  Tests do not redirect `AGENTPULSE_DATABASE_URL`. Recorded, not fixed.
+- **Two database files exist** (`data/` and `backend/data/`) because `database_url` is a
+  *relative* sqlite path — which file you get depends on the working directory.
+- **Retention is not scheduled automatically.** It ships as `python -m app.retention_cli` for
+  cron. Deliberate: deletion is the one irreversible operation here. `--dry-run` first on any
+  long-lived database.
+
+### 15.4 Dashboard gaps recorded at checkpoint
+
+Not fixed — the dashboard was frozen. Must not survive the dashboard phase:
+
+1. `DriftCenterView` renders a hardcoded 5-point series while ignoring the real `agents` prop
+   and the live `/v1/drift`; its 0.30 threshold was superseded by `window_centroid_distance`.
+2. `DatasetsView` hardcodes its table including a `v1.0_curated / 1 case` row that is a guess
+   about DB state; `GET /datasets` returns live counts. Header says 73, table sums to 74.
+3. `ExperimentsView` configs D/E/F are stale (see next-steps item 8) and undated.
+
+`dashboard/src/lib/api.ts:98` types `/v1/health` as `{status, models, version}` — that shape
+is preserved and must stay preserved while the dashboard is frozen.
+
+---
