@@ -181,3 +181,39 @@ The dashboard is presently designed desktop-first for an operator's monitoring s
 - No new global CSS framework or component library swap-in. Extend `dashboard/src/components/ui.tsx` and `dashboard/src/index.css` in place.
 - Every new token goes in `dashboard/tailwind.config.js`'s `theme.extend`, never as a one-off arbitrary Tailwind value repeated across files.
 - Real data only. Every component in this app has, at one point this project, been found rendering hardcoded fixture data disguised as live output — that was treated as a bug each time, not a placeholder to fix "later." Any new component must be wired to the real `dashboard/src/lib/api.ts` client from the start, or explicitly and visibly labeled as illustrative if real data genuinely isn't available yet.
+
+## 11. Precedence over external design skills
+
+Two third-party Claude Code skill collections are installed via `scripts/setup_skills.sh`
+(into `.claude/skills/`, which is gitignored — the script, not the content, is the record):
+
+- **`apple-design`** (`dickwu/apple-design-skill`) — a design reviewer grounded in Apple's
+  Human Interface Guidelines, generalised to any framework. Chosen deliberately as the
+  design authority for review and critique.
+- **`apple-product` / `apple-testing` / `apple-release-review` / `apple-growth`**
+  (`rshankras/claude-code-apple-skills`) — a selective toolbox. That repo's own `design/`
+  category is deliberately **not** installed, because `apple-design` owns design and two
+  competing design sources would conflict on every call.
+
+**This document wins.** `apple-design` is advisory. Where its guidance contradicts anything
+in sections 1–10 above, follow this document and say that a conflict was overridden — do not
+silently take the HIG position, and do not rewrite this document to match it.
+
+The rules most likely to be contradicted, and which still hold:
+
+| This document | What an Apple-HIG reviewer will tend to say instead |
+| :--- | :--- |
+| Disjoint colour law — cyan is identity only, `state-*` is risk only, always via `riskTone()` | Use the accent colour for success/healthy states |
+| Glass is overlay-only (one of three elevation languages) | Apply glass/`materials` broadly as surface treatment |
+| One gradient, one place — the logotype only | Gradients as general decorative accent |
+
+The reason is not that the HIG is wrong. It is that each rule here was arrived at from a
+specific finding in this codebase — the font swap came from a design-lint hook flagging an
+overused face, the `.deck-field` grid was removed because a decorative pattern was tiled
+across a page that had not earned it, and the disjoint colour law exists because an
+ASI-only status badge was once rendering a green HEALTHY next to RISK 1.00. Discarding that
+reasoning in favour of a general guideline would repeat the mistakes it was written to stop.
+
+Where `apple-design` is genuinely useful and should be used: accessibility auditing, dark-mode
+contrast, loading and empty states, layout density, feedback and motion — areas sections 1–10
+say little about. That is what it was installed for.
