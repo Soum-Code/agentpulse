@@ -1,6 +1,6 @@
 # Session Handoff — AgentPulse Work Log
 
-**Written:** 2026-08-23. **Rewritten clean:** 2026-08-26. **Updated:** 2026-08-27 (Sections 7–9 disagreement/benchmark/positioning; 10 drift diagnosis and fix; 11 tool-claim external test; 12 blocked redesign; 13 competitor audits). **Updated:** 2026-08-28 (Section 14 — external disagreement validation, the last of the three signals to be checked and the third to fail; Section 15 — the productization arc, seven phases from migrations through health/readiness).
+**Written:** 2026-08-23. **Rewritten clean:** 2026-08-26. **Updated:** 2026-08-27 (Sections 7–9 disagreement/benchmark/positioning; 10 drift diagnosis and fix; 11 tool-claim external test; 12 blocked redesign; 13 competitor audits). **Updated:** 2026-08-28 (Section 14 — external disagreement validation, the last of the three signals to be checked and the third to fail; Section 15 — the productization arc, seven phases from migrations through health/readiness). **Updated:** 2026-08-28, later (Section 16 — the frontend clean-slate reset, the skill installs that preceded it, and the Antigravity post-mortem; Sections 2 and 15.4 are now historical, Section 5's open question is answered).
 
 **Project:** AgentPulse — self-hostable observability SDK for grounding-risk and drift monitoring in multi-agent LLM systems. M.Tech project. Working directory: `C:\MLOPs\3rd sem project\project one agent`.
 
@@ -10,6 +10,8 @@
 
 ## 0. TL;DR
 
+- **⚠️ The frontend was deleted on purpose.** A clean-slate reset removed the entire presentation layer — 3,467 lines across `App.tsx`, `SideRail.tsx` and `ui.tsx` — leaving a 22-line shell. The data layer (`lib/api.ts`, `hooks/useWebSocket.ts`) is preserved byte-identical and now orphaned. **Sections 2 and 15.4 describe code that no longer exists**; read Section 16 instead. Nothing in the backend was touched.
+- **Work is on a branch now, not `main`.** `claude/session-handoff-20ykc9`. This answers Section 5's long-open question by fact rather than by decision — see that section.
 - **Backend + evaluation pipeline: real, tested, working.** **209/209 tests passing** (`pytest tests/ -q`; was 130 before the productization arc). Security audit complete. Real model inference, not stub fallbacks.
 - **⚠️ Inter-agent disagreement failed its external check too — that is now three for three.** On real multi-agent traces the shipped configuration detects **0 of 10** independently labelled contradictions. The fix that recovers 6 of 10 does **not generalize**. Section 14; `COMPETITIVE_POSITIONING.md` revised. Every internal benchmark this project has checked against external data has broken or narrowed: drift, tool-claim, and now disagreement.
 - **The evidence-partition problem is the more interesting finding** and is now the real research question for disagreement: agents holding different evidence produce apparent contradictions that are not faults, and an NLI score cannot tell the two apart. Section 14.
@@ -23,7 +25,7 @@
 - **⚠️ The tool-claim validator extracts NOTHING from real agent output** — zero claims across 8,353 prose spans, all 5 models, and **F1 0.000** on a real-data benchmark against its own 0.842. Its 19-case benchmark tested the regex against its own phrasing and could not have caught this. Sections 11 and 12. `COMPETITIVE_POSITIONING.md` §5.1/§5.4 have been revised accordingly.
 - **The tool-claim redesign is BLOCKED on labelling, not engineering** (Section 12). A labelling attempt reached only kappa 0.225 and produced zero examples for two of the four target classes. Read §12.3 before restarting it — the failure mode is a question that isn't well-posed, not a prompt that needs tuning.
 - **⚠️ Competitor audits refuted a positioning claim.** Phoenix and MLflow were both installed and probed: **both ship tool-call verification**, so that differentiator is finished. Disagreement holds only as "no named feature" (MLflow's `@scorer` can build it); **drift is the strongest surviving claim**. Section 13; `COMPETITIVE_POSITIONING.md` has been revised accordingly.
-- **Repo pushed through commit `3cd1080`; working tree clean, `origin/main` in sync.** The dashboard work that used to sit uncommitted was reviewed and checkpointed (`8a93558`) with three known gaps recorded — see Section 15.
+- **Repo pushed through commit `78748b8` on `claude/session-handoff-20ykc9`; working tree clean.** The dashboard work that used to sit uncommitted was reviewed and checkpointed (`8a93558`), then deleted by the reset — its three recorded gaps are resolved by deletion, not by fixing. See Sections 15.4 and 16.
 - Docker, GitHub, and dev-server setup are all previously verified working — see Section 4 for exact commands, not re-derived here.
 
 ---
@@ -68,25 +70,20 @@ Saved to `experiments/results/reasoning_strategy_results_llama_gpu.json` (commit
 
 ---
 
-## 2. Dashboard — current real/fake split and what's been fixed
+## 2. Dashboard — HISTORICAL (the code this section describes was deleted)
 
-> **READ THIS FIRST (2026-08-27): there is substantial uncommitted dashboard work in the tree.**
-> Six files are modified and unstaged — `App.tsx` (~+1700 lines), `index.html`, `index.css`,
-> `tailwind.config.js`, `SideRail.tsx`, `lib/api.ts`. This was written by **Antigravity**, a
-> separate agent that ran in parallel and has since been stopped. It was deliberately left
-> untouched all session and is **not verified, not built, not tested by this session**.
+> **⛔ SUPERSEDED 2026-08-28 by the frontend clean-slate reset (`78748b8`). Read Section 16 first.**
+> Every component named below — the A/B/C category table, the fixed items, the open items,
+> the design-hook status — describes `dashboard/src/App.tsx`, `SideRail.tsx` and `ui.tsx`,
+> **all three of which no longer exist**. They are recoverable from git history at `8a93558`.
 >
-> Inspection showed it is a genuine implementation of the trace-waterfall rebuild (item 1
-> below): it replaces `SAMPLE_WATERFALL_SPANS` with a real span tree built from
-> `api.getTrace()`, and adds the honest `AGENTPULSE_CAPTURE_INPUTS=false` empty state that
-> `TRACE_WATERFALL_REBUILD_PROMPT.md` specifies. **But it also silently reverts the
-> IBM Plex Sans font swap back to Space Grotesk** (all three of `index.html`, `index.css`,
-> `tailwind.config.js`) — which undoes commit `2a46046` for no stated reason — and
-> reorganises `SideRail` nav ("Traces" moved to Investigate, "Replay Debugger" renamed
-> "Recorded Replay").
+> This section is kept, not deleted, for two reasons. The A/B/C distinction (genuinely live /
+> real-but-static-and-labelled / fabricated-and-presented-as-live) is the most useful thing
+> this project worked out about its own UI, and the new interface should be built to keep
+> category C empty by construction. And the earlier Antigravity banner that sat here was
+> the input to the post-mortem in Section 16.3 — it turned out to be accurate on every point.
 >
-> Before committing any of it: run the dashboard build, verify the waterfall against a real
-> trace, and decide deliberately about the font revert. Do not commit it blind.
+> Do not treat anything below as a description of the current tree.
 
 The dashboard (`dashboard/src/App.tsx`, React + TypeScript + Tailwind CSS **v3**) has been through a design-system pass. The most important thing to know before touching it further:
 
@@ -170,9 +167,17 @@ The Llama GPU run (Section 1) succeeded on kernel version 12 after **4 failed at
 
 ---
 
-## 5. Open question, never resolved: branch/PR workflow vs. direct-to-main
+## 5. Branch/PR workflow — answered by fact, not by decision (2026-08-28)
 
-This repo has only ever had a `main` branch; every commit across every session has gone directly to it. A system-triggered PR-creation flow once asked for a PR from `main`, which isn't possible without a second branch to diff against. The user was asked whether to start using feature branches going forward and has not yet answered either way. Keep committing directly to `main` unless told otherwise; don't assume.
+This repo had only ever had a `main` branch; every commit across every session went directly to it, and the user was asked twice whether to start using feature branches without answering either way.
+
+**That is now moot: work is on `claude/session-handoff-20ykc9`.** The session environment designated that branch, so the skill install (`e1b7a4e`) and the frontend reset (`78748b8`) both landed there rather than on `main`.
+
+What a future session needs to know:
+
+- **`main` does not have the frontend reset.** If you check out `main` you will find the old dashboard still present. Verify which branch you are on before concluding anything about the tree.
+- **No PR has been opened**, and none should be without the user asking.
+- The underlying preference question — feature branches as a habit, or back to direct-to-`main` once this branch merges — is **still unanswered**. Don't infer a policy from one environment-designated branch.
 
 ---
 
@@ -186,14 +191,14 @@ The recommendation given to the user, and the reasoning, is in Section 9. Short 
 4. ~~Install Phoenix and audit the competitive claims~~ — **done, for Phoenix *and* MLflow, and two claims were refuted.** See Section 13. What remains unaudited is Datadog, which is not installable; and neither audit measured *quality*, only existence and runnability.
 5. ~~Externally validate inter-agent disagreement~~ — **done, and it failed.** Section 14. Three for three.
 6. ~~Correct `DRIFT_EXPERIMENT_REPORT.md` §3~~ — **investigated, and the premise was wrong.** §3 is correctly scoped and already carried a correction notice; the misremembered error was in the real-text diagnosis and had been fixed there. **The real hazard was the regeneration trap**, which was live: `drift_scenarios.py` rewrote the curated report from a template that still contained all three documented errors. Fixed in `78697c5`.
-7. ~~Decide what to do with the uncommitted dashboard work~~ — **reviewed and checkpointed** (`8a93558`). Three gaps recorded for the dashboard phase; see Section 15.
+7. ~~Decide what to do with the uncommitted dashboard work~~ — **checkpointed (`8a93558`), then deleted (`78748b8`).** The whole presentation layer is gone by deliberate choice; Section 16.
 8. **Re-run ablation Configs D, E and F.** Still open, and now more stale: `ablation_results.json` is dated 2026-08-23, before the disagreement rewiring, the drift rebuild, and the ONNX fix that halved NLI latency. The dashboard displays these numbers.
 9. Whenever picked up: the branch/PR question (Section 5) and the standing `gradient-text` hook suppression (Section 2) are both one-line user decisions away.
 
 ### What is actually next
 
 1. **Capability tiers** — published in Phase 0 (drift Beta, grounding Beta, disagreement Experimental, tool-claim Experimental). Nothing measured since has changed them, so this is a re-confirm or a skip.
-2. **Dashboard, last** — the remaining work. It now has considerably more real data available than when it was frozen: `/v1/platform`, `/v1/health` readiness, worker fleet state and queue depth are all live endpoints that did not exist when that UI was written.
+2. **Frontend rebuild — now the active thread, and it starts from empty.** The old UI was deleted rather than redesigned incrementally (Section 16). It has considerably more real data available than when it was frozen: `/v1/platform`, `/v1/health/ready`, worker fleet state and queue depth are all live endpoints that did not exist when that UI was written, and six of the fourteen `api.ts` methods were never called by the deleted UI at all.
 3. **The disagreement research question**, if the project wants to keep pulling that thread: how to distinguish true contradiction from legitimate disagreement caused by partial evidence (§14). Do **not** improve claim extraction before answering it — that optimises the wrong objective.
 
 **No longer "deliberately not next".** The previous handoff deferred production hardening as an "if users arrive" problem. That call was reversed deliberately by the user and the work is done (Section 15) — with scope held to a thin vertical rather than the full SaaS substrate, so the research contribution was not displaced.
@@ -738,9 +743,16 @@ unfalsifiable. Postgres, multi-tenancy, DR, rate limiting, OTLP and scale tiers 
   cron. Deliberate: deletion is the one irreversible operation here. `--dry-run` first on any
   long-lived database.
 
-### 15.4 Dashboard gaps recorded at checkpoint
+### 15.4 Dashboard gaps recorded at checkpoint — RESOLVED BY DELETION
 
-Not fixed — the dashboard was frozen. Must not survive the dashboard phase:
+> **All three were removed with `App.tsx` in the clean-slate reset (`78748b8`). They were
+> never fixed.** That distinction matters: the underlying wiring work (call `/v1/drift`,
+> call `GET /datasets`, re-run and date the ablation configs) is still owed by whatever
+> replaces these views — the reset removed the false surface, not the obligation. Ablation
+> D/E/F staleness in particular is a data problem, not a UI one, and survives untouched as
+> next-steps item 8.
+
+The gaps as recorded, for the rebuild to design against:
 
 1. `DriftCenterView` renders a hardcoded 5-point series while ignoring the real `agents` prop
    and the live `/v1/drift`; its 0.30 threshold was superseded by `window_centroid_distance`.
@@ -748,7 +760,133 @@ Not fixed — the dashboard was frozen. Must not survive the dashboard phase:
    about DB state; `GET /datasets` returns live counts. Header says 73, table sums to 74.
 3. `ExperimentsView` configs D/E/F are stale (see next-steps item 8) and undated.
 
-`dashboard/src/lib/api.ts:98` types `/v1/health` as `{status, models, version}` — that shape
-is preserved and must stay preserved while the dashboard is frozen.
+`dashboard/src/lib/api.ts` types `/v1/health` as `{status, models, version}`. The old advice
+here was to preserve that shape while the dashboard was frozen. **The freeze is over and the
+type is now simply wrong** — the API no longer loads models, so `models` is permanently
+all-false, and readiness moved to `/v1/health/ready`. It was left untouched through the reset
+because correcting a contract had no place in a deletion commit. Fixing it is the first real
+item of the rebuild — see Section 16.4.
+
+---
+
+## 16. Frontend clean-slate reset, and the skills installed before it (2026-08-28)
+
+The dashboard phase opened and immediately changed shape: instead of fixing the frozen UI's
+remaining fake surfaces, the whole presentation layer was deleted so a new interface can be
+built from nothing. The user's framing was explicit — *"we are not only building the dashboard
+but something unique"* — and the reset was specified in detail rather than left to judgement.
+
+### 16.1 What was deleted, and what was deliberately kept
+
+Commit `78748b8`. **3,467 lines removed**, every change under `dashboard/`:
+
+| Deleted | Lines | Was |
+| :--- | ---: | :--- |
+| `src/App.tsx` | 2,962 | every view, layout and KPI composition (13 view components) |
+| `src/components/SideRail.tsx` | 144 | sidebar navigation |
+| `src/components/ui.tsx` | 361 | `Tile`, `Stat`, `Meter`, `RiskPill`, `StatusBadge`, `Sparkline`, `Waveform`, `EmptyState`, `riskTone`, `asiTone`, `toneText` |
+
+Reset to minimal rather than deleted, because they had to stay valid: `index.css` (325 → 17),
+`tailwind.config.js` (55 → 14, `theme.extend` now `{}`), `index.html` (16 → 13, font links and
+token-dependent body classes gone). `src/App.tsx` was replaced by a **22-line shell** that
+renders one sentence and no product data — deliberately not a starting point for the new design.
+
+**Preserved byte-identical** (verified with `git diff 4cc2072 HEAD`): `src/lib/api.ts`,
+`src/hooks/useWebSocket.ts`, `src/main.tsx`, `vite-env.d.ts`, and every build file
+(`package.json`, `vite.config.ts`, `tsconfig*.json`, `postcss.config.js`, `Dockerfile`,
+`nginx.conf`). React 18 + TypeScript + Vite + **Tailwind v3** foundation intact.
+
+`api.ts` and `useWebSocket.ts` are **orphaned** — nothing imports them — and that is correct,
+not an oversight. Validation: `tsc --noEmit` exit 0, `npm run build` succeeds. Tailwind warns
+`No utility classes were detected`, which is expected while the shell uses inline styles.
+
+**Nothing outside `dashboard/` was touched.** `git status --porcelain` produced no path outside
+it, and `git diff HEAD --stat` against `backend/ datasets/ experiments/ scripts/ sdk/ tests/
+benchmarks/ demo/ llm_adapters/ reasoning/` returned empty. No history rewritten; `8a93558`
+remains an ancestor of HEAD, so the old frontend is fully recoverable.
+
+### 16.2 The fabricated-fixture position is now clean, and the credit is not this session's
+
+`SAMPLE_WATERFALL_SPANS` and `SAMPLE_REPLAY_STEPS` — named in Section 2 as the biggest fake
+surfaces — **were already gone before this reset**, removed by the Antigravity work checkpointed
+at `8a93558`. What was still fabricated and went with `App.tsx`: `strategyData`,
+`baselinesData`, `compoundingNodes`, the `v1.0_curated / 1 case` dataset row, and
+`driftTimelineData` (the hardcoded 5-point drift series).
+
+Post-reset sweep for `SAMPLE_|MOCK_|FAKE_|DEMO_|Zhang et al|v1.0_curated|fixture` across
+`dashboard/src/` and `index.html`: **zero matches.** Nothing was replaced with newly invented
+values — the standing rule is real data or an honest empty/loading/error state, never a
+placeholder.
+
+### 16.3 Antigravity post-mortem — the pattern is the useful part
+
+The parallel agent's work was examined properly before being deleted. Section 2's original
+banner turned out to be accurate on every point. `+1,749 / −375` across 6 files.
+
+**What it got right.** The trace-waterfall rebuild was genuine: it removed all three fabricated
+fixtures (including an invented *"Zhang et al. (2024) proven that 300,000 customers experienced
+quantum synchronization"* claim appearing in two places), added `buildSpanTree()` and
+`SpanTreeView` building a real parent-child tree from spans, took `api.getTrace()` call sites
+from 1 → 4, and implemented the honest `AGENTPULSE_CAPTURE_INPUTS=false` empty state that
+`TRACE_WATERFALL_REBUILD_PROMPT.md` specified. Zero `Math.random`. It also renamed
+`IncidentReplayDebugger` → `RecordedTracePlaybackView`, which describes what the view actually
+did.
+
+**What it got wrong.** It silently reverted the IBM Plex Sans → Space Grotesk font swap in all
+three files, undoing commit `2a46046` with no stated reason. And the sharpest finding: **it
+extended `getDrift`'s type with `latest_tool_drift` and `baseline_size` — verified against the
+backend — and then never called `getDrift` at all**, leaving `DriftCenterView` rendering a
+hardcoded series. Six of fourteen `api.ts` methods were dead at the checkpoint: `getHealth`,
+`getAgentHealth`, `getDrift`, `getExperiments`, `getDatasets`, `getDatasetCases`.
+
+**The pattern worth carrying into the rebuild:** where Antigravity had a written spec
+(`TRACE_WATERFALL_REBUILD_PROMPT.md`) the work was solid and honest; where it had none — drift,
+datasets, experiments — it left hardcoded values behind a soft disclaimer. That is an argument
+for specifying each new view's data contract *before* building it, not after. The
+`buildSpanTree()` approach and the empty-state pattern are worth recovering from
+`git show 8a93558:dashboard/src/App.tsx`.
+
+### 16.4 Open items created or exposed by the reset
+
+1. **`api.ts` `getHealth` is typed wrong.** `{status, models, version}` no longer matches: the
+   API performs no inference so `models` is permanently all-false, and readiness is
+   `/v1/health/ready`. Left untouched through the reset on purpose — a contract fix does not
+   belong in a deletion commit. **First real item of the rebuild.**
+2. **`AGENTPULSE_DESIGN_SYSTEM.md` §2 is stale.** It documents the token palette as *"real
+   values already in the codebase — extend, don't replace"*; those values now exist only in git
+   history. Not edited, because rewriting it would prejudge the replacement system. Decide what
+   that document becomes before writing the new UI's first token.
+3. **`lucide-react`, `recharts`, `react-router-dom` are unused dependencies** — and were already
+   unused before the reset, since the old UI hand-built its own SVG. Retained deliberately; the
+   new UI may want them. Removing them is a lockfile decision for the rebuild.
+
+### 16.5 Skills installed (`e1b7a4e`), and the precedence rule that governs them
+
+Two third-party skill collections were compared and both installed, in **deliberately unequal
+roles** chosen by the user:
+
+- **`apple-design`** (`dickwu/apple-design-skill`, pinned `d0bac1e`) — the **design authority**.
+  One skill plus 53 HIG reference documents, 620 KB.
+- **`apple-product` / `apple-testing` / `apple-release-review` / `apple-growth`**
+  (`rshankras/claude-code-apple-skills`, pinned `9ffb831`) — a **selective toolbox**, ~1.1 MB.
+  That repo's own `design/` category is **deliberately not installed**, because two competing
+  design sources would conflict on every call. Its 18 Swift/SwiftUI/App Store categories are
+  also left out and can be added if the project ever goes Apple-native.
+
+**Install mechanics that will bite if forgotten:** `.claude/skills/` is gitignored and the
+session container is ephemeral, so **the skills are not in the repo and do not survive a new
+session**. `scripts/setup_skills.sh` is the record — pinned, idempotent, re-runnable. Run it
+after any fresh checkout, or the skills simply will not be there.
+
+**Precedence, decided explicitly and recorded in `AGENTPULSE_DESIGN_SYSTEM.md` §11:
+that document wins.** `apple-design` is advisory. It will argue for accent-coloured success
+states, broad glass surfaces and decorative gradients — each of which this project ruled out
+from a specific finding in this codebase (the disjoint colour law exists because an ASI-only
+badge once rendered a green HEALTHY next to RISK 1.00). An override must be **stated, not
+silent**. Where the skill is genuinely useful and should be used: accessibility auditing,
+dark-mode contrast, loading and empty states, layout density, feedback and motion.
+
+Note the tension this creates with item 16.4.2 — the document that wins currently describes a
+palette that no longer exists. Resolve that before the rebuild leans on either.
 
 ---
