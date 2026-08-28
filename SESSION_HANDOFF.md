@@ -244,7 +244,16 @@ Full detail in `DISAGREEMENT_BENCHMARK_REPORT.md` (9 sections). Summary of what 
 - The two disagree on exactly one case — a numeric rounding paraphrase ("7.61 billion" vs "approximately 7.6 billion") the cascade scored at 0.922 risk. **That defect is recorded and deliberately not fixed**, since correcting from a single observation is fitting to one data point.
 - Results are split by label provenance because scoring an LLM judge against LLM-judge-produced labels is circular: `test_01`–`test_20` are dual-LLM-judge labelled, `test_21`–`test_30` are deterministic. **On the deterministic subset both systems tie at 1.000** — the judge's entire advantage falls inside the circular subset. Both facts are true and both are reported.
 
-**Production readiness, assessed but not acted on.** Real gaps, in rough priority: the evaluation executor is `ThreadPoolExecutor(max_workers=1)` at ~250–340 ms/span (~3–4 spans/sec ceiling) behind an in-process `BackgroundTasks` queue that loses work on restart; `retention_days` is configured in `config.py` but **nothing implements it**, so the DB grows forever; auth is a single shared static key with no rotation or tenancy; there is no self-monitoring, no DB migration story, and no backup/restore.
+**Production readiness — this assessment was accurate when written on 2026-08-27 and has since been largely acted on. See Section 15; the ✅ items below are done.**
+
+The gaps as assessed then, in rough priority:
+
+- ✅ the evaluation executor is `ThreadPoolExecutor(max_workers=1)` at ~250–340 ms/span (~3–4 spans/sec ceiling) behind an in-process `BackgroundTasks` queue that **loses work on restart** — *replaced by a durable job queue with a separate worker; a SIGKILL mid-evaluation now recovers exactly once. Measured ceiling is ~12 spans/sec at 4 workers.*
+- ✅ `retention_days` is configured in `config.py` but **nothing implements it**, so the DB grows forever — *implemented, verified on real data.*
+- ✅ there is no self-monitoring — *`/v1/platform` plus worker heartbeats.*
+- ✅ no DB migration story — *Alembic, baselined and tested.*
+- ⬜ auth is a single shared static key with no rotation or tenancy — **still true.** Deferred deliberately: single-tenant self-hosted deployment.
+- ⬜ no backup/restore — **still true.** Deferred; follows a database decision not yet made.
 
 **One conceptual trap noted during that discussion:** adding sampling to relieve the throughput ceiling would directly contradict the project's own thesis. `README.md` defines AgentPulse against exactly that — *"treat quality evaluation as an optional, sampled add-on… AgentPulse instead runs a real evaluator on every captured span."* Decoupling evaluation into separate workers is the right fix; sampling is a last resort, not a first option.
 
