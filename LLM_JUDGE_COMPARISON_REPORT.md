@@ -93,8 +93,8 @@ Across all 30 cases there is **one** case where the systems differ: `test_09`.
 | Evidence | "Qwen 2.5 7B contains approximately **7.61 billion** total parameters with dense transformer layers." |
 | Claim | "Qwen 2.5 7B has approximately **7.6 billion** parameters in its dense transformer architecture." |
 | Ground truth | SUPPORTED (not a failure) |
-| NLI cascade | grounding_score **0.922** → predicted failure ✗ |
-| LLM judge | `SUPPORTED` → correct ✓ |
+| NLI cascade | grounding_score **0.922** → predicted failure |
+| LLM judge | `SUPPORTED` → correct |
 
 This is a **numeric rounding paraphrase**. DeBERTa scored a faithful restatement as high
 risk; the judge handled it. That is a real and characterizable NLI weakness, not noise.
