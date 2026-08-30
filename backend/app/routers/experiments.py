@@ -45,6 +45,34 @@ class CurateCaseRequest(BaseModel):
     operator_notes: Optional[str] = None
 
 
+def _scalar_label(value: Any) -> Optional[str]:
+    """Reduce a free-form result-file field to a display string.
+
+    The files under experiments/results/ are written by many different scripts
+    over many months, so the same key does not hold the same shape everywhere:
+    `dataset` is a bare string in most files but an object with `id`/`url` in
+    the three that reference an external HuggingFace corpus. Emitting whichever
+    shape happened to be on disk makes this endpoint's contract depend on the
+    experiment that produced the file, which is not something a caller can
+    reason about.
+
+    Nothing is lost by flattening here -- the untouched original is still
+    returned under `data`.
+    """
+    if value is None or isinstance(value, str):
+        return value
+    if isinstance(value, dict):
+        for key in ("id", "name", "version", "path"):
+            candidate = value.get(key)
+            if isinstance(candidate, str):
+                return candidate
+        return json.dumps(value, separators=(",", ":"))
+    if isinstance(value, (list, tuple)):
+        parts = [p for p in (_scalar_label(v) for v in value) if p]
+        return ", ".join(parts) or None
+    return str(value)
+
+
 @router.get("/experiments")
 async def list_experiments(
     limit: int = Query(default=20, ge=1, le=100),
@@ -60,9 +88,9 @@ async def list_experiments(
                     data = json.load(f)
                     file_experiments.append({
                         "file": p.name,
-                        "timestamp": data.get("timestamp"),
-                        "model": data.get("model"),
-                        "dataset": data.get("dataset"),
+                        "timestamp": _scalar_label(data.get("timestamp")),
+                        "model": _scalar_label(data.get("model")),
+                        "dataset": _scalar_label(data.get("dataset")),
                         "data": data,
                     })
             except Exception as e:
