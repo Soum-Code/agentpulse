@@ -452,6 +452,40 @@ class DriftDetector:
             self._centroids[agent_id] = np.frombuffer(data, dtype=np.float32).copy()
             self._sample_counts[agent_id] = sample_count
 
+    def serialize_window_baseline(self, agent_id: str) -> tuple[bytes, int] | None:
+        """Serialize the window-drift baseline pool for database storage.
+
+        Separate from `serialize_centroid`: the EMA centroid and this pool are
+        different structures feeding different signals, and only the centroid was
+        ever persisted. Restoring the centroid alone brings back the spike metric
+        but leaves `window_centroid_distance` -- the signal DRIFT_DETECTED
+        actually fires on -- cold for `min_samples_for_alert` fresh samples after
+        every restart, which is the opposite of what the restore exists to do.
+
+        The running sum is stored rather than the mean, so the count stays
+        meaningful and accumulation resumes exactly where it stopped.
+        """
+        with self._lock:
+            if agent_id not in self._baseline_sums:
+                return None
+            count = self._baseline_counts.get(agent_id, 0)
+            if count <= 0:
+                return None
+            return self._baseline_sums[agent_id].astype(np.float64).tobytes(), count
+
+    def load_window_baseline(self, agent_id: str, data: bytes, count: int) -> None:
+        """Restore the window-drift baseline pool from database.
+
+        Only the baseline side is restored. The current window
+        (`_recent_embeddings`) is deliberately left empty: it holds the most
+        recent `mean_window` outputs, and outputs from before a restart are no
+        longer "current". Re-warming those few samples is correct; re-warming the
+        entire baseline from scratch was not.
+        """
+        with self._lock:
+            self._baseline_sums[agent_id] = np.frombuffer(data, dtype=np.float64).copy()
+            self._baseline_counts[agent_id] = count
+
     def touched_agent_ids(self, agent_ids: set[str]) -> set[str]:
         """Filter `agent_ids` down to those this detector currently has a centroid for."""
         with self._lock:

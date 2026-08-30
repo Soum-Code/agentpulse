@@ -108,6 +108,7 @@ async def get_trace(trace_id: str):
             "trace": {
                 "trace_id": trace.trace_id,
                 "pipeline_id": trace.pipeline_id,
+                "service_name": trace.service_name,
                 "start_time": trace.start_time.isoformat() if trace.start_time else None,
                 "end_time": trace.end_time.isoformat() if trace.end_time else None,
                 "status": trace.status,
@@ -129,6 +130,10 @@ async def get_trace(trace_id: str):
                     "tokens_in": s.tokens_in,
                     "tokens_out": s.tokens_out,
                     "tool_name": s.tool_name,
+                    "tool_args": s.tool_args,
+                    "tool_result_summary": s.tool_result_summary,
+                    "input_summary": s.input_summary,
+                    "output_summary": s.output_summary,
                     "start_time": s.start_time.isoformat() if s.start_time else None,
                     "evaluation": (
                         {
@@ -151,8 +156,12 @@ async def get_trace(trace_id: str):
                     "severity": a.severity,
                     "message": a.message,
                     "agent_id": a.agent_id,
-                    "created_at": a.created_at.isoformat(),
+                    "trace_id": a.trace_id,
+                    "span_id": a.span_id,
                     "acknowledged": a.acknowledged,
+                    "resolved": a.resolved,
+                    "created_at": a.created_at.isoformat(),
+                    "details": json.loads(a.details_json) if a.details_json else None,
                 }
                 for a in alerts
             ],
@@ -280,7 +289,15 @@ async def get_drift_overview():
             overview.append({
                 "agent_id": agent.agent_id,
                 "current_asi": agent.current_asi,
+                # Two distinct signals, deliberately both exposed. The spike
+                # metric fires on ordinary step-to-step variation; the windowed
+                # one is what DRIFT_DETECTED alerts actually read. A null
+                # windowed value means the baseline and current windows have not
+                # both filled yet -- absent, not zero.
                 "latest_centroid_distance": drift.centroid_distance if drift else None,
+                "latest_window_centroid_distance": (
+                    drift.window_centroid_distance if drift else None
+                ),
                 "latest_tool_drift": drift.tool_drift if drift else None,
                 "baseline_size": drift.baseline_size if drift else 0,
             })

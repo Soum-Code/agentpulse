@@ -322,6 +322,7 @@ async def _amain(lease_seconds: int) -> None:
     # exactly when the system had just been restarted.
     try:
         restored = 0
+        window_restored = 0
         async with get_session() as session:
             result = await session.execute(
                 select(Baseline).where(Baseline.baseline_type == "embedding_centroid")
@@ -332,7 +333,26 @@ async def _amain(lease_seconds: int) -> None:
                         baseline.agent_id, baseline.data, baseline.sample_count
                     )
                     restored += 1
-        logger.info("Restored drift baselines for %d agent(s)", restored)
+
+            # The centroid restore above only revives the spike metric. Without
+            # the window pool as well, `window_centroid_distance` -- the metric
+            # DRIFT_DETECTED actually fires on -- stays None until every agent
+            # re-accumulates a full baseline, so drift alerting was still blind
+            # across exactly the window this restore exists to protect.
+            window_result = await session.execute(
+                select(Baseline).where(Baseline.baseline_type == "window_baseline_pool")
+            )
+            for baseline in window_result.scalars().all():
+                if baseline.data:
+                    drift_detector.load_window_baseline(
+                        baseline.agent_id, baseline.data, baseline.sample_count
+                    )
+                    window_restored += 1
+        logger.info(
+            "Restored drift baselines for %d agent(s); window pools for %d",
+            restored,
+            window_restored,
+        )
     except Exception as exc:
         logger.error("Failed to restore drift baselines: %s", exc)
 

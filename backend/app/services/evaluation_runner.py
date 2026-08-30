@@ -45,6 +45,7 @@ from app.models import (
     DriftRecord,
     Evaluation,
     Span,
+    Trace,
 )
 
 logger = logging.getLogger("agentpulse.evaluation_runner")
@@ -199,6 +200,7 @@ async def persist_results(payload: dict[str, Any], result) -> bool:
                 node_name=payload["agent_id"],
                 span_id=span_id,
                 centroid_distance=result.drift.centroid_distance,
+                window_centroid_distance=result.drift.window_centroid_distance,
                 tool_drift=result.drift.tool_drift,
                 quality_drift=result.drift.quality_drift,
                 error_rate_delta=result.drift.error_rate_delta,
@@ -231,6 +233,18 @@ async def persist_results(payload: dict[str, Any], result) -> bool:
                     agent.avg_risk_score = result.overall_risk_score
                 if result.drift and result.drift.stability_index is not None:
                     agent.current_asi = result.drift.stability_index
+
+            # Update trace status and overall risk
+            trace_result = await session.execute(
+                select(Trace).where(Trace.trace_id == payload["trace_id"])
+            )
+            trace = trace_result.scalar_one_or_none()
+            if trace:
+                if trace.overall_risk_score is not None:
+                    trace.overall_risk_score = round(max(trace.overall_risk_score, result.overall_risk_score), 4)
+                else:
+                    trace.overall_risk_score = round(result.overall_risk_score, 4)
+                trace.status = "completed"
 
         await session.commit()
     return True
@@ -267,6 +281,31 @@ async def persist_drift_baselines(drift_detector, agent_ids: set[str]) -> None:
                 baseline.data = data
                 baseline.sample_count = info["sample_count"]
                 baseline.updated_at = datetime.now(timezone.utc)
+
+            # The window-drift baseline pool is a separate structure from the EMA
+            # centroid and has to be persisted separately, or the sustained-shift
+            # metric restarts cold every time even though the centroid survives.
+            window = drift_detector.serialize_window_baseline(agent_id)
+            if window is not None:
+                window_data, window_count = window
+                window_result = await session.execute(
+                    select(Baseline).where(
+                        Baseline.agent_id == agent_id,
+                        Baseline.baseline_type == "window_baseline_pool",
+                    )
+                )
+                window_baseline = window_result.scalar_one_or_none()
+                if window_baseline is None:
+                    session.add(Baseline(
+                        agent_id=agent_id,
+                        baseline_type="window_baseline_pool",
+                        data=window_data,
+                        sample_count=window_count,
+                    ))
+                else:
+                    window_baseline.data = window_data
+                    window_baseline.sample_count = window_count
+                    window_baseline.updated_at = datetime.now(timezone.utc)
 
         await session.commit()
 

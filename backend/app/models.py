@@ -139,7 +139,15 @@ class DriftRecord(SQLModel, table=True):
 
     # Embedding drift
     embedding: Optional[bytes] = Field(default=None, sa_column=Column(LargeBinary))
+    # Distance of one output from the running EMA centroid: the *spike* signal.
+    # Fires on ordinary step-to-step variation, so it is kept but not used for
+    # alerting.
     centroid_distance: Optional[float] = None
+    # Baseline-window mean vs current-window mean: the *sustained shift* signal
+    # that alerting actually reads. Stays None until both windows fill, which is
+    # why coverage is partial by design -- a null here means "not enough
+    # samples yet", not "no drift".
+    window_centroid_distance: Optional[float] = None
 
     # Other drift signals
     tool_drift: Optional[float] = None
