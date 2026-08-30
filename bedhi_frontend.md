@@ -66,10 +66,35 @@ Transient focus
 
 **AgentPulse translation**
 
-*Standard material* — trace rows, execution tree, metrics, evidence, experiment tables.
+| Surface | Material | Why |
+| :--- | :--- | :--- |
+| Trace rows | standard | dense, scanned for minutes at a time |
+| Execution tree | standard | structure must stay legible |
+| Metrics, evidence, experiment tables | standard | numbers must never sit on a moving background |
+| Connection / verify surface | **Liquid Glass** | transient, entered once |
+| Floating navigation dock | **Liquid Glass** | floats above content |
+| Command palette | **Liquid Glass** | transient focus layer |
+| Contextual controls | **Liquid Glass** | attached to content, not content itself |
+| Inspector header | **Liquid Glass** | contextual chrome; the scrolling body stays solid |
+| High-priority overlays | **Liquid Glass** | deliberately interrupts |
 
-*Liquid Glass* — connection surface, floating navigation, command palette, contextual
-controls, transient inspectors, high-priority overlays.
+### Liquid Glass rules
+
+1. **Glass floats, content sits.** If a surface scrolls with the page, it is content and
+   gets a standard material. If it hovers over the page, it can be glass.
+2. **Never behind numbers.** Metrics, scores and timestamps are read precisely. A
+   translucent, shifting backdrop under a risk score is a legibility cost with no benefit.
+3. **One glass layer at a time.** Glass stacked on glass stops reading as depth and starts
+   reading as fog.
+4. **Depth is spent, not sprinkled.** The codebase already encodes this — `index.css`
+   defines a single `.glass` class documented as *overlay-only, never the base tile
+   surface*, because depth belongs in one place rather than spread across every panel.
+5. **Legibility outranks the effect.** Where translucency and contrast conflict, reduce the
+   translucency. A `@supports not (backdrop-filter)` fallback to a near-opaque background
+   already exists and should stay.
+
+The failure mode to avoid is the one the current dashboard drifted into once: glass on
+every card, which flattens the hierarchy it was supposed to create.
 
 ### What we do not take
 
