@@ -1,17 +1,21 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 
-export function useWebSocket(url: string) {
+export function useWebSocket(url: string, enabled = true) {
   const [lastMessage, setLastMessage] = useState<any>(null);
   const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
-    const wsUrl = url.replace('http', 'ws');
-    let ws: WebSocket;
-    let reconnectTimer: number;
+    if (!enabled || !url) {
+      setIsConnected(false);
+      return;
+    }
+
+    let ws: WebSocket | undefined;
+    let reconnectTimer: number | undefined;
     let closedByCleanup = false;
 
     function connect() {
-      ws = new WebSocket(wsUrl);
+      ws = new WebSocket(url);
 
       ws.onopen = () => {
         setIsConnected(true);
@@ -36,7 +40,7 @@ export function useWebSocket(url: string) {
       };
 
       ws.onerror = () => {
-        ws.close();
+        ws?.close();
       };
     }
 
@@ -44,7 +48,7 @@ export function useWebSocket(url: string) {
 
     // Keep-alive ping
     const pingInterval = setInterval(() => {
-      if (ws.readyState === WebSocket.OPEN) {
+      if (ws?.readyState === WebSocket.OPEN) {
         ws.send('ping');
       }
     }, 30000);
@@ -52,10 +56,10 @@ export function useWebSocket(url: string) {
     return () => {
       closedByCleanup = true;
       clearInterval(pingInterval);
-      clearTimeout(reconnectTimer);
-      ws.close();
+      if (reconnectTimer !== undefined) clearTimeout(reconnectTimer);
+      ws?.close();
     };
-  }, [url]);
+  }, [url, enabled]);
 
   return { lastMessage, isConnected };
 }
