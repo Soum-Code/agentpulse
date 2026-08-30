@@ -39,7 +39,7 @@ WebSocket: `/v1/ws/live` (the route is `/v1/ws/live`, not `/v1/ws`; a mismatch h
 
 The important finding of this pass: components fall into **three** categories, not two. Treating category B as if it were category C would be a mistake.
 
-### Category A — genuinely wired to live data ✓
+### Category A — genuinely wired to live data
 
 | Component | Real source |
 | :--- | :--- |

@@ -1,6 +1,6 @@
 # Session Handoff — AgentPulse Work Log
 
-**Written:** 2026-08-23. **Rewritten clean:** 2026-08-26. **Updated:** 2026-08-27 (Sections 7–9 disagreement/benchmark/positioning; 10 drift diagnosis and fix; 11 tool-claim external test; 12 blocked redesign; 13 competitor audits). **Updated:** 2026-08-28 (Section 14 — external disagreement validation, the last of the three signals to be checked and the third to fail; Section 15 — the productization arc, seven phases from migrations through health/readiness).
+**Written:** 2026-08-23. **Rewritten clean:** 2026-08-26. **Updated:** 2026-08-27 (Sections 7–9 disagreement/benchmark/positioning; 10 drift diagnosis and fix; 11 tool-claim external test; 12 blocked redesign; 13 competitor audits). **Updated:** 2026-08-28 (Section 14 — external disagreement validation, the last of the three signals to be checked and the third to fail; Section 15 — the productization arc, seven phases from migrations through health/readiness). **Updated:** 2026-08-30 (Section 16 — dashboard unfrozen, the landing-page claim audit, and the half-finished drift restore).
 
 **Project:** AgentPulse — self-hostable observability SDK for grounding-risk and drift monitoring in multi-agent LLM systems. M.Tech project. Working directory: `C:\MLOPs\3rd sem project\project one agent`.
 
@@ -11,7 +11,7 @@
 ## 0. TL;DR
 
 - **Backend + evaluation pipeline: real, tested, working.** **209/209 tests passing** (`pytest tests/ -q`; was 130 before the productization arc). Security audit complete. Real model inference, not stub fallbacks.
-- **⚠️ Inter-agent disagreement failed its external check too — that is now three for three.** On real multi-agent traces the shipped configuration detects **0 of 10** independently labelled contradictions. The fix that recovers 6 of 10 does **not generalize**. Section 14; `COMPETITIVE_POSITIONING.md` revised. Every internal benchmark this project has checked against external data has broken or narrowed: drift, tool-claim, and now disagreement.
+- **Inter-agent disagreement failed its external check too — that is now three for three.** On real multi-agent traces the shipped configuration detects **0 of 10** independently labelled contradictions. The fix that recovers 6 of 10 does **not generalize**. Section 14; `COMPETITIVE_POSITIONING.md` revised. Every internal benchmark this project has checked against external data has broken or narrowed: drift, tool-claim, and now disagreement.
 - **The evidence-partition problem is the more interesting finding** and is now the real research question for disagreement: agents holding different evidence produce apparent contradictions that are not faults, and an NLI score cannot tell the two apart. Section 14.
 - **Production hardening happened, and is no longer "deliberately not next".** Seven phases: migrations, durable queue, ONNX fix, throughput measurement, retention, self-monitoring, health/readiness. All measured, not asserted. Section 15 and `PRODUCTIZATION_LOG.md`.
 - **Drift was diagnosed and fixed** against an external real-trace corpus — false alarms on unchanged operation went from **91.7% → 1.5%**, detection 92%, AUC 0.991 on a held-out split. The 0.30 threshold was never the problem; the aggregation was. **But coverage is only 24.5%** — see Section 10, and do not quote the accuracy without the coverage.
@@ -20,9 +20,13 @@
 - **Two head-to-head benchmarks written, and both contradicted their own hypothesis** — reported that way rather than smoothed. See Sections 7 and 8.
 - **Competitive positioning documented** (`COMPETITIVE_POSITIONING.md`). Verdict: breadth is unwinnable. The defensible niche was originally "three signals none of them ships" — **that is now two, and they are not equally strong**; see Sections 8 and 13.
 - **A real documentation defect was found and corrected**: `DRIFT_EXPERIMENT_REPORT.md`'s prose contradicted its own data table, and the same errors had propagated into `PROJECT_REPORT.md` §7. See Section 9.
-- **⚠️ The tool-claim validator extracts NOTHING from real agent output** — zero claims across 8,353 prose spans, all 5 models, and **F1 0.000** on a real-data benchmark against its own 0.842. Its 19-case benchmark tested the regex against its own phrasing and could not have caught this. Sections 11 and 12. `COMPETITIVE_POSITIONING.md` §5.1/§5.4 have been revised accordingly.
+- **The tool-claim validator extracts NOTHING from real agent output** — zero claims across 8,353 prose spans, all 5 models, and **F1 0.000** on a real-data benchmark against its own 0.842. Its 19-case benchmark tested the regex against its own phrasing and could not have caught this. Sections 11 and 12. `COMPETITIVE_POSITIONING.md` §5.1/§5.4 have been revised accordingly.
 - **The tool-claim redesign is BLOCKED on labelling, not engineering** (Section 12). A labelling attempt reached only kappa 0.225 and produced zero examples for two of the four target classes. Read §12.3 before restarting it — the failure mode is a question that isn't well-posed, not a prompt that needs tuning.
-- **⚠️ Competitor audits refuted a positioning claim.** Phoenix and MLflow were both installed and probed: **both ship tool-call verification**, so that differentiator is finished. Disagreement holds only as "no named feature" (MLflow's `@scorer` can build it); **drift is the strongest surviving claim**. Section 13; `COMPETITIVE_POSITIONING.md` has been revised accordingly.
+- **Competitor audits refuted a positioning claim.** Phoenix and MLflow were both installed and probed: **both ship tool-call verification**, so that differentiator is finished. Disagreement holds only as "no named feature" (MLflow's `@scorer` can build it); **drift is the strongest surviving claim**. Section 13; `COMPETITIVE_POSITIONING.md` has been revised accordingly.
+- **The dashboard is unfrozen and the three Section 15.4 gaps are closed** — drift, datasets and experiments all read live endpoints now. Section 16.
+- **The drift baseline restore was only half a fix, and that is the most consequential find of the session.** The restore brought back the EMA centroid but not the window pools, so `DRIFT_DETECTED` was blind for 32 spans per agent after every restart. Fixed and verified live. Section 16.3.
+- **The new landing page shipped ten claims with no basis in the repo** — a grounding F1 that appears nowhere, an SDK command that does not exist, SOC2/HIPAA readiness, an Apache licence with no LICENSE file, and a whitepaper citing a results file that was never created. All corrected. Section 16.4; treat it as the standing example of why marketing copy needs the same evidence bar as a report.
+- **Design direction is frozen in `bedhi_frontend.md`** — reference by reference, what to take and what to refuse, with Liquid Glass rules. Section 16.7.
 - **Repo pushed through commit `3cd1080`; working tree clean, `origin/main` in sync.** The dashboard work that used to sit uncommitted was reviewed and checkpointed (`8a93558`) with three known gaps recorded — see Section 15.
 - Docker, GitHub, and dev-server setup are all previously verified working — see Section 4 for exact commands, not re-derived here.
 
@@ -156,7 +160,7 @@ The Llama GPU run (Section 1) succeeded on kernel version 12 after **4 failed at
 - **Two SQLite DB files exist and they are not the same one.** `./data/agentpulse.db` and `./backend/data/agentpulse.db`. The path in `.env` is relative (`sqlite+aiosqlite:///./data/agentpulse.db`), so which one the backend uses depends on its working directory — as launched, it writes to **`backend/data/agentpulse.db`**. Query that one when verifying, not the root one. This cost real debugging time once.
 - **The backend auto-restarts when killed.** Something supervises it (not `--reload`, and not `.claude/launch.json`), so `Stop-Process` on the port-8000 PID results in a fresh process within seconds — which conveniently picks up code changes, but means you cannot simply stop it. Health is at `/v1/health`, **not** `/health`.
 
-  **⚠️ This next part changed on 2026-08-28 — the old advice is now wrong.** It used to say
+  **This next part changed on 2026-08-28 — the old advice is now wrong.** It used to say
   "allow ~10s for models to load; `/v1/health` reports `models: {nli_model: false, ...}`
   until they do". The API **no longer loads models at all** (it performs no inference), so
   `models` is permanently all-false and that is correct. Do not wait on it.
@@ -244,16 +248,16 @@ Full detail in `DISAGREEMENT_BENCHMARK_REPORT.md` (9 sections). Summary of what 
 - The two disagree on exactly one case — a numeric rounding paraphrase ("7.61 billion" vs "approximately 7.6 billion") the cascade scored at 0.922 risk. **That defect is recorded and deliberately not fixed**, since correcting from a single observation is fitting to one data point.
 - Results are split by label provenance because scoring an LLM judge against LLM-judge-produced labels is circular: `test_01`–`test_20` are dual-LLM-judge labelled, `test_21`–`test_30` are deterministic. **On the deterministic subset both systems tie at 1.000** — the judge's entire advantage falls inside the circular subset. Both facts are true and both are reported.
 
-**Production readiness — this assessment was accurate when written on 2026-08-27 and has since been largely acted on. See Section 15; the ✅ items below are done.**
+**Production readiness — this assessment was accurate when written on 2026-08-27 and has since been largely acted on. See Section 15; the items below are done.**
 
 The gaps as assessed then, in rough priority:
 
-- ✅ the evaluation executor is `ThreadPoolExecutor(max_workers=1)` at ~250–340 ms/span (~3–4 spans/sec ceiling) behind an in-process `BackgroundTasks` queue that **loses work on restart** — *replaced by a durable job queue with a separate worker; a SIGKILL mid-evaluation now recovers exactly once. Measured ceiling is ~12 spans/sec at 4 workers.*
-- ✅ `retention_days` is configured in `config.py` but **nothing implements it**, so the DB grows forever — *implemented, verified on real data.*
-- ✅ there is no self-monitoring — *`/v1/platform` plus worker heartbeats.*
-- ✅ no DB migration story — *Alembic, baselined and tested.*
-- ⬜ auth is a single shared static key with no rotation or tenancy — **still true.** Deferred deliberately: single-tenant self-hosted deployment.
-- ⬜ no backup/restore — **still true.** Deferred; follows a database decision not yet made.
+- [x] the evaluation executor is `ThreadPoolExecutor(max_workers=1)` at ~250–340 ms/span (~3–4 spans/sec ceiling) behind an in-process `BackgroundTasks` queue that **loses work on restart** — *replaced by a durable job queue with a separate worker; a SIGKILL mid-evaluation now recovers exactly once. Measured ceiling is ~12 spans/sec at 4 workers.*
+- [x] `retention_days` is configured in `config.py` but **nothing implements it**, so the DB grows forever — *implemented, verified on real data.*
+- [x] there is no self-monitoring — *`/v1/platform` plus worker heartbeats.*
+- [x] no DB migration story — *Alembic, baselined and tested.*
+- [ ] auth is a single shared static key with no rotation or tenancy — **still true.** Deferred deliberately: single-tenant self-hosted deployment.
+- [ ] no backup/restore — **still true.** Deferred; follows a database decision not yet made.
 
 **One conceptual trap noted during that discussion:** adding sampling to relieve the throughput ceiling would directly contradict the project's own thesis. `README.md` defines AgentPulse against exactly that — *"treat quality evaluation as an optional, sampled add-on… AgentPulse instead runs a real evaluator on every captured span."* Decoupling evaluation into separate workers is the right fix; sampling is a last resort, not a first option.
 
@@ -271,7 +275,7 @@ The gaps as assessed then, in rough priority:
 
 **One claim in that correction was itself wrong, and is superseded.** The §3 statement that "the embedding-centroid detector never fired at all" came from reading `final_centroid_dist` — the value *after* the EMA centroid has converged and the distance decayed. Peak distances were 0.4453 and 0.6838; the centroid branch did fire. Same class of error as the one being corrected. `DRIFT_REAL_TEXT_DIAGNOSIS_REPORT.md` §3 records this; `DRIFT_EXPERIMENT_REPORT.md` §3 still carries the wrong sentence and **should be corrected** — the only drift doc item still outstanding.
 
-**⚠️ `experiments/drift_scenarios.py` regenerates `DRIFT_EXPERIMENT_REPORT.md` from a hardcoded template** (lines ~141-163) containing the original false prose. Running that script silently reverts commit `19cde3a`. This is *why* the contradiction existed: the table is generated from data, the §2 prose is a static string nobody re-derived. If you re-run it, restore the report afterwards (`git checkout -- DRIFT_EXPERIMENT_REPORT.md`).
+**`experiments/drift_scenarios.py` regenerates `DRIFT_EXPERIMENT_REPORT.md` from a hardcoded template** (lines ~141-163) containing the original false prose. Running that script silently reverts commit `19cde3a`. This is *why* the contradiction existed: the table is generated from data, the §2 prose is a static string nobody re-derived. If you re-run it, restore the report afterwards (`git checkout -- DRIFT_EXPERIMENT_REPORT.md`).
 
 ---
 
@@ -324,7 +328,7 @@ undetectable — with the corrected representation it is partly detectable (AUC 
 0.30 threshold. Verified end-to-end through `/v1/ingest`: 40 spans (24 one topic, 16
 another) produced exactly **one** alert at `distance=0.537`, not a per-span storm.
 
-**⚠️ The cost, which must not be read past: coverage is 24.5%.** A `None` metric skips the
+**The cost, which must not be read past: coverage is 24.5%.** A `None` metric skips the
 rule, so no drift alert is raised on roughly three quarters of sessions, and the 1.5%
 false-alarm figure is measured only on the longer sessions that do report — whose halves
 are more similar. Honest framing: **when this detector speaks it is accurate; it stays
@@ -449,7 +453,7 @@ structured field.** OTel span `status`/`error.type` describe the *LLM call*
 result text. And 359/406 results are a single-element `[{"type":"text",...}]` wrapper — no
 typed counts.
 
-### 12.3 ⛔ Why it is blocked — do not simply retry this
+### 12.3 Why it is blocked — do not simply retry this
 
 **No labelled accuracy target exists in this corpus.** All four candidate targets were
 tested and all four failed:
@@ -529,9 +533,9 @@ platforms have now been installed and probed.
 
 | Claim | Arize Phoenix | MLflow 3.15.2 | Datadog |
 | :--- | :--- | :--- | :--- |
-| Tool-call verification absent | ❌ **refuted** — 3 evaluators | ❌ **refuted** — `ToolCallCorrectness`, `ToolCallEfficiency` | unaudited |
-| Inter-agent disagreement absent | ✅ holds | ⚠️ holds *as named feature only*; composable via `@scorer` | unaudited |
-| Drift absent | ✅ holds | ✅ **holds strongest** — no named feature *and* no primitives | unaudited |
+| Tool-call verification absent | **refuted** — 3 evaluators | **refuted** — `ToolCallCorrectness`, `ToolCallEfficiency` | unaudited |
+| Inter-agent disagreement absent | holds | holds *as named feature only*; composable via `@scorer` | unaudited |
+| Drift absent | holds | **holds strongest** — no named feature *and* no primitives | unaudited |
 
 **Tool-call verification is finished as a differentiator.** Present in both platforms where
 it could be checked, while AgentPulse's own implementation measures F1 0.000 on real traces
@@ -750,5 +754,134 @@ Not fixed — the dashboard was frozen. Must not survive the dashboard phase:
 
 `dashboard/src/lib/api.ts:98` types `/v1/health` as `{status, models, version}` — that shape
 is preserved and must stay preserved while the dashboard is frozen.
+
+---
+
+## 16. Dashboard unfrozen, and the honesty audit that came with it (2026-08-30)
+
+The dashboard freeze from Section 15 is over. A full frontend rework landed (landing page,
+connect/handshake flow, command surface, 3D spatial instrument), and it was audited against
+the backend rather than accepted on sight. Most of this section is that audit.
+
+### 16.1 The three Section 15.4 gaps are closed
+
+All three now read live data: `DriftCenterView` calls `/v1/drift`, `DatasetsView` calls
+`/v1/datasets` (real counts: dev 21, val 22, test 30, multiagent 22, curated 76 — the
+hardcoded "1 case" was badly stale), and experiments come from `/v1/experiments`.
+
+The `/v1/health` shape constraint recorded at the end of 15.4 is moot: nothing called
+`getHealth` then, and the new surface uses `/v1/health/ready`, `/v1/health/evaluator` and
+`/v1/platform` instead.
+
+### 16.2 Backend fixes
+
+**`/v1/experiments` crashed the whole console.** Three of the 31 files under
+`experiments/results/` carry `dataset` as an object (`{id, url}`) rather than a string —
+`disagreement_probe_key.json`, `extraction_generalization_key.json`,
+`extraction_generalization_results.json`. The endpoint passed whatever shape was on disk
+straight through, React refused to render an object inside a `<p>`, and with no error
+boundary the entire `CommandSurface` unmounted to a blank page. Fixed with `_scalar_label()`
+in `routers/experiments.py`, which flattens `model`/`dataset`/`timestamp` to display
+strings. Nothing is lost — the untouched original is still returned under `data`.
+
+The TypeScript type said `dataset?: string`, so `tsc` could not catch it. Same class of bug
+as the `service_name` mismatch: **a type that lies about a response shape is worse than no
+type at all.**
+
+**`window_centroid_distance` is now persisted and queryable.** Column added to
+`DriftRecord` (migration `c4b7e91a2f08`), written in `evaluation_runner.persist_results`,
+exposed as `latest_window_centroid_distance` on `/v1/drift`. Previously the validated
+sustained-shift metric only ever reached operators inside an alert payload.
+
+### 16.3 The drift restore was half a fix — this is the important one
+
+`worker.py` restores drift baselines on startup, with a comment saying it exists so drift
+would not "go quiet exactly when the system had just been restarted". It only achieved that
+for the wrong metric.
+
+`load_centroid()` restored `_centroids` and `_sample_counts` — the EMA centroid, which
+feeds `centroid_distance`, the *spike* signal. It did **not** restore `_baseline_sums`,
+`_baseline_counts` or `_recent_embeddings`, which is what `_update_window_drift` needs. So
+after every restart the spike metric worked immediately while
+`window_centroid_distance` — the metric `DRIFT_DETECTED` actually fires on — returned
+`None` until each agent re-accumulated `min_samples_for_alert` (20) fresh baseline samples
+plus `mean_window` (12) window samples. **32 spans per agent of blind alerting, on every
+restart.**
+
+Observed directly: new drift rows carried real `centroid_distance` values (0.68, 0.61,
+0.40) alongside `window_centroid_distance = NULL`, with `baseline_size` at 6-9.
+
+Fixed with `serialize_window_baseline()` / `load_window_baseline()` and a second
+`Baseline` row type, `window_baseline_pool`. The running sum is stored rather than the mean
+so accumulation resumes exactly where it stopped. Only the baseline side is restored — the
+current window is deliberately left cold, because outputs from before a restart are not
+"current".
+
+Verified live, not just in a unit test: after a real worker restart the log reads
+`Restored drift baselines for 48 agent(s); window pools for 5`, and `sample_count`
+continued 1 to 2 across the restart instead of resetting to 0.
+
+### 16.4 Landing-page claims that did not survive checking
+
+The new landing page shipped a number of statements with no basis in the repository. All
+corrected; listed here because the same failure mode will recur:
+
+| Claim | Reality |
+| :--- | :--- |
+| "94.2% F1" grounding benchmark | Appears nowhere in `experiments/results/`. Real cascade F1 is **0.963** (`Config_C_Cascade`). The only 0.9421 in the repo is a cosine similarity in a disagreement diagnosis file |
+| `pip install agentpulse && agentpulse init` | The SDK declares no `[project.scripts]`. `agentpulse init` does not exist |
+| "SOC2 / HIPAA Ready", "Full compliance" | No audit, no certification. Regulated claims with zero backing |
+| "OSS Apache 2.0" (twice) | There is no LICENSE file in the repository |
+| "SQLite WAL / PostgreSQL queue" | No Postgres driver, no Postgres code path |
+| "evaluated on CPU in ~27.8ms" | 27.8ms is Config A, the embedding gate alone. Full cascade is 215.9ms |
+| Whitepaper citing `gpu_vs_cpu_benchmark_results.json` | That file does not exist |
+| Whitepaper: `baseline_comparison_results.json` "vs GPT-4o judge and Prometheus 2" | It compares three non-LLM baselines using qwen-7b |
+| "Restores baseline centroids across restarts without loss" | See 16.3 — it was a partial restore |
+| Hero listing "cross-agent contradictions" and "tool execution falsifications" | Both measure ~0 on external real traces. Removed from the headline; the tool-claim pillar is now labelled Experimental with its constraint stated |
+
+**The pattern worth remembering: a fabricated citation is worse than no citation**, because
+it looks checkable. An earlier fix to the sandbox introduced `ablation_eval_runs.json` as a
+provenance line — a file that has never existed.
+
+### 16.5 Other things measured
+
+- **`Trace.overall_risk_score` and `Trace.status`** are now written by the evaluation
+  runner, but only for newly evaluated spans. Historical traces stay `running` with null
+  risk, which is why any "has risk" filter reads empty on old data.
+  `scripts/backfill_trace_aggregates.py` recomputes both from stored evaluations
+  (**dry-run by default**; on the live database it reports 1,211 traces to update out of
+  20,577, with 19,366 having no evaluations at all).
+- **Evaluation coverage is ~6%** (1,268 of 20,701 spans). An empty queue means nothing is
+  *waiting*, not that everything has been scored — the console badge was changed from "All
+  evaluated" to "Queue empty" for exactly this reason.
+- **Migration state is inconsistent on the live database.** `alembic_version` reads
+  `8d86fee0d663` while the schema already has both `worker_heartbeats` and
+  `window_centroid_distance`. `alembic upgrade head` therefore fails with a duplicate
+  column. Reconcile with `alembic stamp c4b7e91a2f08` before running migrations again.
+- **The venv's editable installs point at the pre-rename path** (`project one agent`), so
+  `import app` fails. Every command in this session used
+  `PYTHONPATH=backend;sdk/src` as a workaround. Worth reinstalling.
+- **The API is supervised and respawns when killed; the worker is not.** Killing the worker
+  leaves the instance with no evaluator until it is started by hand.
+
+### 16.6 AI-artifact cleanup
+
+Emoji removed repo-wide: 51 in code (UI icons in `SwarmSimulator` and `LandingView` were
+replaced with lucide components, not deleted) and 66 in documentation (status markers became
+table text and standard `- [x]` checkboxes). Three "comprehensive"-style adjectives removed
+from benchmark docstrings.
+
+Deliberately **not** stripped: the explanatory comments. This repository's comments record
+measured findings — why `optimum` is pinned, why partial windows are withheld, why
+`useCountUp` skips animation in background tabs, why retention depends on deletion
+ordering. Those are the reason the project can be picked up again, and they are not filler.
+
+### 16.7 Design direction
+
+`bedhi_frontend.md` is the frozen design research baseline: reference by reference, what to
+take and what to refuse, with Liquid Glass rules grounded in what `index.css` already
+enforces. The organising conclusion is that AgentPulse needs **two design modes** — an
+expressive editorial public surface and a calm investigative product surface — and that
+references are not interchangeable between them.
 
 ---

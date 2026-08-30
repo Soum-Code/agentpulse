@@ -536,11 +536,11 @@ an artefact of the harness rather than the system.
 
 | Criterion | Status |
 | :--- | :--- |
-| ONNX path works | ✅ `nli_backend: "onnx"`, verified in the production code path |
-| Or system reports ONNX unavailable + fallback | ✅ also implemented, and tested by forcing the failure |
-| No silent degradation | ✅ `/v1/health`, `backend_info()`, worker startup log |
-| Inference correctness unchanged | ✅ worst difference 1.2e-08; guarded by a test |
-| Full tests pass | ✅ **154/154** |
+| ONNX path works | `nli_backend: "onnx"`, verified in the production code path |
+| Or system reports ONNX unavailable + fallback | also implemented, and tested by forcing the failure |
+| No silent degradation | `/v1/health`, `backend_info()`, worker startup log |
+| Inference correctness unchanged | worst difference 1.2e-08; guarded by a test |
+| Full tests pass | **154/154** |
 
 Dashboard and SDK untouched. Worker counts and throughput deliberately **not** benchmarked —
 that is the next phase, and it can now measure the real backend rather than an accidentally

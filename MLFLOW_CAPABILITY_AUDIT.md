@@ -16,9 +16,9 @@ standing risk. MLflow is open source and installable, so it was checkable all al
 
 | Capability | Verdict |
 | :--- | :--- |
-| Tool-call / tool-response evaluation | ❌ **Claim REFUTED** — exists as a named feature |
-| Inter-agent disagreement | ⚠️ No named feature, but **composable** — wording matters, see §4 |
-| Drift / stability / baseline monitoring | ✅ Claim holds, and holds most strongly |
+| Tool-call / tool-response evaluation | **Claim REFUTED** — exists as a named feature |
+| Inter-agent disagreement | No named feature, but **composable** — wording matters, see §4 |
+| Drift / stability / baseline monitoring | Claim holds, and holds most strongly |
 | Trace-level evaluators | Exists |
 | Deterministic (non-LLM) evaluators | Exists **and confirmed runnable** |
 | Composable custom evaluators | Exists **and confirmed runnable** |
@@ -164,9 +164,9 @@ Combining both audits:
 
 | Claim | Arize (Phoenix) | MLflow | Datadog |
 | :--- | :--- | :--- | :--- |
-| Tool-call verification absent | ❌ refuted | ❌ **refuted** | unaudited |
-| Inter-agent disagreement absent | ✅ holds | ⚠️ holds *as named feature*; composable | unaudited |
-| Drift absent | ✅ holds | ✅ **holds strongly** — no primitives | unaudited |
+| Tool-call verification absent | refuted | **refuted** | unaudited |
+| Inter-agent disagreement absent | holds | holds *as named feature*; composable | unaudited |
+| Drift absent | holds | **holds strongly** — no primitives | unaudited |
 
 **Tool-call verification is finished as a differentiator** — measured present in both
 auditable platforms, while AgentPulse's own implementation scores F1 0.000 on real traces.

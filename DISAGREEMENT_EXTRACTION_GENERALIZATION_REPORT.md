@@ -51,11 +51,11 @@ Selected because it satisfies what DEBATE could not:
 
 | Requirement | DEBATE | This corpus |
 | :--- | :--- | :--- |
-| Distinct agent identities | ✅ | ✅ subagents 1–4 |
-| Shared task context | ✅ | ✅ one claim per episode |
-| Multiple agent outputs | ✅ | ✅ up to 4 per episode |
-| Tool / retrieval structure | ❌ none | ✅ `hits` with source URLs |
-| **Mandated answer marker** | **✅ `A) Yes / B) No`** | **❌ none — free prose** |
+| Distinct agent identities | yes | subagents 1–4 |
+| Shared task context | yes | one claim per episode |
+| Multiple agent outputs | yes | up to 4 per episode |
+| Tool / retrieval structure | none | `hits` with source URLs |
+| **Mandated answer marker** | ** `A) Yes / B) No`** | ** none — free prose** |
 | Disagreement source | binary answer flip | differing evidence partitions |
 
 The last row matters for validity. A corpus that *assigns* agents opposing roles would

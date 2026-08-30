@@ -1,4 +1,4 @@
-"""Comprehensive Empirical Benchmark & Evaluation Suite for AgentPulse.
+"""Empirical benchmark and evaluation suite for AgentPulse.
 
 Measures and records distinct, uncombined metrics:
 A. SDK Enqueue Throughput (in-memory queue capacity)

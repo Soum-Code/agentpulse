@@ -1,4 +1,4 @@
-"""AgentPulse Comprehensive 13-Layer Latency & Throughput Profiler.
+"""AgentPulse 13-layer latency and throughput profiler.
 
 Profiles each distinct architectural layer with separate timers:
 1. Prompt preparation
@@ -75,7 +75,7 @@ def compute_distribution_stats(samples: List[float]) -> Dict[str, float]:
 
 def profile_all_layers() -> Dict[str, Any]:
     print("=" * 64)
-    print("AGENTPULSE 13-LAYER COMPREHENSIVE LATENCY PROFILER")
+    print("AGENTPULSE 13-LAYER LATENCY PROFILER")
     print(f"Environment: {platform.system()} {platform.release()} ({os.cpu_count()} CPU cores)")
     print("=" * 64)
 

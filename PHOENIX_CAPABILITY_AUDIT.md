@@ -52,9 +52,9 @@ Non-LLM helpers also present: `MatchesRegex`, `PrecisionRecallFScore`, `exact_ma
 
 | Claim in `COMPETITIVE_POSITIONING.md` | Verdict | Evidence |
 | :--- | :--- | :--- |
-| Tool-call verification — "not a dedicated feature" | ❌ **WRONG** | Three dedicated evaluators |
-| Inter-agent disagreement — "not a dedicated feature" | ✅ Holds | No evaluator; package-wide search for `disagree\|contradict\|consisten\|multi.?agent` returned nothing |
-| Drift — "not a dedicated feature" | ✅ Holds *for this package* | No evaluator; search for `drift\|centroid\|baseline` returned nothing. Scope limit in §5 |
+| Tool-call verification — "not a dedicated feature" | **WRONG** | Three dedicated evaluators |
+| Inter-agent disagreement — "not a dedicated feature" | Holds | No evaluator; package-wide search for `disagree\|contradict\|consisten\|multi.?agent` returned nothing |
+| Drift — "not a dedicated feature" | Holds *for this package* | No evaluator; search for `drift\|centroid\|baseline` returned nothing. Scope limit in §5 |
 
 ### 3.1 The tool claim was not merely wrong — it was wrong about the exact thing proposed as the fix
 

@@ -2,13 +2,13 @@
 
 Flow:
 LangGraph Application
-  ➔ LangGraphAdapter
-  ➔ AgentPulse SDK (with HTTP / Ingest payload generation)
-  ➔ FastAPI /v1/ingest endpoint
-  ➔ SQLite WAL persistence
-  ➔ Evaluator pipeline (Two-stage Grounding, Tool Claims, Disagreement, Drift)
-  ➔ Alert Engine
-  ➔ Verification of Trace, Spans, Evaluations, and Alerts in Database.
+  - LangGraphAdapter
+  - AgentPulse SDK (with HTTP / Ingest payload generation)
+  - FastAPI /v1/ingest endpoint
+  - SQLite WAL persistence
+  - Evaluator pipeline (Two-stage Grounding, Tool Claims, Disagreement, Drift)
+  - Alert Engine
+  - Verification of Trace, Spans, Evaluations, and Alerts in Database.
 """
 
 import asyncio

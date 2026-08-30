@@ -108,7 +108,7 @@ monitoring), so agent traces sit alongside everything else in the same system.
 | Automatic issue detection | AI-powered issue detection | **Signal** — ranked issues + proposed fix | **Insights** + **Patterns** | None — threshold alerting only |
 | Evaluation approach | Scorers, 50+ built-in metrics/judges | Evaluators with human alignment | Built-in quality/safety/privacy evals | **NLI cascade** (MiniLM → DeBERTa), no LLM judge |
 | Tool-call verification | **Ships `ToolCallCorrectness`, `ToolCallEfficiency`** — audited | **Ships 3 dedicated evaluators** — audited | Not a dedicated feature *(doc-based, unaudited)* | Dedicated deterministic validator — **but inert on real traces, F1 0.000, see §5.1** |
-| Inter-agent disagreement | No named feature — audited; **composable via `@scorer`** | No named feature — audited | Not a dedicated feature *(doc-based, unaudited)* | Dedicated engine, but ⚠️ **0.00 recall on external real traces** (see §5.2) |
+| Inter-agent disagreement | No named feature — audited; **composable via `@scorer`** | No named feature — audited | Not a dedicated feature *(doc-based, unaudited)* | Dedicated engine, but **0.00 recall on external real traces** (see §5.2) |
 | Drift detection | No named feature, no primitives — audited | No named feature in Phoenix — audited; AX's Signal/Patterns not auditable | Indirect via Insights *(doc-based)* | **Dedicated, rebuilt and validated** (§5.3) |
 | Fix-proving loop | Prompt optimization | **Experiments** — prove before shipping | Not a focus | None |
 | In-product AI assistant | No | **Alyx** | No | No |
@@ -149,7 +149,7 @@ The defensible position is narrow: three signals none of the three platforms shi
 first-class feature. But the honest state of those three is uneven, and this section
 separates what is claimed from what is measured.
 
-### 5.1 Deterministic tool-claim validation — ⚠️ inert on real agents
+### 5.1 Deterministic tool-claim validation — inert on real agents
 
 Cross-references an agent's textual claims about tool use against actual recorded tool
 calls: fabricated tools, wrong result counts, claimed success on a failed call.
@@ -173,7 +173,7 @@ harnesses the agent never narrates it, because invocation is a `tool_call` field
 prose narrates intent instead. The tool name the regex hunts for is in a field the
 validator never reads, so expanding the patterns cannot fix it.
 
-**⚠️ The "none of them ships this" half of that claim has been measured and is FALSE for
+**The "none of them ships this" half of that claim has been measured and is FALSE for
 both auditable platforms** — `PHOENIX_CAPABILITY_AUDIT.md` and `MLFLOW_CAPABILITY_AUDIT.md`,
 both 2026-08-27, both by installing the package rather than reading its docs.
 
@@ -227,7 +227,7 @@ agent say it used"* (structurally known from `tool_call` names, no inference req
 ask *"do the agent's statements about tool **results** match those results"* — where
 fabrication actually causes harm.
 
-### 5.2 Inter-agent disagreement — ❌ fails on external real traces
+### 5.2 Inter-agent disagreement — fails on external real traces
 
 Detects contradictions between agents within one trace using NLI.
 
@@ -505,7 +505,7 @@ benchmark rather than an assertion.
 
 ## 9. What would invalidate this analysis
 
-- **⚠️ This section's own warning came true twice.** The bullet below predicted that a
+- **This section's own warning came true twice.** The bullet below predicted that a
   doc-based absence claim might be wrong. Both auditable platforms were then installed and
   probed (`PHOENIX_CAPABILITY_AUDIT.md`, `MLFLOW_CAPABILITY_AUDIT.md`) and the
   tool-verification claim was **refuted for both**. Phoenix ships three tool evaluators,
