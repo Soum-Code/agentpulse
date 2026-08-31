@@ -1,103 +1,110 @@
 import { useState } from 'react';
-import { Activity, AlertTriangle, Database, FlaskConical, History, LayoutGrid, MoreHorizontal, Route, Zap } from 'lucide-react';
-import { LiquidGlass } from './LiquidGlass';
+import {
+  Activity,
+  AlertTriangle,
+  Database,
+  FlaskConical,
+  LayoutGrid,
+  Route,
+} from 'lucide-react';
+
+export type NavTabId = 'overview' | 'traces' | 'incidents' | 'drift' | 'lab' | 'datasets';
 
 interface NavigationDockProps {
+  activeTab: NavTabId;
+  onChangeTab: (tab: NavTabId) => void;
   openIncidentsCount: number;
+  className?: string;
 }
 
-/* Primary items: only currently functional destinations */
-const PRIMARY_ITEMS = [
-  { id: 'overview', label: 'Command', icon: LayoutGrid, available: true },
+const NAV_ITEMS = [
+  { id: 'overview', label: 'Overview', icon: LayoutGrid, shortcut: '1', activeStyle: 'bg-yellow-400 text-black shadow-[3px_3px_0px_#000]' },
+  { id: 'traces', label: 'Traces', icon: Route, shortcut: '2', activeStyle: 'bg-cyan-400 text-black shadow-[3px_3px_0px_#000]' },
+  { id: 'incidents', label: 'Incidents', icon: AlertTriangle, shortcut: '3', activeStyle: 'bg-pink-500 text-white shadow-[3px_3px_0px_#000]' },
+  { id: 'drift', label: 'Drift & ASI', icon: Activity, shortcut: '4', activeStyle: 'bg-orange-500 text-white shadow-[3px_3px_0px_#000]' },
+  { id: 'lab', label: 'Telemetry Lab', icon: FlaskConical, shortcut: '5', activeStyle: 'bg-purple-400 text-black shadow-[3px_3px_0px_#000]' },
+  { id: 'datasets', label: 'Datasets', icon: Database, shortcut: '6', activeStyle: 'bg-emerald-400 text-black shadow-[3px_3px_0px_#000]' },
 ] as const;
 
-/* Overflow items: planned but not yet implemented */
-const OVERFLOW_ITEMS = [
-  { id: 'traces', label: 'Traces', icon: Route },
-  { id: 'incidents', label: 'Incidents', icon: AlertTriangle },
-  { id: 'drift', label: 'Drift', icon: Activity },
-  { id: 'replay', label: 'Replay', icon: History },
-  { id: 'experiments', label: 'Experiments', icon: FlaskConical },
-  { id: 'datasets', label: 'Datasets', icon: Database },
-  { id: 'telemetry', label: 'Telemetry', icon: Zap },
-] as const;
-
-export function NavigationDock({ openIncidentsCount }: NavigationDockProps) {
+export function NavigationDock({
+  activeTab,
+  onChangeTab,
+  openIncidentsCount,
+  className = '',
+}: NavigationDockProps) {
   const [expanded, setExpanded] = useState(false);
-  const [overflowOpen, setOverflowOpen] = useState(false);
 
   return (
     <nav
-      aria-label="AgentPulse sections"
-      className="fixed bottom-6 left-1/2 -translate-x-1/2 z-30"
+      aria-label="AgentPulse Command Navigation"
+      className={`fixed bottom-5 left-1/2 -translate-x-1/2 z-40 max-w-[95vw] ${className}`}
       onMouseEnter={() => setExpanded(true)}
-      onMouseLeave={() => { setExpanded(false); setOverflowOpen(false); }}
+      onMouseLeave={() => setExpanded(false)}
       onFocusCapture={() => setExpanded(true)}
-      onBlurCapture={(event) => {
-        if (!event.currentTarget.contains(event.relatedTarget)) {
+      onBlurCapture={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget)) {
           setExpanded(false);
-          setOverflowOpen(false);
         }
       }}
     >
-      <LiquidGlass elevation="dock" interactive={false} className="px-2 py-2 rounded-2xl flex items-center gap-1 border border-line-strong">
-        {PRIMARY_ITEMS.map((item) => {
+      <div className="px-3 py-2 rounded-2xl flex items-center gap-1 sm:gap-2 border-2 border-black bg-surface-2/95 backdrop-blur-2xl shadow-comic-lg">
+        {NAV_ITEMS.map((item) => {
           const Icon = item.icon;
+          const isActive = activeTab === item.id;
+          const isIncident = item.id === 'incidents';
+          const hasIncidents = isIncident && openIncidentsCount > 0;
+
           return (
             <button
               key={item.id}
               type="button"
-              aria-current="page"
-              title={item.label}
-              className="dock-item dock-item-active"
+              onClick={() => onChangeTab(item.id)}
+              aria-current={isActive ? 'page' : undefined}
+              title={`${item.label} (${item.shortcut})`}
+              className={`relative flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-mono font-bold transition-all duration-150 cursor-pointer select-none border-2 border-black active:translate-x-0.5 active:translate-y-0.5 ${
+                isActive
+                  ? item.activeStyle
+                  : 'bg-surface border-transparent text-neutral-300 hover:text-white hover:border-black hover:bg-surface-3'
+              }`}
             >
-              <Icon className="w-4 h-4 shrink-0" aria-hidden="true" />
-              <span className={`dock-label ${expanded ? 'dock-label-open' : ''}`}>{item.label}</span>
+              <Icon
+                className={`w-4 h-4 shrink-0 transition-transform ${
+                  isActive ? 'scale-110' : 'text-neutral-400'
+                }`}
+                aria-hidden="true"
+              />
+
+              {/* Responsive Text Label */}
+              <span
+                className={`transition-all duration-150 whitespace-nowrap uppercase tracking-wider text-2xs ${
+                  expanded
+                    ? 'inline-block opacity-100 max-w-[120px]'
+                    : isActive
+                    ? 'inline-block opacity-100 max-w-[120px]'
+                    : 'hidden sm:inline-block opacity-85 max-w-[100px]'
+                }`}
+              >
+                {item.label}
+              </span>
+
+              {/* Incidents Comic Pill */}
+              {hasIncidents && (
+                <span
+                  className={`px-1.5 py-0.2 rounded-full text-3xs font-black font-mono border border-black ${
+                    isActive
+                      ? 'bg-black text-white'
+                      : 'bg-pink-500 text-white shadow-[1px_1px_0px_#000]'
+                  }`}
+                  aria-label={`${openIncidentsCount} open incidents`}
+                >
+                  {openIncidentsCount}
+                </span>
+              )}
             </button>
           );
         })}
-
-        {/* Separator */}
-        <span className="w-px h-5 bg-line mx-1" aria-hidden="true" />
-
-        {/* More / Overflow toggle */}
-        <div className="relative">
-          <button
-            type="button"
-            onClick={() => setOverflowOpen(!overflowOpen)}
-            className="dock-more"
-            aria-expanded={overflowOpen}
-            aria-label="More sections"
-            title="More sections (planned)"
-          >
-            <MoreHorizontal className="w-4 h-4 shrink-0" aria-hidden="true" />
-            <span className={`dock-label ${expanded ? 'dock-label-open' : ''}`}>More</span>
-          </button>
-
-          {overflowOpen && (
-            <div className="dock-overflow liquid-glass-elevated border border-line-strong">
-              <p className="px-3 py-1.5 text-2xs text-ink-faint">Planned</p>
-              {OVERFLOW_ITEMS.map((item) => {
-                const Icon = item.icon;
-                const count = item.id === 'incidents' ? openIncidentsCount : 0;
-                return (
-                  <button
-                    key={item.id}
-                    type="button"
-                    disabled
-                    className="dock-overflow-item"
-                    title={`${item.label} — planned for a later phase`}
-                  >
-                    <Icon className="w-4 h-4 shrink-0" aria-hidden="true" />
-                    <span className="flex-1 text-left">{item.label}</span>
-                    {count > 0 && <span className="dock-badge" aria-label={`${count} open`}>{count}</span>}
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      </LiquidGlass>
+      </div>
     </nav>
   );
 }
+

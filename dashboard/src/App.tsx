@@ -6,7 +6,6 @@ import { LandingView } from './views/LandingView';
 import { ConnectView } from './views/ConnectView';
 import { HandshakeView } from './views/HandshakeView';
 import { CommandSurface, TelemetryState } from './views/CommandSurface';
-import { NavigationDock } from './components/NavigationDock';
 
 const SpatialInstrument = lazy(() =>
   import('./spatial/SpatialInstrument').then((module) => ({ default: module.SpatialInstrument })),
@@ -17,8 +16,16 @@ const DEFAULT_CONNECTION: AgentPulseConnection = {
   apiKey: import.meta.env.VITE_API_KEY || undefined,
 };
 
+function getModeFromHash(): InstrumentMode {
+  const hash = window.location.hash.toLowerCase();
+  if (hash === '#connect') return 'CONNECT';
+  if (hash === '#handshake') return 'HANDSHAKE';
+  if (hash === '#console' || hash === '#command') return 'COMMAND';
+  return 'LANDING';
+}
+
 export default function App() {
-  const [mode, setMode] = useState<InstrumentMode>('LANDING');
+  const [mode, setModeState] = useState<InstrumentMode>(getModeFromHash);
   const [sceneMode, setSceneMode] = useState<SpatialSceneMode>('constellation');
   const [connection, setConnection] = useState<AgentPulseConnection>(DEFAULT_CONNECTION);
   const [metrics, setMetrics] = useState<Metrics | null>(null);
@@ -29,6 +36,30 @@ export default function App() {
   const [telemetryError, setTelemetryError] = useState<string | null>(null);
   const [hoveredAgentId, setHoveredAgentId] = useState<string | null>(null);
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
+
+  // Set mode and sync with hash & scroll
+  const setMode = useCallback((newMode: InstrumentMode) => {
+    setModeState(newMode);
+    if (newMode === 'LANDING') {
+      window.history.pushState(null, '', window.location.pathname);
+    } else if (newMode === 'CONNECT') {
+      window.history.pushState(null, '', '#connect');
+    } else if (newMode === 'HANDSHAKE') {
+      window.history.pushState(null, '', '#handshake');
+    } else if (newMode === 'COMMAND') {
+      window.history.pushState(null, '', '#console');
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, []);
+
+  // Listen to browser back/forward buttons
+  useEffect(() => {
+    const onPopState = () => {
+      setModeState(getModeFromHash());
+    };
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
 
   const client = useMemo(() => createApiClient(connection), [connection]);
   const wsUrl = useMemo(() => websocketUrlFor(connection), [connection]);
@@ -92,21 +123,28 @@ export default function App() {
   };
 
   return (
-    <div className="relative w-screen h-screen overflow-hidden bg-void text-ink font-sans">
+    <div className="relative w-full min-h-screen bg-void text-ink font-sans selection:bg-cyan-500/30 selection:text-white">
+      {/* ── Ambient 3D Spatial Instrument Canvas (Fixed Background) ── */}
       {mode !== 'COMMAND' && (
-        <Suspense fallback={<div className="absolute inset-0 bg-void" aria-hidden="true" />}>
-          <SpatialInstrument
-            mode={mode}
-            sceneMode={sceneMode}
-            agents={agents}
-            hoveredAgentId={hoveredAgentId}
-            selectedAgentId={selectedAgentId}
-            onHoverAgent={setHoveredAgentId}
-            onSelectAgent={setSelectedAgentId}
-          />
-        </Suspense>
+        <div className="fixed inset-0 pointer-events-none -z-10 overflow-hidden">
+          <Suspense fallback={<div className="absolute inset-0 bg-void" aria-hidden="true" />}>
+            <SpatialInstrument
+              mode={mode}
+              sceneMode={sceneMode}
+              agents={agents}
+              hoveredAgentId={hoveredAgentId}
+              selectedAgentId={selectedAgentId}
+              onHoverAgent={setHoveredAgentId}
+              onSelectAgent={setSelectedAgentId}
+            />
+          </Suspense>
+          {/* Subtle vignette layer to keep text contrast 100% crisp */}
+          <div className="absolute inset-0 bg-gradient-to-r from-[#030408]/95 via-[#030408]/80 to-[#030408]/40 pointer-events-none" />
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-transparent via-[#030408]/50 to-[#030408] pointer-events-none" />
+        </div>
       )}
 
+      {/* ── Main View Router ── */}
       {mode === 'LANDING' && (
         <LandingView
           onEnter={() => setMode('CONNECT')}

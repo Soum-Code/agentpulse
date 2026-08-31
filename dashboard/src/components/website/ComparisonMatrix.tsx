@@ -99,16 +99,16 @@ export function ComparisonMatrix() {
       );
     }
     return (
-      <span className={`text-2xs font-mono font-medium ${isHighlighted ? 'text-cyan-300 font-bold' : 'text-neutral-300'}`}>
+      <span className={`text-2xs font-mono font-medium ${isHighlighted ? 'text-indigo-300 font-bold' : 'text-neutral-300'}`}>
         {val}
       </span>
     );
   };
 
   return (
-    <div className="w-full rounded-2xl bg-[#0a0c14] border border-white/10 overflow-hidden shadow-2xl space-y-6">
+    <div className="w-full rounded-2xl bg-surface-2 border border-line overflow-hidden shadow-2xl space-y-6">
       <div className="p-6 sm:p-8 pb-0">
-        <div className="inline-flex items-center gap-2 text-xs font-mono text-cyan-400 mb-1">
+        <div className="inline-flex items-center gap-2 text-xs font-mono text-indigo-400 mb-1">
           <Cpu className="w-4 h-4" />
           <span>Architectural Comparison & Benchmark Audit</span>
         </div>
@@ -123,9 +123,9 @@ export function ComparisonMatrix() {
       <div className="overflow-x-auto px-6 pb-6">
         <table className="w-full text-left text-xs font-mono border-collapse">
           <thead>
-            <tr className="border-b border-white/[0.08] text-3xs text-neutral-400 uppercase tracking-wider">
+            <tr className="border-b border-line text-3xs text-neutral-400 uppercase tracking-wider">
               <th className="py-3.5 px-4 font-bold text-white min-w-[220px]">Capability / Metric</th>
-              <th className="py-3.5 px-4 text-center min-w-[140px] bg-cyan-500/10 border-x border-cyan-500/20 text-cyan-300 font-bold">
+              <th className="py-3.5 px-4 text-center min-w-[140px] bg-indigo-500/10 border-x border-indigo-500/20 text-indigo-300 font-bold">
                 AgentPulse
               </th>
               <th className="py-3.5 px-4 text-center min-w-[120px]">MLflow</th>
@@ -134,7 +134,7 @@ export function ComparisonMatrix() {
               <th className="py-3.5 px-4 text-center min-w-[130px]">LLM Judges (GPT-4o)</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-white/[0.04]">
+          <tbody className="divide-y divide-line">
             {COMPARISON_DATA.map((row, idx) => (
               <tr key={idx} className="hover:bg-white/[0.02] transition-colors">
                 <td className="py-3.5 px-4">
@@ -143,7 +143,7 @@ export function ComparisonMatrix() {
                     {row.description}
                   </div>
                 </td>
-                <td className="py-3.5 px-4 text-center bg-cyan-500/5 border-x border-cyan-500/15">
+                <td className="py-3.5 px-4 text-center bg-indigo-500/5 border-x border-indigo-500/15">
                   {renderCell(row.agentpulse, true)}
                 </td>
                 <td className="py-3.5 px-4 text-center">{renderCell(row.mlflow)}</td>

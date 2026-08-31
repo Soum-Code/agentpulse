@@ -6,8 +6,8 @@ interface AgentNode {
   id: string;
   name: string;
   role: string;
-  x: number;
-  y: number;
+  x: number; // Percentage (0-100)
+  y: number; // Percentage (0-100)
   status: 'idle' | 'running' | 'success' | 'warning' | 'error';
   latency: number;
   asi: number;
@@ -25,11 +25,19 @@ interface TelemetryPacket {
 }
 
 const INITIAL_NODES: AgentNode[] = [
-  { id: 'planner', name: 'Planner Agent', role: 'Query Decomposition', x: 120, y: 190, status: 'success', latency: 8.4, asi: 99.8, currentTask: 'Decomposing hypothesis into sub-queries', Icon: Brain },
-  { id: 'retriever', name: 'Search Retriever', role: 'Vector & Tool Ingest', x: 340, y: 90, status: 'success', latency: 24.1, asi: 97.2, currentTask: 'Fetching document embeddings from vector store', Icon: Search },
-  { id: 'verifier', name: 'Claim Verifier', role: 'NLI & Grounding Gate', x: 560, y: 90, status: 'success', latency: 27.8, asi: 98.4, currentTask: 'Validating entailment via DeBERTa cross-attention', Icon: ShieldCheck },
-  { id: 'tools', name: 'Tool Executor', role: 'Deterministic Assertions', x: 340, y: 290, status: 'success', latency: 1.2, asi: 99.1, currentTask: 'Executing SQL query on cluster registry', Icon: Wrench },
-  { id: 'synthesizer', name: 'Synthesis Engine', role: 'Final Consensus', x: 780, y: 190, status: 'success', latency: 88.5, asi: 96.5, currentTask: 'Assembling grounded response with citations', Icon: Sparkles },
+  { id: 'planner', name: 'Planner Agent', role: 'Query Decomposition', x: 13, y: 50, status: 'success', latency: 8.4, asi: 99.8, currentTask: 'Decomposing hypothesis into sub-queries', Icon: Brain },
+  { id: 'retriever', name: 'Search Retriever', role: 'Vector & Tool Ingest', x: 37, y: 22, status: 'success', latency: 24.1, asi: 97.2, currentTask: 'Fetching document embeddings from vector store', Icon: Search },
+  { id: 'verifier', name: 'Claim Verifier', role: 'NLI & Grounding Gate', x: 63, y: 22, status: 'success', latency: 27.8, asi: 98.4, currentTask: 'Validating entailment via DeBERTa cross-attention', Icon: ShieldCheck },
+  { id: 'tools', name: 'Tool Executor', role: 'Deterministic Assertions', x: 37, y: 78, status: 'success', latency: 1.2, asi: 99.1, currentTask: 'Executing SQL query on cluster registry', Icon: Wrench },
+  { id: 'synthesizer', name: 'Synthesis Engine', role: 'Final Consensus', x: 87, y: 50, status: 'success', latency: 88.5, asi: 96.5, currentTask: 'Assembling grounded response with citations', Icon: Sparkles },
+];
+
+const EDGES = [
+  { from: 'planner', to: 'retriever' },
+  { from: 'planner', to: 'tools' },
+  { from: 'retriever', to: 'verifier' },
+  { from: 'tools', to: 'verifier' },
+  { from: 'verifier', to: 'synthesizer' },
 ];
 
 export function SwarmSimulator() {
@@ -49,11 +57,11 @@ export function SwarmSimulator() {
   useEffect(() => {
     if (scenario === 'clean') {
       setNodes([
-        { id: 'planner', name: 'Planner Agent', role: 'Query Decomposition', x: 120, y: 190, status: 'success', latency: 8.4, asi: 99.8, currentTask: 'Decomposing hypothesis into sub-queries', Icon: Brain },
-        { id: 'retriever', name: 'Search Retriever', role: 'Vector & Tool Ingest', x: 340, y: 90, status: 'success', latency: 24.1, asi: 97.2, currentTask: 'Fetching document embeddings from vector store', Icon: Search },
-        { id: 'verifier', name: 'Claim Verifier', role: 'NLI & Grounding Gate', x: 560, y: 90, status: 'success', latency: 27.8, asi: 98.4, currentTask: 'Stage 1 MiniLM + Stage 2 DeBERTa: Grounded (Score: 0.96)', Icon: ShieldCheck },
-        { id: 'tools', name: 'Tool Executor', role: 'Deterministic Assertions', x: 340, y: 290, status: 'success', latency: 1.2, asi: 99.1, currentTask: 'All 3/3 tool claims verified against JSON return', Icon: Wrench },
-        { id: 'synthesizer', name: 'Synthesis Engine', role: 'Final Consensus', x: 780, y: 190, status: 'success', latency: 88.5, asi: 96.5, currentTask: 'Grounded final payload synthesized with 0 hallucinations', Icon: Sparkles },
+        { id: 'planner', name: 'Planner Agent', role: 'Query Decomposition', x: 13, y: 50, status: 'success', latency: 8.4, asi: 99.8, currentTask: 'Decomposing hypothesis into sub-queries', Icon: Brain },
+        { id: 'retriever', name: 'Search Retriever', role: 'Vector & Tool Ingest', x: 37, y: 22, status: 'success', latency: 24.1, asi: 97.2, currentTask: 'Fetching document embeddings from vector store', Icon: Search },
+        { id: 'verifier', name: 'Claim Verifier', role: 'NLI & Grounding Gate', x: 63, y: 22, status: 'success', latency: 27.8, asi: 98.4, currentTask: 'Stage 1 MiniLM + Stage 2 DeBERTa: Grounded (Score: 0.96)', Icon: ShieldCheck },
+        { id: 'tools', name: 'Tool Executor', role: 'Deterministic Assertions', x: 37, y: 78, status: 'success', latency: 1.2, asi: 99.1, currentTask: 'All 3/3 tool claims verified against JSON return', Icon: Wrench },
+        { id: 'synthesizer', name: 'Synthesis Engine', role: 'Final Consensus', x: 87, y: 50, status: 'success', latency: 88.5, asi: 96.5, currentTask: 'Grounded final payload synthesized with 0 hallucinations', Icon: Sparkles },
       ]);
       setEventLog((prev) => [
         { id: Math.random().toString(), time: new Date().toLocaleTimeString(), text: 'Scenario switched: Clean Execution (Grounded & Consistent)', type: 'ok' },
@@ -61,11 +69,11 @@ export function SwarmSimulator() {
       ]);
     } else if (scenario === 'hallucination') {
       setNodes([
-        { id: 'planner', name: 'Planner Agent', role: 'Query Decomposition', x: 120, y: 190, status: 'success', latency: 8.4, asi: 99.8, currentTask: 'Targeting medical trial summary', Icon: Brain },
-        { id: 'retriever', name: 'Search Retriever', role: 'Vector & Tool Ingest', x: 340, y: 90, status: 'success', latency: 22.0, asi: 96.5, currentTask: 'Retrieved trial results: 41% overall response rate', Icon: Search },
-        { id: 'verifier', name: 'Claim Verifier', role: 'NLI & Grounding Gate', x: 560, y: 90, status: 'error', latency: 91.2, asi: 84.1, currentTask: 'CONTRADICTION DETECTED: Synthesizer claimed 100% cure rate vs 41% context', Icon: AlertTriangle },
-        { id: 'tools', name: 'Tool Executor', role: 'Deterministic Assertions', x: 340, y: 290, status: 'success', latency: 1.5, asi: 98.9, currentTask: 'Clinical database queried successfully', Icon: Wrench },
-        { id: 'synthesizer', name: 'Synthesis Engine', role: 'Final Consensus', x: 780, y: 190, status: 'error', latency: 94.0, asi: 78.2, currentTask: 'Injected fabricated claim: "Compound cured 100% of patients"', Icon: XCircle },
+        { id: 'planner', name: 'Planner Agent', role: 'Query Decomposition', x: 13, y: 50, status: 'success', latency: 8.4, asi: 99.8, currentTask: 'Targeting medical trial summary', Icon: Brain },
+        { id: 'retriever', name: 'Search Retriever', role: 'Vector & Tool Ingest', x: 37, y: 22, status: 'success', latency: 22.0, asi: 96.5, currentTask: 'Retrieved trial results: 41% overall response rate', Icon: Search },
+        { id: 'verifier', name: 'Claim Verifier', role: 'NLI & Grounding Gate', x: 63, y: 22, status: 'error', latency: 91.2, asi: 84.1, currentTask: 'CONTRADICTION DETECTED: Synthesizer claimed 100% cure rate vs 41% context', Icon: AlertTriangle },
+        { id: 'tools', name: 'Tool Executor', role: 'Deterministic Assertions', x: 37, y: 78, status: 'success', latency: 1.5, asi: 98.9, currentTask: 'Clinical database queried successfully', Icon: Wrench },
+        { id: 'synthesizer', name: 'Synthesis Engine', role: 'Final Consensus', x: 87, y: 50, status: 'error', latency: 94.0, asi: 78.2, currentTask: 'Injected fabricated claim: "Compound cured 100% of patients"', Icon: XCircle },
       ]);
       setEventLog((prev) => [
         { id: Math.random().toString(), time: new Date().toLocaleTimeString(), text: 'CRITICAL ALERT: Cross-Encoder NLI flagged Contradiction (Risk: 0.88)', type: 'error' },
@@ -73,11 +81,11 @@ export function SwarmSimulator() {
       ]);
     } else if (scenario === 'tool_mismatch') {
       setNodes([
-        { id: 'planner', name: 'Planner Agent', role: 'Query Decomposition', x: 120, y: 190, status: 'success', latency: 7.9, asi: 99.5, currentTask: 'Requesting customer count in EU zone', Icon: Brain },
-        { id: 'retriever', name: 'Search Retriever', role: 'Vector & Tool Ingest', x: 340, y: 90, status: 'success', latency: 19.5, asi: 97.8, currentTask: 'Preparing SQL query payload', Icon: Search },
-        { id: 'verifier', name: 'Claim Verifier', role: 'NLI & Grounding Gate', x: 560, y: 90, status: 'warning', latency: 31.0, asi: 89.2, currentTask: 'Context is ambiguous; awaiting tool assertion', Icon: ShieldCheck },
-        { id: 'tools', name: 'Tool Executor', role: 'Deterministic Assertions', x: 340, y: 290, status: 'error', latency: 0.8, asi: 82.4, currentTask: 'TOOL MISMATCH: Agent asserted 8 records, SQL returned 2 rows', Icon: Zap },
-        { id: 'synthesizer', name: 'Synthesis Engine', role: 'Final Consensus', x: 780, y: 190, status: 'warning', latency: 62.0, asi: 85.0, currentTask: 'Output flagged with numerical inconsistency tag', Icon: AlertTriangle },
+        { id: 'planner', name: 'Planner Agent', role: 'Query Decomposition', x: 13, y: 50, status: 'success', latency: 7.9, asi: 99.5, currentTask: 'Requesting customer count in EU zone', Icon: Brain },
+        { id: 'retriever', name: 'Search Retriever', role: 'Vector & Tool Ingest', x: 37, y: 22, status: 'success', latency: 19.5, asi: 97.8, currentTask: 'Preparing SQL query payload', Icon: Search },
+        { id: 'verifier', name: 'Claim Verifier', role: 'NLI & Grounding Gate', x: 63, y: 22, status: 'warning', latency: 31.0, asi: 89.2, currentTask: 'Context is ambiguous; awaiting tool assertion', Icon: ShieldCheck },
+        { id: 'tools', name: 'Tool Executor', role: 'Deterministic Assertions', x: 37, y: 78, status: 'error', latency: 0.8, asi: 82.4, currentTask: 'TOOL MISMATCH: Agent asserted 8 records, SQL returned 2 rows', Icon: Zap },
+        { id: 'synthesizer', name: 'Synthesis Engine', role: 'Final Consensus', x: 87, y: 50, status: 'warning', latency: 62.0, asi: 85.0, currentTask: 'Output flagged with numerical inconsistency tag', Icon: AlertTriangle },
       ]);
       setEventLog((prev) => [
         { id: Math.random().toString(), time: new Date().toLocaleTimeString(), text: 'WARNING: Tool Assertion Engine detected falsified return count (Claim: 8, DB: 2)', type: 'warn' },
@@ -85,11 +93,11 @@ export function SwarmSimulator() {
       ]);
     } else if (scenario === 'drift') {
       setNodes([
-        { id: 'planner', name: 'Planner Agent', role: 'Query Decomposition', x: 120, y: 190, status: 'success', latency: 9.1, asi: 98.9, currentTask: 'Active with nominal query prompt baseline', Icon: Brain },
-        { id: 'retriever', name: 'Search Retriever', role: 'Vector & Tool Ingest', x: 340, y: 90, status: 'warning', latency: 26.4, asi: 72.5, currentTask: 'CENTROID SHIFT: Embedding distance 0.902 > threshold 0.300', Icon: TrendingUp },
-        { id: 'verifier', name: 'Claim Verifier', role: 'NLI & Grounding Gate', x: 560, y: 90, status: 'warning', latency: 34.2, asi: 79.4, currentTask: 'Evaluator compensating for semantic distribution shift', Icon: ShieldCheck },
-        { id: 'tools', name: 'Tool Executor', role: 'Deterministic Assertions', x: 340, y: 290, status: 'success', latency: 1.4, asi: 98.2, currentTask: 'Tool call parameters stable', Icon: Wrench },
-        { id: 'synthesizer', name: 'Synthesis Engine', role: 'Final Consensus', x: 780, y: 190, status: 'warning', latency: 76.8, asi: 81.0, currentTask: 'Generated output variance elevated', Icon: AlertTriangle },
+        { id: 'planner', name: 'Planner Agent', role: 'Query Decomposition', x: 13, y: 50, status: 'success', latency: 9.1, asi: 98.9, currentTask: 'Active with nominal query prompt baseline', Icon: Brain },
+        { id: 'retriever', name: 'Search Retriever', role: 'Vector & Tool Ingest', x: 37, y: 22, status: 'warning', latency: 26.4, asi: 72.5, currentTask: 'CENTROID SHIFT: Embedding distance 0.902 > threshold 0.300', Icon: TrendingUp },
+        { id: 'verifier', name: 'Claim Verifier', role: 'NLI & Grounding Gate', x: 63, y: 22, status: 'warning', latency: 34.2, asi: 79.4, currentTask: 'Evaluator compensating for semantic distribution shift', Icon: ShieldCheck },
+        { id: 'tools', name: 'Tool Executor', role: 'Deterministic Assertions', x: 37, y: 78, status: 'success', latency: 1.4, asi: 98.2, currentTask: 'Tool call parameters stable', Icon: Wrench },
+        { id: 'synthesizer', name: 'Synthesis Engine', role: 'Final Consensus', x: 87, y: 50, status: 'warning', latency: 76.8, asi: 81.0, currentTask: 'Generated output variance elevated', Icon: AlertTriangle },
       ]);
       setEventLog((prev) => [
         { id: Math.random().toString(), time: new Date().toLocaleTimeString(), text: 'DRIFT ALERT: Search Retriever ASI degraded to 72.5 / 100 (Centroid spike: 0.902)', type: 'warn' },
@@ -102,14 +110,6 @@ export function SwarmSimulator() {
   useEffect(() => {
     if (!isPlaying) return;
 
-    const edges = [
-      { from: 'planner', to: 'retriever' },
-      { from: 'planner', to: 'tools' },
-      { from: 'retriever', to: 'verifier' },
-      { from: 'tools', to: 'verifier' },
-      { from: 'verifier', to: 'synthesizer' },
-    ];
-
     const interval = setInterval(() => {
       setPackets((prev) => {
         // Move existing packets
@@ -119,7 +119,7 @@ export function SwarmSimulator() {
 
         // Spawn new packet occasionally
         if (Math.random() > 0.45 && updated.length < 5) {
-          const edge = edges[Math.floor(Math.random() * edges.length)];
+          const edge = EDGES[Math.floor(Math.random() * EDGES.length)];
           const isBad = scenario === 'hallucination' && (edge.to === 'verifier' || edge.to === 'synthesizer');
           const isWarn = scenario === 'tool_mismatch' && edge.from === 'tools';
           updated.push({
@@ -138,21 +138,26 @@ export function SwarmSimulator() {
     return () => clearInterval(interval);
   }, [isPlaying, scenario]);
 
-  const getNodePos = (id: string) => {
+  // Normalized 1000x400 coordinate resolution for SVG curves
+  const getNodeSvgPos = (id: string) => {
     const node = nodes.find((n) => n.id === id);
-    return node ? { x: node.x, y: node.y } : { x: 0, y: 0 };
+    if (!node) return { x: 0, y: 0 };
+    return {
+      x: (node.x / 100) * 1000,
+      y: (node.y / 100) * 400,
+    };
   };
 
   return (
-    <div className="w-full rounded-2xl bg-[#0a0c14] border border-white/10 overflow-hidden shadow-2xl">
+    <div className="w-full rounded-2xl bg-surface-2 border border-line overflow-hidden shadow-2xl">
       {/* Top Header & Scenario Controls */}
-      <div className="p-4 sm:p-5 bg-[#0e111a] border-b border-white/[0.08] flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="p-4 sm:p-5 bg-surface-3 border-b border-line flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse" />
+          <div className="w-2.5 h-2.5 rounded-full bg-indigo-400 animate-pulse" />
           <div>
             <h3 className="text-xs font-bold text-white uppercase tracking-wider font-mono flex items-center gap-2">
               <span>Interactive Multi-Agent Swarm Simulator</span>
-              <span className="text-3xs px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-300 border border-cyan-500/20 font-mono">
+              <span className="text-3xs px-2 py-0.5 rounded-md bg-indigo-500/15 text-indigo-300 border border-indigo-500/30 font-mono font-semibold">
                 LIVE TOPOLOGY
               </span>
             </h3>
@@ -168,7 +173,7 @@ export function SwarmSimulator() {
             className={`px-3 py-1.5 rounded-xl text-xs font-mono transition-all cursor-pointer flex items-center gap-1.5 ${
               scenario === 'clean'
                 ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-bold'
-                : 'bg-white/5 text-neutral-400 hover:text-white border border-white/5'
+                : 'bg-surface text-neutral-400 hover:text-white border border-line'
             }`}
           >
             <ShieldCheck className="w-3.5 h-3.5" />
@@ -179,7 +184,7 @@ export function SwarmSimulator() {
             className={`px-3 py-1.5 rounded-xl text-xs font-mono transition-all cursor-pointer flex items-center gap-1.5 ${
               scenario === 'hallucination'
                 ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40 font-bold'
-                : 'bg-white/5 text-neutral-400 hover:text-white border border-white/5'
+                : 'bg-surface text-neutral-400 hover:text-white border border-line'
             }`}
           >
             <ShieldAlert className="w-3.5 h-3.5" />
@@ -190,7 +195,7 @@ export function SwarmSimulator() {
             className={`px-3 py-1.5 rounded-xl text-xs font-mono transition-all cursor-pointer flex items-center gap-1.5 ${
               scenario === 'tool_mismatch'
                 ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold'
-                : 'bg-white/5 text-neutral-400 hover:text-white border border-white/5'
+                : 'bg-surface text-neutral-400 hover:text-white border border-line'
             }`}
           >
             <Zap className="w-3.5 h-3.5" />
@@ -200,8 +205,8 @@ export function SwarmSimulator() {
             onClick={() => setScenario('drift')}
             className={`px-3 py-1.5 rounded-xl text-xs font-mono transition-all cursor-pointer flex items-center gap-1.5 ${
               scenario === 'drift'
-                ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 font-bold'
-                : 'bg-white/5 text-neutral-400 hover:text-white border border-white/5'
+                ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 font-bold'
+                : 'bg-surface text-neutral-400 hover:text-white border border-line'
             }`}
           >
             <Cpu className="w-3.5 h-3.5" />
@@ -210,7 +215,7 @@ export function SwarmSimulator() {
 
           <button
             onClick={() => setIsPlaying(!isPlaying)}
-            className="p-1.5 rounded-lg bg-white/10 text-white hover:bg-white/20 transition-all cursor-pointer"
+            className="p-1.5 rounded-lg bg-surface text-white hover:bg-surface-3 transition-all cursor-pointer border border-line"
             title={isPlaying ? 'Pause simulation' : 'Play simulation'}
           >
             {isPlaying ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
@@ -218,80 +223,47 @@ export function SwarmSimulator() {
         </div>
       </div>
 
-      {/* Main Interactive Canvas Area */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-0 relative">
-        {/* Left 8 Cols: Topology Graph */}
-        <div className="lg:col-span-8 p-6 relative min-h-[380px] flex items-center justify-center bg-[#07080d]/80 select-none overflow-hidden">
-          {/* Subtle Grid Background */}
-          <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff05_1px,transparent_1px),linear-gradient(to_bottom,#ffffff05_1px,transparent_1px)] bg-[size:32px_32px] pointer-events-none" />
-
-          {/* SVG Connection Lines */}
-          <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 900 380" preserveAspectRatio="xMidYMid meet">
-            {/* Defs for gradients & filters */}
-            <defs>
-              <linearGradient id="lineGradOk" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%" stopColor="#22d3ee" stopOpacity="0.6" />
-                <stop offset="100%" stopColor="#34d399" stopOpacity="0.6" />
-              </linearGradient>
-              <linearGradient id="lineGradError" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%" stopColor="#f43f5e" stopOpacity="0.8" />
-                <stop offset="100%" stopColor="#fb7185" stopOpacity="0.8" />
-              </linearGradient>
-              <filter id="glow">
-                <feGaussianBlur stdDeviation="2" result="coloredBlur" />
-                <feMerge>
-                  <feMergeNode in="coloredBlur" />
-                  <feMergeNode in="SourceGraphic" />
-                </feMerge>
-              </filter>
-            </defs>
-
-            {/* Static Edges */}
-            {[
-              { from: 'planner', to: 'retriever' },
-              { from: 'planner', to: 'tools' },
-              { from: 'retriever', to: 'verifier' },
-              { from: 'tools', to: 'verifier' },
-              { from: 'verifier', to: 'synthesizer' },
-            ].map((edge, idx) => {
-              const start = getNodePos(edge.from);
-              const end = getNodePos(edge.to);
-              const isAffected = scenario === 'hallucination' && edge.to === 'synthesizer';
+      {/* Grid: Canvas Left (8 cols), Deep Dive Right (4 cols) */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 min-h-[460px]">
+        {/* Left 8 Cols: Interactive Flow Graph */}
+        <div className="lg:col-span-8 p-4 sm:p-6 relative bg-surface flex items-center justify-center overflow-hidden min-h-[400px]">
+          {/* Animated Connecting SVG Curves with standard 1000x400 aspect */}
+          <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 1000 400" preserveAspectRatio="none">
+            {EDGES.map((edge, idx) => {
+              const from = getNodeSvgPos(edge.from);
+              const to = getNodeSvgPos(edge.to);
+              const midX = (from.x + to.x) / 2;
+              const midY = (from.y + to.y) / 2 + (from.y === to.y ? -16 : 0);
+              const isContradiction = scenario === 'hallucination' && (edge.from === 'synthesizer' || edge.to === 'verifier');
 
               return (
                 <g key={idx}>
-                  <line
-                    x1={start.x}
-                    y1={start.y}
-                    x2={end.x}
-                    y2={end.y}
-                    stroke={isAffected ? '#f43f5e' : 'rgba(255, 255, 255, 0.15)'}
-                    strokeWidth={isAffected ? 2 : 1.5}
-                    strokeDasharray={isAffected ? '4 4' : undefined}
+                  <path
+                    d={`M ${from.x} ${from.y} Q ${midX} ${midY} ${to.x} ${to.y}`}
+                    fill="none"
+                    stroke={isContradiction ? '#f43f5e' : 'rgba(255,255,255,0.12)'}
+                    strokeWidth={isContradiction ? '2.5' : '1.5'}
+                    strokeDasharray={isContradiction ? '5 5' : 'none'}
+                    className={isContradiction ? 'animate-pulse' : ''}
                   />
-                </g>
-              );
-            })}
 
-            {/* Animated Telemetry Packets */}
-            {packets.map((p) => {
-              const start = getNodePos(p.from);
-              const end = getNodePos(p.to);
-              const curX = start.x + (end.x - start.x) * p.progress;
-              const curY = start.y + (end.y - start.y) * p.progress;
-              const color = p.status === 'error' ? '#f43f5e' : p.status === 'warn' ? '#fbbf24' : '#22d3ee';
-
-              return (
-                <g key={p.id}>
-                  <circle cx={curX} cy={curY} r="4" fill={color} filter="url(#glow)" />
-                  <circle cx={curX} cy={curY} r="8" fill={color} opacity="0.25" />
+                  {/* Pulsing Particle along curve */}
+                  {isPlaying && (
+                    <circle r="4" fill={isContradiction ? '#f43f5e' : '#6366f1'}>
+                      <animateMotion
+                        path={`M ${from.x} ${from.y} Q ${midX} ${midY} ${to.x} ${to.y}`}
+                        dur={`${2.0 + idx * 0.3}s`}
+                        repeatCount="indefinite"
+                      />
+                    </circle>
+                  )}
                 </g>
               );
             })}
           </svg>
 
-          {/* Render Agent Nodes */}
-          <div className="relative w-full h-[380px] max-w-[900px]">
+          {/* Node Cards */}
+          <div className="relative w-full h-full min-h-[380px]">
             {nodes.map((node) => {
               const isSelected = selectedNode?.id === node.id;
               const isError = node.status === 'error';
@@ -300,44 +272,43 @@ export function SwarmSimulator() {
               return (
                 <div
                   key={node.id}
-                  onClick={() => setSelectedNode(node)}
                   style={{
-                    position: 'absolute',
-                    left: `${(node.x / 900) * 100}%`,
-                    top: `${(node.y / 380) * 100}%`,
+                    left: `${node.x}%`,
+                    top: `${node.y}%`,
                     transform: 'translate(-50%, -50%)',
                   }}
-                  className={`group cursor-pointer transition-all duration-200 ${
+                  onClick={() => setSelectedNode(node)}
+                  className={`group cursor-pointer transition-all duration-200 absolute ${
                     isSelected ? 'scale-110 z-20' : 'hover:scale-105 z-10'
                   }`}
                 >
                   <div
-                    className={`w-14 h-14 sm:w-16 sm:h-16 rounded-2xl flex flex-col items-center justify-center relative backdrop-blur-md transition-all shadow-xl ${
+                    className={`w-14 h-14 sm:w-16 sm:h-16 rounded-2xl flex flex-col items-center justify-center relative backdrop-blur-md transition-all shadow-xl px-1 ${
                       isError
-                        ? 'bg-rose-950/80 border-2 border-rose-500 shadow-rose-500/30'
+                        ? 'bg-rose-950/85 border-2 border-rose-500 shadow-rose-500/30 text-rose-300'
                         : isWarning
-                        ? 'bg-amber-950/80 border-2 border-amber-500 shadow-amber-500/30'
+                        ? 'bg-amber-950/85 border-2 border-amber-500 shadow-amber-500/30 text-amber-300'
                         : isSelected
-                        ? 'bg-[#151926] border-2 border-cyan-400 shadow-cyan-500/20'
-                        : 'bg-[#0f121c]/90 border border-white/20 hover:border-white/40'
+                        ? 'bg-surface-3 border-2 border-indigo-400 shadow-indigo-500/20 text-indigo-300'
+                        : 'bg-surface-2 border border-line hover:border-line-strong text-neutral-200'
                     }`}
                   >
                     <node.Icon className="w-5 h-5 sm:w-6 sm:h-6" aria-hidden="true" />
-                    <span className="text-3xs font-mono font-bold text-white mt-0.5 truncate max-w-[50px]">
+                    <span className="text-4xs sm:text-3xs font-mono font-bold uppercase tracking-wider mt-1 text-center truncate max-w-[54px]">
                       {node.id}
                     </span>
 
                     {/* Status Pip */}
                     <span
-                      className={`absolute -top-1 -right-1 w-3 h-3 rounded-full border-2 border-[#07080d] ${
+                      className={`absolute -top-1 -right-1 w-3 h-3 rounded-full border-2 border-surface ${
                         isError ? 'bg-rose-500 animate-ping' : isWarning ? 'bg-amber-400' : 'bg-emerald-400'
                       }`}
                     />
                   </div>
 
                   {/* Node Label Below */}
-                  <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1.5 text-center whitespace-nowrap pointer-events-none">
-                    <span className="text-3xs font-mono font-bold text-white px-2 py-0.5 rounded bg-black/60 border border-white/10">
+                  <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1.5 text-center whitespace-nowrap pointer-events-none z-10">
+                    <span className="text-3xs font-mono font-semibold text-white px-2 py-0.5 rounded-md bg-slate-900/90 border border-line shadow-md inline-block">
                       {node.name}
                     </span>
                     <div className="text-4xs font-mono text-neutral-400 mt-0.5">
@@ -351,12 +322,12 @@ export function SwarmSimulator() {
         </div>
 
         {/* Right 4 Cols: Selected Node Deep-Dive Inspector */}
-        <div className="lg:col-span-4 p-5 bg-[#0e111a] border-t lg:border-t-0 lg:border-l border-white/[0.08] flex flex-col justify-between space-y-4">
+        <div className="lg:col-span-4 p-5 bg-surface-2 border-t lg:border-t-0 lg:border-l border-line flex flex-col justify-between space-y-4">
           {selectedNode ? (
             <div className="space-y-4 font-mono">
-              <div className="flex items-center justify-between pb-3 border-b border-white/[0.08]">
+              <div className="flex items-center justify-between pb-3 border-b border-line">
                 <div className="flex items-center gap-2">
-                  <selectedNode.Icon className="w-5 h-5" aria-hidden="true" />
+                  <selectedNode.Icon className="w-5 h-5 text-indigo-400" aria-hidden="true" />
                   <div>
                     <h4 className="text-xs font-bold text-white">{selectedNode.name}</h4>
                     <p className="text-3xs text-neutral-400">{selectedNode.role}</p>
@@ -377,11 +348,11 @@ export function SwarmSimulator() {
 
               {/* Node Stats Grid */}
               <div className="grid grid-cols-2 gap-2 text-2xs">
-                <div className="p-2.5 rounded-xl bg-[#08090d] border border-white/[0.06]">
+                <div className="p-2.5 rounded-xl bg-surface border border-line">
                   <span className="text-3xs text-neutral-400 uppercase">Agent Stability (ASI)</span>
                   <p className="text-sm font-bold text-white mt-0.5">{selectedNode.asi.toFixed(1)} / 100</p>
                 </div>
-                <div className="p-2.5 rounded-xl bg-[#08090d] border border-white/[0.06]">
+                <div className="p-2.5 rounded-xl bg-surface border border-line">
                   <span className="text-3xs text-neutral-400 uppercase">Step Latency (P50)</span>
                   <p className="text-sm font-bold text-white mt-0.5">{selectedNode.latency} ms</p>
                 </div>
@@ -390,24 +361,8 @@ export function SwarmSimulator() {
               {/* Live Evaluator Action */}
               <div className="space-y-1.5">
                 <label className="text-3xs text-neutral-400 uppercase tracking-wider">Active Evaluator State</label>
-                <div className="p-3 rounded-xl bg-[#08090d] border border-white/[0.08] text-xs text-neutral-200 leading-relaxed font-sans">
+                <div className="p-3 rounded-xl bg-surface border border-line text-xs text-neutral-200 leading-relaxed font-sans">
                   {selectedNode.currentTask}
-                </div>
-              </div>
-
-              {/* Inter-Agent Contract Verification */}
-              <div className="space-y-1.5 text-3xs text-neutral-400">
-                <div className="flex justify-between">
-                  <span>Input Privacy Hash:</span>
-                  <span className="text-white font-mono">0x4a91..f8e2</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Inference Mode:</span>
-                  <span className="text-emerald-400 font-mono">Local CPU (Zero 3rd-party API)</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Ingest Overhead:</span>
-                  <span className="text-white font-mono">&lt;0.005 ms</span>
                 </div>
               </div>
             </div>
@@ -418,10 +373,10 @@ export function SwarmSimulator() {
           )}
 
           {/* Live Telemetry Event Stream */}
-          <div className="pt-3 border-t border-white/[0.08] space-y-2 font-mono">
+          <div className="pt-3 border-t border-line space-y-2 font-mono">
             <div className="flex items-center justify-between text-3xs text-neutral-400 uppercase">
               <span>Telemetry Stream</span>
-              <span className="text-cyan-400 animate-pulse">&bull; Live</span>
+              <span className="text-indigo-400 animate-pulse">&bull; Live</span>
             </div>
             <div className="space-y-1.5 max-h-[110px] overflow-y-auto pr-1 text-3xs">
               {eventLog.map((ev) => (

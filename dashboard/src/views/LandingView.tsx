@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Activity,
   ArrowRight,
+  BookOpen,
   CheckCircle2,
   ChevronRight,
   Code2,
@@ -9,6 +10,10 @@ import {
   Cpu,
   Database,
   ExternalLink,
+  Flame,
+  Github,
+  Globe,
+  HelpCircle,
   Layers,
   Play,
   Radio,
@@ -18,13 +23,9 @@ import {
   ShieldCheck,
   Sparkles,
   Terminal,
-  Zap,
-  BookOpen,
-  DollarSign,
-  HelpCircle,
-  Github,
-  Globe,
   TrendingUp,
+  Wrench,
+  Zap,
 } from 'lucide-react';
 import { SpatialSceneMode } from '../spatial/SpatialInstrument';
 import { SwarmSimulator } from '../components/website/SwarmSimulator';
@@ -91,6 +92,15 @@ export function LandingView({ onEnter, sceneMode, onChangeSceneMode }: LandingVi
   const [activeScenarioId, setActiveScenarioId] = useState('clean');
   const [copiedPip, setCopiedPip] = useState(false);
   const [isWhitepaperOpen, setIsWhitepaperOpen] = useState(false);
+  const [scrollY, setScrollY] = useState(0);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrollY(window.scrollY);
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   const activeScenario = EVAL_SCENARIOS.find((s) => s.id === activeScenarioId) || EVAL_SCENARIOS[0];
 
@@ -100,54 +110,93 @@ export function LandingView({ onEnter, sceneMode, onChangeSceneMode }: LandingVi
     setTimeout(() => setCopiedPip(false), 2000);
   };
 
+  const scrollToSection = (id: string) => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
   return (
-    <div className="relative z-10 min-h-screen overflow-y-auto overflow-x-hidden selection:bg-cyan-500/20 selection:text-cyan-300 pb-32">
-      {/* ─── Top Sticky Minimal Navigation ─────────────────────────── */}
-      <header className="sticky top-0 z-40 w-full px-6 py-3.5 flex items-center justify-between border-b border-white/[0.08] bg-[#05060b]/90 backdrop-blur-xl">
+    <div className="relative min-h-screen w-full selection:bg-yellow-400 selection:text-black pt-16 font-sans">
+      {/* ── Fixed Sticky Comic Navigation Bar ── */}
+      <header className="fixed top-0 left-0 right-0 z-50 w-full px-4 sm:px-8 py-3.5 flex items-center justify-between border-b-2 border-black bg-[#0e1322]/95 backdrop-blur-2xl shadow-comic transition-all">
+        {/* Brand */}
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center font-bold text-sm text-black shadow-lg shadow-cyan-500/20">
+          <div className="w-9 h-9 rounded-xl bg-yellow-400 border-2 border-black flex items-center justify-center font-black text-sm text-black shadow-[2px_2px_0px_#000]">
             AP
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-sm font-semibold tracking-tight text-white font-sans">AgentPulse</span>
-            <span className="hidden sm:inline-block text-3xs font-mono px-2 py-0.5 rounded bg-white/5 border border-white/10 text-neutral-400">
-              v0.1.0-beta &bull; Self-hosted
+            <span className="text-base font-black tracking-tight text-white font-mono">
+              Agent<span className="text-yellow-400">Pulse</span>
+            </span>
+            <span className="hidden sm:inline-block comic-tag bg-cyan-400 text-black">
+              v0.1.0-beta · Self-hosted
             </span>
           </div>
         </div>
 
-        {/* Center Desktop Navigation Links */}
-        <nav className="hidden lg:flex items-center gap-6 text-xs font-mono text-neutral-400">
-          <a href="#simulator" className="hover:text-white transition-colors">
+        {/* Center Desktop Navigation Links in Comic Frame */}
+        <nav className="hidden lg:flex items-center gap-4 text-xs font-mono font-bold text-neutral-300 bg-surface-2 border-2 border-black rounded-2xl px-5 py-2 shadow-comic">
+          <button
+            type="button"
+            onClick={() => scrollToSection('simulator')}
+            className="hover:text-yellow-400 transition-colors cursor-pointer"
+          >
             Swarm Simulator
-          </a>
-          <a href="#pillars" className="hover:text-white transition-colors">
+          </button>
+          <button
+            type="button"
+            onClick={() => scrollToSection('pillars')}
+            className="hover:text-cyan-400 transition-colors cursor-pointer"
+          >
             Six Pillars
-          </a>
-          <a href="#evaluation" className="hover:text-white transition-colors">
+          </button>
+          <button
+            type="button"
+            onClick={() => scrollToSection('evaluation')}
+            className="hover:text-pink-400 transition-colors cursor-pointer"
+          >
             Cascaded Evaluator
-          </a>
-          <a href="#benchmarks" className="hover:text-white transition-colors">
+          </button>
+          <button
+            type="button"
+            onClick={() => scrollToSection('benchmarks')}
+            className="hover:text-emerald-400 transition-colors cursor-pointer"
+          >
             Benchmark Matrix
-          </a>
-          <a href="#calculator" className="hover:text-white transition-colors">
+          </button>
+          <button
+            type="button"
+            onClick={() => scrollToSection('calculator')}
+            className="hover:text-orange-400 transition-colors cursor-pointer"
+          >
             ROI Calculator
-          </a>
-          <a href="#sdk" className="hover:text-white transition-colors">
+          </button>
+          <button
+            type="button"
+            onClick={() => scrollToSection('sdk')}
+            className="hover:text-purple-400 transition-colors cursor-pointer"
+          >
             SDK Studio
-          </a>
-          <a href="#faq" className="hover:text-white transition-colors">
+          </button>
+          <button
+            type="button"
+            onClick={() => scrollToSection('faq')}
+            className="hover:text-yellow-400 transition-colors cursor-pointer"
+          >
             FAQ
-          </a>
+          </button>
         </nav>
 
         {/* Right CTA Group */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5">
           <button
+            type="button"
             onClick={() => setIsWhitepaperOpen(true)}
-            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-mono bg-white/5 hover:bg-white/10 border border-white/10 text-neutral-300 hover:text-white transition-all cursor-pointer"
+            className="hidden sm:flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-mono font-bold bg-surface-2 hover:bg-surface-3 border-2 border-black text-neutral-300 hover:text-white shadow-[2px_2px_0px_#000] active:translate-x-0.5 active:translate-y-0.5 transition-all cursor-pointer"
           >
-            <BookOpen className="w-3.5 h-3.5 text-cyan-400" />
+            <BookOpen className="w-3.5 h-3.5 text-yellow-400" />
             <span>Whitepaper</span>
           </button>
 
@@ -155,179 +204,183 @@ export function LandingView({ onEnter, sceneMode, onChangeSceneMode }: LandingVi
             href="https://github.com/Soum-Code/agentpulse"
             target="_blank"
             rel="noreferrer"
-            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-mono bg-white/5 hover:bg-white/10 border border-white/10 text-neutral-300 hover:text-white transition-all cursor-pointer"
+            className="hidden sm:flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-mono font-bold bg-surface-2 hover:bg-surface-3 border-2 border-black text-neutral-300 hover:text-white shadow-[2px_2px_0px_#000] active:translate-x-0.5 active:translate-y-0.5 transition-all cursor-pointer"
           >
-            <Github className="w-3.5 h-3.5" />
+            <Github className="w-3.5 h-3.5 text-cyan-400" />
             <span>GitHub</span>
           </a>
 
           <button
+            type="button"
             onClick={onEnter}
-            className="px-4 py-2 rounded-xl text-xs font-semibold bg-white text-black hover:bg-neutral-200 transition-all flex items-center gap-2 cursor-pointer shadow-lg font-mono font-bold"
+            className="comic-btn-yellow px-4 py-2 text-xs font-mono flex items-center gap-2 cursor-pointer"
           >
             <span>Launch Console</span>
-            <ArrowRight className="w-3.5 h-3.5" />
+            <ArrowRight className="w-3.5 h-3.5 text-black" />
           </button>
         </div>
       </header>
 
-      {/* ─── 1. Asymmetric Editorial Hero ────────────────────────────── */}
-      <section className="relative px-6 pt-16 pb-16 max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-        {/* Left Column: Stark Human-First Editorial Copy */}
-        <div className="lg:col-span-7 space-y-8">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/25 text-xs font-mono text-cyan-300">
-            <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+      {/* ── 1. Hero Section ── */}
+      <section className="relative px-4 sm:px-8 pt-16 pb-20 max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-center">
+        {/* Left Column: High-Contrast Editorial Copy */}
+        <div className="lg:col-span-7 space-y-8 relative z-10">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-2xl bg-yellow-400 border-2 border-black text-xs font-mono font-black text-black shadow-comic">
+            <span className="w-2.5 h-2.5 rounded-full bg-black animate-pulse" />
             <span>Continuous Grounding & Drift Observability for Multi-Agent AI</span>
           </div>
 
           <div className="space-y-4">
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-white leading-[1.1] font-sans">
-              The Observability Engine for Multi-Agent AI Swarms.
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight text-white leading-[1.08] font-sans">
+              The Observability Engine for{' '}
+              <span className="wordmark-gradient">Multi-Agent AI Swarms.</span>
             </h1>
-            <p className="text-sm sm:text-base text-neutral-300 max-w-2xl leading-relaxed font-sans">
-              {/* Two capabilities were dropped from this sentence. Inter-agent
-                  disagreement and tool-claim validation are shipped but have not
-                  held up on external traces, so they are described further down
-                  as experimental rather than promised in the headline. The
-                  latency figure now names the stage it belongs to: 27.8ms is the
-                  Stage 1 cosine gate, not the full cascade (215.9ms). */}
-              Catch hallucinations and semantic embedding drift across your multi-agent graph — every span evaluated on CPU, never sampled. A <strong className="text-white font-mono">~27.8ms</strong> cosine gate fronts a DeBERTa-v3 NLI stage (<strong className="text-white font-mono">215.9ms</strong> end-to-end), with zero GPU cost and no prompt data leaving your host.
+            <p className="text-sm sm:text-base text-neutral-300 max-w-2xl leading-relaxed font-sans font-medium">
+              Catch hallucinations and semantic embedding drift across your multi-agent graph — every span evaluated on CPU, never sampled. A <strong className="text-yellow-400 font-mono">~27.8ms</strong> cosine gate fronts a DeBERTa-v3 NLI stage (<strong className="text-cyan-400 font-mono">215.9ms</strong> end-to-end), with zero GPU cost and no prompt data leaving your host.
             </p>
           </div>
 
-          {/* Quick CLI Copy Bar */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 pt-1">
+          {/* Action CTAs */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-2">
             <button
+              type="button"
               onClick={onEnter}
-              className="px-6 py-3.5 rounded-xl text-xs font-semibold bg-white text-black hover:bg-neutral-200 transition-all flex items-center gap-2 cursor-pointer shadow-xl font-mono font-bold shrink-0"
+              className="comic-btn-yellow px-7 py-3.5 text-xs font-mono flex items-center justify-center gap-2 cursor-pointer"
             >
               <span>Connect to AgentPulse</span>
-              <ArrowRight className="w-4 h-4" />
+              <ArrowRight className="w-4 h-4 text-black" />
             </button>
 
             <div
               onClick={handleCopyPip}
-              className="px-4 py-3 rounded-xl bg-[#0e111a] border border-white/10 hover:border-cyan-500/40 text-xs font-mono text-neutral-300 flex items-center gap-3 cursor-pointer group transition-all"
+              className="px-4 py-3 rounded-2xl bg-surface-2 border-2 border-black hover:border-yellow-400 text-xs font-mono font-bold text-neutral-300 flex items-center justify-between sm:justify-start gap-3 cursor-pointer shadow-comic active:translate-x-0.5 active:translate-y-0.5 transition-all"
               title="Click to copy quickstart command"
             >
-              <span className="text-neutral-500">$</span>
-              <span className="text-white group-hover:text-cyan-300 transition-colors">
-                {/* `agentpulse init` does not exist -- the SDK declares no
-                    console_scripts entry point. Only the import path is real. */}
-                pip install agentpulse
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-yellow-400 font-black">$</span>
+                <span className="text-white">
+                  pip install agentpulse
+                </span>
+              </div>
               {copiedPip ? (
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
               ) : (
-                <Copy className="w-3.5 h-3.5 text-neutral-500 group-hover:text-white" />
+                <Copy className="w-4 h-4 text-neutral-400 hover:text-white" />
               )}
             </div>
           </div>
 
-          {/* Key Measured Metrics (Real Engineering Signals with Provenance) */}
-          <div className="grid grid-cols-3 gap-6 pt-8 border-t border-white/[0.08]">
-            <div>
-              <p className="text-2xs font-mono text-neutral-400 uppercase tracking-wider">SDK Overhead</p>
-              <p className="text-2xl font-bold font-mono text-white mt-1">&lt;0.005 ms</p>
-              <p className="text-3xs text-neutral-500 mt-0.5 font-mono">tests/test_sdk.py</p>
+          {/* Key Measured Metrics Strip */}
+          <div className="grid grid-cols-3 gap-3 sm:gap-4 pt-6 border-t-2 border-black">
+            <div className="p-3.5 rounded-2xl bg-surface-2 border-2 border-black shadow-[2px_2px_0px_#000]">
+              <p className="text-3xs font-mono text-neutral-400 uppercase font-black tracking-wider">SDK Overhead</p>
+              <p className="text-lg sm:text-2xl font-black font-mono text-white mt-1">&lt;0.005 ms</p>
+              <p className="text-4xs text-neutral-400 mt-0.5 font-mono">tests/test_sdk.py</p>
             </div>
-            <div>
-              <p className="text-2xs font-mono text-neutral-400 uppercase tracking-wider">Stage 1 Latency</p>
-              <p className="text-2xl font-bold font-mono text-cyan-300 mt-1">~27.8 ms</p>
-              <p className="text-3xs text-neutral-500 mt-0.5 font-mono">ablation_results.json</p>
+            <div className="p-3.5 rounded-2xl bg-surface-2 border-2 border-black shadow-[2px_2px_0px_#000]">
+              <p className="text-3xs font-mono text-yellow-400 uppercase font-black tracking-wider">Stage 1 Latency</p>
+              <p className="text-lg sm:text-2xl font-black font-mono text-yellow-400 mt-1">~27.8 ms</p>
+              <p className="text-4xs text-neutral-400 mt-0.5 font-mono">MiniLM Cosine Gate</p>
             </div>
-            <div>
-              <p className="text-2xs font-mono text-neutral-400 uppercase tracking-wider">Evaluation Cost</p>
-              <p className="text-2xl font-bold font-mono text-emerald-300 mt-1">$0.00 / eval</p>
-              <p className="text-3xs text-neutral-500 mt-0.5 font-mono">100% local CPU ONNX</p>
+            <div className="p-3.5 rounded-2xl bg-surface-2 border-2 border-black shadow-[2px_2px_0px_#000]">
+              <p className="text-3xs font-mono text-emerald-400 uppercase font-black tracking-wider">Evaluation Cost</p>
+              <p className="text-lg sm:text-2xl font-black font-mono text-emerald-400 mt-1">$0.00 / eval</p>
+              <p className="text-4xs text-neutral-400 mt-0.5 font-mono">100% local CPU ONNX</p>
             </div>
           </div>
         </div>
 
-        {/* Right Column: Spatial System Perception Controls & Holographic Preview */}
-        <div className="lg:col-span-5 relative flex flex-col items-center justify-center space-y-4">
-          <div className="w-full rounded-2xl overflow-hidden border border-white/15 bg-[#0a0c14] shadow-2xl relative group">
-            <img
-              src="/agentpulse_swarm_architecture.jpg"
-              alt="Multi-Agent AI Swarm Neural Telemetry Matrix"
-              className="w-full h-auto object-cover opacity-90 group-hover:opacity-100 transition-opacity"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-[#0a0c14] via-transparent to-transparent pointer-events-none" />
-            <div className="absolute bottom-3 left-4 right-4 flex items-center justify-between text-3xs font-mono text-neutral-300">
-              <span className="px-2 py-0.5 rounded bg-black/70 border border-white/10">Multi-Agent Swarm DAG</span>
-              <span className="text-cyan-400">&bull; Live Neural Mesh</span>
-            </div>
-          </div>
-
-          {/* 3D Scene Controls Card */}
-          <div className="w-full p-4 rounded-2xl bg-[#0e111a] border border-white/10 space-y-3">
-            <div className="flex items-center justify-between pb-2 border-b border-white/[0.08]">
+        {/* Right Column: 3D Perception & Scene Mode Selector */}
+        <div className="lg:col-span-5 relative space-y-4">
+          <div className="p-5 rounded-3xl bg-surface-2 border-2 border-black shadow-comic-lg space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b-2 border-black">
               <div className="flex items-center gap-2">
-                <Activity className="w-3.5 h-3.5 text-cyan-400" />
-                <span className="text-xs font-semibold text-white font-mono uppercase tracking-wider">
+                <div className="w-7 h-7 rounded-lg bg-cyan-400 border border-black flex items-center justify-center shadow-[1.5px_1.5px_0px_#000]">
+                  <Activity className="w-4 h-4 text-black" />
+                </div>
+                <span className="text-xs font-black text-white font-mono uppercase tracking-wider">
                   Spatial Scene Mode
                 </span>
               </div>
-              <span className="text-3xs font-mono text-neutral-400 uppercase">3D Engine Active</span>
+              <span className="comic-tag bg-emerald-400 text-black">
+                3D Constellation
+              </span>
             </div>
+
+            <p className="text-xs font-mono text-neutral-300 leading-relaxed font-semibold">
+              Switch the 3D space backdrop to project real-time multi-agent topologies, cascade flows, vector drift, and disagreement radar:
+            </p>
 
             <div className="grid grid-cols-2 gap-2 text-xs font-mono">
               {(
                 [
-                  { id: 'constellation', label: 'Topology Graph', Icon: Globe },
-                  { id: 'cascade', label: 'Cascade Flow', Icon: Zap },
-                  { id: 'drift', label: 'ASI Vector Drift', Icon: TrendingUp },
-                  { id: 'threat', label: 'Disagreement Radar', Icon: Shield },
+                  { id: 'constellation', label: 'Topology Graph', Icon: Globe, activeStyle: 'bg-yellow-400 text-black border-black' },
+                  { id: 'cascade', label: 'Cascade Flow', Icon: Zap, activeStyle: 'bg-cyan-400 text-black border-black' },
+                  { id: 'drift', label: 'ASI Vector Drift', Icon: TrendingUp, activeStyle: 'bg-orange-500 text-white border-black' },
+                  { id: 'threat', label: 'Disagreement Radar', Icon: Shield, activeStyle: 'bg-pink-500 text-white border-black' },
                 ] as const
               ).map((mode) => (
                 <button
                   key={mode.id}
+                  type="button"
                   onClick={() => onChangeSceneMode(mode.id)}
-                  className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex items-center gap-2 ${
+                  className={`p-3 rounded-xl border-2 text-left font-bold transition-all cursor-pointer flex items-center gap-2.5 active:translate-x-0.5 active:translate-y-0.5 ${
                     sceneMode === mode.id
-                      ? 'bg-cyan-500/20 border-cyan-500/40 text-cyan-300 font-bold'
-                      : 'bg-white/5 border-white/5 text-neutral-400 hover:text-white hover:bg-white/10'
+                      ? `${mode.activeStyle} shadow-[2px_2px_0px_#000]`
+                      : 'bg-surface border-black text-neutral-300 hover:text-white hover:bg-surface-3 shadow-[1px_1px_0px_#000]'
                   }`}
                 >
-                  <mode.Icon className="w-3.5 h-3.5" aria-hidden="true" />
-                  <span className="text-3xs">{mode.label}</span>
+                  <mode.Icon className="w-4 h-4 shrink-0" aria-hidden="true" />
+                  <span className="text-3xs font-mono">{mode.label}</span>
                 </button>
               ))}
+            </div>
+
+            <div className="pt-2 border-t-2 border-black flex items-center justify-between text-3xs font-mono text-neutral-400 font-bold">
+              <span>Drag to orbit · Scroll to zoom</span>
+              <button
+                type="button"
+                onClick={onEnter}
+                className="text-yellow-400 hover:underline flex items-center gap-1 cursor-pointer font-black"
+              >
+                <span>Enter Workspace</span>
+                <ArrowRight className="w-3 h-3 text-yellow-400" />
+              </button>
             </div>
           </div>
         </div>
       </section>
 
-      {/* ─── Live Backend Health Diagnostic Strip ─────────────────────── */}
-      <section className="px-6 py-4 max-w-7xl mx-auto">
+      {/* ── Live Backend Health Diagnostic Strip ── */}
+      <section className="px-4 sm:px-8 py-4 max-w-7xl mx-auto">
         <LiveBackendBridge onEnterConsole={onEnter} />
       </section>
 
-      {/* ─── 2. Interactive Multi-Agent Swarm Simulator ───────────────── */}
-      <section id="simulator" className="px-6 py-16 max-w-7xl mx-auto space-y-6">
+      {/* ── 2. Interactive Multi-Agent Swarm Simulator ── */}
+      <section id="simulator" className="px-4 sm:px-8 py-16 max-w-7xl mx-auto space-y-6">
         <SwarmSimulator />
       </section>
 
-      {/* ─── 3. Six Pillars Bento Grid ───────────────────────────────── */}
-      <section id="pillars" className="px-6 py-16 max-w-7xl mx-auto">
+      {/* ── 3. Six Pillars Bento Grid ── */}
+      <section id="pillars" className="px-4 sm:px-8 py-16 max-w-7xl mx-auto">
         <BentoPillars />
       </section>
 
-      {/* ─── 4. Interactive Cascaded Evaluator Sandbox ───────────────── */}
-      <section id="evaluation" className="px-6 py-16 max-w-7xl mx-auto space-y-8 border-t border-white/[0.08]">
+      {/* ── 4. Interactive Cascaded Evaluator Sandbox ── */}
+      <section id="evaluation" className="px-4 sm:px-8 py-16 max-w-7xl mx-auto space-y-8 border-t-2 border-black">
         <div className="space-y-2">
-          <div className="inline-flex items-center gap-2 text-xs font-mono text-emerald-400">
+          <div className="inline-flex items-center gap-2 text-xs font-mono text-emerald-400 font-black">
             <ShieldCheck className="w-4 h-4" />
             <span>Dual-Stage Cascaded Evaluator Engine</span>
           </div>
-          <h2 className="text-3xl font-bold text-white tracking-tight font-sans">
+          <h2 className="text-3xl font-black text-white tracking-tight font-sans">
             How multi-agent spans are evaluated in real time.
           </h2>
-          <p className="text-sm text-neutral-300 max-w-2xl font-sans">
+          <p className="text-sm text-neutral-300 max-w-2xl font-sans font-medium">
             MiniLM-L6-v2 cosine similarity gating, DeBERTa-v3 cross-attention NLI, and deterministic regex assertions evaluate every step with zero GPU dependency.
           </p>
-          <p className="text-3xs font-mono text-neutral-500">
-            Provenance: <code className="text-neutral-400">experiments/results/ablation_results.json</code> &bull; Model: MiniLM-L6-v2 + DeBERTa-v3-small (CPU ONNX)
+          <p className="text-3xs font-mono text-neutral-400 font-semibold">
+            Provenance: <code className="text-yellow-400">experiments/results/ablation_results.json</code> &bull; Model: MiniLM-L6-v2 + DeBERTa-v3-small (CPU ONNX)
           </p>
         </div>
 
@@ -336,11 +389,12 @@ export function LandingView({ onEnter, sceneMode, onChangeSceneMode }: LandingVi
           {EVAL_SCENARIOS.map((scenario) => (
             <button
               key={scenario.id}
+              type="button"
               onClick={() => setActiveScenarioId(scenario.id)}
-              className={`px-4 py-2 rounded-xl transition-all cursor-pointer flex items-center gap-2 ${
+              className={`px-4 py-2 rounded-xl transition-all cursor-pointer font-bold border-2 active:translate-x-0.5 active:translate-y-0.5 ${
                 activeScenarioId === scenario.id
-                  ? 'bg-white text-black font-bold shadow-md'
-                  : 'bg-white/5 border border-white/10 text-neutral-400 hover:text-white hover:bg-white/10'
+                  ? 'bg-yellow-400 text-black border-black shadow-[2.5px_2.5px_0px_#000]'
+                  : 'bg-surface-2 border-black text-neutral-300 hover:text-white hover:bg-surface-3 shadow-[1.5px_1.5px_0px_#000]'
               }`}
             >
               <span>{scenario.name}</span>
@@ -349,47 +403,47 @@ export function LandingView({ onEnter, sceneMode, onChangeSceneMode }: LandingVi
         </div>
 
         {/* Sandbox Content Panel */}
-        <div className="p-6 sm:p-8 rounded-2xl bg-[#0a0c14] border border-white/10 space-y-6 shadow-2xl">
+        <div className="p-6 sm:p-8 rounded-3xl bg-surface-2 border-2 border-black space-y-6 shadow-comic-lg">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
             {/* Left: Input Claim & Retrieved Context */}
             <div className="lg:col-span-7 space-y-5">
               <div className="space-y-2">
-                <label className="text-2xs font-mono text-neutral-400 uppercase tracking-wider">Agent Generated Claim</label>
-                <div className="p-3.5 rounded-xl bg-[#07080d] border border-white/10 text-xs text-white leading-relaxed font-mono">
+                <label className="text-2xs font-mono text-neutral-400 uppercase font-black tracking-wider">Agent Generated Claim</label>
+                <div className="p-3.5 rounded-xl bg-surface border-2 border-black text-xs text-white leading-relaxed font-mono font-bold shadow-[1px_1px_0px_#000]">
                   {activeScenario.claim}
                 </div>
               </div>
 
               <div className="space-y-2">
-                <label className="text-2xs font-mono text-neutral-400 uppercase tracking-wider">Retrieved Source Context</label>
-                <div className="p-3.5 rounded-xl bg-[#07080d] border border-white/10 text-xs text-neutral-300 leading-relaxed font-sans">
+                <label className="text-2xs font-mono text-neutral-400 uppercase font-black tracking-wider">Retrieved Source Context</label>
+                <div className="p-3.5 rounded-xl bg-surface border-2 border-black text-xs text-neutral-300 leading-relaxed font-sans shadow-[1px_1px_0px_#000]">
                   {activeScenario.context}
                 </div>
               </div>
 
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <label className="text-2xs font-mono text-neutral-400 uppercase tracking-wider">Tool Execution Summary</label>
-                  <span className="text-3xs font-mono text-amber-400/80">Deterministic Regex Assertion</span>
+                  <label className="text-2xs font-mono text-neutral-400 uppercase font-black tracking-wider">Tool Execution Summary</label>
+                  <span className="comic-tag bg-orange-500 text-white">Deterministic Regex Assertion</span>
                 </div>
-                <div className="p-3.5 rounded-xl bg-[#07080d] border border-white/10 text-xs text-neutral-300 font-mono">
+                <div className="p-3.5 rounded-xl bg-surface border-2 border-black text-xs text-neutral-200 font-mono shadow-[1px_1px_0px_#000]">
                   {activeScenario.toolReturn}
                 </div>
               </div>
             </div>
 
             {/* Right: Cascade Evaluation Verdict */}
-            <div className="lg:col-span-5 p-5 rounded-xl bg-[#0e111a] border border-white/10 space-y-5 flex flex-col justify-between">
+            <div className="lg:col-span-5 p-5 rounded-2xl bg-surface border-2 border-black space-y-5 flex flex-col justify-between shadow-[2px_2px_0px_#000]">
               <div>
-                <div className="flex items-center justify-between pb-3 border-b border-white/[0.08]">
-                  <span className="text-xs font-semibold text-white font-mono uppercase">Evaluation Verdict</span>
+                <div className="flex items-center justify-between pb-3 border-b-2 border-black">
+                  <span className="text-xs font-black text-white font-mono uppercase">Evaluation Verdict</span>
                   <span
-                    className={`text-2xs font-mono font-bold px-2.5 py-0.5 rounded-full ${
+                    className={`comic-tag ${
                       activeScenario.verdictType === 'ok'
-                        ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                        ? 'bg-emerald-400 text-black'
                         : activeScenario.verdictType === 'bad'
-                        ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
-                        : 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                        ? 'bg-pink-500 text-white'
+                        : 'bg-yellow-400 text-black'
                     }`}
                   >
                     {activeScenario.verdict}
@@ -398,31 +452,32 @@ export function LandingView({ onEnter, sceneMode, onChangeSceneMode }: LandingVi
 
                 <div className="mt-4 space-y-3.5 text-xs font-mono">
                   <div>
-                    <span className="text-3xs text-neutral-400 uppercase">Evaluator Pipeline</span>
-                    <p className="text-white font-medium mt-0.5">{activeScenario.stage}</p>
+                    <span className="text-3xs text-neutral-400 uppercase font-bold">Evaluator Pipeline</span>
+                    <p className="text-white font-bold mt-0.5">{activeScenario.stage}</p>
                   </div>
                   <div>
-                    <span className="text-3xs text-neutral-400 uppercase">Cosine Similarity Gate</span>
-                    <p className="text-cyan-300 font-medium mt-0.5">{activeScenario.cosineScore.toFixed(2)}</p>
+                    <span className="text-3xs text-neutral-400 uppercase font-bold">Cosine Similarity Gate</span>
+                    <p className="text-cyan-400 font-black mt-0.5">{activeScenario.cosineScore.toFixed(2)}</p>
                   </div>
                   <div>
-                    <span className="text-3xs text-neutral-400 uppercase">Cross-Attention NLI Classification</span>
-                    <p className="text-white font-medium mt-0.5">{activeScenario.debertaNli}</p>
+                    <span className="text-3xs text-neutral-400 uppercase font-bold">Cross-Attention NLI Classification</span>
+                    <p className="text-white font-bold mt-0.5">{activeScenario.debertaNli}</p>
                   </div>
                   <div>
-                    <span className="text-3xs text-neutral-400 uppercase">Tool Return Assertion</span>
-                    <p className="text-white font-medium mt-0.5">{activeScenario.toolMatch}</p>
+                    <span className="text-3xs text-neutral-400 uppercase font-bold">Tool Return Assertion</span>
+                    <p className="text-white font-bold mt-0.5">{activeScenario.toolMatch}</p>
                   </div>
                 </div>
               </div>
 
-              <div className="pt-4 border-t border-white/[0.08]">
+              <div className="pt-4 border-t-2 border-black">
                 <button
+                  type="button"
                   onClick={onEnter}
-                  className="w-full py-2.5 rounded-xl text-xs font-semibold bg-white text-black hover:bg-neutral-200 transition-all flex items-center justify-center gap-2 cursor-pointer font-mono font-bold"
+                  className="w-full comic-btn-yellow py-2.5 px-4 text-xs font-mono flex items-center justify-center gap-2 cursor-pointer"
                 >
                   <span>Open Live Trace Inspector</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
+                  <ArrowRight className="w-3.5 h-3.5 text-black" />
                 </button>
               </div>
             </div>
@@ -430,48 +485,61 @@ export function LandingView({ onEnter, sceneMode, onChangeSceneMode }: LandingVi
         </div>
       </section>
 
-      {/* ─── 5. Architectural Comparison Matrix ───────────────────────── */}
-      <section id="benchmarks" className="px-6 py-16 max-w-7xl mx-auto">
+      {/* ── 5. Architectural Comparison Matrix ── */}
+      <section id="benchmarks" className="px-4 sm:px-8 py-16 max-w-7xl mx-auto">
         <ComparisonMatrix />
       </section>
 
-      {/* ─── 6. Interactive ROI & Cost Calculator ─────────────────────── */}
-      <section id="calculator" className="px-6 py-16 max-w-7xl mx-auto">
+      {/* ── 6. Interactive ROI & Cost Calculator ── */}
+      <section id="calculator" className="px-4 sm:px-8 py-16 max-w-7xl mx-auto">
         <CostCalculator />
       </section>
 
-      {/* ─── 7. Developer SDK Quickstart Studio ───────────────────────── */}
-      <section id="sdk" className="px-6 py-16 max-w-7xl mx-auto">
+      {/* ── 7. Developer SDK Quickstart Studio ── */}
+      <section id="sdk" className="px-4 sm:px-8 py-16 max-w-7xl mx-auto">
         <SdkStudio />
       </section>
 
-      {/* ─── 8. Technical Architecture FAQ ────────────────────────────── */}
-      <section id="faq" className="px-6 py-16 max-w-7xl mx-auto">
+      {/* ── 8. Technical Architecture FAQ ── */}
+      <section id="faq" className="px-4 sm:px-8 py-16 max-w-7xl mx-auto">
         <FaqSection />
       </section>
 
-      {/* ─── 9. Technical Whitepaper Modal ────────────────────────────── */}
+      {/* ── 9. Technical Whitepaper Modal ── */}
       <WhitepaperModal isOpen={isWhitepaperOpen} onClose={() => setIsWhitepaperOpen(false)} />
 
-      {/* ─── Footer ─────────────────────────────────────────────────── */}
-      <footer className="px-6 py-12 max-w-7xl mx-auto border-t border-white/[0.08] flex flex-col md:flex-row items-center justify-between gap-6 text-xs text-neutral-400 font-mono">
+      {/* ── Footer ── */}
+      <footer className="px-4 sm:px-8 py-12 max-w-7xl mx-auto border-t-2 border-black flex flex-col md:flex-row items-center justify-between gap-6 text-xs text-neutral-400 font-mono font-bold">
         <div className="flex items-center gap-3">
-          <div className="w-6 h-6 rounded-md bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center font-bold text-3xs text-black">
+          <div className="w-7 h-7 rounded-lg bg-yellow-400 border-2 border-black flex items-center justify-center font-black text-xs text-black shadow-[1.5px_1.5px_0px_#000]">
             AP
           </div>
-          <span className="font-semibold text-white">AgentPulse</span>
+          <span className="font-black text-white">AgentPulse</span>
           <span>&bull;</span>
           <span>Open-Source Multi-Agent AI Observability</span>
         </div>
 
         <div className="flex flex-wrap items-center gap-6">
-          <button onClick={() => setIsWhitepaperOpen(true)} className="hover:text-white transition-colors cursor-pointer">
+          <button
+            type="button"
+            onClick={() => setIsWhitepaperOpen(true)}
+            className="hover:text-yellow-400 transition-colors cursor-pointer"
+          >
             Formulas & Whitepaper
           </button>
-          <a href="https://github.com/Soum-Code/agentpulse" target="_blank" rel="noreferrer" className="hover:text-white transition-colors">
+          <a
+            href="https://github.com/Soum-Code/agentpulse"
+            target="_blank"
+            rel="noreferrer"
+            className="hover:text-cyan-400 transition-colors"
+          >
             GitHub Repo
           </a>
-          <button onClick={onEnter} className="hover:text-white transition-colors cursor-pointer text-cyan-400">
+          <button
+            type="button"
+            onClick={onEnter}
+            className="hover:text-yellow-300 transition-colors cursor-pointer text-yellow-400 font-black"
+          >
             Console Workspace &rarr;
           </button>
         </div>

@@ -141,7 +141,7 @@ export function BentoPillars() {
   return (
     <div className="w-full space-y-8">
       <div className="space-y-2">
-        <div className="inline-flex items-center gap-2 text-xs font-mono text-cyan-400">
+        <div className="inline-flex items-center gap-2 text-xs font-mono text-indigo-400">
           <Layers className="w-4 h-4" />
           <span>Core Technological Architecture</span>
         </div>
@@ -161,19 +161,19 @@ export function BentoPillars() {
           return (
             <div
               key={pillar.id}
-              className={`${pillar.colSpan} p-6 sm:p-7 rounded-2xl bg-[#0a0c14] border border-white/10 hover:border-white/20 transition-all duration-300 flex flex-col justify-between space-y-6 shadow-xl group`}
+              className={`${pillar.colSpan} p-6 sm:p-7 rounded-2xl bg-surface-2 border border-line hover:border-line-strong transition-all duration-300 flex flex-col justify-between space-y-6 shadow-lg group`}
             >
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2.5">
-                    <div className="w-9 h-9 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-cyan-400 group-hover:text-white group-hover:bg-cyan-500/20 transition-all">
+                    <div className="w-9 h-9 rounded-xl bg-surface-3 border border-line flex items-center justify-center text-indigo-400 group-hover:text-white group-hover:bg-indigo-500/20 transition-all">
                       <Icon className="w-4 h-4" />
                     </div>
                     <span className="text-3xs font-mono text-neutral-400 uppercase tracking-wider">
                       {pillar.eyebrow}
                     </span>
                   </div>
-                  <span className="text-3xs font-mono px-2 py-0.5 rounded bg-white/5 text-neutral-300 border border-white/10">
+                  <span className="text-3xs font-mono px-2 py-0.5 rounded-md bg-surface-3 text-neutral-300 border border-line">
                     {pillar.badge}
                   </span>
                 </div>
@@ -188,10 +188,10 @@ export function BentoPillars() {
                 </div>
 
                 {/* Detail Checklist */}
-                <div className="space-y-1.5 pt-2 border-t border-white/[0.04] text-3xs font-mono text-neutral-400">
+                <div className="space-y-1.5 pt-2 border-t border-line text-3xs font-mono text-neutral-400">
                   {pillar.detailPoints.map((pt, i) => (
                     <div key={i} className="flex items-center gap-2">
-                      <div className="w-1 h-1 rounded-full bg-cyan-400" />
+                      <div className="w-1.5 h-1.5 rounded-full bg-indigo-400" />
                       <span>{pt}</span>
                     </div>
                   ))}
@@ -199,12 +199,12 @@ export function BentoPillars() {
               </div>
 
               {/* Metric Footer */}
-              <div className="p-3 rounded-xl bg-[#0e111a] border border-white/[0.06] flex items-center justify-between font-mono">
+              <div className="p-3 rounded-xl bg-surface border border-line flex items-center justify-between font-mono">
                 <div>
                   <span className="text-3xs text-neutral-500 uppercase">{pillar.metricLabel}</span>
                   <p className="text-sm font-bold text-white">{pillar.metric}</p>
                 </div>
-                <div className="w-6 h-6 rounded-lg bg-white/5 flex items-center justify-center text-neutral-500 group-hover:text-white transition-colors">
+                <div className="w-6 h-6 rounded-lg bg-surface-3 flex items-center justify-center text-neutral-400 group-hover:text-indigo-300 transition-colors">
                   <ArrowUpRight className="w-3.5 h-3.5" />
                 </div>
               </div>

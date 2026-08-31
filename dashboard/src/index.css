@@ -1,49 +1,45 @@
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 /* ══════════════════════════════════════════════════════════════════════
-   AgentPulse — Quiet Editorial + Spatial Intelligence Design System
-
-   Core Principles:
-   1. Visual Restraint: Deep obsidian / graphite base. Quiet at rest.
-   2. Semantic Color: Color strictly reserved for state (OK, WARN, BAD) upon interaction.
-   3. Selective Liquid Glass: Functional layer only (dock, command bar, transient modals).
-   4. Content Surfaces: Crisp, high-contrast, flat technical surfaces for maximum readability.
-   5. Editorial Typography: Space Grotesk for human UI, JetBrains Mono for tabular numbers/IDs.
+   AgentPulse — Lively Comic & Neo-Pop Observability Deck Design System
    ══════════════════════════════════════════════════════════════════════ */
 
 :root {
-  /* Quiet Monochrome Foundation */
-  --void:               #08090d;
-  --void-elevated:      #0e1017;
-  --surface:            #131620;
-  --surface-2:          #1a1e2b;
-  --surface-3:          #232839;
-  --line:               rgba(255, 255, 255, 0.08);
-  --line-strong:        rgba(255, 255, 255, 0.16);
+  --void:               #0c101d;
+  --surface:            #141b2d;
+  --surface-2:          #1b243b;
+  --surface-3:          #24304e;
+  --surface-4:          #2f3e63;
+  --line:               rgba(255, 255, 255, 0.12);
+  --line-strong:        rgba(255, 255, 255, 0.22);
+  --line-highlight:     #ffe600;
 
-  /* Typography / Editorial Inks */
-  --ink:                #f3f4f6;
-  --ink-dim:            #8b92a5;
-  --ink-faint:          #4e5569;
+  --ink:                #f8fafc;
+  --ink-dim:            #94a3b8;
+  --ink-faint:          #64748b;
+  --ink-dark:           #050811;
 
-  /* Semantic State Tokens (Restrained & Meaningful) */
-  --state-ok:           #10b981;
-  --state-ok-bg:        rgba(16, 185, 129, 0.10);
-  --state-ok-line:      rgba(16, 185, 129, 0.30);
+  --comic-yellow:       #ffe600;
+  --comic-cyan:         #00e5ff;
+  --comic-pink:         #ff3366;
+  --comic-green:        #00e676;
+  --comic-purple:       #a855f7;
+  --comic-orange:       #ff6d00;
+  --comic-blue:         #3b82f6;
 
-  --state-warn:         #f59e0b;
-  --state-warn-bg:      rgba(245, 158, 11, 0.10);
-  --state-warn-line:    rgba(245, 158, 11, 0.30);
+  --signal:             #ffe600;
+  --signal-glow:        #fff275;
+  --signal-dim:         #eab308;
+  --signal-deep:        #422006;
 
-  --state-bad:          #ef4444;
-  --state-bad-bg:       rgba(239, 68, 68, 0.10);
-  --state-bad-line:     rgba(239, 68, 68, 0.30);
-
-  --state-info:         #6366f1;
-  --state-info-bg:      rgba(99, 102, 241, 0.10);
-  --state-info-line:    rgba(99, 102, 241, 0.30);
+  --state-ok:           #00e676;
+  --state-warn:         #ffe600;
+  --state-bad:          #ff3366;
+  --state-crit:         #ff1744;
 
   color-scheme: dark;
 }
@@ -60,17 +56,18 @@ body {
   color: var(--ink);
   margin: 0;
   padding: 0;
-  min-height: 100%;
-  overflow-x: hidden;
+  min-height: 100vh;
+  width: 100%;
 }
 
 body {
-  font-family: 'Space Grotesk', system-ui, -apple-system, sans-serif;
+  font-family: 'IBM Plex Sans', system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+  overflow-x: hidden;
 }
 
-/* Monospace & Tabular figures */
+/* Monospace & Tabular figures for telemetry data readouts */
 .font-mono,
 code,
 pre,
@@ -80,114 +77,203 @@ pre,
   font-feature-settings: 'tnum' 1;
 }
 
-/* ─── Apple Functional Liquid Glass (Reserved for Navigation & Overlays) ─── */
-
-.glass-functional {
-  background: rgba(19, 22, 32, 0.72);
-  backdrop-filter: blur(28px) saturate(180%);
-  -webkit-backdrop-filter: blur(28px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow:
-    inset 0 1px 0.5px 0 rgba(255, 255, 255, 0.20),
-    0 16px 40px -12px rgba(0, 0, 0, 0.85);
+/* Comic Tri-Color Wordmark Gradient (Yellow -> Pink -> Cyan) */
+.wordmark-gradient {
+  background: linear-gradient(135deg, #ffe600 0%, #ff3366 50%, #00e5ff 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  filter: drop-shadow(2px 2px 0px rgba(0,0,0,0.8));
 }
 
-.glass-functional-dock {
-  background: rgba(14, 16, 23, 0.82);
-  backdrop-filter: blur(32px) saturate(190%);
-  -webkit-backdrop-filter: blur(32px) saturate(190%);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  box-shadow:
-    inset 0 1px 1px 0 rgba(255, 255, 255, 0.25),
-    0 20px 50px -10px rgba(0, 0, 0, 0.90);
-}
-
-.glass-command-bar {
-  background: rgba(14, 16, 23, 0.90);
-  backdrop-filter: blur(36px) saturate(200%);
-  -webkit-backdrop-filter: blur(36px) saturate(200%);
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  box-shadow:
-    inset 0 1px 1px 0 rgba(255, 255, 255, 0.30),
-    0 30px 80px -15px rgba(0, 0, 0, 0.95);
-}
-
-/* ─── Quiet Standard Technical Surfaces (For Traces, Metrics & Data) ─── */
-
-.surface-card {
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: 16px;
-  transition: border-color 0.2s ease, background-color 0.2s ease;
-}
-
-.surface-card:hover {
-  border-color: var(--line-strong);
+/* Comic Panel Base */
+.comic-panel {
   background: var(--surface-2);
+  border: 2px solid rgba(255, 255, 255, 0.16);
+  border-radius: 16px;
+  box-shadow: 4px 4px 0px 0px #000000;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
 }
 
-.surface-card-interactive {
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: 16px;
+.comic-panel:hover {
+  border-color: rgba(255, 255, 255, 0.3);
+  box-shadow: 6px 6px 0px 0px #000000;
+}
+
+.comic-panel-interactive {
   cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.surface-card-interactive:hover {
-  border-color: rgba(255, 255, 255, 0.24);
-  background: var(--surface-2);
-  transform: translateY(-1px);
+.comic-panel-interactive:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0px 0px #000000;
 }
 
-/* ─── Editorial Layout & Typography Tokens ─── */
+.comic-panel-interactive:active {
+  transform: translate(1px, 1px);
+  box-shadow: 2px 2px 0px 0px #000000;
+}
 
-.editorial-headline {
-  font-size: clamp(2.5rem, 5vw, 4.25rem);
-  line-height: 1.05;
+/* Comic Action Buttons */
+.comic-btn-yellow {
+  background: #ffe600;
+  color: #000000;
   font-weight: 700;
-  letter-spacing: -0.035em;
-  color: var(--ink);
+  border: 2px solid #000000;
+  border-radius: 12px;
+  box-shadow: 3px 3px 0px 0px #000000;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
 }
 
-.editorial-subhead {
-  font-size: clamp(1.125rem, 2vw, 1.375rem);
-  line-height: 1.5;
-  color: var(--ink-dim);
-  font-weight: 400;
+.comic-btn-yellow:hover {
+  background: #fff275;
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0px 0px #000000;
 }
 
-/* ─── Stream Indicator Dot ─── */
+.comic-btn-yellow:active {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0px 0px #000000;
+}
 
+.comic-btn-cyan {
+  background: #00e5ff;
+  color: #000000;
+  font-weight: 700;
+  border: 2px solid #000000;
+  border-radius: 12px;
+  box-shadow: 3px 3px 0px 0px #000000;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.comic-btn-cyan:hover {
+  background: #6ff9ff;
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0px 0px #000000;
+}
+
+.comic-btn-pink {
+  background: #ff3366;
+  color: #ffffff;
+  font-weight: 700;
+  border: 2px solid #000000;
+  border-radius: 12px;
+  box-shadow: 3px 3px 0px 0px #000000;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.comic-btn-pink:hover {
+  background: #ff5c85;
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0px 0px #000000;
+}
+
+/* Comic Speech Bubble / Tag */
+.comic-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 800;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 2px 8px;
+  border-radius: 8px;
+  border: 1.5px solid #000000;
+  box-shadow: 2px 2px 0px 0px #000000;
+}
+
+/* Frosted Comic Glass Header & Navigation Dock */
+.glass-header {
+  background: rgba(12, 16, 29, 0.88);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-bottom: 2px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.5);
+}
+
+.glass-dock {
+  background: rgba(20, 27, 45, 0.92);
+  backdrop-filter: blur(24px) saturate(200%);
+  -webkit-backdrop-filter: blur(24px) saturate(200%);
+  border: 2px solid rgba(255, 255, 255, 0.18);
+  border-radius: 24px;
+  box-shadow: 0 16px 36px -8px rgba(0, 0, 0, 0.8), 4px 4px 0px 0px #000000;
+}
+
+/* Stream Status Dot & Pulse */
 .stream-dot {
-  width: 6px;
-  height: 6px;
+  width: 9px;
+  height: 9px;
   border-radius: 9999px;
   display: inline-block;
   flex-shrink: 0;
+  position: relative;
 }
 
 .stream-live {
   background-color: var(--state-ok);
-  box-shadow: 0 0 6px var(--state-ok);
+  box-shadow: 0 0 8px var(--state-ok);
+}
+
+.stream-live::after {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 9999px;
+  border: 2px solid var(--state-ok);
+  animation: pulse-ring 2.2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+}
+
+@keyframes pulse-ring {
+  0% { transform: scale(0.9); opacity: 0.9; }
+  70% { transform: scale(2.2); opacity: 0; }
+  100% { transform: scale(2.2); opacity: 0; }
 }
 
 .stream-idle {
   background-color: var(--ink-faint);
 }
 
-/* ─── Minimal Custom Scrollbar ─── */
+.stream-warning {
+  background-color: var(--state-warn);
+  box-shadow: 0 0 8px var(--state-warn);
+}
+
+/* Comic Halftone Dot Grid Background Texture */
+.ai-grid-bg {
+  background-color: var(--void);
+  background-image: 
+    radial-gradient(rgba(255, 255, 255, 0.08) 1.5px, transparent 1.5px),
+    radial-gradient(rgba(255, 230, 0, 0.04) 1.5px, transparent 1.5px);
+  background-size: 24px 24px, 48px 48px;
+  background-position: 0 0, 12px 12px;
+}
+
+/* Comic Brand Accent Glow Bar */
+.brand-glow-bar {
+  height: 3px;
+  background: linear-gradient(90deg, #ffe600, #ff3366, #a855f7, #00e5ff, #00e676);
+  box-shadow: 0 0 12px rgba(255, 230, 0, 0.5);
+}
+
+/* Custom Comic Scrollbar */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
 }
 ::-webkit-scrollbar-track {
-  background: transparent;
+  background: #0c101d;
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.12);
+  background: #ffe600;
+  border: 1.5px solid #000000;
   border-radius: 9999px;
+  box-shadow: 1px 1px 0px 0px #000000;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.24);
+  background: #ff3366;
 }
+

@@ -1,5 +1,25 @@
-import { FormEvent, useState } from 'react';
-import { ArrowLeft, ArrowRight, CheckCircle2, Globe, KeyRound, ShieldCheck } from 'lucide-react';
+import { FormEvent, useState, useEffect } from 'react';
+import {
+  Activity,
+  ArrowLeft,
+  ArrowRight,
+  CheckCircle2,
+  Cpu,
+  Database,
+  Eye,
+  EyeOff,
+  Globe,
+  KeyRound,
+  Radio,
+  RefreshCw,
+  Server,
+  Shield,
+  ShieldAlert,
+  ShieldCheck,
+  Sparkles,
+  Terminal,
+  Zap,
+} from 'lucide-react';
 import { AgentPulseConnection } from '../lib/api';
 
 interface ConnectViewProps {
@@ -17,15 +37,66 @@ function normaliseUrl(value: string) {
 }
 
 const PRESET_INSTANCES = [
-  { id: 'local', name: 'Localhost Node', url: 'http://localhost:8000', label: 'Default Instance' },
-  { id: 'docker', name: 'Docker Bridge', url: 'http://127.0.0.1:8000', label: 'Local Fleet' },
-  { id: 'custom', name: 'Custom Instance', url: '', label: 'Remote Cluster' },
+  {
+    id: 'local',
+    name: 'Local Standalone Node',
+    url: 'http://localhost:8000',
+    type: 'Local Python Service',
+    recommended: true,
+  },
+  {
+    id: 'docker',
+    name: 'Docker Fleet Cluster',
+    url: 'http://127.0.0.1:8000',
+    type: 'Containerized Swarm',
+    recommended: false,
+  },
+  {
+    id: 'custom',
+    name: 'Remote Cloud VPC',
+    url: 'https://telemetry.yourcompany.ai',
+    type: 'Dedicated Endpoint',
+    recommended: false,
+  },
 ];
 
 export function ConnectView({ initialConnection, onConnect, onBack }: ConnectViewProps) {
   const [instanceUrl, setInstanceUrl] = useState(initialConnection.baseUrl || 'http://localhost:8000');
   const [apiKey, setApiKey] = useState(initialConnection.apiKey || '');
+  const [showApiKey, setShowApiKey] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [pingStatus, setPingStatus] = useState<'checking' | 'online' | 'offline'>('checking');
+  const [pingLatency, setPingLatency] = useState<number | null>(null);
+
+  // Quick live ping probe to instance URL
+  useEffect(() => {
+    let isCurrent = true;
+    setPingStatus('checking');
+
+    const checkPing = async () => {
+      const startTime = performance.now();
+      try {
+        const normalized = normaliseUrl(instanceUrl);
+        const res = await fetch(`${normalized}/v1/health/ready`, { method: 'GET', signal: AbortSignal.timeout(2500) });
+        if (isCurrent) {
+          const latency = Math.round(performance.now() - startTime);
+          setPingLatency(latency);
+          setPingStatus(res.ok ? 'online' : 'offline');
+        }
+      } catch {
+        if (isCurrent) {
+          setPingStatus('offline');
+          setPingLatency(null);
+        }
+      }
+    };
+
+    const timer = setTimeout(checkPing, 300);
+    return () => {
+      isCurrent = false;
+      clearTimeout(timer);
+    };
+  }, [instanceUrl]);
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
@@ -37,45 +108,89 @@ export function ConnectView({ initialConnection, onConnect, onBack }: ConnectVie
   };
 
   return (
-    <div className="relative z-10 min-h-screen flex flex-col items-center justify-between px-6 py-10 selection:bg-white/20 selection:text-white">
-      {/* Top Header Bar */}
-      <header className="w-full max-w-xl flex items-center justify-between">
+    <div className="relative min-h-screen w-full flex flex-col justify-between px-4 sm:px-8 py-8 selection:bg-indigo-500/30 selection:text-white overflow-x-hidden">
+      {/* ── Ambient Background Glow ── */}
+      <div className="fixed top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[42rem] h-[42rem] rounded-full bg-indigo-500/10 blur-[150px] pointer-events-none -z-10" />
+      <div className="fixed bottom-10 right-1/4 w-[30rem] h-[30rem] rounded-full bg-purple-500/10 blur-[140px] pointer-events-none -z-10" />
+
+      {/* ── Top Header Navigation Bar ── */}
+      <header className="w-full max-w-4xl mx-auto flex items-center justify-between z-20">
         <button
           type="button"
           onClick={onBack}
-          className="inline-flex items-center gap-2 text-xs font-medium text-neutral-400 hover:text-white transition-colors group cursor-pointer"
+          className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-surface-2 hover:bg-surface-3 border border-line text-xs font-mono text-neutral-300 hover:text-white transition-all group cursor-pointer backdrop-blur-md shadow-sm"
         >
-          <ArrowLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
-          <span>Return</span>
+          <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform text-indigo-400" />
+          <span>Return to Public Deck</span>
         </button>
-        <div className="flex items-center gap-2">
-          <span className="stream-dot stream-live" />
-          <span className="text-2xs font-mono text-neutral-400 uppercase tracking-wider">Gateway Client</span>
+
+        {/* Live Instance Ping Badge */}
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface-2 border border-line backdrop-blur-md text-3xs font-mono">
+          <span
+            className={`w-2 h-2 rounded-full ${
+              pingStatus === 'online'
+                ? 'bg-emerald-400'
+                : pingStatus === 'checking'
+                ? 'bg-amber-400 animate-pulse'
+                : 'bg-rose-500'
+            }`}
+          />
+          <span className="text-neutral-400">GATEWAY:</span>
+          <span
+            className={`font-bold ${
+              pingStatus === 'online'
+                ? 'text-emerald-400'
+                : pingStatus === 'checking'
+                ? 'text-amber-400'
+                : 'text-rose-400'
+            }`}
+          >
+            {pingStatus === 'online'
+              ? `ONLINE (${pingLatency}ms)`
+              : pingStatus === 'checking'
+              ? 'PINGING...'
+              : 'OFFLINE / UNREACHABLE'}
+          </span>
         </div>
       </header>
 
-      {/* Center Functional Liquid Glass Connection Surface */}
-      <main className="w-full max-w-md my-auto py-6">
-        <div className="glass-functional p-8 rounded-3xl space-y-6 shadow-2xl border border-white/10">
-          <div className="space-y-2">
-            <div className="w-10 h-10 rounded-xl bg-white/10 border border-white/15 flex items-center justify-center font-bold text-sm text-white">
-              AP
+      {/* ── Center Glassmorphism Configuration Card ── */}
+      <main className="w-full max-w-xl mx-auto my-auto py-8 z-20">
+        <div className="p-7 sm:p-9 rounded-3xl bg-surface-2 border border-line shadow-2xl space-y-7 transition-all">
+          {/* Card Header */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center font-bold text-sm text-white shadow-lg shadow-indigo-500/25">
+                AP
+              </div>
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/25 text-3xs font-mono text-indigo-300">
+                <Sparkles className="w-3 h-3" />
+                <span>Zero-Egress Ingest</span>
+              </div>
             </div>
-            <h1 className="text-2xl font-bold tracking-tight text-white">
-              Connect to AgentPulse
-            </h1>
-            <p className="text-xs text-neutral-400 leading-relaxed">
-              Connect to a local or remote AgentPulse instance to stream live telemetry, monitor drift, and inspect agent traces.
-            </p>
+
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white font-sans">
+                Connect to <span className="wordmark-gradient">AgentPulse</span>
+              </h1>
+              <p className="text-xs font-mono text-neutral-400 leading-relaxed mt-1">
+                Establish an encrypted low-latency telemetry bridge to stream multi-agent traces, evaluate grounding cascades, and monitor vector drift in real time.
+              </p>
+            </div>
           </div>
 
-          {/* Quick Presets */}
-          <div className="space-y-2">
-            <label className="text-3xs font-mono uppercase tracking-wider text-neutral-400">
-              Instance Presets
-            </label>
-            <div className="grid grid-cols-2 gap-2 text-xs font-mono">
-              {PRESET_INSTANCES.slice(0, 2).map((preset) => {
+          {/* Quick Instance Presets */}
+          <div className="space-y-2.5">
+            <div className="flex items-center justify-between">
+              <label className="text-3xs font-mono uppercase tracking-wider text-neutral-400 font-bold flex items-center gap-1.5">
+                <Server className="w-3.5 h-3.5 text-indigo-400" />
+                <span>Instance Presets</span>
+              </label>
+              <span className="text-4xs font-mono text-neutral-500">1-Click Select</span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+              {PRESET_INSTANCES.map((preset) => {
                 const isSelected = instanceUrl === preset.url;
                 return (
                   <button
@@ -85,14 +200,24 @@ export function ConnectView({ initialConnection, onConnect, onBack }: ConnectVie
                       setInstanceUrl(preset.url);
                       setError(null);
                     }}
-                    className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                    className={`p-3 rounded-2xl border text-left transition-all cursor-pointer relative flex flex-col justify-between gap-1.5 ${
                       isSelected
-                        ? 'bg-white/15 border-white/30 text-white font-bold'
-                        : 'bg-white/5 border-white/5 text-neutral-400 hover:text-white hover:bg-white/10'
+                        ? 'bg-indigo-500/15 border-indigo-500/50 shadow-signal'
+                        : 'bg-surface border-line hover:bg-surface-3 hover:border-line-strong'
                     }`}
                   >
-                    <p className="text-xs">{preset.name}</p>
-                    <p className="text-3xs text-neutral-400 truncate mt-0.5">{preset.url}</p>
+                    <div className="flex items-center justify-between">
+                      <span className={`text-xs font-mono font-bold truncate ${isSelected ? 'text-indigo-300' : 'text-white'}`}>
+                        {preset.name}
+                      </span>
+                      {isSelected && <CheckCircle2 className="w-3.5 h-3.5 text-indigo-400 shrink-0" />}
+                    </div>
+                    <span className="text-3xs font-mono text-neutral-400 truncate block">
+                      {preset.type}
+                    </span>
+                    <span className="text-4xs font-mono text-neutral-500 truncate block pt-1 border-t border-line">
+                      {preset.url}
+                    </span>
                   </button>
                 );
               })}
@@ -100,13 +225,15 @@ export function ConnectView({ initialConnection, onConnect, onBack }: ConnectVie
           </div>
 
           {/* Connect Form */}
-          <form onSubmit={submit} className="space-y-4">
+          <form onSubmit={submit} className="space-y-5">
+            {/* Instance URL Field */}
             <div className="space-y-1.5">
-              <label htmlFor="instance-url" className="text-3xs font-mono uppercase tracking-wider text-neutral-400">
-                Instance URL
+              <label htmlFor="instance-url" className="text-3xs font-mono uppercase tracking-wider text-neutral-300 font-bold flex items-center justify-between">
+                <span>Instance URL</span>
+                <span className="text-neutral-500 font-normal">HTTP / HTTPS</span>
               </label>
-              <div className="relative">
-                <Globe className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500" />
+              <div className="relative group">
+                <Globe className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 group-focus-within:text-indigo-400 transition-colors" />
                 <input
                   id="instance-url"
                   type="text"
@@ -116,50 +243,67 @@ export function ConnectView({ initialConnection, onConnect, onBack }: ConnectVie
                     setError(null);
                   }}
                   placeholder="http://localhost:8000"
-                  className="w-full bg-[#08090d] border border-white/10 focus:border-white/30 rounded-xl pl-10 pr-4 py-2.5 text-xs text-white placeholder:text-neutral-600 font-mono transition-colors"
+                  className="w-full bg-surface border border-line focus:border-indigo-400/60 focus:bg-surface-3 rounded-xl pl-10 pr-4 py-3 text-xs text-white placeholder:text-neutral-600 font-mono transition-all"
+                  required
                 />
               </div>
             </div>
 
+            {/* API Key Field */}
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <label htmlFor="api-key" className="text-3xs font-mono uppercase tracking-wider text-neutral-400">
-                  API Key <span className="text-neutral-500">(Optional)</span>
+                <label htmlFor="api-key" className="text-3xs font-mono uppercase tracking-wider text-neutral-300 font-bold flex items-center gap-1.5">
+                  <KeyRound className="w-3.5 h-3.5 text-indigo-400" />
+                  <span>API Key <span className="text-neutral-500 font-normal">(Optional for local dev)</span></span>
                 </label>
+                <span className="text-4xs font-mono text-neutral-500">X-API-Key</span>
               </div>
-              <div className="relative">
-                <KeyRound className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500" />
+              <div className="relative group">
                 <input
                   id="api-key"
-                  type="password"
+                  type={showApiKey ? 'text' : 'password'}
                   value={apiKey}
                   onChange={(e) => setApiKey(e.target.value)}
-                  placeholder="Leave empty for local development"
-                  className="w-full bg-[#08090d] border border-white/10 focus:border-white/30 rounded-xl pl-10 pr-4 py-2.5 text-xs text-white placeholder:text-neutral-600 font-mono transition-colors"
+                  placeholder="Bearer token or cluster API key..."
+                  className="w-full bg-surface border border-line focus:border-indigo-400/60 focus:bg-surface-3 rounded-xl pl-4 pr-10 py-3 text-xs text-white placeholder:text-neutral-600 font-mono transition-all"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowApiKey((prev) => !prev)}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-white transition-colors cursor-pointer"
+                >
+                  {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
               </div>
             </div>
 
+            {/* Error Banner */}
             {error && (
-              <p className="text-xs text-rose-400 font-mono bg-rose-500/10 border border-rose-500/20 p-2.5 rounded-xl">
-                {error}
-              </p>
+              <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-xs font-mono text-rose-300 flex items-start gap-2.5 animate-rise">
+                <ShieldAlert className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+                <span>{error}</span>
+              </div>
             )}
 
+            {/* Submit Action Button */}
             <button
               type="submit"
-              className="w-full py-3 rounded-xl text-xs font-semibold bg-white text-black hover:bg-neutral-200 transition-all flex items-center justify-center gap-2 cursor-pointer shadow-lg mt-2"
+              className="w-full py-3.5 rounded-xl text-xs font-bold font-mono bg-indigo-600 hover:bg-indigo-500 text-white transition-all flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-indigo-500/25 active:scale-[0.99]"
             >
-              <span>Initialize Connection</span>
+              <span>Initialize Handshake Sequence</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </form>
         </div>
       </main>
 
-      {/* Footer Security Note */}
-      <footer className="text-3xs font-mono text-neutral-500 text-center">
-        Zero credentials stored permanently &bull; Ephemeral memory session
+      {/* ── Footer Security & Ephemeral Memory Guarantee ── */}
+      <footer className="w-full max-w-xl mx-auto flex items-center justify-between text-3xs font-mono text-neutral-500 z-20 pt-2 border-t border-line">
+        <div className="flex items-center gap-1.5">
+          <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+          <span>Zero Credential Retention Guarantee</span>
+        </div>
+        <span>Self-Hosted &bull; Port 8000</span>
       </footer>
     </div>
   );

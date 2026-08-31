@@ -35,12 +35,12 @@ type DataPulse = {
 };
 
 const AGENT_COLORS = [
-  0x00f2ff, // Electric Cyan (Query Planner)
-  0xa855f7, // Aurora Violet (Paper Indexer)
-  0x10b981, // Neon Emerald (Claim Verifier)
-  0xf43f5e, // Sunset Rose (Synthesis Engine)
-  0xf59e0b, // Amber Gold
-  0x38bdf8, // Sky Blue
+  0xffe600, // Comic Vivid Yellow (Query Planner)
+  0x00e5ff, // Comic Vivid Cyan (Retriever / Telemetry)
+  0x00e676, // Comic Vivid Emerald Green (Claim Verifier)
+  0xff3366, // Comic Vivid Pink (Synthesis Engine)
+  0xff6d00, // Comic Vivid Orange (Tool Executor)
+  0xa855f7, // Comic Vivid Purple (NLI Inspector)
 ];
 
 function disposeObject(object: THREE.Object3D) {
@@ -102,31 +102,8 @@ export function SpatialInstrument({
       }
     }
 
-    if (mode === 'LANDING') {
-      if (sceneMode === 'cascade') {
-        stateRef.current.targetCameraPos.set(0, 3.5, 14);
-        stateRef.current.targetCameraLookAt.set(0, 0, 0);
-      } else if (sceneMode === 'drift') {
-        stateRef.current.targetCameraPos.set(4, 3.0, 13);
-        stateRef.current.targetCameraLookAt.set(0, 0, 0);
-      } else if (sceneMode === 'threat') {
-        stateRef.current.targetCameraPos.set(0, 6.0, 12);
-        stateRef.current.targetCameraLookAt.set(0, -0.5, 0);
-      } else {
-        stateRef.current.targetCameraPos.set(0, 2.2, 16);
-        stateRef.current.targetCameraLookAt.set(0, 0, 0);
-      }
-      return;
-    }
-
-    const targets: Record<InstrumentMode, [number, number, number, number, number, number]> = {
-      LANDING: [0, 2.2, 16, 0, 0, 0],
-      CONNECT: [0, 1.2, 11, 0, -0.1, 0],
-      HANDSHAKE: [0, 3.2, 13, 0, 0, 0],
-      COMMAND: [0, 6.0, 14, 0, -0.4, 0],
-    };
-    const [x, y, z, lookX, lookY, lookZ] = targets[mode];
-    stateRef.current.targetCameraPos.set(x, y, z);
+    const { posX, posY, posZ, lookX, lookY, lookZ } = getSpatialCameraTarget(mode, sceneMode);
+    stateRef.current.targetCameraPos.set(posX, posY, posZ);
     stateRef.current.targetCameraLookAt.set(lookX, lookY, lookZ);
   }, [mode, sceneMode, selectedAgentId, agents]);
 
@@ -135,7 +112,7 @@ export function SpatialInstrument({
     if (!container) return;
 
     const scene = new THREE.Scene();
-    scene.fog = new THREE.FogExp2(0x030508, 0.032);
+    scene.fog = new THREE.FogExp2(0x090d16, 0.030);
 
     const camera = new THREE.PerspectiveCamera(
       42,
@@ -151,44 +128,44 @@ export function SpatialInstrument({
       renderer.setSize(container.clientWidth, container.clientHeight);
       renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
       renderer.toneMapping = THREE.ACESFilmicToneMapping;
-      renderer.toneMappingExposure = 1.25;
+      renderer.toneMappingExposure = 1.2;
       container.appendChild(renderer.domElement);
     } catch {
       return;
     }
 
-    // ── Apple Aurora Multi-Point Illumination ──
-    const ambientLight = new THREE.AmbientLight(0xffffff, 1.1);
+    // ── Vibrant Comic Ambient Multi-Point Illumination ──
+    const ambientLight = new THREE.AmbientLight(0xffffff, 1.4);
     scene.add(ambientLight);
 
     const keyLight = new THREE.DirectionalLight(0xffffff, 1.6);
     keyLight.position.set(8, 14, 10);
     scene.add(keyLight);
 
-    const cyanPoint = new THREE.PointLight(0x00f2ff, 3.0, 30);
-    cyanPoint.position.set(-8, 3, -4);
+    const yellowPoint = new THREE.PointLight(0xffe600, 2.5, 30);
+    yellowPoint.position.set(-8, 3, -4);
+    scene.add(yellowPoint);
+
+    const cyanPoint = new THREE.PointLight(0x00e5ff, 2.5, 30);
+    cyanPoint.position.set(8, -2, -4);
     scene.add(cyanPoint);
 
-    const violetPoint = new THREE.PointLight(0xa855f7, 3.0, 30);
-    violetPoint.position.set(8, -2, -4);
-    scene.add(violetPoint);
+    const pinkPoint = new THREE.PointLight(0xff3366, 1.8, 25);
+    pinkPoint.position.set(0, -6, 6);
+    scene.add(pinkPoint);
 
-    const rosePoint = new THREE.PointLight(0xf43f5e, 2.2, 25);
-    rosePoint.position.set(0, -6, 6);
-    scene.add(rosePoint);
-
-    // ── Colorful Chromatic Particle Nebula ──
-    const starCount = 450;
+    // ── Subtle Particle Nebula ──
+    const starCount = 380;
     const starGeo = new THREE.BufferGeometry();
     const starPositions = new Float32Array(starCount * 3);
     const starColors = new Float32Array(starCount * 3);
 
     const palette = [
-      new THREE.Color(0x00f2ff),
-      new THREE.Color(0xa855f7),
+      new THREE.Color(0x6366f1),
+      new THREE.Color(0x8b5cf6),
+      new THREE.Color(0x38bdf8),
       new THREE.Color(0x10b981),
-      new THREE.Color(0xf43f5e),
-      new THREE.Color(0xfbbf24),
+      new THREE.Color(0x94a3b8),
     ];
 
     for (let i = 0; i < starCount; i++) {
@@ -205,19 +182,19 @@ export function SpatialInstrument({
     starGeo.setAttribute('color', new THREE.BufferAttribute(starColors, 3));
 
     const starMat = new THREE.PointsMaterial({
-      size: 0.075,
+      size: 0.065,
       vertexColors: true,
       transparent: true,
-      opacity: 0.65,
+      opacity: 0.55,
     });
     const starField = new THREE.Points(starGeo, starMat);
     scene.add(starField);
 
-    // ── 3D Pixel Grid Floor ──
-    const gridHelper = new THREE.GridHelper(36, 36, 0x00f2ff, 0x1e293b);
+    // ── Subtle Slate Grid Floor ──
+    const gridHelper = new THREE.GridHelper(36, 36, 0x4f46e5, 0x1e293b);
     gridHelper.position.y = -3.5;
     (gridHelper.material as THREE.Material).transparent = true;
-    (gridHelper.material as THREE.Material).opacity = 0.25;
+    (gridHelper.material as THREE.Material).opacity = 0.12;
     scene.add(gridHelper);
 
     // Scene Groups
@@ -617,6 +594,29 @@ export function SpatialInstrument({
   }, [reducedMotion, onHoverAgent, onSelectAgent]);
 
   return <div ref={mountRef} className="absolute inset-0 z-0 overflow-hidden select-none" aria-hidden="true" />;
+}
+
+function getSpatialCameraTarget(mode: InstrumentMode, sceneMode: SpatialSceneMode) {
+  if (mode === 'LANDING') {
+    if (sceneMode === 'cascade') {
+      return { posX: 3.5, posY: 3.2, posZ: 18, lookX: 2.0, lookY: 0, lookZ: 0 };
+    } else if (sceneMode === 'drift') {
+      return { posX: 4.5, posY: 2.8, posZ: 16, lookX: 2.5, lookY: 0, lookZ: 0 };
+    } else if (sceneMode === 'threat') {
+      return { posX: 3.0, posY: 4.5, posZ: 17, lookX: 1.8, lookY: -0.4, lookZ: 0 };
+    } else {
+      return { posX: 4.0, posY: 2.0, posZ: 19, lookX: 2.5, lookY: 0, lookZ: 0 };
+    }
+  }
+
+  const targets: Record<InstrumentMode, [number, number, number, number, number, number]> = {
+    LANDING: [0, 2.2, 16, 0, 0, 0],
+    CONNECT: [0, 1.2, 11, 0, -0.1, 0],
+    HANDSHAKE: [0, 3.2, 13, 0, 0, 0],
+    COMMAND: [0, 6.0, 14, 0, -0.4, 0],
+  };
+  const [posX, posY, posZ, lookX, lookY, lookZ] = targets[mode] || targets.LANDING;
+  return { posX, posY, posZ, lookX, lookY, lookZ };
 }
 
 function topologyRadius(count: number) {
