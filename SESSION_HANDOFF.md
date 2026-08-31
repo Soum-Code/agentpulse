@@ -1,6 +1,6 @@
 # Session Handoff — AgentPulse Work Log
 
-**Written:** 2026-08-23. **Rewritten clean:** 2026-08-26. **Updated:** 2026-08-27 (Sections 7–9 disagreement/benchmark/positioning; 10 drift diagnosis and fix; 11 tool-claim external test; 12 blocked redesign; 13 competitor audits). **Updated:** 2026-08-28 (Section 14 — external disagreement validation, the last of the three signals to be checked and the third to fail; Section 15 — the productization arc, seven phases from migrations through health/readiness). **Updated:** 2026-08-30 (Section 16 — dashboard unfrozen, the landing-page claim audit, and the half-finished drift restore).
+**Written:** 2026-08-23. **Rewritten clean:** 2026-08-26. **Updated:** 2026-08-27 (Sections 7–9 disagreement/benchmark/positioning; 10 drift diagnosis and fix; 11 tool-claim external test; 12 blocked redesign; 13 competitor audits). **Updated:** 2026-08-28 (Section 14 — external disagreement validation, the last of the three signals to be checked and the third to fail; Section 15 — the productization arc, seven phases from migrations through health/readiness). **Updated:** 2026-08-30 (Section 16 — dashboard unfrozen, the landing-page claim audit, and the half-finished drift restore). **Updated:** 2026-08-31 (Section 17 — Final Review deliverables, the literature survey, and repository access).
 
 **Project:** AgentPulse — self-hostable observability SDK for grounding-risk and drift monitoring in multi-agent LLM systems. M.Tech project. Working directory: `C:\MLOPs\3rd sem project\project one agent`.
 
@@ -26,6 +26,10 @@
 - **The dashboard is unfrozen and the three Section 15.4 gaps are closed** — drift, datasets and experiments all read live endpoints now. Section 16.
 - **The drift baseline restore was only half a fix, and that is the most consequential find of the session.** The restore brought back the EMA centroid but not the window pools, so `DRIFT_DETECTED` was blind for 32 spans per agent after every restart. Fixed and verified live. Section 16.3.
 - **The new landing page shipped ten claims with no basis in the repo** — a grounding F1 that appears nowhere, an SDK command that does not exist, SOC2/HIPAA readiness, an Apache licence with no LICENSE file, and a whitepaper citing a results file that was never created. All corrected. Section 16.4; treat it as the standing example of why marketing copy needs the same evidence bar as a report.
+- **The Final Review deck and speaker notes exist** in `presentation/`, built against the actual four-checklist rubric rather than a generic format. Never visually rendered - open the deck before relying on it. Section 17.2.
+- **A literature survey now exists: 17 verified works, 9 from 2023 onward.** The papers are real and their limitations accurate, but they have not been read - the table is a reading list still owed. Section 17.3.
+- **The baseline comparison shows the full system losing to its own ablation** (F1 0.842 against 0.941), because drift is a per-agent signal folded into a per-claim score. Kept in the deck with the mechanism and the nine-day staleness caveat. Section 17.4.
+- **`main` has a second writer and no branch protection** - the Free plan does not offer it on private repos. Section 17.5.
 - **Design direction is frozen in `bedhi_frontend.md`** — reference by reference, what to take and what to refuse, with Liquid Glass rules. Section 16.7.
 - **Repo pushed through commit `3cd1080`; working tree clean, `origin/main` in sync.** The dashboard work that used to sit uncommitted was reviewed and checkpointed (`8a93558`) with three known gaps recorded — see Section 15.
 - Docker, GitHub, and dev-server setup are all previously verified working — see Section 4 for exact commands, not re-derived here.
@@ -883,5 +887,132 @@ take and what to refuse, with Liquid Glass rules grounded in what `index.css` al
 enforces. The organising conclusion is that AgentPulse needs **two design modes** — an
 expressive editorial public surface and a calm investigative product surface — and that
 references are not interchangeable between them.
+
+---
+
+## 17. Review deliverables, literature survey, and repository access (2026-08-31)
+
+Everything in Section 16 is now committed and pushed. This section covers what came
+after: the Final Review presentation, the literature survey that had never existed, and
+one repository-access change.
+
+### 17.1 What is on origin/main
+
+Seven commits landed after `4cc2072`, working tree clean and in sync:
+
+| Commit | Contents |
+| :--- | :--- |
+| `3909d61` | `bedhi_frontend.md` — design research baseline |
+| `ca0166f` | Liquid Glass material rules expanded in that document |
+| `d662e80` | Backend: drift window baseline persist/restore, `window_centroid_distance` column and migration `c4b7e91a2f08`, `/v1/experiments` normalisation, `scripts/backfill_trace_aggregates.py` |
+| `0b93172` | Dashboard rework: landing site, connect/handshake, operator console, and the ten corrected claims |
+| `7f6196a` | Section 16 of this file, plus the AI-artifact cleanup and `.agents/` ignore |
+| `e8405e9` | Design reference media (2.6 MB of binaries — worth moving to a release asset if the repo should stay lean) |
+| `98cd2ae` | Ignore `agenttrace/` (a nested checkout with its own `.git`) and `linkedin_profile.md` |
+
+`presentation/` is deliberately untracked so far.
+
+### 17.2 Final Review deck, built against the actual rubric
+
+`MTech_ProjectGuidelines_2026.pdf` turned out to be four review checklists — Review 0, 1,
+2 and Final — not a single format. The deck was rebuilt against the **Final Review**
+checklist, with each slide carrying a small tag naming the rubric item it answers.
+
+Files (regeneration scripts sit alongside them):
+
+- `presentation/AgentPulse_Final_Review_v2.pptx` — 18 slides, speaker notes on every slide
+- `presentation/AgentPulse_Final_Review_Notes.pdf` — 9 pages: per-slide timing, opening
+  line, talking beats, ten anticipated panel questions with answers, and a numbers
+  cheat-sheet
+
+The `_v2` suffix exists because some process holds a lock on the original filename. The
+generator now takes `OUT=<name> node build_final_review.js`.
+
+**Not verifiable in this environment:** LibreOffice is not installed, so the slides could
+not be rendered to images for visual inspection. Schema validation passes, geometry is
+clean apart from two intentional decorative bleeds, and the content dump is correct — but
+the deck has never actually been *looked at*. Open it in PowerPoint before relying on it.
+
+### 17.3 The literature survey now exists, and its papers are real
+
+There was no literature survey anywhere in the repository — 35 markdown files, all
+engineering or experiment reports. `COMPETITIVE_POSITIONING.md` compares *products*, not
+papers, so it does not satisfy the checklist.
+
+Seventeen works were found and verified by search, nine of them from 2023 onward. Ten are
+on the comparison slide with method, evaluation set, metric and limitation; the full list
+is on an appendix slide. The two most load-bearing:
+
+- **MAST — "Why Do Multi-Agent LLM Systems Fail?"** (Cemri, Pan, Yang et al., NeurIPS
+  2025, arXiv:2503.13657). 14 failure modes across 3 categories, 1600+ annotated traces
+  from 7 frameworks, inter-annotator kappa 0.88. Sits directly above this project, and its
+  limitation *is* the gap: it describes multi-agent failures without detecting them at
+  runtime.
+- **SummaC** (Laban et al., TACL 2022). Balanced accuracy 74.4% on its six-dataset
+  benchmark. Its limitation — a single-document premise assumption — is exactly what breaks
+  in a multi-agent setting.
+
+The limitation column was written so the gap statement on the next slide falls out of it:
+consistency metrics assume a single-document premise, judge-based methods pay per
+evaluation (which is what forces sampling), drift methods are untied to correctness, and
+MAST is descriptive.
+
+**These papers have not been read.** They were verified to exist and their descriptions are
+accurate, but a panel can pick any row. Treat the table as a reading list still owed. The
+speaker notes carry this warning on the first page.
+
+### 17.4 A result that works against the project, kept in
+
+While pulling real numbers for the baseline slide, `baseline_comparison_results.json`
+turned out to show the full system **losing** to one of its own ablations:
+
+| System | P | R | F1 | FPR |
+| :--- | ---: | ---: | ---: | ---: |
+| D — NLI without drift | 0.889 | 1.000 | **0.941** | 0.083 |
+| AgentPulse full system | 0.727 | 1.000 | 0.842 | **0.250** |
+
+Recall is identical at 1.000 — the full system does not miss more, it raises three times
+as many false alarms. The mechanism: drift is a *per-agent behavioural* signal, not
+evidence about a single claim, so folding it into a per-claim composite pushes clean claims
+over the threshold. Ablation configuration F confirms the same effect independently
+(0.619 against 0.963 for NLI alone).
+
+**Caveat that must travel with this number:** the file is dated 2026-08-18, nine days
+before the drift rebuild, so it measures the superseded spike signal. Re-running it is
+item 2 in the deck's future work, and it may well change the headline row.
+
+### 17.5 Repository access
+
+`SkSahoo98` (Swarup Kumar Sahoo) was added as a collaborator — read first, then raised to
+**write** on request. The invitation was accepted; there are no pending invitations. Note
+the email originally supplied was `sahooamit642@gmail.com`, a different first name from the
+account holder; the username was confirmed by the owner before granting.
+
+**Branch protection on `main` could not be applied.** Both the classic branch-protection
+API and the newer rulesets API return:
+
+```
+403  "Upgrade to GitHub Pro or make this repository public to enable this feature."
+```
+
+Branch protection is not available on the Free plan for private repositories. So `main` is
+currently unguarded and a second account has write access to it. The options, none of which
+have been taken: make the repository public, upgrade to Pro, or drop the collaborator back
+to `triage` (comment on issues and PRs, no push).
+
+### 17.6 Standing operational facts, unchanged
+
+These were true at the end of Section 16 and are still true:
+
+- **`alembic_version` reads `8d86fee0d663`** while the schema already contains both
+  `worker_heartbeats` and `window_centroid_distance`. `alembic upgrade head` fails with a
+  duplicate column. Reconcile with `alembic stamp c4b7e91a2f08` first.
+- **The venv's editable installs point at the pre-rename path**, so `import app` fails.
+  Every command in these sessions used `PYTHONPATH=backend;sdk/src`. Fix with
+  `pip install -e backend -e sdk`.
+- **The API is supervised and respawns when killed; the worker is not.** Killing the worker
+  leaves the instance with no evaluator until it is started by hand.
+- **Evaluation coverage is ~6%.** An empty queue means nothing is waiting, not that
+  everything has been scored.
 
 ---
