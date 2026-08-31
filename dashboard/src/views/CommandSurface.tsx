@@ -127,25 +127,20 @@ export function CommandSurface({
     }, 3000);
   }, []);
 
-  // ─── Real Waveform Points Array ───────────────────────────────────
+  // Risk over time, read off the traces the API actually returned. Most traces
+  // carry no score until an evaluator has processed them, so this series is
+  // short whenever coverage is thin; the Overview shows an empty state rather
+  // than padding it out.
   const riskWaveformData = useMemo(() => {
-    if (metrics?.avg_risk_score !== undefined && metrics?.avg_risk_score !== null) {
-      const base = metrics.avg_risk_score;
-      return [
-        Math.max(0.04, base * 0.35),
-        Math.max(0.06, base * 0.5),
-        Math.max(0.05, base * 0.4),
-        Math.max(0.12, base * 0.85),
-        Math.max(0.08, base * 0.65),
-        Math.max(0.18, base * 1.05),
-        Math.max(0.11, base * 0.75),
-        Math.max(0.22, base * 1.2),
-        Math.max(0.15, base * 0.9),
-        base,
-      ];
+    const scored: number[] = [];
+    for (const trace of traces) {
+      if (trace.overall_risk_score !== null && trace.overall_risk_score !== undefined) {
+        scored.push(trace.overall_risk_score);
+      }
     }
-    return [0.06, 0.1, 0.08, 0.18, 0.12, 0.28, 0.2, 0.36, 0.25, 0.18];
-  }, [metrics]);
+    // getTraces returns newest first; the chart reads left-to-right in time.
+    return scored.reverse();
+  }, [traces]);
 
   // ─── Load Traces ───────────────────────────────────────────────────
   const loadTraces = useCallback(async () => {

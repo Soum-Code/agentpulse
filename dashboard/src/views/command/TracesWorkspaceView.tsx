@@ -105,13 +105,27 @@ export function TracesWorkspaceView({
     return selectedTraceData.spans.find((s) => s.span_id === selectedSpanId) || selectedTraceData.spans[0] || null;
   }, [selectedTraceData, selectedSpanId]);
 
-  // Hierarchical Spans Duration
-  const totalDuration = useMemo(() => {
+  // Real trace timeline: spans are positioned by their recorded start_time
+  // relative to the first span, so the bars line up as an actual waterfall
+  // rather than as duration bars all anchored at zero.
+  const timeline = useMemo(() => {
     const spans = selectedTraceData?.spans || [];
-    if (spans.length === 0) return 100;
-    const maxLatency = Math.max(...spans.map((s) => s.latency_ms || 10));
-    return Math.max(maxLatency, 100);
+    const starts = spans
+      .map((s) => Date.parse(s.start_time))
+      .filter((t) => Number.isFinite(t));
+    if (starts.length === 0) return { t0: 0, totalDuration: 0, usable: false };
+
+    const t0 = Math.min(...starts);
+    let end = t0;
+    for (const span of spans) {
+      const start = Date.parse(span.start_time);
+      if (!Number.isFinite(start)) continue;
+      end = Math.max(end, start + (span.latency_ms ?? 0));
+    }
+    return { t0, totalDuration: end - t0, usable: end > t0 };
   }, [selectedTraceData]);
+
+  const totalDuration = timeline.totalDuration;
 
   // Curation Action
   const handleCurateSpan = async () => {
@@ -335,22 +349,38 @@ export function TracesWorkspaceView({
               <div className="flex-1 overflow-y-auto space-y-2.5 max-h-[620px] pr-1">
                 {/* Timeline scale bar */}
                 <div className="flex items-center justify-between text-4xs font-mono text-neutral-400 font-bold px-2 pb-1 border-b border-black">
-                  <span>0ms</span>
-                  <span>{(totalDuration * 0.5).toFixed(0)}ms</span>
-                  <span>{totalDuration.toFixed(0)}ms</span>
+                  {timeline.usable ? (
+                    <>
+                      <span>0ms</span>
+                      <span>{(totalDuration * 0.5).toFixed(0)}ms</span>
+                      <span>{totalDuration.toFixed(0)}ms</span>
+                    </>
+                  ) : (
+                    <span>No span timings recorded for this trace</span>
+                  )}
                 </div>
 
                 {/* Spans List */}
                 {selectedTraceData.spans.map((span) => {
                   const isSelected = selectedSpanId === span.span_id;
-                  const spanRisk = span.evaluation?.overall_risk_score ?? 0;
-                  const tone = riskTone(spanRisk);
+                  // Null means "not evaluated", which must not read as low risk.
+                  const spanRisk = span.evaluation?.overall_risk_score ?? null;
+                  const tone = riskTone(spanRisk ?? 0);
                   const styles = riskToneStyles(tone);
                   const isError = span.status?.toUpperCase() === 'ERROR';
 
-                  // Relative latency duration
-                  const latency = span.latency_ms || 10;
-                  const latencyPct = Math.min(100, Math.max(5, (latency / totalDuration) * 100));
+                  // Position and width both come from recorded times; a span
+                  // without a latency is drawn as a hairline marker, not a bar.
+                  const latency = span.latency_ms;
+                  const start = Date.parse(span.start_time);
+                  const offsetPct =
+                    timeline.usable && Number.isFinite(start)
+                      ? Math.min(100, Math.max(0, ((start - timeline.t0) / totalDuration) * 100))
+                      : 0;
+                  const latencyPct =
+                    timeline.usable && latency != null
+                      ? Math.min(100 - offsetPct, Math.max(0.5, (latency / totalDuration) * 100))
+                      : 0.5;
 
                   return (
                     <div
@@ -400,18 +430,22 @@ export function TracesWorkspaceView({
                             className={`h-full rounded-full transition-all border border-black/30 ${
                               isError
                                 ? 'bg-rose-500'
+                                : spanRisk === null
+                                ? 'bg-neutral-600'
                                 : spanRisk > 0.7
                                 ? 'bg-pink-500'
                                 : spanRisk > 0.4
                                 ? 'bg-yellow-400'
                                 : 'bg-cyan-400'
                             }`}
-                            style={{ width: `${latencyPct}%` }}
+                            style={{ marginLeft: `${offsetPct}%`, width: `${latencyPct}%` }}
                           />
                         </div>
                         <div className="flex justify-between text-4xs font-mono font-bold text-neutral-400">
                           <span className="truncate max-w-[200px]">{span.output_summary ? span.output_summary.slice(0, 45) + '...' : 'Span Execution'}</span>
-                          <span className="text-white font-extrabold">{latency.toFixed(1)}ms</span>
+                          <span className="text-white font-extrabold">
+                            {latency != null ? `${latency.toFixed(1)}ms` : 'no latency'}
+                          </span>
                         </div>
                       </div>
                     </div>

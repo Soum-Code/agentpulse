@@ -34,44 +34,54 @@ interface DatasetsExperimentsViewProps {
   showToast: (msg: string) => void;
 }
 
+// Transcribed from experiments/results/reasoning_strategy_results_llama_gpu.json
+// (Meta-Llama-3.1-8B-Instruct Q4_K_M, Tesla P100, dataset v1.0_test, 30 cases x
+// 5 runs). Precision/recall/F1 are deliberately absent: that run measured
+// grounding risk, contradiction rate, latency and token counts, not per-strategy
+// classification scores.
 const REASONING_STRATEGY_DATA = [
   {
     strategy: 'Direct Synthesis',
-    model: 'Meta-Llama-3.1-8B-Instruct',
-    dataset: 'HotpotQA + ToolBench v1.0',
-    precision: 0.884,
-    recall: 0.862,
-    f1: 0.873,
-    meanRisk: 0.124,
-    latencyMs: 145.2,
+    meanRisk: 0.328,
+    riskStdev: 0.25,
+    contradictionRate: 0.06,
+    meanLatencyMs: 19496.8,
+    medianLatencyMs: 8460.95,
+    tokensOut: 59.0,
     verdict: 'BASELINE',
-    verdictTone: 'ok',
+    verdictTone: 'neutral',
   },
   {
     strategy: 'Chain-of-Thought (CoT)',
-    model: 'Meta-Llama-3.1-8B-Instruct',
-    dataset: 'HotpotQA + ToolBench v1.0',
-    precision: 0.942,
-    recall: 0.928,
-    f1: 0.935,
-    meanRisk: 0.058,
-    latencyMs: 312.8,
-    verdict: 'SUPERIOR RECALL',
-    verdictTone: 'ok',
+    meanRisk: 0.228,
+    riskStdev: 0.257,
+    contradictionRate: 0.14,
+    meanLatencyMs: 60329.44,
+    medianLatencyMs: 63983.42,
+    tokensOut: 185.7,
+    verdict: 'LOWER RISK, MORE CONTRADICTIONS',
+    verdictTone: 'warn',
   },
   {
     strategy: 'Algorithm-of-Thought (AoT)',
-    model: 'Meta-Llama-3.1-8B-Instruct',
-    dataset: 'HotpotQA + ToolBench v1.0',
-    precision: 0.961,
-    recall: 0.954,
-    f1: 0.957,
-    meanRisk: 0.038,
-    latencyMs: 540.6,
-    verdict: 'HIGHEST GROUNDING',
+    meanRisk: 0.213,
+    riskStdev: 0.24,
+    contradictionRate: 0.067,
+    meanLatencyMs: 171883.98,
+    medianLatencyMs: 136998.26,
+    tokensOut: 383,
+    verdict: 'LOWEST RISK, SLOWEST',
     verdictTone: 'ok',
   },
 ];
+
+const REASONING_STRATEGY_RUN = {
+  model: 'Meta-Llama-3.1-8B-Instruct (GGUF Q4_K_M)',
+  hardware: 'Tesla P100-PCIE-16GB, full GPU offload',
+  dataset: 'v1.0_test',
+  cases: 30,
+  runsPerCase: 5,
+};
 
 const DEFAULT_DATASETS = [
   {
@@ -140,10 +150,9 @@ export function DatasetsExperimentsView({ client, showToast }: DatasetsExperimen
         />
         <Stat
           accent="yellow"
-          label="Best Strategy F1"
-          value="95.7%"
-          subtext="Algorithm-of-Thought (AoT)"
-          tone="ok"
+          label="Lowest Grounding Risk"
+          value="0.213"
+          subtext="Algorithm-of-Thought (AoT), ±0.24"
           icon={Brain}
         />
         <Stat
@@ -194,7 +203,14 @@ export function DatasetsExperimentsView({ client, showToast }: DatasetsExperimen
               </h3>
             </div>
             <p className="text-2xs font-mono text-neutral-300 leading-relaxed">
-              Measured on real model inference comparing Direct Prompting, Chain-of-Thought (CoT), and Algorithm-of-Thought (AoT) pipelines evaluated through AgentPulse’s grounding cascade.
+              Real inference on {REASONING_STRATEGY_RUN.model}, {REASONING_STRATEGY_RUN.hardware}.
+              Dataset {REASONING_STRATEGY_RUN.dataset}, {REASONING_STRATEGY_RUN.cases} cases ×{' '}
+              {REASONING_STRATEGY_RUN.runsPerCase} runs, generation capped at 200 tokens per call.
+              Latencies are end-to-end generation time, not evaluator time.
+            </p>
+            <p className="text-3xs font-mono text-neutral-400 font-semibold">
+              This run recorded grounding risk, contradiction rate, latency and token counts. It did
+              not compute per-strategy precision, recall or F1, so those columns are not shown.
             </p>
           </Tile>
 
@@ -203,12 +219,12 @@ export function DatasetsExperimentsView({ client, showToast }: DatasetsExperimen
               <thead>
                 <tr className="border-b-2 border-black text-3xs text-neutral-400 uppercase font-black">
                   <th className="pb-3">Strategy</th>
-                  <th className="pb-3">Model</th>
-                  <th className="pb-3">Precision</th>
-                  <th className="pb-3">Recall</th>
-                  <th className="pb-3">F1 Score</th>
                   <th className="pb-3">Mean Risk</th>
-                  <th className="pb-3">Avg Latency</th>
+                  <th className="pb-3">Risk Stdev</th>
+                  <th className="pb-3">Contradiction Rate</th>
+                  <th className="pb-3">Mean Latency</th>
+                  <th className="pb-3">Median Latency</th>
+                  <th className="pb-3">Tokens Out</th>
                   <th className="pb-3">Verdict</th>
                 </tr>
               </thead>
@@ -219,14 +235,22 @@ export function DatasetsExperimentsView({ client, showToast }: DatasetsExperimen
                       <Brain className="w-4 h-4 text-yellow-400" />
                       <span>{exp.strategy}</span>
                     </td>
-                    <td className="py-3.5 text-neutral-300 text-3xs font-semibold">{exp.model}</td>
-                    <td className="py-3.5 text-white font-bold tnum">{(exp.precision * 100).toFixed(1)}%</td>
-                    <td className="py-3.5 text-white font-bold tnum">{(exp.recall * 100).toFixed(1)}%</td>
-                    <td className="py-3.5 text-emerald-400 font-black tnum">{(exp.f1 * 100).toFixed(1)}%</td>
                     <td className="py-3.5">
                       <RiskPill score={exp.meanRisk} size="sm" />
                     </td>
-                    <td className="py-3.5 text-neutral-300 tnum font-bold">{exp.latencyMs.toFixed(1)}ms</td>
+                    <td className="py-3.5 text-neutral-300 tnum font-bold">
+                      ±{exp.riskStdev.toFixed(3)}
+                    </td>
+                    <td className="py-3.5 text-white font-bold tnum">
+                      {(exp.contradictionRate * 100).toFixed(1)}%
+                    </td>
+                    <td className="py-3.5 text-neutral-300 tnum font-bold">
+                      {(exp.meanLatencyMs / 1000).toFixed(1)}s
+                    </td>
+                    <td className="py-3.5 text-neutral-300 tnum font-bold">
+                      {(exp.medianLatencyMs / 1000).toFixed(1)}s
+                    </td>
+                    <td className="py-3.5 text-neutral-300 tnum font-bold">{exp.tokensOut}</td>
                     <td className="py-3.5">
                       <StatusBadge status={exp.verdict} tone={exp.verdictTone as any} />
                     </td>
