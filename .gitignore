@@ -66,3 +66,12 @@ experiments/results/.drift_embedding_cache.npz
 
 # Agent/plugin skill caches — tooling, not project source
 .agents/
+
+# Nested checkout with its own .git — tracking it would create a broken
+# gitlink rather than real content. Make it a submodule if it is meant to
+# ship with the project.
+agenttrace/
+
+# Personal profile scrape, not project source. The repo is private today,
+# but this would follow it if it were ever made public.
+linkedin_profile.md
