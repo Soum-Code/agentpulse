@@ -132,16 +132,21 @@ export function TracesWorkspaceView({
     if (!activeSpan || !selectedTraceId) return;
     try {
       setCuratingSpan(true);
-      await client.curateCase('production_audit_curated', {
+      // Field names must match CurateCaseRequest in routers/experiments.py:
+      // case_id, input_query and agent_claim are required.
+      const risk = activeSpan.evaluation?.overall_risk_score;
+      await client.curateCase('AgentPulse Benchmark', {
+        case_id: `curated_${activeSpan.span_id}`,
+        input_query: activeSpan.input_summary ?? '',
+        agent_claim: activeSpan.output_summary ?? '',
+        evidence: activeSpan.tool_result_summary ?? undefined,
+        expected_classification: risk != null && risk > 0.5 ? 'REFUTED' : 'SUPPORTED',
+        is_failure: risk != null && risk > 0.5,
         trace_id: selectedTraceId,
         span_id: activeSpan.span_id,
-        agent_id: activeSpan.agent_id,
-        input_summary: activeSpan.input_summary,
-        output_summary: activeSpan.output_summary,
-        risk_score: activeSpan.evaluation?.overall_risk_score,
-        curator_notes: `Curated by operator from trace ${selectedTraceId}.`,
+        operator_notes: `Curated from trace ${selectedTraceId} (agent ${activeSpan.agent_id}).`,
       });
-      showToast(`Span ${activeSpan.span_id.slice(0, 8)} successfully curated into test dataset.`);
+      showToast(`Span ${activeSpan.span_id.slice(0, 8)} curated into the benchmark dataset.`);
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Curation failed.');
     } finally {
@@ -551,7 +556,15 @@ export function TracesWorkspaceView({
                     <div className="p-3 rounded-xl bg-surface border-2 border-black shadow-[2px_2px_0px_#000] space-y-1.5 text-xs">
                       <div className="flex items-center justify-between">
                         <span className="text-orange-400 font-black">{activeSpan.tool_name}()</span>
-                        <StatusBadge status="VERIFIED" tone="ok" />
+                        {/* Reflects the recorded score; a null score means the
+                            claim checker never ran on this span. */}
+                        {activeSpan.evaluation?.tool_claim_score == null ? (
+                          <StatusBadge status="NOT CHECKED" tone="neutral" />
+                        ) : activeSpan.evaluation.tool_claim_score > 0 ? (
+                          <StatusBadge status="CLAIM MISMATCH" tone="bad" />
+                        ) : (
+                          <StatusBadge status="NO MISMATCH FOUND" tone="ok" />
+                        )}
                       </div>
                       {activeSpan.tool_args && (
                         <p className="text-3xs text-neutral-300">Args: {activeSpan.tool_args}</p>
