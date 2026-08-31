@@ -50,7 +50,7 @@ export function FaqSection() {
   return (
     <div className="w-full space-y-8">
       <div className="space-y-2">
-        <div className="inline-flex items-center gap-2 text-xs font-mono text-cyan-400">
+        <div className="inline-flex items-center gap-2 text-xs font-mono text-indigo-400">
           <HelpCircle className="w-4 h-4" />
           <span>Frequently Asked Questions</span>
         </div>
@@ -71,14 +71,14 @@ export function FaqSection() {
               key={idx}
               className={`p-5 rounded-2xl border transition-all cursor-pointer ${
                 isOpen
-                  ? 'bg-[#0e111a] border-cyan-500/30 shadow-lg'
-                  : 'bg-[#0a0c14] border-white/10 hover:border-white/20'
+                  ? 'bg-surface-2 border-indigo-500/30 shadow-lg'
+                  : 'bg-surface border-line hover:border-line-strong'
               }`}
               onClick={() => setOpenIndex(isOpen ? null : idx)}
             >
               <div className="flex items-start justify-between gap-4">
                 <div className="space-y-1">
-                  <span className="text-4xs font-mono px-2 py-0.5 rounded bg-white/5 text-neutral-400 uppercase">
+                  <span className="text-4xs font-mono px-2 py-0.5 rounded-md bg-surface-3 text-neutral-400 uppercase">
                     {faq.category}
                   </span>
                   <h4 className="text-sm font-bold text-white font-sans mt-1">
@@ -86,8 +86,8 @@ export function FaqSection() {
                   </h4>
                 </div>
                 <div
-                  className={`w-6 h-6 rounded-full bg-white/5 flex items-center justify-center text-neutral-400 shrink-0 transition-transform ${
-                    isOpen ? 'rotate-180 text-cyan-400' : ''
+                  className={`w-6 h-6 rounded-full bg-surface-3 flex items-center justify-center text-neutral-400 shrink-0 transition-transform ${
+                    isOpen ? 'rotate-180 text-indigo-400' : ''
                   }`}
                 >
                   <ChevronDown className="w-3.5 h-3.5" />
@@ -95,7 +95,7 @@ export function FaqSection() {
               </div>
 
               {isOpen && (
-                <div className="mt-3 pt-3 border-t border-white/[0.06] text-xs text-neutral-300 font-sans leading-relaxed animate-in fade-in duration-150">
+                <div className="mt-3 pt-3 border-t border-line text-xs text-neutral-300 font-sans leading-relaxed animate-in fade-in duration-150">
                   {faq.answer}
                 </div>
               )}

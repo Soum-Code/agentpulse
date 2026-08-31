@@ -203,6 +203,11 @@ export function createApiClient(connection: AgentPulseConnection) {
         method: 'POST',
         body: JSON.stringify({ scenario, query }),
       }),
+    ingestSpans: (spans: unknown[]) =>
+      fetchApi<{ accepted: number; failed: number; message: string; errors: string[] }>('/v1/ingest', {
+        method: 'POST',
+        body: JSON.stringify({ spans }),
+      }),
     getExperiments: () => fetchApi<{ experiments: unknown[]; file_experiments: unknown[] }>('/v1/experiments'),
     getDatasets: () => fetchApi<{ datasets: unknown[] }>('/v1/datasets'),
     getDatasetCases: (name: string) => fetchApi<unknown>(`/v1/datasets/${name}`),

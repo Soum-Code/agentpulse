@@ -77,17 +77,17 @@ export function CyberDevice3D({
     mainLight.shadow.mapSize.height = 1024;
     scene.add(mainLight);
 
-    const rimCyan = new THREE.PointLight(0x00f2ff, 4.0, 18);
-    rimCyan.position.set(-6, -2, 4);
-    scene.add(rimCyan);
+    const rimIndigo = new THREE.PointLight(0x6366f1, 3.2, 18);
+    rimIndigo.position.set(-6, -2, 4);
+    scene.add(rimIndigo);
 
-    const rimPink = new THREE.PointLight(0xff2e93, 3.0, 18);
-    rimPink.position.set(6, -4, 3);
-    scene.add(rimPink);
+    const rimViolet = new THREE.PointLight(0x8b5cf6, 2.5, 18);
+    rimViolet.position.set(6, -4, 3);
+    scene.add(rimViolet);
 
-    const bottomYellow = new THREE.PointLight(0xffe600, 2.5, 14);
-    bottomYellow.position.set(0, -5, 2);
-    scene.add(bottomYellow);
+    const bottomWarm = new THREE.PointLight(0xf59e0b, 1.8, 14);
+    bottomWarm.position.set(0, -5, 2);
+    scene.add(bottomWarm);
 
     // ── Root Device Group ──
     const deviceRoot = new THREE.Group();
@@ -97,9 +97,9 @@ export function CyberDevice3D({
     // Main Body Box with beveled curves
     const bodyGeo = new THREE.BoxGeometry(3.6, 5.2, 0.9);
     
-    // Apple-grade Translucent Frosted Glass Material
+    // Translucent Frosted Glass Material
     const shellMat = new THREE.MeshPhysicalMaterial({
-      color: 0x111625,
+      color: 0x0f172a,
       roughness: 0.18,
       metalness: 0.1,
       transmission: 0.88, // Translucent see-through glass!
@@ -143,7 +143,7 @@ export function CyberDevice3D({
     // Gold/Copper Circuit Traces on PCB
     const traceGeo = new THREE.PlaneGeometry(3.0, 4.4);
     const traceMat = new THREE.MeshStandardMaterial({
-      color: 0xeab308, // Gold traces
+      color: 0x6366f1, // Indigo traces
       roughness: 0.3,
       metalness: 0.9,
       wireframe: true,
@@ -168,7 +168,7 @@ export function CyberDevice3D({
     // Glowing Logo on CPU Chip
     const chipLogoGeo = new THREE.PlaneGeometry(0.7, 0.7);
     const chipLogoMat = new THREE.MeshBasicMaterial({
-      color: 0x00f2ff,
+      color: 0x6366f1,
       transparent: true,
       opacity: 0.9,
     });
@@ -183,7 +183,7 @@ export function CyberDevice3D({
     ].forEach(([cx, cy], idx) => {
       const capGeo = new THREE.BoxGeometry(0.32, 0.24, 0.18);
       const capMat = new THREE.MeshStandardMaterial({
-        color: idx % 2 === 0 ? 0x00f2ff : 0xff2e93,
+        color: idx % 2 === 0 ? 0x6366f1 : 0x8b5cf6,
         roughness: 0.3,
         metalness: 0.7,
       });

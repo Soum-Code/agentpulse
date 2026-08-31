@@ -167,13 +167,12 @@ export function SdkStudio() {
     setCopied(id);
     setTimeout(() => setCopied(null), 2000);
   };
-
   return (
-    <div className="w-full rounded-2xl bg-[#0a0c14] border border-white/10 overflow-hidden shadow-2xl space-y-6">
+    <div className="w-full rounded-2xl bg-surface-2 border border-line overflow-hidden shadow-2xl space-y-6">
       {/* Header */}
       <div className="p-6 sm:p-8 pb-0 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <div className="inline-flex items-center gap-2 text-xs font-mono text-cyan-400 mb-1">
+          <div className="inline-flex items-center gap-2 text-xs font-mono text-indigo-400 mb-1">
             <Terminal className="w-4 h-4" />
             <span>Developer SDK Studio & Multi-Framework Adapters</span>
           </div>
@@ -188,10 +187,10 @@ export function SdkStudio() {
         {/* Quick PIP badge */}
         <div
           onClick={() => handleCopy('pip install agentpulse', 'pip')}
-          className="px-4 py-2.5 rounded-xl bg-[#11131a] border border-white/10 hover:border-cyan-500/30 text-xs font-mono text-neutral-300 flex items-center justify-between gap-3 cursor-pointer group transition-all shrink-0"
+          className="px-4 py-2.5 rounded-xl bg-surface border border-line hover:border-indigo-500/40 text-xs font-mono text-neutral-300 flex items-center justify-between gap-3 cursor-pointer group transition-all shrink-0"
         >
           <span className="text-neutral-500">$</span>
-          <span className="text-white font-bold group-hover:text-cyan-300 transition-colors">pip install agentpulse</span>
+          <span className="text-white font-bold group-hover:text-indigo-300 transition-colors">pip install agentpulse</span>
           {copied === 'pip' ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 text-neutral-500 group-hover:text-white" />}
         </div>
       </div>
@@ -204,14 +203,14 @@ export function SdkStudio() {
             onClick={() => setActiveTab(tab.id)}
             className={`px-3.5 py-2 rounded-xl text-xs font-mono transition-all cursor-pointer flex items-center gap-2 ${
               activeTab === tab.id
-                ? 'bg-white text-black font-bold shadow-md'
-                : 'bg-white/5 border border-white/5 text-neutral-400 hover:text-white hover:bg-white/10'
+                ? 'bg-indigo-600 text-white font-bold shadow-md'
+                : 'bg-surface border border-line text-neutral-400 hover:text-white hover:bg-surface-3'
             }`}
           >
             <span>{tab.name}</span>
             <span
-              className={`text-4xs px-1.5 py-0.5 rounded uppercase ${
-                activeTab === tab.id ? 'bg-black/10 text-neutral-800 font-bold' : 'bg-white/10 text-neutral-400'
+              className={`text-4xs px-1.5 py-0.5 rounded-md uppercase ${
+                activeTab === tab.id ? 'bg-white/20 text-white font-bold' : 'bg-surface-3 text-neutral-400'
               }`}
             >
               {tab.badge}
@@ -221,17 +220,17 @@ export function SdkStudio() {
       </div>
 
       {/* Code Viewer Panel */}
-      <div className="mx-6 mb-6 rounded-xl bg-[#07080d] border border-white/[0.08] overflow-hidden">
-        <div className="px-4 py-3 bg-[#0e111a] border-b border-white/[0.06] flex items-center justify-between text-xs font-mono">
+      <div className="mx-6 mb-6 rounded-xl bg-surface border border-line overflow-hidden">
+        <div className="px-4 py-3 bg-surface-3 border-b border-line flex items-center justify-between text-xs font-mono">
           <div className="flex items-center gap-3 text-neutral-400">
-            <span className="text-cyan-400 font-bold">{current.filename}</span>
+            <span className="text-indigo-300 font-bold">{current.filename}</span>
             <span>&bull;</span>
             <span className="text-3xs text-neutral-500">{current.description}</span>
           </div>
 
           <button
             onClick={() => handleCopy(current.code, current.id)}
-            className="p-1.5 rounded-lg bg-white/5 hover:bg-white/15 text-neutral-400 hover:text-white transition-all cursor-pointer flex items-center gap-1.5"
+            className="p-1.5 rounded-lg bg-surface hover:bg-white/10 text-neutral-400 hover:text-white transition-all cursor-pointer flex items-center gap-1.5 border border-line"
             title="Copy code snippet"
           >
             {copied === current.id ? (
@@ -242,17 +241,15 @@ export function SdkStudio() {
             ) : (
               <>
                 <Copy className="w-3.5 h-3.5" />
-                <span className="text-3xs">Copy</span>
+                <span className="text-3xs">Copy Code</span>
               </>
             )}
           </button>
         </div>
 
-        <div className="p-6 font-mono text-xs text-neutral-300 leading-relaxed overflow-x-auto">
-          <pre className="text-white/90">
-            {current.code}
-          </pre>
-        </div>
+        <pre className="p-5 text-2xs font-mono text-neutral-300 overflow-x-auto leading-relaxed selection:bg-indigo-500/30 selection:text-white">
+          <code>{current.code}</code>
+        </pre>
       </div>
     </div>
   );
