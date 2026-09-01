@@ -88,7 +88,8 @@ export function OverviewView({
           (a.agent_role && a.agent_role.toLowerCase().includes(agentSearchQuery.toLowerCase()))
       )
       .sort((a, b) => {
-        if (agentSortKey === 'asi') return (b.current_asi ?? 100) - (a.current_asi ?? 100);
+        // Agents without an ASI sort last rather than tying with a perfect score.
+        if (agentSortKey === 'asi') return (b.current_asi ?? -1) - (a.current_asi ?? -1);
         if (agentSortKey === 'spans') return (b.total_spans ?? 0) - (a.total_spans ?? 0);
         if (agentSortKey === 'error') return (b.error_rate ?? 0) - (a.error_rate ?? 0);
         if (agentSortKey === 'latency') return (b.avg_latency_ms ?? 0) - (a.avg_latency_ms ?? 0);
@@ -100,6 +101,26 @@ export function OverviewView({
   const compositeRisk = metrics?.avg_risk_score ?? 0;
   const compositeRiskTone = riskTone(compositeRisk);
 
+  // A two-point minimum keeps the chart from implying a trend that one sample
+  // cannot support.
+  const hasRiskSeries = riskWaveformData.length >= 2;
+
+  // Every readiness indicator below is derived from the API rather than
+  // assumed, so a stalled backend reads as stalled instead of green.
+  const platformState = platform?.state ?? null;
+  const platformTone =
+    platformState === 'healthy'
+      ? 'ok'
+      : platformState === 'degraded' || platformState === 'backlogged' || platformState === 'starting'
+      ? 'warn'
+      : platformState === 'failing'
+      ? 'bad'
+      : 'neutral';
+
+  const apiReady = apiReadiness?.ready ?? null;
+  const workersAlive = evaluatorReadiness?.workers_alive ?? null;
+  const deadLetter = platform?.evaluation_queue?.by_status?.dead_letter ?? 0;
+
   return (
     <div className="space-y-6 rise pb-20 font-sans">
       {/* ── Top Vitality Metrics Grid ── */}
@@ -107,20 +128,22 @@ export function OverviewView({
         <Stat
           accent="pink"
           label="Composite Swarm Risk"
-          value={compositeRisk ? compositeRisk.toFixed(3) : '0.000'}
-          subtext="Evaluated cascade confidence"
-          tone={compositeRiskTone}
+          value={metrics?.avg_risk_score != null ? metrics.avg_risk_score.toFixed(3) : '—'}
+          subtext={
+            metrics?.avg_risk_score != null
+              ? 'Mean risk across evaluated spans'
+              : 'No spans evaluated yet'
+          }
+          tone={metrics?.avg_risk_score != null ? compositeRiskTone : undefined}
           icon={ShieldAlert}
-          sparklineData={riskWaveformData}
+          sparklineData={hasRiskSeries ? riskWaveformData : undefined}
         />
         <Stat
           accent="yellow"
           label="Active Agents in Swarm"
           value={agents.length}
-          subtext="Connected neural nodes"
-          tone="ok"
+          subtext="Agents seen in ingested telemetry"
           icon={Brain}
-          trend={{ direction: 'neutral', text: '100% OPERATIONAL' }}
         />
         <Stat
           accent="cyan"
@@ -128,7 +151,6 @@ export function OverviewView({
           value={metrics?.total_spans ?? 0}
           subtext="Real-time telemetry stream"
           icon={Activity}
-          sparklineData={[12, 18, 24, 30, 45, 60, 80, 110, 140, metrics?.total_spans ?? 150]}
         />
         <Stat
           accent="purple"
@@ -148,11 +170,21 @@ export function OverviewView({
       {/* ── Real-Time Signal Waveform & Swarm Diagnostics ── */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         <div className="xl:col-span-2">
-          <Waveform
-            data={riskWaveformData}
-            height={160}
-            title="SWARM RISK & GROUNDING HARMONIC STREAM"
-          />
+          {hasRiskSeries ? (
+            <Waveform
+              data={riskWaveformData}
+              height={160}
+              title={`RISK SCORE ACROSS LAST ${riskWaveformData.length} EVALUATED TRACES`}
+            />
+          ) : (
+            <Tile accent="cyan" className="p-5 h-full flex items-center">
+              <EmptyState
+                icon={Activity}
+                title="Not Enough Evaluated Traces"
+                description="A risk trend needs at least two scored traces. Ingested traces stay unscored until an evaluation worker processes them."
+              />
+            </Tile>
+          )}
         </div>
 
         {/* System & Engine Readiness Card */}
@@ -167,26 +199,57 @@ export function OverviewView({
                   Engine Readiness
                 </h3>
               </div>
-              <span className="comic-tag bg-emerald-400 text-black">ONLINE</span>
+              <StatusBadge
+                status={platformState ? platformState.toUpperCase() : 'UNKNOWN'}
+                tone={platformTone}
+              />
             </div>
 
             <div className="space-y-3 pt-3">
               {/* API Status */}
               <div className="flex items-center justify-between text-xs font-mono">
                 <span className="text-neutral-300 font-semibold">Ingest Gateway:</span>
-                <span className="flex items-center gap-1.5 font-bold text-emerald-400">
-                  <CheckCircle2 className="w-3.5 h-3.5" />
-                  <span>Port 8000 (WAL)</span>
+                <span
+                  className={`flex items-center gap-1.5 font-bold ${
+                    apiReady === null ? 'text-neutral-400' : apiReady ? 'text-emerald-400' : 'text-pink-400'
+                  }`}
+                >
+                  {apiReady ? (
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                  ) : (
+                    <AlertTriangle className="w-3.5 h-3.5" />
+                  )}
+                  <span>{apiReady === null ? 'Unknown' : apiReady ? 'Accepting spans' : 'Not ready'}</span>
                 </span>
               </div>
 
               {/* Evaluator Status */}
               <div className="flex items-center justify-between text-xs font-mono">
                 <span className="text-neutral-300 font-semibold">Evaluator Fleet:</span>
-                <span className="flex items-center gap-1.5 font-bold text-emerald-400">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_#00e676]" />
+                <span
+                  className={`flex items-center gap-1.5 font-bold ${
+                    workersAlive === null
+                      ? 'text-neutral-400'
+                      : workersAlive > 0
+                      ? 'text-emerald-400'
+                      : 'text-pink-400'
+                  }`}
+                >
+                  <span
+                    className={`w-2 h-2 rounded-full ${
+                      workersAlive === null
+                        ? 'bg-neutral-500'
+                        : workersAlive > 0
+                        ? 'bg-emerald-400 shadow-[0_0_8px_#00e676]'
+                        : 'bg-pink-500'
+                    }`}
+                  />
                   <span>
-                    {evaluatorReadiness?.workers_alive ?? 1} Worker Running
+                    {workersAlive === null
+                      ? 'Unknown'
+                      : workersAlive === 0
+                      ? 'No worker running'
+                      : `${workersAlive} worker${workersAlive === 1 ? '' : 's'} running`}
                   </span>
                 </span>
               </div>
@@ -206,7 +269,25 @@ export function OverviewView({
                   {platform?.evaluation_queue?.depth ?? 0} In Flight
                 </span>
               </div>
+
+              {/* Jobs that exhausted their retries and will never be evaluated */}
+              {deadLetter > 0 && (
+                <div className="flex items-center justify-between text-xs font-mono">
+                  <span className="text-neutral-300 font-semibold">Dead Letter:</span>
+                  <span className="text-pink-400 font-bold tnum">{deadLetter} abandoned</span>
+                </div>
+              )}
             </div>
+
+            {platform?.reasons && platform.reasons.length > 0 && (
+              <ul className="pt-3 mt-3 border-t-2 border-black space-y-1">
+                {platform.reasons.map((reason) => (
+                  <li key={reason} className="text-3xs font-mono text-neutral-400 leading-relaxed">
+                    {reason}
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
 
           <div className="pt-2">
@@ -285,9 +366,9 @@ export function OverviewView({
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
             {filteredAgents.map((agent, idx) => {
-              const asi = agent.current_asi ?? 100;
+              const asi = agent.current_asi;
               const isSelected = selectedAgentId === agent.agent_id;
-              const asiTone = asi < 60 ? 'bad' : asi < 80 ? 'warn' : 'ok';
+              const asiTone = asi === null ? 'ok' : asi < 60 ? 'bad' : asi < 80 ? 'warn' : 'ok';
               const asiStyles = riskToneStyles(asiTone);
 
               const cardAccents: ('yellow' | 'cyan' | 'green' | 'purple' | 'orange')[] = ['yellow', 'cyan', 'green', 'purple', 'orange'];
@@ -306,7 +387,11 @@ export function OverviewView({
                   <div className="flex items-start justify-between gap-2">
                     <div className="space-y-0.5 min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className={`w-2.5 h-2.5 rounded-full border border-black ${asiStyles.dot}`} />
+                        <span
+                          className={`w-2.5 h-2.5 rounded-full border border-black ${
+                            asi === null ? 'bg-neutral-600' : asiStyles.dot
+                          }`}
+                        />
                         <h4 className="text-xs font-mono font-black text-white truncate">
                           {agent.agent_id}
                         </h4>
@@ -318,14 +403,22 @@ export function OverviewView({
 
                     <div className="text-right shrink-0">
                       <span className="text-3xs font-mono text-neutral-400 block uppercase font-bold">Stability (ASI)</span>
-                      <span className={`text-sm font-black font-mono tnum ${asiStyles.text}`}>
-                        {asi.toFixed(1)}%
+                      <span
+                        className={`text-sm font-black font-mono tnum ${
+                          asi === null ? 'text-neutral-500' : asiStyles.text
+                        }`}
+                      >
+                        {asi === null ? '—' : `${asi.toFixed(1)}%`}
                       </span>
                     </div>
                   </div>
 
-                  {/* ASI Stability Meter */}
-                  <Meter value={asi / 100} tone={asiTone} showValue={false} />
+                  {/* ASI Stability Meter, omitted when no baseline has formed yet */}
+                  {asi === null ? (
+                    <p className="text-3xs font-mono text-neutral-500">No drift baseline yet</p>
+                  ) : (
+                    <Meter value={asi / 100} tone={asiTone} showValue={false} />
+                  )}
 
                   {/* Agent Stats Summary Bar */}
                   <div className="grid grid-cols-3 gap-2 pt-2 border-t-2 border-black text-center font-mono">
