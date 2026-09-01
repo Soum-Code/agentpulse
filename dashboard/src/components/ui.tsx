@@ -376,9 +376,10 @@ interface WaveformProps {
   height?: number;
   title?: string;
   mode?: 'risk' | 'grounding' | 'latency';
+  live?: boolean;
 }
 
-export function Waveform({ data, height = 135, title = 'LIVE SWARM TELEMETRY SIGNAL WAVEFORM', mode = 'risk' }: WaveformProps) {
+export function Waveform({ data, height = 135, title = 'SWARM TELEMETRY SIGNAL WAVEFORM', mode = 'risk', live = false }: WaveformProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const prefersReducedMotion = useReducedMotion();
@@ -555,7 +556,8 @@ export function Waveform({ data, height = 135, title = 'LIVE SWARM TELEMETRY SIG
           <span className="w-3 h-3 rounded-full bg-yellow-400 border border-black animate-pulse" />
           <span className="text-xs font-mono uppercase font-black text-white tracking-wider flex items-center gap-1.5">
             <span>{title}</span>
-            <span className="comic-tag bg-yellow-400 text-black">LIVE</span>
+            {/* Only claim LIVE when the caller is genuinely streaming. */}
+            {live && <span className="comic-tag bg-yellow-400 text-black">LIVE</span>}
           </span>
         </div>
 

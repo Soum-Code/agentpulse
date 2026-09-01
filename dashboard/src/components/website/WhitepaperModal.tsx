@@ -150,7 +150,8 @@ export function WhitepaperModal({ isOpen, onClose }: WhitepaperModalProps) {
 
         {/* Footer */}
         <div className="p-4 bg-surface-3 border-t border-line flex items-center justify-between text-xs font-mono">
-          <span className="text-neutral-400">Self-hosted · Apache 2.0</span>
+          {/* No licence claimed: the repository ships no LICENSE file. */}
+          <span className="text-neutral-400">Self-hosted · Research preview</span>
           <button
             onClick={onClose}
             className="px-4 py-1.5 rounded-lg bg-surface hover:bg-white/10 text-white font-bold transition-all cursor-pointer border border-line"

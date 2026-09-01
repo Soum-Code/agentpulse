@@ -77,13 +77,22 @@ export function AgentDiagnosticsDrawer({
 
   if (!agentId) return null;
 
-  const asi = agent?.current_asi ?? 94.5;
-  const asiTone = asi < 65 ? 'bad' : asi < 85 ? 'warn' : 'ok';
+  const asi = agent?.current_asi ?? null;
+  const asiTone = asi === null ? 'ok' : asi < 65 ? 'bad' : asi < 85 ? 'warn' : 'ok';
   const asiStyles = riskToneStyles(asiTone);
 
-  const riskHistory = healthData?.risk_trend?.map((r) => r.risk_score ?? 0.05) || [
-    0.04, 0.08, 0.06, 0.12, 0.09, 0.15, 0.08, 0.04,
-  ];
+  // Only points the backend actually scored. Unscored entries are dropped
+  // rather than filled in, so the sparkline never invents a history.
+  // Both trends arrive newest-first, so reverse to read left-to-right in time.
+  const riskHistory: number[] = (healthData?.risk_trend ?? [])
+    .map((r) => r.risk_score)
+    .filter((score): score is number => score !== null && score !== undefined)
+    .reverse();
+
+  // Latest recorded centroid distance for this agent, if drift has run at all.
+  const driftTrend = healthData?.drift_trend ?? [];
+  const latestCentroid =
+    driftTrend.find((d) => d.centroid_distance !== null)?.centroid_distance ?? null;
 
   return (
     <div className="fixed inset-y-0 right-0 z-50 w-full sm:w-[460px] bg-surface-2 border-l-2 border-black shadow-comic-xl flex flex-col justify-between animate-rise font-sans">
@@ -118,28 +127,44 @@ export function AgentDiagnosticsDrawer({
             <span className="text-3xs font-mono uppercase text-neutral-400 font-black">
               Agent Stability Index (ASI)
             </span>
-            <span className={`text-base font-black font-mono tnum ${asiStyles.text}`}>
-              {asi.toFixed(1)}%
+            <span
+              className={`text-base font-black font-mono tnum ${
+                asi === null ? 'text-neutral-500' : asiStyles.text
+              }`}
+            >
+              {asi === null ? '—' : `${asi.toFixed(1)}%`}
             </span>
           </div>
 
-          <Meter value={asi / 100} tone={asiTone} showValue={false} />
+          {asi === null ? (
+            <p className="text-3xs font-mono text-neutral-500">No drift baseline recorded yet</p>
+          ) : (
+            <Meter value={asi / 100} tone={asiTone} showValue={false} />
+          )}
 
           <div className="grid grid-cols-3 gap-2 pt-2 border-t-2 border-black text-center font-mono text-xs">
             <div className="p-2 rounded-xl bg-surface border border-black shadow-[1px_1px_0px_#000]">
               <span className="text-4xs text-neutral-400 block uppercase font-bold">Total Spans</span>
-              <span className="font-black text-white tnum">{agent?.total_spans ?? 24}</span>
+              <span className="font-black text-white tnum">{agent?.total_spans ?? '—'}</span>
             </div>
             <div className="p-2 rounded-xl bg-surface border border-black shadow-[1px_1px_0px_#000]">
               <span className="text-4xs text-neutral-400 block uppercase font-bold">Avg Latency</span>
               <span className="font-black text-white tnum">
-                {agent?.avg_latency_ms ? `${agent.avg_latency_ms.toFixed(0)}ms` : '42ms'}
+                {agent?.avg_latency_ms != null ? `${agent.avg_latency_ms.toFixed(0)}ms` : '—'}
               </span>
             </div>
             <div className="p-2 rounded-xl bg-surface border border-black shadow-[1px_1px_0px_#000]">
               <span className="text-4xs text-neutral-400 block uppercase font-bold">Error Rate</span>
-              <span className="font-black text-emerald-400 tnum">
-                {agent?.error_rate ? `${(agent.error_rate * 100).toFixed(0)}%` : '0%'}
+              <span
+                className={`font-black tnum ${
+                  agent?.error_rate == null
+                    ? 'text-neutral-500'
+                    : agent.error_rate > 0
+                    ? 'text-rose-400'
+                    : 'text-emerald-400'
+                }`}
+              >
+                {agent?.error_rate != null ? `${(agent.error_rate * 100).toFixed(0)}%` : '—'}
               </span>
             </div>
           </div>
@@ -157,11 +182,15 @@ export function AgentDiagnosticsDrawer({
             <RiskPill score={agent?.avg_risk_score} size="sm" />
           </div>
 
-          <div className="pt-2 flex items-center justify-between">
+          <div className="pt-2 flex items-center justify-between gap-3">
             <div className="text-2xs font-mono text-neutral-300 font-semibold">
-              Variance across {riskHistory.length} spans
+              {riskHistory.length >= 2
+                ? `Across ${riskHistory.length} evaluated spans`
+                : 'Not enough evaluated spans to plot a trend'}
             </div>
-            <Sparkline data={riskHistory} width={140} height={36} tone="cyan" />
+            {riskHistory.length >= 2 && (
+              <Sparkline data={riskHistory} width={140} height={36} tone="cyan" />
+            )}
           </div>
         </Tile>
 
@@ -173,17 +202,34 @@ export function AgentDiagnosticsDrawer({
           </div>
 
           <div className="flex items-center justify-between pt-1">
-            <span className="text-neutral-300 font-semibold">Current Centroid Distance:</span>
-            <span className="font-black text-white tnum">0.0842</span>
+            <span className="text-neutral-300 font-semibold">Latest Centroid Spike:</span>
+            <span
+              className={`font-black tnum ${
+                latestCentroid === null ? 'text-neutral-500' : 'text-white'
+              }`}
+            >
+              {latestCentroid === null ? '—' : latestCentroid.toFixed(4)}
+            </span>
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-neutral-300 font-semibold">Max Variance Allowed:</span>
+            <span className="text-neutral-300 font-semibold">Alert Threshold:</span>
             <span className="font-bold text-neutral-400 tnum">0.3000</span>
           </div>
           <div className="flex items-center justify-between pt-1">
             <span className="text-neutral-300 font-semibold">Baseline State:</span>
-            <StatusBadge status="WITHIN BASELINE" tone="ok" />
+            {latestCentroid === null ? (
+              <StatusBadge status="NO BASELINE" tone="neutral" />
+            ) : (
+              <StatusBadge
+                status={latestCentroid > 0.3 ? 'ABOVE THRESHOLD' : 'WITHIN BASELINE'}
+                tone={latestCentroid > 0.3 ? 'bad' : 'ok'}
+              />
+            )}
           </div>
+          <p className="text-4xs text-neutral-500 leading-relaxed pt-1">
+            Per-span spike against the EMA centroid. Drift alerts fire on the sustained
+            window-centroid distance, shown in the Drift &amp; ASI view.
+          </p>
         </Tile>
       </div>
 

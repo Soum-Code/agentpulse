@@ -28,6 +28,13 @@ export interface PlatformHealth {
   evaluation_queue: {
     depth: number;
     backlog_threshold: number;
+    by_status?: {
+      queued?: number;
+      running?: number;
+      succeeded?: number;
+      failed?: number;
+      dead_letter?: number;
+    };
   };
   workers: {
     alive?: number;

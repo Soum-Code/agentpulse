@@ -47,7 +47,9 @@ export function NavigationDock({
         }
       }}
     >
-      <div className="px-3 py-2 rounded-2xl flex items-center gap-1 sm:gap-2 border-2 border-black bg-surface-2/95 backdrop-blur-2xl shadow-comic-lg">
+      {/* overflow-x-auto keeps the six tabs inside the 95vw bound on narrow
+          screens; without it they spill past the viewport edge. */}
+      <div className="px-3 py-2 rounded-2xl flex items-center gap-1 sm:gap-2 border-2 border-black bg-surface-2/95 backdrop-blur-2xl shadow-comic-lg overflow-x-auto">
         {NAV_ITEMS.map((item) => {
           const Icon = item.icon;
           const isActive = activeTab === item.id;

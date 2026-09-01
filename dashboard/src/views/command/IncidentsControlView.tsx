@@ -30,6 +30,18 @@ import {
   Tile,
 } from '../../components/ui';
 
+// The API emits severities uppercase ("HIGH", "MEDIUM"), so every comparison
+// normalises first rather than matching a casing that never arrives.
+function isHighSeverity(severity: string): boolean {
+  const s = severity.toLowerCase();
+  return s === 'critical' || s === 'high';
+}
+
+function isWarnSeverity(severity: string): boolean {
+  const s = severity.toLowerCase();
+  return s === 'warning' || s === 'medium';
+}
+
 interface IncidentsControlViewProps {
   alerts: AlertItem[];
   client: ApiClient;
@@ -66,8 +78,8 @@ export function IncidentsControlView({
 
       if (!matchesSearch) return false;
       if (filterTab === 'UNACKNOWLEDGED') return !alert.acknowledged;
-      if (filterTab === 'CRITICAL') return alert.severity === 'critical' || alert.severity === 'high';
-      if (filterTab === 'WARNING') return alert.severity === 'warning' || alert.severity === 'medium';
+      if (filterTab === 'CRITICAL') return isHighSeverity(alert.severity);
+      if (filterTab === 'WARNING') return isWarnSeverity(alert.severity);
       return true;
     });
   }, [localAlerts, searchQuery, filterTab]);
@@ -89,7 +101,8 @@ export function IncidentsControlView({
   };
 
   const totalUnacked = localAlerts.filter((a) => !a.acknowledged).length;
-  const criticalCount = localAlerts.filter((a) => a.severity === 'critical' || a.severity === 'high').length;
+  const criticalCount = localAlerts.filter((a) => isHighSeverity(a.severity)).length;
+  const acknowledgedCount = localAlerts.length - totalUnacked;
 
   return (
     <div className="space-y-6 rise pb-20 font-sans">
@@ -112,18 +125,18 @@ export function IncidentsControlView({
         />
         <Stat
           accent="pink"
-          label="Critical Severity"
+          label="High Severity"
           value={criticalCount}
-          subtext="High grounding risk"
+          subtext="Critical or high alerts"
           tone={criticalCount > 0 ? 'crit' : 'ok'}
           icon={Flame}
         />
         <Stat
           accent="green"
-          label="Resolution Time"
-          value="< 4.2m"
-          subtext="Fast operator triage"
-          tone="ok"
+          label="Acknowledged"
+          value={acknowledgedCount}
+          subtext={`of ${localAlerts.length} logged`}
+          tone={acknowledgedCount === localAlerts.length ? 'ok' : undefined}
           icon={ShieldCheck}
         />
       </div>
@@ -190,7 +203,7 @@ export function IncidentsControlView({
       ) : (
         <div className="space-y-3.5">
           {filteredAlerts.map((alert) => {
-            const isCritical = alert.severity === 'critical' || alert.severity === 'high';
+            const isCritical = isHighSeverity(alert.severity);
             const isExpanded = !!expandedAlerts[alert.id];
             const isLoading = !!actionLoading[alert.id];
             const riskVal = (alert.details as any)?.risk_score;

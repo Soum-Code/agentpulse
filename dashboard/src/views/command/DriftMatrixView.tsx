@@ -56,30 +56,42 @@ export function DriftMatrixView({
   onSelectAgent,
   onRefresh,
 }: DriftMatrixViewProps) {
-  // Combine agent records with drift data
+  // Combine agent records with drift data. Every field stays null when the
+  // backend has no value for it: a missing baseline is not a healthy baseline.
   const combinedAgents = useMemo(() => {
     return agents.map((agent) => {
       const drift = driftOverview?.agents.find((d) => d.agent_id === agent.agent_id);
-      const asi = drift?.current_asi ?? agent.current_asi ?? 100;
-      const centroidDist = drift?.latest_centroid_distance ?? 0.08;
-      const toolDrift = drift?.latest_tool_drift ?? 0.04;
-      const isDrifted = asi < 70 || centroidDist > 0.3;
+      const asi = drift?.current_asi ?? agent.current_asi ?? null;
+      const centroidDist = drift?.latest_centroid_distance ?? null;
+      // The sustained-shift metric alerting actually fires on. Null until both
+      // the baseline and current windows have filled.
+      const windowDist = drift?.latest_window_centroid_distance ?? null;
+      const toolDrift = drift?.latest_tool_drift ?? null;
+      const baselineSize = drift?.baseline_size ?? null;
+      const isDrifted =
+        (asi !== null && asi < 70) || (windowDist !== null && windowDist > 0.3);
 
       return {
         ...agent,
         asi,
         centroidDist,
+        windowDist,
         toolDrift,
+        baselineSize,
         isDrifted,
       };
     });
   }, [agents, driftOverview]);
 
-  const avgAsi = combinedAgents.length > 0
-    ? combinedAgents.reduce((acc, a) => acc + a.asi, 0) / combinedAgents.length
-    : 100;
+  const scoredAsi = combinedAgents.filter((a) => a.asi !== null);
+  const avgAsi =
+    scoredAsi.length > 0
+      ? scoredAsi.reduce((acc, a) => acc + (a.asi as number), 0) / scoredAsi.length
+      : null;
 
   const driftedCount = combinedAgents.filter((a) => a.isDrifted).length;
+  // Agents whose drift windows have filled, and so can actually be judged.
+  const judgedCount = combinedAgents.filter((a) => a.windowDist !== null).length;
 
   return (
     <div className="space-y-6 rise pb-20 font-sans">
@@ -88,32 +100,41 @@ export function DriftMatrixView({
         <Stat
           accent="orange"
           label="Swarm Fleet Mean ASI"
-          value={`${avgAsi.toFixed(1)}%`}
-          subtext="Agent Stability Index"
-          tone={avgAsi < 70 ? 'bad' : avgAsi < 85 ? 'warn' : 'ok'}
+          value={avgAsi !== null ? `${avgAsi.toFixed(1)}%` : '—'}
+          subtext={
+            avgAsi !== null
+              ? `Mean across ${scoredAsi.length} of ${combinedAgents.length} agents`
+              : 'No agent has a stability index yet'
+          }
+          tone={avgAsi === null ? undefined : avgAsi < 70 ? 'bad' : avgAsi < 85 ? 'warn' : 'ok'}
           icon={Activity}
-          sparklineData={[94, 92, 95, 91, 89, 93, 90, 96, 94, avgAsi]}
         />
         <Stat
           accent="purple"
-          label="Agents Evaluated"
-          value={combinedAgents.length}
-          subtext="Centroid baselines active"
+          label="Agents With Baselines"
+          value={combinedAgents.filter((a) => a.baselineSize !== null).length}
+          subtext={`of ${combinedAgents.length} agents seen`}
           icon={Brain}
         />
         <Stat
           accent="pink"
           label="Drifted Nodes"
           value={driftedCount}
-          subtext={driftedCount > 0 ? 'Exceeding variance threshold' : 'All agents within baseline bounds'}
-          tone={driftedCount > 0 ? 'bad' : 'ok'}
+          subtext={
+            driftedCount > 0
+              ? 'Exceeding sustained-shift threshold'
+              : judgedCount === 0
+              ? 'No agent has enough samples to judge'
+              : `${judgedCount} of ${combinedAgents.length} agents judged`
+          }
+          tone={driftedCount > 0 ? 'bad' : judgedCount === 0 ? undefined : 'ok'}
           icon={TrendingUp}
         />
         <Stat
           accent="cyan"
-          label="Centroid Threshold"
+          label="Sustained Drift Threshold"
           value="0.300"
-          subtext="Cosine distance trigger"
+          subtext="Fires on window centroid distance"
           icon={Shield}
         />
       </div>
@@ -129,14 +150,22 @@ export function DriftMatrixView({
           </h3>
         </div>
         <p className="text-2xs font-mono text-neutral-300 leading-relaxed">
-          AgentPulse continuously scores each agent’s behavioral consistency as a composite index:
+          ASI is a weighted mean of per-signal stability terms, renormalised over whichever signals
+          the agent actually has:
           <br />
           <span className="comic-tag bg-yellow-400 text-black text-xs font-black inline-block mt-2">
-            ASI = 100 · (1 - 0.45 · CentroidShift - 0.35 · ToolEntropy - 0.20 · ErrorRate)
+            ASI = 100 · Σ(wᵢ · sᵢ) / Σwᵢ
           </span>
         </p>
+        <ul className="text-3xs font-mono text-neutral-400 font-semibold space-y-1">
+          <li>s = max(0, 1 − centroid_distance), w = 0.35</li>
+          <li>s = max(0, 1 − 2 · quality_drift), w = 0.30</li>
+          <li>s = max(0, 1 − 5 · error_rate_delta), w = 0.20</li>
+          <li>s = max(0, 1 − tool_drift), w = 0.15</li>
+        </ul>
         <p className="text-3xs font-mono text-neutral-400 font-semibold">
-          When an agent begins subtly altering its vocabulary distribution or diverging in tool usage patterns, the Centroid Shift alerts the operator before severe downstream hallucinations occur.
+          ASI is a heuristic, not a calibrated probability. Drift alerts fire on the sustained
+          window-centroid distance rather than on ASI or on the per-span centroid spike.
         </p>
       </Tile>
 
@@ -170,7 +199,8 @@ export function DriftMatrixView({
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
             {combinedAgents.map((agent, idx) => {
-              const asiTone = agent.asi < 65 ? 'bad' : agent.asi < 85 ? 'warn' : 'ok';
+              const asiTone =
+                agent.asi === null ? 'ok' : agent.asi < 65 ? 'bad' : agent.asi < 85 ? 'warn' : 'ok';
               const asiStyles = riskToneStyles(asiTone);
               const isSelected = selectedAgentId === agent.agent_id;
 
@@ -190,7 +220,11 @@ export function DriftMatrixView({
                   <div className="flex items-start justify-between gap-2">
                     <div className="space-y-0.5 min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className={`w-2.5 h-2.5 rounded-full border border-black ${asiStyles.dot}`} />
+                        <span
+                          className={`w-2.5 h-2.5 rounded-full border border-black ${
+                            agent.asi === null ? 'bg-neutral-600' : asiStyles.dot
+                          }`}
+                        />
                         <h4 className="text-xs font-mono font-black text-white truncate">
                           {agent.agent_id}
                         </h4>
@@ -201,8 +235,14 @@ export function DriftMatrixView({
                     </div>
 
                     <StatusBadge
-                      status={agent.isDrifted ? 'DRIFT DETECTED' : 'STABLE'}
-                      tone={agent.isDrifted ? 'bad' : 'ok'}
+                      status={
+                        agent.isDrifted
+                          ? 'DRIFT DETECTED'
+                          : agent.windowDist === null
+                          ? 'WARMING UP'
+                          : 'STABLE'
+                      }
+                      tone={agent.isDrifted ? 'bad' : agent.windowDist === null ? 'neutral' : 'ok'}
                     />
                   </div>
 
@@ -210,34 +250,73 @@ export function DriftMatrixView({
                   <div className="space-y-1.5">
                     <div className="flex justify-between text-2xs font-mono">
                       <span className="text-neutral-400 font-bold uppercase">Stability Index:</span>
-                      <span className={`font-black tnum ${asiStyles.text}`}>
-                        {agent.asi.toFixed(1)}%
+                      <span
+                        className={`font-black tnum ${
+                          agent.asi === null ? 'text-neutral-500' : asiStyles.text
+                        }`}
+                      >
+                        {agent.asi === null ? '—' : `${agent.asi.toFixed(1)}%`}
                       </span>
                     </div>
-                    <Meter value={agent.asi / 100} tone={asiTone} showValue={false} />
+                    {agent.asi !== null && (
+                      <Meter value={agent.asi / 100} tone={asiTone} showValue={false} />
+                    )}
                   </div>
 
                   {/* Vector Drift Sub-Metrics Grid */}
                   <div className="grid grid-cols-2 gap-2 pt-2 border-t-2 border-black text-xs font-mono">
                     <div className="p-2.5 rounded-xl bg-surface border-2 border-black shadow-[1px_1px_0px_#000]">
-                      <span className="text-4xs text-neutral-400 block uppercase font-bold">Centroid Distance</span>
-                      <span className="text-xs font-black text-white tnum">
-                        {agent.centroidDist.toFixed(4)}
+                      <span className="text-4xs text-neutral-400 block uppercase font-bold">Sustained Shift</span>
+                      <span
+                        className={`text-xs font-black tnum ${
+                          agent.windowDist === null ? 'text-neutral-500' : 'text-white'
+                        }`}
+                      >
+                        {agent.windowDist === null ? '—' : agent.windowDist.toFixed(4)}
                       </span>
-                      <span className="text-4xs text-neutral-400 block">Threshold: 0.300</span>
+                      <span className="text-4xs text-neutral-400 block">
+                        {agent.windowDist === null ? 'Windows not filled' : 'Alerts at 0.300'}
+                      </span>
+                    </div>
+
+                    <div className="p-2.5 rounded-xl bg-surface border-2 border-black shadow-[1px_1px_0px_#000]">
+                      <span className="text-4xs text-neutral-400 block uppercase font-bold">Centroid Spike</span>
+                      <span
+                        className={`text-xs font-black tnum ${
+                          agent.centroidDist === null ? 'text-neutral-500' : 'text-white'
+                        }`}
+                      >
+                        {agent.centroidDist === null ? '—' : agent.centroidDist.toFixed(4)}
+                      </span>
+                      <span className="text-4xs text-neutral-400 block">Per-span, not alerted on</span>
                     </div>
 
                     <div className="p-2.5 rounded-xl bg-surface border-2 border-black shadow-[1px_1px_0px_#000]">
                       <span className="text-4xs text-neutral-400 block uppercase font-bold">Tool Usage Drift</span>
-                      <span className="text-xs font-black text-white tnum">
-                        {agent.toolDrift.toFixed(4)}
+                      <span
+                        className={`text-xs font-black tnum ${
+                          agent.toolDrift === null ? 'text-neutral-500' : 'text-white'
+                        }`}
+                      >
+                        {agent.toolDrift === null ? '—' : agent.toolDrift.toFixed(4)}
                       </span>
                       <span className="text-4xs text-neutral-400 block">Entropy shift</span>
                     </div>
+
+                    <div className="p-2.5 rounded-xl bg-surface border-2 border-black shadow-[1px_1px_0px_#000]">
+                      <span className="text-4xs text-neutral-400 block uppercase font-bold">Baseline Pool</span>
+                      <span
+                        className={`text-xs font-black tnum ${
+                          agent.baselineSize === null ? 'text-neutral-500' : 'text-white'
+                        }`}
+                      >
+                        {agent.baselineSize === null ? '—' : agent.baselineSize}
+                      </span>
+                      <span className="text-4xs text-neutral-400 block">Embeddings held</span>
+                    </div>
                   </div>
 
-                  <div className="pt-1 flex items-center justify-between text-3xs font-mono text-neutral-400 font-bold">
-                    <span>Baseline: 100 samples</span>
+                  <div className="pt-1 flex items-center justify-end text-3xs font-mono text-neutral-400 font-bold">
                     <span className="text-yellow-400 hover:underline inline-flex items-center gap-1 cursor-pointer">
                       <span>View Diagnostics</span>
                       <ArrowRight className="w-3 h-3 text-yellow-400" />

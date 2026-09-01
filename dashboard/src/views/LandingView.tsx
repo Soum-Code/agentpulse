@@ -516,7 +516,8 @@ export function LandingView({ onEnter, sceneMode, onChangeSceneMode }: LandingVi
           </div>
           <span className="font-black text-white">AgentPulse</span>
           <span>&bull;</span>
-          <span>Open-Source Multi-Agent AI Observability</span>
+          {/* Not "open-source": the repository ships no LICENSE file. */}
+          <span>Self-Hosted Multi-Agent AI Observability</span>
         </div>
 
         <div className="flex flex-wrap items-center gap-6">
