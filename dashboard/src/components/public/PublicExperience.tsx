@@ -47,7 +47,7 @@ export const PublicExperience: React.FC<PublicExperienceProps> = ({ onEnterProdu
   const [selectedSdkFramework, setSelectedSdkFramework] = useState<'python' | 'langgraph' | 'crewai' | 'langchain'>('python');
   
   // Palette mode: 'butter' (Iconic Buttermax canary yellow & deep black), 'dark' (Cyber obsidian), 'chalk' (Studio light)
-  const [palette, setPalette] = useState<'butter' | 'dark' | 'chalk'>('butter');
+  const [palette, setPalette] = useState<'butter' | 'dark' | 'chalk'>('dark');
 
   const handleCopyPip = (textToCopy = 'pip install agentpulse') => {
     navigator.clipboard.writeText(textToCopy);
