@@ -279,11 +279,14 @@ export const LiquidBackgroundCanvas: React.FC<LiquidBackgroundCanvasProps> = ({
           col = mix(u_base_color, u_liquid_color1, glassWave1 * 0.60);
           col = mix(col, u_liquid_color2, glassWave2 * 0.45);
 
-          // Electric Caustic Refraction & Glass Edge Glint
+          // Electric Caustic Refraction & Glass Edge Glint.
+          // These three terms are additive, so at full strength the cyan
+          // caustic washed the obsidian base out to a saturated blue across
+          // the whole hero. Kept as edge glints instead.
           vec3 prismaticGlow = mix(u_caustic_color, u_highlight_color, smoothstep(0.2, 0.8, chromaticTear.b));
-          col += totalSpec * prismaticGlow * 1.1;
-          col += fresnel * u_caustic_color * 0.65;
-          col += rippleDecay * u_caustic_color * (0.35 + mouseSpeedVal * 0.6);
+          col += totalSpec * prismaticGlow * 0.40;
+          col += fresnel * u_caustic_color * 0.18;
+          col += rippleDecay * u_caustic_color * (0.10 + mouseSpeedVal * 0.25);
         }
 
         // Soft subtle peripheral vignette to guarantee maximum text readability
