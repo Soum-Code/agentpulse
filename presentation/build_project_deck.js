@@ -415,7 +415,7 @@ after 14 shifted spans
   bullets(s, [
     'Ready and evaluator-ready are separate on purpose: the API can correctly accept spans while nothing is evaluating them.',
     'Workers heartbeat; stale after 90 seconds. Retention deletes past retention_days and records what it removed.',
-    'docker compose builds API, worker and an nginx-served dashboard.',
+    'docker compose builds the API and dashboard only - it defines no worker service, so a Compose deployment stores spans without evaluating them.',
   ], { y: 4.35, h: 1.9, fontSize: 13.5 });
 }
 

@@ -569,8 +569,9 @@ A(P(
     "deletes beyond <font face='Courier'>retention_days</font> (default 30) and "
     "records what it removed in <font face='Courier'>retention_runs</font>. "
     "Rate limiting, API-key auth and CORS are handled in middleware; "
-    "<font face='Courier'>docker-compose.yml</font> builds the API, worker and "
-    "an nginx-served dashboard."))
+    "<font face='Courier'>docker-compose.yml</font> builds the API and an "
+    "nginx-served dashboard. It defines no worker service, so a Compose deployment accepts spans but evaluates none until a worker is run against "
+    "the same database."))
 
 # ---- 14. Observed output ---------------------------------------------------
 A(Spacer(1, 5 * mm)); A(H1("14. What the output looks like"))
@@ -668,7 +669,7 @@ python -m app.worker
 # 3. Dashboard
 cd dashboard && npm install && npm run dev
 
-# Everything together
+# API + dashboard only (compose defines no worker service)
 docker compose up
 """))
 A(P("Configuration is environment-driven; the defaults that matter:"))
