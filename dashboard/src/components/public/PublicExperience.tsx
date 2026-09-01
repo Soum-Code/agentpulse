@@ -44,7 +44,7 @@ export const PublicExperience: React.FC<PublicExperienceProps> = ({ onEnterProdu
   const [pipCopied, setPipCopied] = useState(false);
   const [activeDriftView, setActiveDriftView] = useState<'spatial' | 'analytical'>('spatial');
   const [activeLoopStep, setActiveLoopStep] = useState<number>(0);
-  const [selectedSdkFramework, setSelectedSdkFramework] = useState<'python' | 'langgraph' | 'crewai' | 'llamaindex' | 'ts'>('python');
+  const [selectedSdkFramework, setSelectedSdkFramework] = useState<'python' | 'langgraph' | 'crewai' | 'langchain'>('python');
   
   // Palette mode: 'butter' (Iconic Buttermax canary yellow & deep black), 'dark' (Cyber obsidian), 'chalk' (Studio light)
   const [palette, setPalette] = useState<'butter' | 'dark' | 'chalk'>('butter');
@@ -102,29 +102,29 @@ export const PublicExperience: React.FC<PublicExperienceProps> = ({ onEnterProdu
     {
       label: 'OBSERVE',
       subtitle: 'Continuous Telemetry Ingestion',
-      description: 'Capture every autonomous agent prompt, tool argument, nested sub-agent dispatch, and streaming token in real time with OpenTelemetry-compatible traces.',
-      badge: 'Zero Overhead',
-      metric: '< 1.4ms Ingestion',
-      metricLabel: 'P99 Overhead',
-      diagramTitle: 'OTel-Native Span Tree',
-      features: ['Automatic LangGraph & CrewAI auto-instrumentation', 'Microsecond token streaming latency capture', 'Prompt & tool call argument payload serialization']
+      description: 'Capture every autonomous agent prompt, tool argument, nested sub-agent dispatch, and streaming token in real time through the AgentPulse span schema.',
+      badge: 'Local CPU',
+      metric: '< 0.005ms SDK overhead',
+      metricLabel: 'tests/test_sdk.py',
+      diagramTitle: 'Span Tree',
+      features: ['LangGraph and CrewAI integrations', 'Per-span latency and token counts', 'Prompt & tool call argument payload serialization']
     },
     {
       label: 'UNDERSTAND',
       subtitle: 'Behavioral & Trajectory Drift',
       description: 'Detect subtle divergence in tool parameters, embedding distance, and reasoning loops long before catastrophic user-facing incidents happen.',
-      badge: 'Spatial Clustering',
-      metric: '0.88 Δ Max Divergence',
-      metricLabel: 'Cluster Variance',
-      diagramTitle: 'UMAP Trajectory Vector Space',
-      features: ['Embedding distance shifts across swarm clusters', 'Output schema hallucination detection', 'Cyclic reasoning loop & tool retry traps']
+      badge: 'Beta',
+      metric: '0.300 Δ alert threshold',
+      metricLabel: 'Window centroid distance',
+      diagramTitle: 'Centroid Distance Over Windows',
+      features: ['MiniLM embedding centroid drift per agent', 'Sustained window vs baseline centroid shift', 'Agent Stability Index across four signals']
     },
     {
       label: 'INVESTIGATE',
       subtitle: 'Honeycomb & LangSmith Depth',
       description: 'Traverse failure-first spans, parallel agent timeline lanes, and exact token payloads without ever losing breadcrumb context.',
-      badge: 'Context-Preserving',
-      metric: '100% Causal Trace',
+      badge: 'Beta',
+      metric: 'Parent-child spans',
       metricLabel: 'Span Lineage',
       diagramTitle: 'Parallel Multi-Agent Lanes',
       features: ['Failure-first filtered timeline navigation', 'Complete agent input-to-output causal spine', 'Deep tool I/O and payload inspector']
@@ -133,63 +133,62 @@ export const PublicExperience: React.FC<PublicExperienceProps> = ({ onEnterProdu
       label: 'ACT & CURATE',
       subtitle: 'Production → Dataset → Experiment',
       description: 'Instantly isolate anomalous spans into curated regression datasets, run candidate prompt/model experiments, and deploy hardened guardrails.',
-      badge: 'Braintrust Loop',
+      badge: 'Experimental',
       metric: '1-Click Dataset',
       metricLabel: 'Curated Regressions',
       diagramTitle: 'Golden Evaluation Benchmark',
-      features: ['One-click production trace to test suite curation', 'Candidate prompt & model A/B evaluation matrix', 'Automated guardrail re-anchoring rules']
+      features: ['One-click production trace to test suite curation', 'Candidate prompt & model A/B evaluation matrix', 'Curated cases stored as dataset benchmarks']
     }
   ];
 
+  // Snippets below use the SDK's real public API: AgentPulse, .monitor(),
+  // and the LangGraph/CrewAI/LangChain adapters that sdk/src/agentpulse
+  // actually exports. There is no JS/TS SDK and no LlamaIndex adapter.
   const sdkSnippets = {
-    python: `from agentpulse import observe, pulse
+    python: `from agentpulse import AgentPulse
 
-# 1. Initialize high-throughput telemetry collector
-pulse.init(api_key="ap_live_key_948f", project="production-swarms")
+pulse = AgentPulse(
+    endpoint="http://localhost:8000",
+    api_key="your-api-key",
+    service_name="production-swarms",
+)
 
-# 2. Decorate any agent orchestrator, tool, or reasoning loop
-@observe(name="autonomous_sql_synthesizer")
+@pulse.monitor(agent_id="sql_synthesizer", role="synthesizer")
 def run_agent_pipeline(user_query: str):
     schema = fetch_warehouse_schema()
     sql = generate_sql(user_query, schema)
     return validate_and_execute(sql)`,
-    langgraph: `from agentpulse.integrations.langgraph import instrument_langgraph
+    langgraph: `from agentpulse import AgentPulse
+from agentpulse.integrations import instrument_graph
 from langgraph.graph import StateGraph
 
-# Automatically captures state transitions, node hops & evaluator scores
-instrument_langgraph(project="finance-analyst-swarm")
+pulse = AgentPulse(service_name="finance-analyst-swarm")
 
 workflow = StateGraph(AgentState)
 workflow.add_node("planner", planner_node)
 workflow.add_node("sql_synth", sql_synthesizer)
-app = workflow.compile()`,
-    crewai: `from agentpulse.integrations.crewai import instrument_crewai
-from crewai import Agent, Crew, Task
 
-# Instruments inter-agent delegations & sub-task dependencies
-instrument_crewai(api_key="ap_live_key_948f")
+# Wraps every node so each hop is recorded as a span
+instrument_graph(workflow, pulse, agent_roles={"planner": "planner"})
+app = workflow.compile()`,
+    crewai: `from agentpulse import AgentPulse
+from agentpulse.integrations.crewai import CrewAIAdapter
+from crewai import Agent, Crew
+
+pulse = AgentPulse(service_name="research-crew")
+adapter = CrewAIAdapter(pulse)
 
 researcher = Agent(role="Data Extractor", goal="Query warehouse")
 analyst = Agent(role="Synthesis Engine", goal="Draft report")
 crew = Crew(agents=[researcher, analyst], tasks=[task1, task2])`,
-    llamaindex: `from agentpulse.integrations.llamaindex import AgentPulseCallbackHandler
-from llama_index.core import Settings
+    langchain: `from agentpulse import AgentPulse
+from agentpulse.integrations.langchain import LangChainAdapter
 
-# Captures vector retrieval recall, context grounding & reranker latency
-Settings.callback_manager.add_handler(
-    AgentPulseCallbackHandler(project="enterprise-rag-v3")
-)`,
-    ts: `import { AgentPulse } from "@agentpulse/sdk";
+pulse = AgentPulse(service_name="enterprise-rag")
+adapter = LangChainAdapter(pulse)
 
-const pulse = new AgentPulse({
-  apiKey: process.env.AGENTPULSE_API_KEY,
-  serviceName: "autonomous-support-agent"
-});
-
-export const runAgent = pulse.wrap("support_orchestrator", async (query) => {
-  const plan = await generatePlan(query);
-  return executePlan(plan);
-});`
+# Spans are emitted for each chain step the adapter observes
+chain.invoke({"question": user_query})`
   };
 
   return (
@@ -234,7 +233,7 @@ export const runAgent = pulse.wrap("support_orchestrator", async (query) => {
                 : 'border-white/[0.12] text-neutral-400'
             }`}
           >
-            v2.4 research baseline
+            v0.1.0-beta
           </span>
         </div>
 
@@ -437,38 +436,38 @@ export const runAgent = pulse.wrap("support_orchestrator", async (query) => {
             >
               <div>
                 <span className={palette === 'butter' ? 'text-neutral-700 font-bold block' : palette === 'chalk' ? 'text-neutral-500 block' : 'text-neutral-500 block'}>
-                  Ingestion Latency
+                  SDK Overhead
                 </span>
                 <span
                   className={`text-sm font-black mt-0.5 block ${
                     palette === 'butter' ? 'text-neutral-950' : palette === 'chalk' ? 'text-neutral-900' : 'text-neutral-100'
                   }`}
                 >
-                  &lt; 1.4 ms
+                  &lt; 0.005 ms
                 </span>
               </div>
               <div>
                 <span className={palette === 'butter' ? 'text-neutral-700 font-bold block' : palette === 'chalk' ? 'text-neutral-500 block' : 'text-neutral-500 block'}>
-                  Tracing Overhead
+                  Stage 1 Gate
                 </span>
                 <span
                   className={`text-sm font-black mt-0.5 block ${
                     palette === 'butter' ? 'text-neutral-950' : palette === 'chalk' ? 'text-neutral-900' : 'text-neutral-100'
                   }`}
                 >
-                  0.02% CPU
+                  ~27.8 ms
                 </span>
               </div>
               <div>
                 <span className={palette === 'butter' ? 'text-neutral-700 font-bold block' : palette === 'chalk' ? 'text-neutral-500 block' : 'text-neutral-500 block'}>
-                  Eval Framework
+                  Evaluator
                 </span>
                 <span
                   className={`text-sm font-black mt-0.5 block ${
                     palette === 'butter' ? 'text-neutral-950' : palette === 'chalk' ? 'text-neutral-900' : 'text-neutral-100'
                   }`}
                 >
-                  OpenTelemetry
+                  MiniLM + DeBERTa
                 </span>
               </div>
             </div>
@@ -494,11 +493,13 @@ export const runAgent = pulse.wrap("support_orchestrator", async (query) => {
                 <span className="w-3 h-3 rounded-full bg-rose-500/90 inline-block" />
                 <span className="w-3 h-3 rounded-full bg-amber-500/90 inline-block" />
                 <span className="w-3 h-3 rounded-full bg-emerald-500/90 inline-block" />
-                <span className="text-xs font-mono font-bold ml-2 text-neutral-400">agentpulse://live-telemetry</span>
+                <span className="text-xs font-mono font-bold ml-2 text-neutral-400">agentpulse://walkthrough</span>
               </div>
+              {/* This panel replays a scripted example, not a live feed. The
+                  real stream lives in the console. */}
               <div className="flex items-center space-x-2">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                <span className="text-[11px] font-mono text-emerald-400 font-bold uppercase">STREAM ACTIVE</span>
+                <span className="w-2 h-2 rounded-full bg-neutral-500" />
+                <span className="text-[11px] font-mono text-neutral-400 font-bold uppercase">Worked example</span>
               </div>
             </div>
 
@@ -541,12 +542,12 @@ export const runAgent = pulse.wrap("support_orchestrator", async (query) => {
             <div className="mt-4 pt-3 border-t border-white/10 flex items-center justify-between text-xs font-mono">
               <div className="flex items-center space-x-4">
                 <div>
-                  <span className="text-neutral-500 text-[10px] block uppercase">Multi-Agent Nodes</span>
-                  <span className="font-bold text-amber-300">12 Live Swarms</span>
+                  <span className="text-neutral-500 text-[10px] block uppercase">Cascade Mean</span>
+                  <span className="font-bold text-amber-300">215.9 ms</span>
                 </div>
                 <div>
-                  <span className="text-neutral-500 text-[10px] block uppercase">Eval Agreement</span>
-                  <span className="font-bold text-emerald-400">98.4% Confidence</span>
+                  <span className="text-neutral-500 text-[10px] block uppercase">Grounding F1</span>
+                  <span className="font-bold text-emerald-400">0.963 (v1.0_test)</span>
                 </div>
               </div>
               <button
@@ -1135,10 +1136,10 @@ export const runAgent = pulse.wrap("support_orchestrator", async (query) => {
             <div className="flex items-center justify-between mb-6 border-b border-white/10 pb-4">
               <div className="font-mono text-xs text-neutral-200 flex items-center space-x-2.5 font-bold">
                 <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse" />
-                <span>Semantic Trajectory Embedding Vector Map (UMAP 2D Projection)</span>
+                <span>Illustration: baseline pool vs current window</span>
               </div>
               <div className="text-xs font-mono text-rose-300 font-bold bg-rose-500/15 border border-rose-500/30 px-3 py-1.5 rounded-lg shadow-sm">
-                Cluster Divergence: 0.88 Δ (CRITICAL)
+                Alerts above 0.300 Δ
               </div>
             </div>
 
@@ -1149,7 +1150,7 @@ export const runAgent = pulse.wrap("support_orchestrator", async (query) => {
               {/* Baseline Cluster */}
               <div className="absolute left-[18%] top-[35%] w-44 h-44 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center">
                 <span className="text-[11px] font-mono text-emerald-400 font-bold text-center px-2">
-                  Nominal Baseline Cluster<br /><span className="text-[9px] text-emerald-400/70">(5,000 runs)</span>
+                  Baseline pool<br /><span className="text-[9px] text-emerald-400/70">(first 20 samples)</span>
                 </span>
                 <div className="absolute w-2.5 h-2.5 rounded-full bg-emerald-400" style={{ left: '28%', top: '38%' }} />
                 <div className="absolute w-2.5 h-2.5 rounded-full bg-emerald-400" style={{ left: '65%', top: '48%' }} />
@@ -1165,8 +1166,8 @@ export const runAgent = pulse.wrap("support_orchestrator", async (query) => {
               {/* Drifted Cluster */}
               <div className="absolute right-[16%] top-[20%] w-48 h-48 rounded-full bg-rose-500/15 border-2 border-rose-500/40 flex items-center justify-center animate-pulse">
                 <div className="text-center">
-                  <span className="text-[11px] font-mono text-rose-300 font-bold block">Critical Drift Frontier</span>
-                  <span className="text-[9px] font-mono text-rose-400/90">Cluster #3 Divergence</span>
+                  <span className="text-[11px] font-mono text-rose-300 font-bold block">Current window</span>
+                  <span className="text-[9px] font-mono text-rose-400/90">Rolling 12 samples</span>
                 </div>
                 <div className="absolute w-3 h-3 rounded-full bg-rose-400" style={{ left: '32%', top: '32%' }} />
                 <div className="absolute w-3 h-3 rounded-full bg-rose-400" style={{ left: '58%', top: '42%' }} />
@@ -1452,7 +1453,7 @@ export const runAgent = pulse.wrap("support_orchestrator", async (query) => {
               palette === 'butter' ? 'text-neutral-800 font-medium' : palette === 'chalk' ? 'text-neutral-600' : 'text-neutral-400'
             }`}
           >
-            Non-intrusive auto-instrumentation for Python native, LangGraph, CrewAI, LlamaIndex, LiteLLM, and TypeScript.
+            Python SDK with adapters for LangGraph, CrewAI and LangChain.
           </p>
         </div>
 
@@ -1475,8 +1476,7 @@ export const runAgent = pulse.wrap("support_orchestrator", async (query) => {
                 { id: 'python', label: 'Python Native' },
                 { id: 'langgraph', label: 'LangGraph' },
                 { id: 'crewai', label: 'CrewAI' },
-                { id: 'llamaindex', label: 'LlamaIndex' },
-                { id: 'ts', label: 'TypeScript / Node' }
+                { id: 'langchain', label: 'LangChain' }
               ].map((fw) => (
                 <button
                   key={fw.id}
@@ -1567,7 +1567,7 @@ export const runAgent = pulse.wrap("support_orchestrator", async (query) => {
                   GA · STABLE
                 </span>
               </div>
-              <div className="col-span-5 text-neutral-400">OpenTelemetry GenAI Semantic Conventions</div>
+              <div className="col-span-5 text-neutral-400">AgentPulse span schema (not OpenTelemetry)</div>
             </div>
 
             <div className="grid grid-cols-12 px-6 py-4 items-center hover:bg-white/[0.02] transition-colors">
@@ -1577,7 +1577,7 @@ export const runAgent = pulse.wrap("support_orchestrator", async (query) => {
                   BETA
                 </span>
               </div>
-              <div className="col-span-5 text-neutral-400">Density-based spatial trajectory clustering (UMAP)</div>
+              <div className="col-span-5 text-neutral-400">EMA and windowed embedding centroid cosine distance</div>
             </div>
 
             <div className="grid grid-cols-12 px-6 py-4 items-center hover:bg-white/[0.02] transition-colors">
@@ -1587,7 +1587,7 @@ export const runAgent = pulse.wrap("support_orchestrator", async (query) => {
                   BETA
                 </span>
               </div>
-              <div className="col-span-5 text-neutral-400">Exact AST &amp; JSON Schema reflection validation</div>
+              <div className="col-span-5 text-neutral-400">MiniLM cosine gate escalating to DeBERTa-v3 NLI</div>
             </div>
 
             <div className="grid grid-cols-12 px-6 py-4 items-center hover:bg-white/[0.02] transition-colors">
@@ -1597,7 +1597,7 @@ export const runAgent = pulse.wrap("support_orchestrator", async (query) => {
                   EXPERIMENTAL
                 </span>
               </div>
-              <div className="col-span-5 text-neutral-400">Consensus voting across parallel reasoning lanes</div>
+              <div className="col-span-5 text-neutral-400">Pairwise NLI contradiction between agents in a trace</div>
             </div>
 
             <div className="grid grid-cols-12 px-6 py-4 items-center hover:bg-white/[0.02] transition-colors">
@@ -1607,7 +1607,7 @@ export const runAgent = pulse.wrap("support_orchestrator", async (query) => {
                   EXPERIMENTAL
                 </span>
               </div>
-              <div className="col-span-5 text-neutral-400">Natural language assertion vs tool exit status check</div>
+              <div className="col-span-5 text-neutral-400">Regex claim extraction vs recorded tool results; needs prose claims and a result count</div>
             </div>
           </div>
         </div>
@@ -1672,7 +1672,7 @@ export const runAgent = pulse.wrap("support_orchestrator", async (query) => {
       <footer className="border-t border-white/[0.08] px-6 sm:px-12 py-8 max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between text-xs font-mono text-neutral-400 gap-4">
         <div>AgentPulse — AI Agent Observability &amp; Evaluation Platform</div>
         <div className="flex items-center space-x-6">
-          <span>OpenTelemetry Compliant</span>
+          <span>Self-hosted</span>
           <span>Editorial Aesthetic Baseline</span>
           <button onClick={onEnterProduct} className="text-neutral-300 hover:text-white underline">
             Workspace Mode
