@@ -1,193 +1,504 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
-import { createApiClient, websocketUrlFor, Agent, AgentPulseConnection, AlertItem, Metrics, PlatformHealth } from './lib/api';
-import { useWebSocket } from './hooks/useWebSocket';
-import type { InstrumentMode, SpatialSceneMode } from './spatial/SpatialInstrument';
-import { LandingView } from './views/LandingView';
-import { ConnectView } from './views/ConnectView';
-import { HandshakeView } from './views/HandshakeView';
-import { CommandSurface, TelemetryState } from './views/CommandSurface';
+import React, { useState, useEffect } from 'react';
+import {
+  DesignMode,
+  ProductTab,
+  Agent,
+  Trace,
+  Span,
+  Incident,
+  DriftProfile,
+  Dataset,
+  Experiment
+} from './types';
+import { useTelemetry } from './lib/useTelemetry';
+import { api } from './lib/api';
 
-const SpatialInstrument = lazy(() =>
-  import('./spatial/SpatialInstrument').then((module) => ({ default: module.SpatialInstrument })),
-);
+// Public Experience components
+import { PublicExperience } from './components/public/PublicExperience';
+import { LiquidBackgroundCanvas } from './components/public/LiquidBackgroundCanvas';
 
-const DEFAULT_CONNECTION: AgentPulseConnection = {
-  baseUrl: import.meta.env.VITE_API_URL || 'http://localhost:8000',
-  apiKey: import.meta.env.VITE_API_KEY || undefined,
-};
-
-function getModeFromHash(): InstrumentMode {
-  const hash = window.location.hash.toLowerCase();
-  if (hash === '#connect') return 'CONNECT';
-  if (hash === '#handshake') return 'HANDSHAKE';
-  if (hash === '#console' || hash === '#command') return 'COMMAND';
-  return 'LANDING';
-}
+// Product Experience components
+import { ProductHeader } from './components/product/ProductHeader';
+import { FloatingDock } from './components/product/FloatingDock';
+import { CommandPalette } from './components/product/CommandPalette';
+import { OverviewView } from './components/product/OverviewView';
+import { AgentsView } from './components/product/AgentsView';
+import { TracesView } from './components/product/TracesView';
+import { IncidentsView } from './components/product/IncidentsView';
+import { DriftView } from './components/product/DriftView';
+import { ExperimentsView } from './components/product/ExperimentsView';
+import { DatasetsView } from './components/product/DatasetsView';
+import { ReplayView } from './components/product/ReplayView';
+import { TelemetryLabView } from './components/product/TelemetryLabView';
+import { SettingsView } from './components/product/SettingsView';
+import { ShortcutsHelpModal } from './components/product/ShortcutsHelpModal';
+import { ActiveContextPanel } from './components/product/ActiveContextPanel';
 
 export default function App() {
-  const [mode, setModeState] = useState<InstrumentMode>(getModeFromHash);
-  const [sceneMode, setSceneMode] = useState<SpatialSceneMode>('constellation');
-  const [connection, setConnection] = useState<AgentPulseConnection>(DEFAULT_CONNECTION);
-  const [metrics, setMetrics] = useState<Metrics | null>(null);
-  const [agents, setAgents] = useState<Agent[]>([]);
-  const [alerts, setAlerts] = useState<AlertItem[]>([]);
-  const [platform, setPlatform] = useState<PlatformHealth | null>(null);
-  const [telemetryState, setTelemetryState] = useState<TelemetryState>('idle');
-  const [telemetryError, setTelemetryError] = useState<string | null>(null);
-  const [hoveredAgentId, setHoveredAgentId] = useState<string | null>(null);
-  const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
+  // Mode state: 'public' (editorial, spatial) vs 'product' (calm, precise, investigative)
+  const [mode, setMode] = useState<DesignMode>('public');
 
-  // Set mode and sync with hash & scroll
-  const setMode = useCallback((newMode: InstrumentMode) => {
-    setModeState(newMode);
-    if (newMode === 'LANDING') {
-      window.history.pushState(null, '', window.location.pathname);
-    } else if (newMode === 'CONNECT') {
-      window.history.pushState(null, '', '#connect');
-    } else if (newMode === 'HANDSHAKE') {
-      window.history.pushState(null, '', '#handshake');
-    } else if (newMode === 'COMMAND') {
-      window.history.pushState(null, '', '#console');
-    }
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, []);
+  // Product tab state
+  const [productTab, setProductTab] = useState<ProductTab>('overview');
 
-  // Listen to browser back/forward buttons
+  // Context-Preserving selection states (The Most Important UX Pattern: Agent A ↳ Trace 483 ↳ Span 7)
+  const [selectedAgent, setSelectedAgent] = useState<Agent | undefined>(undefined);
+  const [selectedTrace, setSelectedTrace] = useState<Trace | undefined>(undefined);
+  const [selectedSpan, setSelectedSpan] = useState<Span | undefined>(undefined);
+  const [selectedIncident, setSelectedIncident] = useState<Incident | undefined>(undefined);
+
+  // Active Context Side-Panel open & pinned states
+  const [isContextPanelOpen, setIsContextPanelOpen] = useState(true);
+  const [isContextPanelPinned, setIsContextPanelPinned] = useState(true);
+
+  // Core telemetry, polled from the running AgentPulse instance.
+  const {
+    agents,
+    traces,
+    incidents,
+    driftProfiles,
+    datasets,
+    experiments,
+    loading: telemetryLoading,
+    error: telemetryError,
+    connected,
+    refresh: refreshTelemetry,
+  } = useTelemetry();
+
+  // Command palette and shortcuts help modals
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
+  const [isShortcutsHelpOpen, setIsShortcutsHelpOpen] = useState(false);
+
+  // Live telemetry pulse simulator toggle
+  const [isSimulatingLive, setIsSimulatingLive] = useState(true);
+
+  // Global Keyboard shortcut listener (Cmd+K, ?, chord navigation 'g' + key)
   useEffect(() => {
-    const onPopState = () => {
-      setModeState(getModeFromHash());
+    let chordKey: string | null = null;
+    let chordTimer: any = null;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const activeEl = document.activeElement;
+      const isInputActive =
+        activeEl &&
+        (activeEl.tagName === 'INPUT' ||
+          activeEl.tagName === 'TEXTAREA' ||
+          (activeEl as HTMLElement).isContentEditable);
+
+      // Cmd+K / Ctrl+K toggle command palette anywhere
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setIsCommandPaletteOpen(prev => !prev);
+        return;
+      }
+
+      // Escape closes open modals
+      if (e.key === 'Escape') {
+        if (isShortcutsHelpOpen) {
+          setIsShortcutsHelpOpen(false);
+          return;
+        }
+        if (isCommandPaletteOpen) {
+          setIsCommandPaletteOpen(false);
+          return;
+        }
+      }
+
+      // Don't trigger single-key global shortcuts while typing in input fields
+      if (isInputActive) return;
+
+      // Question mark '?' toggles keyboard shortcuts cheat sheet
+      if (e.key === '?' || (e.shiftKey && e.key === '/')) {
+        e.preventDefault();
+        setIsShortcutsHelpOpen(prev => !prev);
+        return;
+      }
+
+      // 'g' key chord navigation (VIM style)
+      if (e.key.toLowerCase() === 'g' && !chordKey) {
+        chordKey = 'g';
+        clearTimeout(chordTimer);
+        chordTimer = setTimeout(() => {
+          chordKey = null;
+        }, 1200);
+        return;
+      }
+
+      if (chordKey === 'g') {
+        const k = e.key.toLowerCase();
+        chordKey = null;
+        clearTimeout(chordTimer);
+
+        if (k === 'o') {
+          e.preventDefault();
+          setProductTab('overview');
+        } else if (k === 't') {
+          e.preventDefault();
+          setProductTab('traces');
+        } else if (k === 'a') {
+          e.preventDefault();
+          setProductTab('agents');
+        } else if (k === 'i') {
+          e.preventDefault();
+          setProductTab('incidents');
+        } else if (k === 'd') {
+          e.preventDefault();
+          setProductTab('drift');
+        } else if (k === 'r') {
+          e.preventDefault();
+          setProductTab('replay');
+        } else if (k === 'e') {
+          e.preventDefault();
+          setProductTab('experiments');
+        } else if (k === 's') {
+          e.preventDefault();
+          setProductTab('settings');
+        } else if (k === 'l') {
+          e.preventDefault();
+          setProductTab('telemetry-lab');
+        } else if (k === 'c') {
+          e.preventDefault();
+          setIsContextPanelOpen(prev => !prev);
+        }
+      }
     };
-    window.addEventListener('popstate', onPopState);
-    return () => window.removeEventListener('popstate', onPopState);
-  }, []);
 
-  const client = useMemo(() => createApiClient(connection), [connection]);
-  const wsUrl = useMemo(() => websocketUrlFor(connection), [connection]);
-  const { lastMessage, isConnected: isWsConnected } = useWebSocket(wsUrl, mode === 'COMMAND');
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      clearTimeout(chordTimer);
+    };
+  }, [isShortcutsHelpOpen, isCommandPaletteOpen]);
 
-  const refreshTelemetry = useCallback(async () => {
-    setTelemetryState((state) => (state === 'ready' ? 'ready' : 'loading'));
-    setTelemetryError(null);
+  // The former synthetic telemetry pulse was removed: it fabricated traces,
+  // latencies and evaluator evidence that never came from the backend.
 
-    const [metricsResult, agentsResult, alertsResult, platformResult] = await Promise.allSettled([
-      client.getMetrics(),
-      client.getAgents(),
-      client.getAlerts(),
-      client.getPlatformHealth(),
-    ]);
-
-    if (metricsResult.status === 'fulfilled') setMetrics(metricsResult.value);
-    if (agentsResult.status === 'fulfilled') setAgents(agentsResult.value.agents);
-    if (alertsResult.status === 'fulfilled') setAlerts(alertsResult.value.alerts);
-    if (platformResult.status === 'fulfilled') setPlatform(platformResult.value);
-
-    const failures = [metricsResult, agentsResult, alertsResult, platformResult].filter(
-      (result): result is PromiseRejectedResult => result.status === 'rejected',
-    );
-    if (failures.length === 3) {
-      const reason = failures[0].reason;
-      setTelemetryState('error');
-      setTelemetryError(reason instanceof Error ? reason.message : 'Telemetry is unavailable.');
-      return;
+  // Handler: curate a span into the benchmark dataset. Field names must match
+  // CurateCaseRequest in backend/app/routers/experiments.py.
+  const handleCurateToDataset = async (span: Span, trace: Trace) => {
+    try {
+      const risk = trace.groundingScore;
+      await api.curateCase('AgentPulse Benchmark', {
+        case_id: `curated_${span.id}`,
+        input_query: span.prompt ?? trace.inputPreview ?? '',
+        agent_claim: span.completion ?? trace.outputPreview ?? '',
+        evidence: typeof span.toolOutput === 'string' ? span.toolOutput : undefined,
+        expected_classification: risk != null && risk > 0.5 ? 'REFUTED' : 'SUPPORTED',
+        is_failure: risk != null && risk > 0.5,
+        trace_id: trace.id,
+        span_id: span.id,
+        operator_notes: `Curated from trace ${trace.id} (agent ${span.agentLane ?? trace.agentId}).`,
+      });
+      refreshTelemetry();
+    } catch (err) {
+      console.warn('Curation failed:', err);
     }
-
-    setTelemetryState('ready');
-    if (failures.length) {
-      const reason = failures[0].reason;
-      setTelemetryError(reason instanceof Error ? reason.message : 'Some telemetry could not be read.');
-    }
-  }, [client]);
-
-  useEffect(() => {
-    if (mode !== 'COMMAND') return;
-    void refreshTelemetry();
-    const interval = window.setInterval(() => void refreshTelemetry(), 4_000);
-    return () => window.clearInterval(interval);
-  }, [mode, refreshTelemetry]);
-
-  useEffect(() => {
-    if (mode === 'COMMAND' && lastMessage) void refreshTelemetry();
-  }, [lastMessage, mode, refreshTelemetry]);
-
-  const beginConnection = (nextConnection: AgentPulseConnection) => {
-    setConnection(nextConnection);
-    setMetrics(null);
-    setAgents([]);
-    setAlerts([]);
-    setPlatform(null);
-    setTelemetryState('idle');
-    setTelemetryError(null);
-    setHoveredAgentId(null);
-    setSelectedAgentId(null);
-    setMode('HANDSHAKE');
   };
 
+  // Handler: run a scenario in the backend simulator. The resulting spans come
+  // back through the normal telemetry poll once the worker has evaluated them.
+  const handleInjectSyntheticTrace = async (scenario: string, query?: string) => {
+    try {
+      await api.simulatePipeline(scenario, query ?? 'Telemetry Lab run');
+      refreshTelemetry();
+    } catch (err) {
+      console.warn('Simulation failed:', err);
+    }
+  };
+
+  // Handler: acknowledge an incident against the alerts API.
+  const handleResolveIncident = async (incidentId: string) => {
+    try {
+      await api.acknowledgeAlert(Number(incidentId));
+      refreshTelemetry();
+    } catch (err) {
+      console.warn('Acknowledge failed:', err);
+    }
+  };
+
+  // Clear context selections
+  const handleClearSelection = () => {
+    setSelectedAgent(undefined);
+    setSelectedTrace(undefined);
+    setSelectedSpan(undefined);
+    setSelectedIncident(undefined);
+  };
+
+  // RENDER: Public Editorial Experience
+  if (mode === 'public') {
+    return (
+      <PublicExperience
+        onEnterProduct={() => {
+          setMode('product');
+          setProductTab('overview');
+        }}
+      />
+    );
+  }
+
+  // RENDER: Product Investigation Experience (Calm, Precise, Investigative with iOS 26 Liquid Glass)
   return (
-    <div className="relative w-full min-h-screen bg-void text-ink font-sans selection:bg-cyan-500/30 selection:text-white">
-      {/* ── Ambient 3D Spatial Instrument Canvas (Fixed Background) ── */}
-      {mode !== 'COMMAND' && (
-        <div className="fixed inset-0 pointer-events-none -z-10 overflow-hidden">
-          <Suspense fallback={<div className="absolute inset-0 bg-void" aria-hidden="true" />}>
-            <SpatialInstrument
-              mode={mode}
-              sceneMode={sceneMode}
-              agents={agents}
-              hoveredAgentId={hoveredAgentId}
-              selectedAgentId={selectedAgentId}
-              onHoverAgent={setHoveredAgentId}
-              onSelectAgent={setSelectedAgentId}
-            />
-          </Suspense>
-          {/* Subtle vignette layer to keep text contrast 100% crisp */}
-          <div className="absolute inset-0 bg-gradient-to-r from-[#030408]/95 via-[#030408]/80 to-[#030408]/40 pointer-events-none" />
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-transparent via-[#030408]/50 to-[#030408] pointer-events-none" />
+    <div className="min-h-screen bg-[#06070a] text-[#F5F5F7] selection:bg-neutral-800 selection:text-white flex flex-col relative overflow-x-hidden">
+      {/* Interactive Liquid Fluid Background */}
+      <LiquidBackgroundCanvas palette="dark" className="fixed inset-0 pointer-events-none opacity-45 z-0" />
+
+      <div className="relative z-10 flex flex-col min-h-screen">
+        {/* Context-Preserving Header */}
+        <ProductHeader
+          currentTab={productTab}
+          onSelectTab={setProductTab}
+          selectedAgent={selectedAgent}
+          selectedTrace={selectedTrace}
+          selectedSpan={selectedSpan}
+          selectedIncident={selectedIncident}
+          onClearSelection={handleClearSelection}
+          onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
+          onSwitchToPublic={() => setMode('public')}
+          isSimulatingLive={isSimulatingLive}
+          onToggleLive={() => setIsSimulatingLive(prev => !prev)}
+          onOpenShortcutsModal={() => setIsShortcutsHelpOpen(true)}
+          isContextPanelOpen={isContextPanelOpen}
+          onToggleContextPanel={() => setIsContextPanelOpen(prev => !prev)}
+        />
+
+        {/* Main Product Layout Container with Pinned / Interactive Active Context Side-Panel */}
+        <div className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-28 flex flex-col lg:flex-row gap-6 items-start">
+          {/* Main Investigative Content Surface */}
+          <main className="flex-1 min-w-0 w-full">
+            {/* The views index into these collections directly, so hold them
+                back until the first poll resolves rather than rendering an
+                empty shell that reads as "no problems found". */}
+            {telemetryLoading && (
+              <div className="ios-liquid-card rounded-2xl p-10 text-center font-mono text-xs text-neutral-400">
+                Loading telemetry from AgentPulse...
+              </div>
+            )}
+
+            {!telemetryLoading && telemetryError && (
+              <div className="ios-liquid-card rounded-2xl p-10 text-center font-mono text-xs space-y-2">
+                <p className="text-rose-300">Cannot reach AgentPulse.</p>
+                <p className="text-neutral-400">{telemetryError}</p>
+                <button
+                  onClick={refreshTelemetry}
+                  className="mt-3 px-4 py-2 rounded-xl bg-white/10 text-neutral-100 hover:bg-white/20"
+                >
+                  Retry
+                </button>
+              </div>
+            )}
+
+            {!telemetryLoading && !telemetryError && agents.length === 0 && traces.length === 0 && (
+              <div className="ios-liquid-card rounded-2xl p-10 text-center font-mono text-xs text-neutral-400">
+                Connected, but this instance has no telemetry yet. Send spans through the SDK
+                or run a scenario in the Telemetry Lab.
+              </div>
+            )}
+
+            {!telemetryLoading && !telemetryError && (agents.length > 0 || traces.length > 0) && (
+            <>
+            {productTab === 'overview' && (
+              <OverviewView
+                agents={agents}
+                traces={traces}
+                incidents={incidents}
+                driftProfiles={driftProfiles}
+                onSelectAgent={(agent) => {
+                  setSelectedAgent(agent);
+                  setProductTab('agents');
+                  setIsContextPanelOpen(true);
+                }}
+                onSelectTrace={(trace) => {
+                  setSelectedTrace(trace);
+                  setProductTab('traces');
+                  setIsContextPanelOpen(true);
+                }}
+                onSelectIncident={(incident) => {
+                  setSelectedIncident(incident);
+                  setProductTab('incidents');
+                  setIsContextPanelOpen(true);
+                }}
+                onNavigateTab={(tab) => setProductTab(tab)}
+              />
+            )}
+
+            {productTab === 'agents' && (
+              <AgentsView
+                agents={agents}
+                selectedAgent={selectedAgent}
+                onSelectAgent={(agent) => {
+                  setSelectedAgent(agent);
+                  setIsContextPanelOpen(true);
+                }}
+                onNavigateToTraces={(agentId) => {
+                  const targetAgent = agents.find(a => a.id === agentId);
+                  setSelectedAgent(targetAgent);
+                  setProductTab('traces');
+                  setIsContextPanelOpen(true);
+                }}
+                onNavigateToDrift={(agentId) => {
+                  const targetAgent = agents.find(a => a.id === agentId);
+                  setSelectedAgent(targetAgent);
+                  setProductTab('drift');
+                  setIsContextPanelOpen(true);
+                }}
+              />
+            )}
+
+            {productTab === 'traces' && (
+              <TracesView
+                traces={traces}
+                selectedTrace={selectedTrace}
+                selectedSpan={selectedSpan}
+                onSelectTrace={(trace) => {
+                  setSelectedTrace(trace);
+                  setIsContextPanelOpen(true);
+                }}
+                onSelectSpan={(span) => {
+                  setSelectedSpan(span);
+                  setIsContextPanelOpen(true);
+                }}
+                onCurateToDataset={handleCurateToDataset}
+                filterAgentId={selectedAgent?.id}
+                onOpenShortcutsModal={() => setIsShortcutsHelpOpen(true)}
+              />
+            )}
+
+            {productTab === 'incidents' && (
+              <IncidentsView
+                incidents={incidents}
+                selectedIncident={selectedIncident}
+                onSelectIncident={(incident) => {
+                  setSelectedIncident(incident);
+                  setIsContextPanelOpen(true);
+                }}
+                onNavigateToTrace={(traceId) => {
+                  const foundTrace = traces.find(t => t.id === traceId);
+                  if (foundTrace) setSelectedTrace(foundTrace);
+                  setProductTab('traces');
+                  setIsContextPanelOpen(true);
+                }}
+                onNavigateToAgent={(agentId) => {
+                  const foundAgent = agents.find(a => a.id === agentId);
+                  if (foundAgent) setSelectedAgent(foundAgent);
+                  setProductTab('agents');
+                  setIsContextPanelOpen(true);
+                }}
+                onResolveIncident={handleResolveIncident}
+              />
+            )}
+
+            {productTab === 'drift' && (
+              <DriftView
+                driftProfiles={driftProfiles}
+                agents={agents}
+                selectedAgentId={selectedAgent?.id}
+                onNavigateToTrace={(traceId) => {
+                  const foundTrace = traces.find(t => t.id === traceId);
+                  if (foundTrace) setSelectedTrace(foundTrace);
+                  setProductTab('traces');
+                  setIsContextPanelOpen(true);
+                }}
+              />
+            )}
+
+            {productTab === 'replay' && (
+              <ReplayView
+                traces={traces}
+                selectedTrace={selectedTrace}
+                onSelectTrace={(trace) => {
+                  setSelectedTrace(trace);
+                  setIsContextPanelOpen(true);
+                }}
+              />
+            )}
+
+            {productTab === 'experiments' && (
+              <ExperimentsView
+                experiments={experiments}
+                datasets={datasets}
+              />
+            )}
+
+            {productTab === 'datasets' && (
+              <DatasetsView
+                datasets={datasets}
+                onNavigateToExperiments={() => setProductTab('experiments')}
+              />
+            )}
+
+            {productTab === 'telemetry-lab' && (
+              <TelemetryLabView
+                agents={agents}
+                onInjectSyntheticTrace={handleInjectSyntheticTrace}
+              />
+            )}
+
+            {productTab === 'settings' && (
+              <SettingsView />
+            )}
+            </>
+            )}
+          </main>
+
+          {/* Persistent Active Context Side-Panel */}
+          <ActiveContextPanel
+            currentTab={productTab}
+            onSelectTab={setProductTab}
+            selectedAgent={selectedAgent}
+            selectedTrace={selectedTrace}
+            selectedSpan={selectedSpan}
+            selectedIncident={selectedIncident}
+            onClearSelection={handleClearSelection}
+            onSelectAgent={setSelectedAgent}
+            onSelectTrace={setSelectedTrace}
+            onSelectSpan={setSelectedSpan}
+            onCurateToDataset={handleCurateToDataset}
+            isOpen={isContextPanelOpen}
+            onToggleOpen={() => setIsContextPanelOpen(prev => !prev)}
+            isPinned={isContextPanelPinned}
+            onTogglePin={() => setIsContextPanelPinned(prev => !prev)}
+          />
         </div>
-      )}
 
-      {/* ── Main View Router ── */}
-      {mode === 'LANDING' && (
-        <LandingView
-          onEnter={() => setMode('CONNECT')}
-          sceneMode={sceneMode}
-          onChangeSceneMode={setSceneMode}
-        />
-      )}
+      {/* Apple Liquid Glass Floating Navigation Dock */}
+      <FloatingDock
+        currentTab={productTab}
+        onSelectTab={setProductTab}
+        onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
+        onOpenShortcutsModal={() => setIsShortcutsHelpOpen(true)}
+        incidentCount={incidents.length}
+        driftWarningCount={agents.filter(a => a.driftStatus !== 'normal').length}
+      />
 
-      {mode === 'CONNECT' && (
-        <ConnectView
-          initialConnection={connection}
-          onConnect={beginConnection}
-          onBack={() => setMode('LANDING')}
-        />
-      )}
+      {/* Raycast-Style Liquid Glass Command Palette (Cmd+K / Ctrl+K) */}
+      <CommandPalette
+        isOpen={isCommandPaletteOpen}
+        onClose={() => setIsCommandPaletteOpen(false)}
+        onSelectTab={setProductTab}
+        onSelectAgent={(agent) => {
+          setSelectedAgent(agent);
+          setProductTab('agents');
+        }}
+        onSelectTrace={(trace) => {
+          setSelectedTrace(trace);
+          setProductTab('traces');
+        }}
+        onSelectIncident={(incident) => {
+          setSelectedIncident(incident);
+          setProductTab('incidents');
+        }}
+        agents={agents}
+        traces={traces}
+        incidents={incidents}
+        onSwitchToPublic={() => setMode('public')}
+      />
 
-      {mode === 'HANDSHAKE' && (
-        <HandshakeView
-          connection={connection}
-          client={client}
-          onComplete={() => setMode('COMMAND')}
-          onCancel={() => setMode('CONNECT')}
-        />
-      )}
-
-      {mode === 'COMMAND' && (
-        <CommandSurface
-          metrics={metrics}
-          agents={agents}
-          alerts={alerts}
-          platform={platform}
-          client={client}
-          telemetryState={telemetryState}
-          telemetryError={telemetryError}
-          hoveredAgentId={hoveredAgentId}
-          selectedAgentId={selectedAgentId}
-          isWsConnected={isWsConnected}
-          onHoverAgent={setHoveredAgentId}
-          onSelectAgent={setSelectedAgentId}
-          onRefresh={() => void refreshTelemetry()}
-          onDisconnect={() => setMode('CONNECT')}
-        />
-      )}
+      {/* Power User Global Shortcuts Cheat Sheet Modal (?) */}
+      <ShortcutsHelpModal
+        isOpen={isShortcutsHelpOpen}
+        onClose={() => setIsShortcutsHelpOpen(false)}
+      />
+      </div>
     </div>
   );
 }

@@ -1,279 +1,574 @@
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap');
+@import "tailwindcss";
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@layer base {
+  :root {
+    --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --font-mono: 'JetBrains Mono', SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    --font-serif: 'Newsreader', 'Playfair Display', Georgia, serif;
+    --bg-base: #06070a;
+    --text-primary: #F5F5F7;
+    --text-secondary: #9ea3b0;
+    --text-muted: #626775;
+    --border-editorial: rgba(255, 255, 255, 0.10);
+  }
 
-/* ══════════════════════════════════════════════════════════════════════
-   AgentPulse — Lively Comic & Neo-Pop Observability Deck Design System
-   ══════════════════════════════════════════════════════════════════════ */
+  body {
+    font-family: var(--font-sans);
+    background-color: #06070a;
+    color: #F5F5F7;
+    letter-spacing: -0.011em;
+  }
 
-:root {
-  --void:               #0c101d;
-  --surface:            #141b2d;
-  --surface-2:          #1b243b;
-  --surface-3:          #24304e;
-  --surface-4:          #2f3e63;
-  --line:               rgba(255, 255, 255, 0.12);
-  --line-strong:        rgba(255, 255, 255, 0.22);
-  --line-highlight:     #ffe600;
+  /* Code and tabular numbers font */
+  .font-mono {
+    font-family: var(--font-mono);
+    font-feature-settings: "tnum" 1, "zero" 1;
+  }
 
-  --ink:                #f8fafc;
-  --ink-dim:            #94a3b8;
-  --ink-faint:          #64748b;
-  --ink-dark:           #050811;
-
-  --comic-yellow:       #ffe600;
-  --comic-cyan:         #00e5ff;
-  --comic-pink:         #ff3366;
-  --comic-green:        #00e676;
-  --comic-purple:       #a855f7;
-  --comic-orange:       #ff6d00;
-  --comic-blue:         #3b82f6;
-
-  --signal:             #ffe600;
-  --signal-glow:        #fff275;
-  --signal-dim:         #eab308;
-  --signal-deep:        #422006;
-
-  --state-ok:           #00e676;
-  --state-warn:         #ffe600;
-  --state-bad:          #ff3366;
-  --state-crit:         #ff1744;
-
-  color-scheme: dark;
+  .font-serif {
+    font-family: var(--font-serif);
+  }
 }
 
-* {
-  border-color: var(--line);
-  outline: none;
-  box-sizing: border-box;
+/* ==========================================================================
+   Editorial Aesthetic Material & Surface System
+   Public: Expressive, editorial, spatial, subtle glow
+   Product: Calm, precise, investigative, zero distortion behind numbers
+   ========================================================================== */
+
+.editorial-radial-glow {
+  background: radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.045) 0%, rgba(5, 5, 5, 0) 70%);
 }
 
-html,
-body {
-  background-color: var(--void);
-  color: var(--ink);
-  margin: 0;
-  padding: 0;
-  min-height: 100vh;
-  width: 100%;
+.editorial-spatial-canvas {
+  background-color: #050505;
+  background-image: 
+    radial-gradient(ellipse at 50% -10%, rgba(255, 255, 255, 0.06) 0%, transparent 60%),
+    radial-gradient(circle at 80% 30%, rgba(255, 255, 255, 0.02) 0%, transparent 40%);
 }
 
-body {
-  font-family: 'IBM Plex Sans', system-ui, -apple-system, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  text-rendering: optimizeLegibility;
-  overflow-x: hidden;
+/* ==========================================================================
+   Editorial Aesthetic & Liquid Glass Material System
+   - Liquid Glass: Apple VisionOS & macOS Sequoia style optical materials,
+     multi-layered backdrop blur, specular top-bevels, chromatic refraction,
+     and deep atmospheric light absorption.
+   - Refined Palette: Deep space obsidian (#06070a), celestial zinc, luminous
+     platinum (#F5F5F7), phosphor emerald, solar amber, laser rose, and electric cyan.
+   ========================================================================== */
+
+.editorial-radial-glow {
+  background: radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.06) 0%, rgba(6, 7, 10, 0) 70%);
 }
 
-/* Monospace & Tabular figures for telemetry data readouts */
-.font-mono,
-code,
-pre,
-.tnum {
-  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
-  font-variant-numeric: tabular-nums;
-  font-feature-settings: 'tnum' 1;
+.editorial-spatial-canvas {
+  background-color: #06070a;
+  background-image: 
+    radial-gradient(ellipse 80% 50% at 50% -15%, rgba(120, 140, 180, 0.08) 0%, transparent 70%),
+    radial-gradient(circle 600px at 85% 20%, rgba(56, 189, 248, 0.035) 0%, transparent 70%),
+    radial-gradient(circle 500px at 15% 45%, rgba(168, 85, 247, 0.03) 0%, transparent 60%);
 }
 
-/* Comic Tri-Color Wordmark Gradient (Yellow -> Pink -> Cyan) */
-.wordmark-gradient {
-  background: linear-gradient(135deg, #ffe600 0%, #ff3366 50%, #00e5ff 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  filter: drop-shadow(2px 2px 0px rgba(0,0,0,0.8));
+/* ==========================================================================
+   Apple iOS Ultra-Thin Liquid Glass Surface System
+   Reduced opacity (approx 65%) with elevated backdrop-filter blur & luminous caustics
+   ========================================================================== */
+
+.ios-ultra-thin {
+  background: rgba(10, 12, 18, 0.65) !important;
+  backdrop-filter: blur(44px) saturate(220%) contrast(106%) !important;
+  -webkit-backdrop-filter: blur(44px) saturate(220%) contrast(106%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  box-shadow: 
+    0 20px 48px -10px rgba(0, 0, 0, 0.65),
+    0 8px 16px -4px rgba(0, 0, 0, 0.35),
+    inset 0 1px 1px 0 rgba(255, 255, 255, 0.36),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.06),
+    inset 0 -1px 2px 0 rgba(0, 0, 0, 0.4) !important;
 }
 
-/* Comic Panel Base */
-.comic-panel {
-  background: var(--surface-2);
-  border: 2px solid rgba(255, 255, 255, 0.16);
-  border-radius: 16px;
-  box-shadow: 4px 4px 0px 0px #000000;
-  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+.ios-ultra-thin-header {
+  background: rgba(10, 12, 18, 0.65) !important;
+  backdrop-filter: blur(48px) saturate(220%) contrast(108%) !important;
+  -webkit-backdrop-filter: blur(48px) saturate(220%) contrast(108%) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12) !important;
+  box-shadow: 
+    0 16px 36px -8px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.32),
+    inset 0 -1px 0 0 rgba(0, 0, 0, 0.35) !important;
 }
 
-.comic-panel:hover {
-  border-color: rgba(255, 255, 255, 0.3);
-  box-shadow: 6px 6px 0px 0px #000000;
+.ios-ultra-thin-dock {
+  background: radial-gradient(130% 150% at 50% -20%, rgba(255, 255, 255, 0.18) 0%, rgba(20, 24, 34, 0.62) 42%, rgba(8, 10, 15, 0.68) 100%) !important;
+  backdrop-filter: blur(48px) saturate(240%) contrast(110%) !important;
+  -webkit-backdrop-filter: blur(48px) saturate(240%) contrast(110%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.20) !important;
+  box-shadow: 
+    0 32px 64px -12px rgba(0, 0, 0, 0.8),
+    0 12px 24px -6px rgba(0, 0, 0, 0.45),
+    inset 0 1.5px 2px 0 rgba(255, 255, 255, 0.45),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.12),
+    inset 0 -2px 3px 0 rgba(0, 0, 0, 0.6) !important;
 }
 
-.comic-panel-interactive {
-  cursor: pointer;
+.ios-ultra-thin-toolbar {
+  background: rgba(18, 21, 30, 0.65) !important;
+  backdrop-filter: blur(36px) saturate(210%) contrast(105%) !important;
+  -webkit-backdrop-filter: blur(36px) saturate(210%) contrast(105%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  box-shadow: 
+    0 12px 28px -6px rgba(0, 0, 0, 0.5),
+    inset 0 1px 1px 0 rgba(255, 255, 255, 0.3) !important;
 }
 
-.comic-panel-interactive:hover {
-  transform: translate(-2px, -2px);
-  box-shadow: 6px 6px 0px 0px #000000;
+.ios-ultra-thin-butter {
+  background: rgba(254, 215, 42, 0.65) !important;
+  backdrop-filter: blur(44px) saturate(200%) contrast(106%) !important;
+  -webkit-backdrop-filter: blur(44px) saturate(200%) contrast(106%) !important;
+  border: 1px solid rgba(0, 0, 0, 0.20) !important;
+  box-shadow: 
+    0 16px 36px -8px rgba(0, 0, 0, 0.18),
+    inset 0 1px 1.5px 0 rgba(255, 255, 255, 0.6),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.06) !important;
 }
 
-.comic-panel-interactive:active {
-  transform: translate(1px, 1px);
-  box-shadow: 2px 2px 0px 0px #000000;
+.ios-ultra-thin-chalk {
+  background: rgba(255, 255, 255, 0.65) !important;
+  backdrop-filter: blur(44px) saturate(200%) contrast(105%) !important;
+  -webkit-backdrop-filter: blur(44px) saturate(200%) contrast(105%) !important;
+  border: 1px solid rgba(0, 0, 0, 0.10) !important;
+  box-shadow: 
+    0 16px 36px -8px rgba(0, 0, 0, 0.08),
+    inset 0 1px 1.5px 0 rgba(255, 255, 255, 0.9),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.04) !important;
 }
 
-/* Comic Action Buttons */
-.comic-btn-yellow {
-  background: #ffe600;
-  color: #000000;
-  font-weight: 700;
-  border: 2px solid #000000;
-  border-radius: 12px;
-  box-shadow: 3px 3px 0px 0px #000000;
-  transition: transform 0.12s ease, box-shadow 0.12s ease;
-}
+/* ==========================================================================
+   Liquid Glass Materials
+   ========================================================================== */
 
-.comic-btn-yellow:hover {
-  background: #fff275;
-  transform: translate(-1px, -1px);
-  box-shadow: 4px 4px 0px 0px #000000;
-}
-
-.comic-btn-yellow:active {
-  transform: translate(2px, 2px);
-  box-shadow: 1px 1px 0px 0px #000000;
-}
-
-.comic-btn-cyan {
-  background: #00e5ff;
-  color: #000000;
-  font-weight: 700;
-  border: 2px solid #000000;
-  border-radius: 12px;
-  box-shadow: 3px 3px 0px 0px #000000;
-  transition: transform 0.12s ease, box-shadow 0.12s ease;
-}
-
-.comic-btn-cyan:hover {
-  background: #6ff9ff;
-  transform: translate(-1px, -1px);
-  box-shadow: 4px 4px 0px 0px #000000;
-}
-
-.comic-btn-pink {
-  background: #ff3366;
-  color: #ffffff;
-  font-weight: 700;
-  border: 2px solid #000000;
-  border-radius: 12px;
-  box-shadow: 3px 3px 0px 0px #000000;
-  transition: transform 0.12s ease, box-shadow 0.12s ease;
-}
-
-.comic-btn-pink:hover {
-  background: #ff5c85;
-  transform: translate(-1px, -1px);
-  box-shadow: 4px 4px 0px 0px #000000;
-}
-
-/* Comic Speech Bubble / Tag */
-.comic-tag {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-family: 'JetBrains Mono', monospace;
-  font-weight: 800;
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  padding: 2px 8px;
-  border-radius: 8px;
-  border: 1.5px solid #000000;
-  box-shadow: 2px 2px 0px 0px #000000;
-}
-
-/* Frosted Comic Glass Header & Navigation Dock */
-.glass-header {
-  background: rgba(12, 16, 29, 0.88);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border-bottom: 2px solid rgba(255, 255, 255, 0.14);
-  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.5);
-}
-
-.glass-dock {
-  background: rgba(20, 27, 45, 0.92);
-  backdrop-filter: blur(24px) saturate(200%);
-  -webkit-backdrop-filter: blur(24px) saturate(200%);
-  border: 2px solid rgba(255, 255, 255, 0.18);
-  border-radius: 24px;
-  box-shadow: 0 16px 36px -8px rgba(0, 0, 0, 0.8), 4px 4px 0px 0px #000000;
-}
-
-/* Stream Status Dot & Pulse */
-.stream-dot {
-  width: 9px;
-  height: 9px;
-  border-radius: 9999px;
-  display: inline-block;
-  flex-shrink: 0;
+.liquid-glass-card {
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.09) 0%, rgba(22, 26, 36, 0.70) 35%, rgba(9, 11, 16, 0.88) 100%);
+  backdrop-filter: blur(32px) saturate(210%) contrast(106%);
+  -webkit-backdrop-filter: blur(32px) saturate(210%) contrast(106%);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow: 
+    0 24px 48px -12px rgba(0, 0, 0, 0.75),
+    0 8px 16px -4px rgba(0, 0, 0, 0.4),
+    inset 0 1px 1px 0 rgba(255, 255, 255, 0.38),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.07),
+    inset 0 -1px 2px 0 rgba(0, 0, 0, 0.5);
   position: relative;
 }
 
-.stream-live {
-  background-color: var(--state-ok);
-  box-shadow: 0 0 8px var(--state-ok);
+.liquid-glass-card-hover {
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.stream-live::after {
-  content: '';
-  position: absolute;
-  inset: -3px;
+.liquid-glass-card-hover:hover {
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.13) 0%, rgba(28, 33, 46, 0.75) 35%, rgba(12, 14, 21, 0.92) 100%);
+  border-color: rgba(255, 255, 255, 0.32);
+  box-shadow: 
+    0 30px 60px -12px rgba(0, 0, 0, 0.85),
+    0 12px 24px -4px rgba(0, 0, 0, 0.45),
+    inset 0 1.5px 2px 0 rgba(255, 255, 255, 0.55),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.12),
+    0 0 25px -4px rgba(255, 255, 255, 0.05);
+}
+
+.liquid-glass-header {
+  background: linear-gradient(180deg, rgba(14, 16, 23, 0.88) 0%, rgba(9, 10, 15, 0.82) 100%);
+  backdrop-filter: blur(36px) saturate(220%) contrast(108%);
+  -webkit-backdrop-filter: blur(36px) saturate(220%) contrast(108%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 
+    0 16px 36px -8px rgba(0, 0, 0, 0.6),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.28),
+    inset 0 -1px 0 0 rgba(0, 0, 0, 0.4);
+}
+
+.liquid-glass-pill {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.04) 100%);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow: 
+    0 4px 12px -2px rgba(0, 0, 0, 0.35),
+    inset 0 1px 1px 0 rgba(255, 255, 255, 0.4),
+    inset 0 -1px 1px 0 rgba(0, 0, 0, 0.3);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.liquid-glass-pill:hover {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0.07) 100%);
+  border-color: rgba(255, 255, 255, 0.32);
+  box-shadow: 
+    0 6px 16px -2px rgba(0, 0, 0, 0.45),
+    inset 0 1px 1.5px 0 rgba(255, 255, 255, 0.6),
+    0 0 14px rgba(255, 255, 255, 0.06);
+}
+
+.liquid-glass-pill-active {
+  background: #F5F5F7 !important;
+  color: #06070a !important;
+  border-color: #FFFFFF !important;
+  box-shadow: 
+    0 6px 20px -2px rgba(255, 255, 255, 0.3),
+    0 2px 4px rgba(0, 0, 0, 0.25),
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.95) !important;
+}
+
+/* Chromatic Liquid Glass Accents */
+.liquid-glass-emerald {
+  background: linear-gradient(145deg, rgba(16, 185, 129, 0.16) 0%, rgba(6, 78, 59, 0.45) 45%, rgba(6, 20, 16, 0.85) 100%);
+  backdrop-filter: blur(28px) saturate(210%);
+  -webkit-backdrop-filter: blur(28px) saturate(210%);
+  border: 1px solid rgba(52, 211, 153, 0.35);
+  box-shadow: 
+    0 16px 36px -8px rgba(16, 185, 129, 0.2),
+    inset 0 1px 1px 0 rgba(167, 243, 208, 0.45),
+    inset 0 0 0 1px rgba(16, 185, 129, 0.15);
+}
+
+.liquid-glass-amber {
+  background: linear-gradient(145deg, rgba(245, 158, 11, 0.16) 0%, rgba(120, 53, 15, 0.45) 45%, rgba(26, 14, 5, 0.85) 100%);
+  backdrop-filter: blur(28px) saturate(210%);
+  -webkit-backdrop-filter: blur(28px) saturate(210%);
+  border: 1px solid rgba(251, 191, 36, 0.38);
+  box-shadow: 
+    0 16px 36px -8px rgba(245, 158, 11, 0.2),
+    inset 0 1px 1px 0 rgba(253, 230, 138, 0.45),
+    inset 0 0 0 1px rgba(245, 158, 11, 0.15);
+}
+
+.liquid-glass-rose {
+  background: linear-gradient(145deg, rgba(244, 63, 94, 0.16) 0%, rgba(136, 19, 55, 0.45) 45%, rgba(28, 8, 13, 0.85) 100%);
+  backdrop-filter: blur(28px) saturate(210%);
+  -webkit-backdrop-filter: blur(28px) saturate(210%);
+  border: 1px solid rgba(251, 113, 133, 0.38);
+  box-shadow: 
+    0 16px 36px -8px rgba(244, 63, 94, 0.22),
+    inset 0 1px 1px 0 rgba(254, 205, 211, 0.45),
+    inset 0 0 0 1px rgba(244, 63, 94, 0.15);
+}
+
+.liquid-glass-cyan {
+  background: linear-gradient(145deg, rgba(6, 182, 212, 0.16) 0%, rgba(14, 116, 144, 0.45) 45%, rgba(6, 18, 24, 0.85) 100%);
+  backdrop-filter: blur(28px) saturate(210%);
+  -webkit-backdrop-filter: blur(28px) saturate(210%);
+  border: 1px solid rgba(103, 232, 249, 0.38);
+  box-shadow: 
+    0 16px 36px -8px rgba(6, 182, 212, 0.2),
+    inset 0 1px 1px 0 rgba(165, 243, 252, 0.45),
+    inset 0 0 0 1px rgba(6, 182, 212, 0.15);
+}
+
+.liquid-glass-violet {
+  background: linear-gradient(145deg, rgba(139, 92, 246, 0.16) 0%, rgba(91, 33, 182, 0.45) 45%, rgba(16, 8, 30, 0.85) 100%);
+  backdrop-filter: blur(28px) saturate(210%);
+  -webkit-backdrop-filter: blur(28px) saturate(210%);
+  border: 1px solid rgba(196, 181, 253, 0.38);
+  box-shadow: 
+    0 16px 36px -8px rgba(139, 92, 246, 0.2),
+    inset 0 1px 1px 0 rgba(221, 214, 254, 0.45),
+    inset 0 0 0 1px rgba(139, 92, 246, 0.15);
+}
+
+.liquid-specular-beam {
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.5) 50%, transparent 100%);
+}
+
+.glass-floating {
+  background: radial-gradient(130% 140% at 50% 0%, rgba(255, 255, 255, 0.14) 0%, rgba(24, 28, 38, 0.72) 45%, rgba(10, 12, 17, 0.90) 100%);
+  backdrop-filter: blur(36px) saturate(220%) contrast(108%);
+  -webkit-backdrop-filter: blur(36px) saturate(220%) contrast(108%);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 
+    0 32px 64px -12px rgba(0, 0, 0, 0.85),
+    0 0 0 1px rgba(255, 255, 255, 0.14) inset,
+    0 1.5px 2px 0 rgba(255, 255, 255, 0.4) inset,
+    0 -1px 2px 0 rgba(0, 0, 0, 0.6) inset;
+  position: relative;
+}
+
+/* Apple Liquid Glass Surface & Material Tokens */
+.apple-liquid-dock {
+  background: radial-gradient(130% 150% at 50% -20%, rgba(255, 255, 255, 0.22) 0%, rgba(26, 30, 42, 0.78) 42%, rgba(8, 10, 15, 0.92) 100%);
+  backdrop-filter: blur(42px) saturate(240%) contrast(110%);
+  -webkit-backdrop-filter: blur(42px) saturate(240%) contrast(110%);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  box-shadow: 
+    0 36px 72px -16px rgba(0, 0, 0, 0.9),
+    0 16px 32px -8px rgba(0, 0, 0, 0.55),
+    0 1.5px 2.5px 0 rgba(255, 255, 255, 0.48) inset,
+    0 0 0 1px rgba(255, 255, 255, 0.14) inset,
+    0 -2px 3px 0 rgba(0, 0, 0, 0.7) inset;
+}
+
+/* iOS 26 Premium Translucent Liquid Glass Dashboard Surface System */
+.glass-morphism-v2 {
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.08) 0%, rgba(16, 20, 28, 0.45) 30%, rgba(6, 8, 12, 0.45) 100%) !important;
+  backdrop-filter: blur(80px) saturate(230%) contrast(108%) !important;
+  -webkit-backdrop-filter: blur(80px) saturate(230%) contrast(108%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.16) !important;
+  box-shadow: 
+    0 24px 54px -12px rgba(0, 0, 0, 0.75),
+    0 10px 20px -4px rgba(0, 0, 0, 0.4),
+    inset 0 1.5px 1.5px 0 rgba(255, 255, 255, 0.45),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.08),
+    inset 0 -1.5px 2px 0 rgba(0, 0, 0, 0.5) !important;
+  position: relative;
+  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.ios-liquid-card {
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.09) 0%, rgba(18, 22, 32, 0.55) 30%, rgba(7, 9, 14, 0.55) 100%) !important;
+  backdrop-filter: blur(64px) saturate(230%) contrast(108%) !important;
+  -webkit-backdrop-filter: blur(64px) saturate(230%) contrast(108%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.16) !important;
+  box-shadow: 
+    0 24px 54px -12px rgba(0, 0, 0, 0.75),
+    0 10px 20px -4px rgba(0, 0, 0, 0.4),
+    inset 0 1.5px 1.5px 0 rgba(255, 255, 255, 0.42),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.08),
+    inset 0 -1.5px 2px 0 rgba(0, 0, 0, 0.5) !important;
+  position: relative;
+  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Tiered Editorial Typography Hierarchy within Liquid Cards */
+.ios-liquid-card .liquid-card-title,
+.ios-liquid-title {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, sans-serif !important;
+  font-weight: 500 !important;
+  letter-spacing: -0.015em;
+  color: #ffffff;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+.ios-liquid-card .liquid-card-metric,
+.ios-liquid-metric {
+  font-family: "SF Mono", ui-monospace, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important;
+  font-variant-numeric: tabular-nums !important;
+  letter-spacing: -0.01em !important;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.ios-liquid-card .liquid-card-label,
+.ios-liquid-label {
+  color: #94a3b8 !important;
+  letter-spacing: 0.02em;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.ios-liquid-card-interactive {
+  cursor: pointer;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  transition: 
+    backdrop-filter 0.45s cubic-bezier(0.16, 1, 0.3, 1),
+    -webkit-backdrop-filter 0.45s cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 0.45s cubic-bezier(0.16, 1, 0.3, 1),
+    background 0.45s cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 0.45s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.45s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.45s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  will-change: transform, backdrop-filter, opacity, box-shadow;
+}
+
+.ios-liquid-card-interactive:hover {
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.15) 0%, rgba(24, 30, 44, 0.62) 30%, rgba(10, 13, 20, 0.65) 100%) !important;
+  backdrop-filter: blur(80px) saturate(250%) contrast(112%) !important;
+  -webkit-backdrop-filter: blur(80px) saturate(250%) contrast(112%) !important;
+  opacity: 0.98;
+  border-color: rgba(255, 255, 255, 0.32) !important;
+  transform: translateY(-2.5px) scale(1.002);
+  box-shadow: 
+    0 32px 64px -12px rgba(0, 0, 0, 0.85),
+    0 14px 28px -4px rgba(0, 0, 0, 0.5),
+    inset 0 2px 2.5px 0 rgba(255, 255, 255, 0.6),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.14),
+    0 0 30px -4px rgba(255, 255, 255, 0.08) !important;
+}
+
+.ios-liquid-kpi {
+  background: radial-gradient(130% 140% at 50% -20%, rgba(255, 255, 255, 0.14) 0%, rgba(18, 22, 32, 0.65) 45%, rgba(6, 8, 12, 0.75) 100%) !important;
+  backdrop-filter: blur(40px) saturate(220%) contrast(108%) !important;
+  -webkit-backdrop-filter: blur(40px) saturate(220%) contrast(108%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  box-shadow: 
+    0 20px 48px -10px rgba(0, 0, 0, 0.68),
+    inset 0 1.5px 1.5px 0 rgba(255, 255, 255, 0.40),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.06),
+    inset 0 -1px 2px 0 rgba(0, 0, 0, 0.45) !important;
+  position: relative;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.ios-liquid-kpi:hover {
+  border-color: rgba(255, 255, 255, 0.30) !important;
+  transform: translateY(-2px);
+  box-shadow: 
+    0 28px 56px -10px rgba(0, 0, 0, 0.78),
+    inset 0 2px 2px 0 rgba(255, 255, 255, 0.55),
+    0 0 24px -4px rgba(255, 255, 255, 0.06) !important;
+}
+
+.ios-liquid-row {
+  background: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(24px) saturate(200%);
+  -webkit-backdrop-filter: blur(24px) saturate(200%);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  box-shadow: 
+    0 8px 24px -4px rgba(0, 0, 0, 0.45),
+    inset 0 1px 1px 0 rgba(255, 255, 255, 0.25);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.ios-liquid-row:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.28);
+  box-shadow: 
+    0 12px 28px -4px rgba(0, 0, 0, 0.6),
+    inset 0 1px 1.5px 0 rgba(255, 255, 255, 0.45),
+    0 0 20px -2px rgba(255, 255, 255, 0.05);
+}
+
+.apple-liquid-specular {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.35) 0%, rgba(255, 255, 255, 0.05) 45%, transparent 100%);
+}
+
+/* Animated Soft Border-Light Pulse for Liquid Glass Aesthetics */
+@keyframes border-glow-subtle-pulse {
+  0% {
+    border-color: rgba(255, 255, 255, 0.20);
+    box-shadow: 
+      0 24px 54px -12px rgba(0, 0, 0, 0.75),
+      0 0 14px -2px rgba(255, 255, 255, 0.08),
+      inset 0 1.5px 1.5px 0 rgba(255, 255, 255, 0.45);
+  }
+  50% {
+    border-color: rgba(255, 255, 255, 0.45);
+    box-shadow: 
+      0 32px 64px -12px rgba(0, 0, 0, 0.85),
+      0 0 28px 2px rgba(255, 255, 255, 0.18),
+      inset 0 2px 2.5px 0 rgba(255, 255, 255, 0.70);
+  }
+  100% {
+    border-color: rgba(255, 255, 255, 0.20);
+    box-shadow: 
+      0 24px 54px -12px rgba(0, 0, 0, 0.75),
+      0 0 14px -2px rgba(255, 255, 255, 0.08),
+      inset 0 1.5px 1.5px 0 rgba(255, 255, 255, 0.45);
+  }
+}
+
+.border-glow-subtle {
+  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.border-glow-subtle:hover {
+  animation: border-glow-subtle-pulse 2.4s ease-in-out infinite alternate;
+  border-color: rgba(255, 255, 255, 0.40) !important;
+}
+
+.apple-liquid-pill-active {
+  background: #F5F5F7;
+  color: #06070a;
+  box-shadow: 
+    0 6px 18px rgba(255, 255, 255, 0.28),
+    0 1px 2px rgba(0, 0, 0, 0.25),
+    0 1.5px 0 rgba(255, 255, 255, 0.9) inset;
+}
+
+@supports not (backdrop-filter: blur(24px)) {
+  .glass-floating, .apple-liquid-dock, .liquid-glass-card {
+    background: #0d0e14;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+  }
+}
+
+.glass-subtle {
+  background: rgba(18, 21, 28, 0.72);
+  backdrop-filter: blur(18px) saturate(180%);
+  -webkit-backdrop-filter: blur(18px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.2);
+}
+
+/* Solid Standard Surfaces (for dense data, metric cards, trace tables) */
+.surface-solid {
+  background: #090a0e;
+  border: 1px solid #1c1f2a;
+}
+
+.surface-solid-subtle {
+  background: #07080b;
+  border: 1px solid #161822;
+}
+
+.surface-hover {
+  transition: background-color 0.25s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.surface-hover:hover {
+  background: #13151f;
+  border-color: #2b3042;
+}
+
+/* Calm Precision Trace Span Row Transition */
+.trace-span-row {
+  transition: background-color 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+              color 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.trace-span-row:hover {
+  background-color: rgba(255, 255, 255, 0.075);
+  border-color: rgba(255, 255, 255, 0.32);
+  box-shadow: 0 0 24px -4px rgba(255, 255, 255, 0.05);
+}
+
+/* Editorial badge & label styles */
+.badge-editorial {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0.25rem 0.7rem;
   border-radius: 9999px;
-  border: 2px solid var(--state-ok);
-  animation: pulse-ring 2.2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.02) 100%);
+  box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.25);
 }
 
-@keyframes pulse-ring {
-  0% { transform: scale(0.9); opacity: 0.9; }
-  70% { transform: scale(2.2); opacity: 0; }
-  100% { transform: scale(2.2); opacity: 0; }
-}
-
-.stream-idle {
-  background-color: var(--ink-faint);
-}
-
-.stream-warning {
-  background-color: var(--state-warn);
-  box-shadow: 0 0 8px var(--state-warn);
-}
-
-/* Comic Halftone Dot Grid Background Texture */
-.ai-grid-bg {
-  background-color: var(--void);
-  background-image: 
-    radial-gradient(rgba(255, 255, 255, 0.08) 1.5px, transparent 1.5px),
-    radial-gradient(rgba(255, 230, 0, 0.04) 1.5px, transparent 1.5px);
-  background-size: 24px 24px, 48px 48px;
-  background-position: 0 0, 12px 12px;
-}
-
-/* Comic Brand Accent Glow Bar */
-.brand-glow-bar {
-  height: 3px;
-  background: linear-gradient(90deg, #ffe600, #ff3366, #a855f7, #00e5ff, #00e676);
-  box-shadow: 0 0 12px rgba(255, 230, 0, 0.5);
-}
-
-/* Custom Comic Scrollbar */
+/* Custom crisp scrollbar */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 5px;
+  height: 5px;
 }
 ::-webkit-scrollbar-track {
-  background: #0c101d;
-  border-left: 1px solid rgba(255, 255, 255, 0.08);
+  background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #ffe600;
-  border: 1.5px solid #000000;
-  border-radius: 9999px;
-  box-shadow: 1px 1px 0px 0px #000000;
+  background: #20222a;
+  border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #ff3366;
+  background: #333744;
 }
 
+/* Subtle animation pulses */
+@keyframes subtle-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+
+.animate-subtle-pulse {
+  animation: subtle-pulse 2.8s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
