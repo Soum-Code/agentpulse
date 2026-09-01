@@ -75,3 +75,6 @@ agenttrace/
 # Personal profile scrape, not project source. The repo is private today,
 # but this would follow it if it were ever made public.
 linkedin_profile.md
+
+# Office lock files
+~$*
