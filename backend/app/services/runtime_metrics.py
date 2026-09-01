@@ -61,7 +61,7 @@ class _Counters:
         # Bounded latency samples, kept for percentiles.
         self._api_latency_ms: deque[float] = deque(maxlen=MAX_LATENCY_SAMPLES)
 
-    # ─── recording ────────────────────────────────────────────────────
+    # recording
 
     def record_ingest(self, *, accepted: int, failed: int, duplicates: int,
                       queued: int, enqueue_failed: bool = False) -> None:
@@ -89,7 +89,7 @@ class _Counters:
             self._api_events.append(now)
             self._api_latency_ms.append(duration_ms)
 
-    # ─── reading ──────────────────────────────────────────────────────
+    # reading
 
     def _rate(self, events: deque[float], now: float) -> float:
         cutoff = now - RATE_WINDOW_SECONDS

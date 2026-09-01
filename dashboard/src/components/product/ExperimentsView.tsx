@@ -25,7 +25,6 @@ export const ExperimentsView: React.FC<ExperimentsViewProps> = ({
 
   return (
     <div className="space-y-6 pb-28">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-lg font-mono font-semibold text-white uppercase tracking-wider flex items-center space-x-2">
@@ -47,9 +46,7 @@ export const ExperimentsView: React.FC<ExperimentsViewProps> = ({
         </button>
       </div>
 
-      {/* Grid: Experiment Runs (Left) + Detailed Score Matrix & Diff Comparison (Right) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* Left Column: Experiments List */}
         <div className="lg:col-span-5 space-y-3">
           {experiments.map((exp) => {
             const isSelected = selectedExp.id === exp.id;
@@ -87,10 +84,8 @@ export const ExperimentsView: React.FC<ExperimentsViewProps> = ({
           })}
         </div>
 
-        {/* Right Column: Experiment Comparison Diff Matrix */}
         {selectedExp && (
           <div className="lg:col-span-7 surface-solid rounded-xl border border-neutral-800 overflow-hidden font-mono text-xs">
-            {/* Header (Liquid Glass) */}
             <div className="glass-floating px-6 py-4 border-b border-neutral-800 flex items-center justify-between">
               <div>
                 <span className="text-[10px] uppercase text-neutral-400 tracking-wider block">
@@ -105,9 +100,7 @@ export const ExperimentsView: React.FC<ExperimentsViewProps> = ({
               </span>
             </div>
 
-            {/* Solid Body */}
             <div className="p-6 space-y-6 bg-[#121316]">
-              {/* Evaluators Applied */}
               <div>
                 <span className="text-neutral-400 uppercase tracking-wider text-[10px] block mb-2">
                   Applied Evaluators ({selectedExp.evaluators.length})
@@ -121,7 +114,6 @@ export const ExperimentsView: React.FC<ExperimentsViewProps> = ({
                 </div>
               </div>
 
-              {/* High-level Insights */}
               <div className="p-4 rounded-xl bg-neutral-950 border border-neutral-800 space-y-1.5">
                 <span className="text-neutral-400 uppercase tracking-wider text-[10px] block font-semibold">
                   Evaluator Findings
@@ -131,7 +123,6 @@ export const ExperimentsView: React.FC<ExperimentsViewProps> = ({
                 </p>
               </div>
 
-              {/* Side-by-Side Comparison Diffs */}
               <div className="space-y-4">
                 <span className="text-neutral-400 uppercase tracking-wider text-[10px] block">
                   Benchmark Item Side-by-Side Diff

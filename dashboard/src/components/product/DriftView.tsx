@@ -24,7 +24,6 @@ export const DriftView: React.FC<DriftViewProps> = ({
 
   return (
     <div className="space-y-6 pb-28">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-lg font-mono font-semibold text-white uppercase tracking-wider flex items-center space-x-2">
@@ -36,7 +35,6 @@ export const DriftView: React.FC<DriftViewProps> = ({
           </p>
         </div>
 
-        {/* Sub-view toggle */}
         <div className="flex items-center space-x-2 bg-neutral-900 border border-neutral-800 p-1 rounded-lg">
           <button
             onClick={() => setDriftSubView('spatial')}
@@ -57,7 +55,6 @@ export const DriftView: React.FC<DriftViewProps> = ({
         </div>
       </div>
 
-      {/* Agent Selector Bar */}
       <div className="flex items-center space-x-2 overflow-x-auto pb-1 scrollbar-none font-mono text-xs">
         {driftProfiles.map((p) => (
           <button
@@ -75,10 +72,8 @@ export const DriftView: React.FC<DriftViewProps> = ({
         ))}
       </div>
 
-      {/* Main Drift Workspace */}
       {currentProfile && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          {/* Left Column: Drift Metrics & Breakdown */}
           <div className="lg:col-span-4 space-y-4">
             <div className="ios-liquid-card border-glow-subtle rounded-2xl p-5 space-y-4 font-mono text-xs relative overflow-hidden">
               <div className="absolute inset-x-0 top-0 h-[1.5px] apple-liquid-specular pointer-events-none" />
@@ -92,7 +87,6 @@ export const DriftView: React.FC<DriftViewProps> = ({
                 </p>
               </div>
 
-              {/* Sub-component meters */}
               <div className="space-y-3 pt-3 border-t border-white/[0.08]">
                 <div>
                   <div className="flex justify-between text-[11px] mb-1">
@@ -131,7 +125,6 @@ export const DriftView: React.FC<DriftViewProps> = ({
               </div>
             </div>
 
-            {/* Drift Sample Cluster Points (Navigable to Traces) */}
             <div className="ios-liquid-card border-glow-subtle rounded-2xl p-4 space-y-2 font-mono text-xs relative overflow-hidden">
               <div className="absolute inset-x-0 top-0 h-[1.5px] apple-liquid-specular pointer-events-none" />
               <div className="text-neutral-300 uppercase tracking-wider text-[10px] font-bold pb-2 border-b border-white/[0.08]">
@@ -166,7 +159,6 @@ export const DriftView: React.FC<DriftViewProps> = ({
             </div>
           </div>
 
-          {/* Right Column: 2D Embedding Vector Canvas or Matrix View */}
           <div className="lg:col-span-8">
             {driftSubView === 'spatial' ? (
               <div className="h-[520px] rounded-2xl ios-liquid-card border-glow-subtle relative overflow-hidden flex flex-col p-6">
@@ -181,29 +173,24 @@ export const DriftView: React.FC<DriftViewProps> = ({
                   </span>
                 </div>
 
-                {/* Vector Canvas */}
                 <div className="flex-1 relative my-4 rounded-xl bg-[#040507] border border-neutral-800/60 overflow-hidden flex items-center justify-center">
                   <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff05_1px,transparent_1px),linear-gradient(to_bottom,#ffffff05_1px,transparent_1px)] bg-[size:28px_28px]" />
 
-                  {/* Golden Baseline Hull */}
                   <div className="absolute left-[15%] top-[35%] w-52 h-44 rounded-full bg-emerald-500/5 border border-emerald-500/20 flex flex-col items-center justify-center p-4">
                     <span className="text-[10px] font-mono font-bold text-emerald-400">Golden Baseline Region</span>
                     <span className="text-[9px] font-mono text-emerald-500/70">5,000 verified runs</span>
                   </div>
 
-                  {/* Deviation Boundary */}
                   <div className="absolute left-[38%] top-[25%] w-36 h-36 rounded-full bg-amber-500/5 border border-amber-500/20 flex flex-col items-center justify-center p-2">
                     <span className="text-[10px] font-mono font-bold text-amber-400">Deviation Zone</span>
                     <span className="text-[9px] font-mono text-amber-500/70">12-30% Δ</span>
                   </div>
 
-                  {/* Outlier Drift Cluster */}
                   <div className="absolute right-[12%] top-[20%] w-48 h-48 rounded-full bg-rose-500/10 border-2 border-rose-500/30 flex flex-col items-center justify-center p-4 animate-pulse">
                     <span className="text-[10px] font-mono font-bold text-rose-300">Critical Drift Cluster</span>
                     <span className="text-[9px] font-mono text-rose-400/80">&gt; 50% Δ Divergence</span>
                   </div>
 
-                  {/* Interactive Scatter Points */}
                   {currentProfile.points.map((pt, idx) => {
                     const posX = pt.cluster === 'baseline' ? 22 + (idx * 5) : pt.cluster === 'deviation' ? 45 + (idx * 6) : 75 + (idx * 4);
                     const posY = pt.cluster === 'baseline' ? 45 + ((idx % 3) * 6) : pt.cluster === 'deviation' ? 35 + ((idx % 2) * 8) : 32 + ((idx % 3) * 10);

@@ -13,7 +13,7 @@ from sqlmodel import Field, SQLModel, Column, Text, LargeBinary
 import sqlalchemy as sa
 
 
-# ─── Trace & Span Models ──────────────────────────────────────────────
+# Trace & Span Models
 
 class Trace(SQLModel, table=True):
     """Top-level trace representing a complete multi-agent workflow execution."""
@@ -84,7 +84,7 @@ class Span(SQLModel, table=True):
     metadata_json: Optional[str] = Field(default=None, sa_column=Column(Text))
 
 
-# ─── Evaluation Models ─────────────────────────────────────────────────
+# Evaluation Models
 
 class Evaluation(SQLModel, table=True):
     """Evaluation result for a single span."""
@@ -125,7 +125,7 @@ class Evaluation(SQLModel, table=True):
     details_json: Optional[str] = Field(default=None, sa_column=Column(Text))
 
 
-# ─── Drift Models ──────────────────────────────────────────────────────
+# Drift Models
 
 class DriftRecord(SQLModel, table=True):
     """Per-span drift measurement against rolling baseline."""
@@ -187,7 +187,7 @@ class Baseline(SQLModel, table=True):
     )
 
 
-# ─── Alert Models ──────────────────────────────────────────────────────
+# Alert Models
 
 class Alert(SQLModel, table=True):
     """Triggered alert record."""
@@ -215,7 +215,7 @@ class Alert(SQLModel, table=True):
     resolved_at: Optional[datetime] = None
 
 
-# ─── Agent Registry ────────────────────────────────────────────────────
+# Agent Registry
 
 class AgentRecord(SQLModel, table=True):
     """Registry of known agents seen in traces."""
@@ -234,7 +234,7 @@ class AgentRecord(SQLModel, table=True):
     current_asi: Optional[float] = None
 
 
-# ─── Dataset & Experiment Models ───────────────────────────────────────
+# Dataset & Experiment Models
 
 class DatasetCase(SQLModel, table=True):
     """A curated evaluation test case in a versioned dataset."""

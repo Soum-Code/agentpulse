@@ -23,7 +23,6 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
   onSelectIncident,
   onNavigateTab
 }) => {
-  // Aggregate KPIs
   const totalTraces = agents.reduce((acc, a) => acc + (a.totalTraces24h ?? 0), 0);
   const divergences = agents.map(a => a.driftScore).filter((v): v is number => v != null);
   const maxDivergence = divergences.length ? Math.max(...divergences) : null;
@@ -39,9 +38,7 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
 
   return (
     <div className="space-y-8 pb-28">
-      {/* Top Section: System Pulse & Aggregate Density Metrics */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* KPI 1: 24h Trace Volume */}
         <div className="ios-liquid-card ios-liquid-card-interactive border-glow-subtle rounded-2xl p-5 relative overflow-hidden group">
           <div className="absolute inset-x-0 top-0 h-[1.5px] apple-liquid-specular pointer-events-none" />
           <div className="flex items-center justify-between text-neutral-400 text-xs mb-3">
@@ -60,7 +57,6 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
           </div>
         </div>
 
-        {/* KPI 2: Avg Latency */}
         <div className="ios-liquid-card ios-liquid-card-interactive border-glow-subtle rounded-2xl p-5 relative overflow-hidden group">
           <div className="absolute inset-x-0 top-0 h-[1.5px] apple-liquid-specular pointer-events-none" />
           <div className="flex items-center justify-between text-neutral-400 text-xs mb-3">
@@ -79,7 +75,6 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
           </div>
         </div>
 
-        {/* KPI 3: Active Incidents */}
         <div
           onClick={() => onNavigateTab('incidents')}
           className={`ios-liquid-card ios-liquid-card-interactive border-glow-subtle rounded-2xl p-5 relative overflow-hidden cursor-pointer group ${
@@ -107,7 +102,6 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
           </div>
         </div>
 
-        {/* KPI 4: Behavioral Drift */}
         <div
           onClick={() => onNavigateTab('drift')}
           className={`ios-liquid-card ios-liquid-card-interactive border-glow-subtle rounded-2xl p-5 relative overflow-hidden cursor-pointer group ${
@@ -136,9 +130,7 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
         </div>
       </div>
 
-      {/* Main Grid: Active Swarm Roster (Left) & Navigable Trace Scatter/List (Right) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Agent Roster with Liquid Glass Header & Cards */}
         <div className="lg:col-span-7 ios-liquid-card border-glow-subtle rounded-2xl overflow-hidden relative">
           <div className="absolute inset-x-0 top-0 h-[1.5px] apple-liquid-specular pointer-events-none" />
           <div className="px-5 py-4 border-b border-white/[0.12] flex items-center justify-between bg-white/[0.04] backdrop-blur-xl">
@@ -177,7 +169,6 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
                 >
                   <div className="absolute inset-x-0 top-0 h-[1.5px] apple-liquid-specular pointer-events-none opacity-70 group-hover:opacity-100 transition-opacity" />
                   <div className="flex items-center space-x-3.5 min-w-0">
-                    {/* Semantic State Dot */}
                     <div className="shrink-0 text-sm font-mono flex items-center justify-center w-8 h-8 rounded-lg bg-white/[0.06] border border-white/[0.12] shadow-xs">
                       {agent.status === 'idle' && <span className="text-neutral-500">○</span>}
                       {agent.status === 'running' && <span className="text-emerald-400 font-bold drop-shadow-[0_0_6px_rgba(52,211,153,0.8)]">◉</span>}
@@ -235,7 +226,6 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
           </div>
         </div>
 
-        {/* Live Incident Stream & Failure-First Drill-Down */}
         <div className="lg:col-span-5 space-y-4">
           <div className="ios-liquid-card border-glow-subtle rounded-2xl overflow-hidden relative">
             <div className="absolute inset-x-0 top-0 h-[1.5px] apple-liquid-specular pointer-events-none" />
@@ -307,7 +297,6 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
         </div>
       </div>
 
-      {/* Navigable Interactive Trace Scatter Plot */}
       <div className="ios-liquid-card border-glow-subtle rounded-2xl p-6 relative overflow-hidden">
         <div className="absolute inset-x-0 top-0 h-[1.5px] apple-liquid-specular pointer-events-none" />
         <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-5 gap-3 pb-4 border-b border-white/[0.12]">
@@ -336,7 +325,6 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
           </div>
         </div>
 
-        {/* Visual Trace Scatter Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 pt-1">
           {traces.map((trace) => (
             <div

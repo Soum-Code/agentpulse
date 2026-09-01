@@ -29,7 +29,6 @@ export const AgentsView: React.FC<AgentsViewProps> = ({
 
   return (
     <div className="space-y-6 pb-28">
-      {/* Search and Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-lg font-mono font-semibold text-white uppercase tracking-wider flex items-center space-x-2">
@@ -53,9 +52,7 @@ export const AgentsView: React.FC<AgentsViewProps> = ({
         </div>
       </div>
 
-      {/* Main Split Layout: Agent List (Left) + Detailed Agent Inspector (Right) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* Left Column: Agent Cards */}
         <div className="lg:col-span-5 space-y-3">
           {filteredAgents.map((agent) => {
             const isSelected = currentAgent?.id === agent.id;
@@ -119,11 +116,9 @@ export const AgentsView: React.FC<AgentsViewProps> = ({
           })}
         </div>
 
-        {/* Right Column: Selected Agent Deep Dive */}
         {currentAgent && (
           <div className="lg:col-span-7 glass-morphism-v2 border-glow-subtle rounded-2xl overflow-hidden relative">
             <div className="absolute inset-x-0 top-0 h-[1.5px] apple-liquid-specular pointer-events-none" />
-            {/* Inspector Header */}
             <div className="px-6 py-4 border-b border-white/[0.12] flex items-center justify-between bg-white/[0.04] backdrop-blur-xl">
               <div>
                 <span className="text-[10px] font-mono uppercase tracking-wider text-neutral-400 block font-semibold">
@@ -152,7 +147,6 @@ export const AgentsView: React.FC<AgentsViewProps> = ({
               </div>
             </div>
 
-            {/* Inspector Body */}
             <div className="p-6 space-y-6">
               <div>
                 <span className="text-xs font-mono text-neutral-400 uppercase tracking-wider block mb-1">
@@ -163,7 +157,6 @@ export const AgentsView: React.FC<AgentsViewProps> = ({
                 </p>
               </div>
 
-              {/* Specs Grid */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 font-mono text-xs">
                 <div className="p-3 rounded-xl ios-liquid-row border border-white/[0.12]">
                   <span className="text-neutral-400 block text-[10px]">FRAMEWORK</span>
@@ -183,7 +176,6 @@ export const AgentsView: React.FC<AgentsViewProps> = ({
                 </div>
               </div>
 
-              {/* Tools Inventory */}
               <div>
                 <span className="text-xs font-mono text-neutral-400 uppercase tracking-wider block mb-2 flex items-center space-x-1.5">
                   <Wrench className="w-3.5 h-3.5 text-neutral-400" />
@@ -201,7 +193,6 @@ export const AgentsView: React.FC<AgentsViewProps> = ({
                 </div>
               </div>
 
-              {/* Drift & Anomaly Assessment */}
               <div className="p-4 rounded-xl ios-liquid-row border border-white/[0.12] space-y-2">
                 <div className="flex items-center justify-between text-xs font-mono">
                   <span className="text-neutral-400">Drift Anomaly Index:</span>

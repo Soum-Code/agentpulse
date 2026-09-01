@@ -66,7 +66,6 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
     }
   }, [isOpen]);
 
-  // Build structured, rich item library
   const allItems = useMemo(() => {
     const list: Array<{
       id: string;
@@ -81,7 +80,6 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
       shortcutHint?: string;
     }> = [];
 
-    // Incidents (Priority)
     incidents.forEach((inc) => {
       list.push({
         id: `inc-${inc.id}`,
@@ -100,7 +98,6 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
       });
     });
 
-    // Agents
     agents.forEach((agent) => {
       list.push({
         id: `agent-${agent.id}`,
@@ -124,7 +121,6 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
       });
     });
 
-    // Traces
     traces.slice(0, 16).forEach((trace) => {
       list.push({
         id: `trace-${trace.id}`,
@@ -143,7 +139,6 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
       });
     });
 
-    // Navigation and Core Surfaces
     const navSurfaces: Array<{
       tab: ProductTab;
       title: string;
@@ -177,7 +172,6 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
       });
     });
 
-    // Editorial Public Switch
     list.push({
       id: 'nav-public',
       category: 'all',
@@ -193,7 +187,6 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
     return list;
   }, [agents, traces, incidents, onSelectAgent, onSelectTrace, onSelectIncident, onSelectTab, onSwitchToPublic]);
 
-  // Query and Category Filter
   const filteredItems = useMemo(() => {
     let result = allItems;
 
@@ -203,7 +196,6 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
 
     const q = query.trim().toLowerCase();
     if (q) {
-      // Check prefix filters
       let cleanQ = q;
       if (q.startsWith('agent:') || q.startsWith('agents:')) {
         cleanQ = q.replace(/^agents?:/, '').trim();
@@ -233,7 +225,6 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
     return result;
   }, [allItems, category, query]);
 
-  // Adjust selection bounds
   useEffect(() => {
     setSelectedIndex(0);
   }, [query, category]);
@@ -255,7 +246,6 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
       onClose();
     } else if (e.key === 'Tab') {
       e.preventDefault();
-      // Cycle category
       const categories: FilterCategory[] = ['all', 'agents', 'traces', 'incidents', 'drift', 'experiments', 'settings'];
       const nextIdx = (categories.indexOf(category) + 1) % categories.length;
       setCategory(categories[nextIdx]);
@@ -276,7 +266,6 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
     <AnimatePresence>
       {isOpen && (
         <div className="fixed inset-0 z-50 flex items-start justify-center pt-16 sm:pt-24 p-4">
-          {/* Backdrop with subtle monochrome blur */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -285,7 +274,6 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
             className="fixed inset-0 bg-black/80 backdrop-blur-md"
           />
 
-          {/* Apple-Inspired Liquid Glass Command Surface */}
           <motion.div
             initial={{ opacity: 0, scale: 0.97, y: -12 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -293,10 +281,8 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
             transition={{ duration: 0.16, ease: [0.16, 1, 0.3, 1] }}
             className="relative w-full max-w-2xl ios-liquid-card border-glow-subtle rounded-2xl overflow-hidden shadow-2xl flex flex-col max-h-[82vh]"
           >
-            {/* Top Liquid Specular Reflection */}
             <div className="absolute inset-x-0 top-0 h-[1.5px] apple-liquid-specular pointer-events-none" />
 
-            {/* Top Search Bar Toolbar */}
             <div className="flex items-center px-4 py-3.5 border-b border-white/[0.12] bg-white/[0.03] backdrop-blur-xl">
               <Search className="w-4 h-4 text-neutral-400 mr-3 shrink-0" />
               <input
@@ -321,7 +307,6 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
               </kbd>
             </div>
 
-            {/* Quick Filter Category Chips (Raycast Philosophy: Minimum Movement) */}
             <div className="flex items-center space-x-1 px-4 py-2 border-b border-white/[0.06] bg-[#0c0d11] overflow-x-auto scrollbar-none text-[11px] font-mono">
               <span className="text-neutral-500 mr-1 text-[10px] uppercase tracking-wider shrink-0">Filter:</span>
               {categoriesList.map((cat) => {
@@ -342,7 +327,6 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
               })}
             </div>
 
-            {/* Search Results List */}
             <div className="overflow-y-auto p-2 space-y-1 flex-1 max-h-[380px] scrollbar-thin">
               {filteredItems.length === 0 ? (
                 <div className="py-12 text-center text-xs font-mono text-neutral-500">
@@ -412,7 +396,6 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
                         </div>
                       </div>
 
-                      {/* Right Action Hint */}
                       <div className="flex items-center space-x-2 shrink-0 ml-3">
                         <span
                           className={`text-[10px] font-mono ${
@@ -433,7 +416,6 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
               )}
             </div>
 
-            {/* Bottom Keyboard Navigation Bar (Speed & Commandability) */}
             <div className="px-4 py-2.5 border-t border-white/[0.08] bg-[#0a0b0e] text-[11px] font-mono text-neutral-400 flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center space-x-4">
                 <span className="flex items-center space-x-1">

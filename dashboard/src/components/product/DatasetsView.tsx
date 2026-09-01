@@ -16,7 +16,6 @@ export const DatasetsView: React.FC<DatasetsViewProps> = ({
 
   return (
     <div className="space-y-6 pb-28">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-lg font-mono font-semibold text-white uppercase tracking-wider flex items-center space-x-2">
@@ -37,9 +36,7 @@ export const DatasetsView: React.FC<DatasetsViewProps> = ({
         </button>
       </div>
 
-      {/* Grid: Datasets List (Left) + Item Inspector (Right) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* Left Column: Dataset List */}
         <div className="lg:col-span-5 space-y-3 font-mono text-xs">
           {datasets.map((dataset) => {
             const isSelected = selectedDataset.id === dataset.id;
@@ -77,7 +74,6 @@ export const DatasetsView: React.FC<DatasetsViewProps> = ({
           })}
         </div>
 
-        {/* Right Column: Dataset Items Inspector */}
         {selectedDataset && (
           <div className="lg:col-span-7 surface-solid rounded-xl border border-neutral-800 overflow-hidden font-mono text-xs">
             <div className="glass-floating px-6 py-4 border-b border-neutral-800 flex items-center justify-between">

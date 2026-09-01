@@ -15,7 +15,6 @@ export const ShortcutsHelpModal: React.FC<ShortcutsHelpModalProps> = ({
     <AnimatePresence>
       {isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -24,7 +23,6 @@ export const ShortcutsHelpModal: React.FC<ShortcutsHelpModalProps> = ({
             className="absolute inset-0 bg-black/80 backdrop-blur-md"
           />
 
-          {/* Modal Card */}
           <motion.div
             initial={{ opacity: 0, scale: 0.95, y: 10 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -32,10 +30,8 @@ export const ShortcutsHelpModal: React.FC<ShortcutsHelpModalProps> = ({
             transition={{ type: 'spring', stiffness: 450, damping: 30 }}
             className="relative w-full max-w-2xl ios-liquid-card border-glow-subtle rounded-2xl p-6 shadow-2xl text-white font-mono overflow-hidden z-10"
           >
-            {/* Top Specular Accent */}
             <div className="absolute inset-x-0 top-0 h-[1.5px] apple-liquid-specular pointer-events-none" />
 
-            {/* Header */}
             <div className="flex items-center justify-between pb-4 border-b border-white/[0.08]">
               <div className="flex items-center space-x-2.5">
                 <div className="p-2 rounded-xl bg-white/[0.06] border border-white/[0.1] text-white">
@@ -59,9 +55,7 @@ export const ShortcutsHelpModal: React.FC<ShortcutsHelpModalProps> = ({
               </button>
             </div>
 
-            {/* Shortcuts Content */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-5 text-xs">
-              {/* Trace List Navigation */}
               <div className="space-y-3">
                 <div className="text-[10px] uppercase tracking-wider text-neutral-500 font-bold">
                   Trace Investigation (J/K)
@@ -125,7 +119,6 @@ export const ShortcutsHelpModal: React.FC<ShortcutsHelpModalProps> = ({
                 </div>
               </div>
 
-              {/* Global Commands & Views */}
               <div className="space-y-3">
                 <div className="text-[10px] uppercase tracking-wider text-neutral-500 font-bold">
                   Global System & Commands
@@ -194,7 +187,6 @@ export const ShortcutsHelpModal: React.FC<ShortcutsHelpModalProps> = ({
               </div>
             </div>
 
-            {/* Footer */}
             <div className="pt-4 border-t border-white/[0.08] flex items-center justify-between text-[11px] text-neutral-400">
               <span>Shortcuts are active globally across the product workspace.</span>
               <button

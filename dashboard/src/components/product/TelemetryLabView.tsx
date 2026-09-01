@@ -43,7 +43,6 @@ export const TelemetryLabView: React.FC<TelemetryLabViewProps> = ({
 
   return (
     <div className="space-y-6 pb-28">
-      {/* Header */}
       <div>
         <h2 className="text-lg font-mono font-semibold text-white uppercase tracking-wider flex items-center space-x-2">
           <Cpu className="w-5 h-5 text-neutral-400" />
@@ -54,7 +53,6 @@ export const TelemetryLabView: React.FC<TelemetryLabViewProps> = ({
         </p>
       </div>
 
-      {/* Main Simulation Panel */}
       <div className="ios-liquid-card border-glow-subtle rounded-2xl p-6 space-y-6 font-mono text-xs max-w-4xl relative overflow-hidden">
         <div className="absolute inset-x-0 top-0 h-[1.5px] apple-liquid-specular pointer-events-none" />
         

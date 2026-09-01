@@ -46,7 +46,7 @@ export const PublicExperience: React.FC<PublicExperienceProps> = ({ onEnterProdu
   const [activeLoopStep, setActiveLoopStep] = useState<number>(0);
   const [selectedSdkFramework, setSelectedSdkFramework] = useState<'python' | 'langgraph' | 'crewai' | 'langchain'>('python');
   
-  // Palette mode: 'butter' (Iconic Buttermax canary yellow & deep black), 'dark' (Cyber obsidian), 'chalk' (Studio light)
+  // butter = yellow on black, dark = near-black, chalk = light.
   const [palette, setPalette] = useState<'butter' | 'dark' | 'chalk'>('dark');
 
   const handleCopyPip = (textToCopy = 'pip install agentpulse') => {
@@ -201,11 +201,9 @@ chain.invoke({"question": user_query})`
           : 'text-[#F5F5F7]'
       }`}
     >
-      {/* Interactive 3D Liquid Flowing Canvas Background */}
       <LiquidBackgroundCanvas palette={palette} />
 
       <div className="relative z-10">
-        {/* Editorial Navigation Header */}
         <header
           className={`sticky top-0 z-40 px-6 sm:px-12 py-4 flex items-center justify-between transition-colors ${
             palette === 'butter'
@@ -237,9 +235,7 @@ chain.invoke({"question": user_query})`
           </span>
         </div>
 
-        {/* Center/Right Nav & Theme Palette Switcher */}
         <div className="flex items-center space-x-4">
-          {/* Palette Switcher */}
           <div
             className={`flex items-center p-1 rounded-full border text-xs font-mono ${
               palette === 'butter'
@@ -352,16 +348,12 @@ chain.invoke({"question": user_query})`
         </div>
       </header>
 
-      {/* ========================================================================= */}
-      {/* SECTION 01: HERO                                                          */}
-      {/* ========================================================================= */}
       <section
         className={`relative pt-16 sm:pt-20 pb-24 sm:pb-28 px-6 sm:px-12 max-w-7xl mx-auto ${
           palette === 'butter' ? 'border-b-2 border-neutral-950' : palette === 'chalk' ? 'border-b border-neutral-200' : 'border-b border-white/[0.08]'
         }`}
       >
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-          {/* Editorial Typography (Left) */}
           <div className="lg:col-span-6 space-y-8">
             <div className="space-y-4">
               <span
@@ -428,7 +420,6 @@ chain.invoke({"question": user_query})`
               </button>
             </div>
 
-            {/* Quick Micro Stats */}
             <div
               className={`pt-6 grid grid-cols-3 gap-6 font-mono text-xs ${
                 palette === 'butter' ? 'border-t-2 border-neutral-950 text-neutral-950' : palette === 'chalk' ? 'border-t border-neutral-200' : 'border-t border-white/[0.08]'
@@ -473,7 +464,6 @@ chain.invoke({"question": user_query})`
             </div>
           </div>
 
-          {/* Right Column: High-Contrast Telemetry Stream & Live Trace Engine */}
           <div
             className={`lg:col-span-6 rounded-3xl p-6 sm:p-8 flex flex-col justify-between transition-all relative overflow-hidden ${
               palette === 'butter'
@@ -487,7 +477,6 @@ chain.invoke({"question": user_query})`
               <div className="absolute inset-x-0 top-0 h-[1.5px] apple-liquid-specular pointer-events-none" />
             )}
 
-            {/* Terminal Header */}
             <div className="flex items-center justify-between border-b border-white/10 pb-4 mb-6">
               <div className="flex items-center space-x-2">
                 <span className="w-3 h-3 rounded-full bg-rose-500/90 inline-block" />
@@ -503,7 +492,6 @@ chain.invoke({"question": user_query})`
               </div>
             </div>
 
-            {/* Trace Activity Stream */}
             <div className="space-y-3 font-mono text-xs">
               <div className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.08] flex items-center justify-between transition-all duration-300 ease-out hover:bg-white/[0.07] hover:border-white/30 hover:shadow-[0_0_15px_rgba(255,255,255,0.03)] cursor-default">
                 <div className="flex items-center space-x-2.5">
@@ -538,7 +526,6 @@ chain.invoke({"question": user_query})`
               </div>
             </div>
 
-            {/* Terminal Footer Metrics Bar */}
             <div className="mt-4 pt-3 border-t border-white/10 flex items-center justify-between text-xs font-mono">
               <div className="flex items-center space-x-4">
                 <div>
@@ -562,9 +549,6 @@ chain.invoke({"question": user_query})`
         </div>
       </section>
 
-      {/* ========================================================================= */}
-      {/* SECTION 02: THE FAILURE MODES (ELEVATED TO SAME PREMIUM TOUCH)             */}
-      {/* ========================================================================= */}
       <section
         id="problem"
         className={`py-24 px-6 sm:px-12 max-w-7xl mx-auto ${
@@ -617,9 +601,7 @@ chain.invoke({"question": user_query})`
           </p>
         </div>
 
-        {/* 4 Connected Stages with Apple Liquid Dock Material */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 relative">
-          {/* Stage 1 */}
           <div
             className={`rounded-2xl p-5 relative overflow-hidden transition-all duration-300 group ${
               palette === 'butter'
@@ -649,7 +631,6 @@ chain.invoke({"question": user_query})`
             </div>
           </div>
 
-          {/* Stage 2 */}
           <div
             className={`rounded-2xl p-5 relative overflow-hidden transition-all duration-300 group ${
               palette === 'butter'
@@ -679,7 +660,6 @@ chain.invoke({"question": user_query})`
             </div>
           </div>
 
-          {/* Stage 3 */}
           <div
             className={`rounded-2xl p-5 relative overflow-hidden transition-all duration-300 group ${
               palette === 'butter'
@@ -709,7 +689,6 @@ chain.invoke({"question": user_query})`
             </div>
           </div>
 
-          {/* Stage 4: Critical Reveal */}
           <div
             className={`rounded-2xl p-5 relative overflow-hidden transition-all duration-300 group ${
               palette === 'butter'
@@ -741,9 +720,6 @@ chain.invoke({"question": user_query})`
         </div>
       </section>
 
-      {/* ========================================================================= */}
-      {/* SECTION 03: THE OPERATING SYSTEM (ELEVATED INTERACTIVE FLYWHEEL)          */}
-      {/* ========================================================================= */}
       <section
         className={`py-24 px-6 sm:px-12 max-w-7xl mx-auto ${
           palette === 'butter' ? 'border-b-2 border-neutral-950' : palette === 'chalk' ? 'border-b border-neutral-200' : 'border-b border-white/[0.08]'
@@ -777,7 +753,6 @@ chain.invoke({"question": user_query})`
           </p>
         </div>
 
-        {/* 4 Loop Tabs */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           {loopPhases.map((phase, idx) => (
             <button
@@ -815,7 +790,6 @@ chain.invoke({"question": user_query})`
           ))}
         </div>
 
-        {/* Active Phase Details Liquid Glass Card */}
         <div
           className={`rounded-3xl p-8 sm:p-10 transition-all duration-300 relative overflow-hidden shadow-2xl ${
             palette === 'butter'
@@ -828,7 +802,6 @@ chain.invoke({"question": user_query})`
           {palette === 'dark' && <div className="absolute inset-x-0 top-0 h-[1.5px] apple-liquid-specular pointer-events-none" />}
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-            {/* Left: Text & Features */}
             <div className="lg:col-span-7 space-y-6">
               <div className="flex items-center space-x-3">
                 <span className="px-2.5 py-1 rounded-md bg-amber-300 text-neutral-950 text-xs font-mono font-black">
@@ -868,7 +841,6 @@ chain.invoke({"question": user_query})`
               </div>
             </div>
 
-            {/* Right: Interactive Architectural Schematic */}
             <div className="lg:col-span-5 bg-black/60 rounded-2xl border border-white/[0.1] p-6 font-mono text-xs space-y-4">
               <div className="flex items-center justify-between pb-3 border-b border-white/[0.08]">
                 <span className="text-neutral-400 text-[11px] uppercase font-bold flex items-center space-x-2">
@@ -904,9 +876,6 @@ chain.invoke({"question": user_query})`
         </div>
       </section>
 
-      {/* ========================================================================= */}
-      {/* SECTION 04: LIVE TRACE STORY (ELEVATED IDE-GRADE INSPECTOR)                */}
-      {/* ========================================================================= */}
       <section
         id="trace-story"
         className={`py-24 px-6 sm:px-12 max-w-7xl mx-auto ${
@@ -942,7 +911,6 @@ chain.invoke({"question": user_query})`
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          {/* Step Timeline (Left) */}
           <div className="lg:col-span-5 space-y-3">
             {storySteps.map((step, idx) => (
               <div
@@ -991,7 +959,6 @@ chain.invoke({"question": user_query})`
             ))}
           </div>
 
-          {/* Step Detail Inspector (Right) */}
           <div
             className={`lg:col-span-7 rounded-3xl overflow-hidden transition-all duration-300 shadow-2xl relative ${
               palette === 'butter'
@@ -1003,7 +970,6 @@ chain.invoke({"question": user_query})`
           >
             {palette === 'dark' && <div className="absolute inset-x-0 top-0 h-[1.5px] apple-liquid-specular pointer-events-none" />}
 
-            {/* Inspector Header */}
             <div className="px-6 py-4 border-b border-white/[0.1] flex items-center justify-between text-xs font-mono bg-white/[0.02]">
               <div className="flex items-center space-x-2.5">
                 <span className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
@@ -1014,7 +980,6 @@ chain.invoke({"question": user_query})`
               <span className="text-neutral-400">Trace: tr-98410</span>
             </div>
 
-            {/* Inspector Body */}
             <div className="p-6 space-y-6 font-mono text-xs">
               <div>
                 <span className="text-[10px] uppercase text-neutral-400 font-bold tracking-wider block mb-2">
@@ -1059,9 +1024,6 @@ chain.invoke({"question": user_query})`
         </div>
       </section>
 
-      {/* ========================================================================= */}
-      {/* SECTION 05: BEHAVIORAL DRIFT DETECTION (ELEVATED VECTOR CANVAS)            */}
-      {/* ========================================================================= */}
       <section
         id="drift"
         className={`py-24 px-6 sm:px-12 max-w-7xl mx-auto ${
@@ -1143,11 +1105,9 @@ chain.invoke({"question": user_query})`
               </div>
             </div>
 
-            {/* Vector Cluster Grid */}
             <div className="relative h-72 w-full bg-[#050608] rounded-2xl border border-white/[0.08] p-6 flex items-center justify-center overflow-hidden shadow-inner">
               <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff08_1px,transparent_1px),linear-gradient(to_bottom,#ffffff08_1px,transparent_1px)] bg-[size:28px_28px]" />
 
-              {/* Baseline Cluster */}
               <div className="absolute left-[18%] top-[35%] w-44 h-44 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center">
                 <span className="text-[11px] font-mono text-emerald-400 font-bold text-center px-2">
                   Baseline pool<br /><span className="text-[9px] text-emerald-400/70">(first 20 samples)</span>
@@ -1157,13 +1117,11 @@ chain.invoke({"question": user_query})`
                 <div className="absolute w-2.5 h-2.5 rounded-full bg-emerald-400" style={{ left: '42%', top: '72%' }} />
               </div>
 
-              {/* Trajectory Divergence Line */}
               <svg className="absolute inset-0 w-full h-full pointer-events-none">
                 <line x1="38%" y1="52%" x2="68%" y2="35%" stroke="#f43f5e" strokeWidth="2.5" strokeDasharray="5 5" />
                 <polygon points="68%,35 63%,31 63%,39" fill="#f43f5e" />
               </svg>
 
-              {/* Drifted Cluster */}
               <div className="absolute right-[16%] top-[20%] w-48 h-48 rounded-full bg-rose-500/15 border-2 border-rose-500/40 flex items-center justify-center animate-pulse">
                 <div className="text-center">
                   <span className="text-[11px] font-mono text-rose-300 font-bold block">Current window</span>
@@ -1246,9 +1204,6 @@ chain.invoke({"question": user_query})`
         )}
       </section>
 
-      {/* ========================================================================= */}
-      {/* SECTION 06: EVIDENCE (THE HONESTY PRINCIPLE - OBSERVED -> MEASURED)        */}
-      {/* ========================================================================= */}
       <section
         id="evidence"
         className={`py-24 px-6 sm:px-12 max-w-7xl mx-auto ${
@@ -1352,9 +1307,6 @@ chain.invoke({"question": user_query})`
         </div>
       </section>
 
-      {/* ========================================================================= */}
-      {/* SECTION 07: RESEARCH LOOP (TRACE -> CURATE -> DATASET -> EXPERIMENT)     */}
-      {/* ========================================================================= */}
       <section
         className={`py-24 px-6 sm:px-12 max-w-7xl mx-auto ${
           palette === 'butter' ? 'border-b-2 border-neutral-950' : palette === 'chalk' ? 'border-b border-neutral-200' : 'border-b border-white/[0.08]'
@@ -1388,7 +1340,6 @@ chain.invoke({"question": user_query})`
           </p>
         </div>
 
-        {/* 5-Stage Step Flow */}
         <div className="grid grid-cols-1 sm:grid-cols-5 gap-3.5">
           {[
             { step: '01', title: 'Production Trace', desc: 'Capture anomaly in live swarm', tag: 'OTel Ingestion' },
@@ -1421,9 +1372,6 @@ chain.invoke({"question": user_query})`
         </div>
       </section>
 
-      {/* ========================================================================= */}
-      {/* SECTION 08: SDK & COMPACT INSTRUMENTATION                                */}
-      {/* ========================================================================= */}
       <section
         className={`py-24 px-6 sm:px-12 max-w-7xl mx-auto ${
           palette === 'butter' ? 'border-b-2 border-neutral-950' : palette === 'chalk' ? 'border-b border-neutral-200' : 'border-b border-white/[0.08]'
@@ -1457,7 +1405,6 @@ chain.invoke({"question": user_query})`
           </p>
         </div>
 
-        {/* Framework Selector & SDK Terminal */}
         <div
           className={`rounded-3xl p-6 sm:p-8 relative overflow-hidden transition-all duration-300 shadow-2xl ${
             palette === 'butter'
@@ -1469,7 +1416,6 @@ chain.invoke({"question": user_query})`
         >
           {palette === 'dark' && <div className="absolute inset-x-0 top-0 h-[1.5px] apple-liquid-specular pointer-events-none" />}
 
-          {/* Framework Tabs */}
           <div className="flex flex-wrap items-center justify-between pb-6 border-b border-white/10 gap-4">
             <div className="flex flex-wrap items-center gap-2">
               {[
@@ -1507,9 +1453,6 @@ chain.invoke({"question": user_query})`
         </div>
       </section>
 
-      {/* ========================================================================= */}
-      {/* SECTION 09: CAPABILITY MATURITY (HONEST SYSTEM LIMITS)                    */}
-      {/* ========================================================================= */}
       <section
         id="maturity"
         className={`py-24 px-6 sm:px-12 max-w-7xl mx-auto ${
@@ -1613,9 +1556,6 @@ chain.invoke({"question": user_query})`
         </div>
       </section>
 
-      {/* ========================================================================= */}
-      {/* SECTION 10: COMMAND CENTER CTA                                            */}
-      {/* ========================================================================= */}
       <section className="py-24 px-6 sm:px-12 max-w-7xl mx-auto text-center">
         <div
           className={`rounded-3xl p-10 sm:p-14 relative overflow-hidden shadow-2xl transition-all duration-300 ${
@@ -1668,7 +1608,6 @@ chain.invoke({"question": user_query})`
         </div>
       </section>
 
-      {/* Editorial Footer */}
       <footer className="border-t border-white/[0.08] px-6 sm:px-12 py-8 max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between text-xs font-mono text-neutral-400 gap-4">
         <div>AgentPulse — AI Agent Observability &amp; Evaluation Platform</div>
         <div className="flex items-center space-x-6">
@@ -1680,7 +1619,6 @@ chain.invoke({"question": user_query})`
         </div>
       </footer>
 
-      {/* Liquid Glass Connect Modal */}
       <ConnectModal
         isOpen={connectOpen}
         onClose={() => setConnectOpen(false)}

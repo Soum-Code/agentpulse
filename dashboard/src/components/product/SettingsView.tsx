@@ -22,7 +22,6 @@ export const SettingsView: React.FC = () => {
 
   return (
     <div className="space-y-6 pb-28 font-mono text-xs max-w-4xl">
-      {/* Header */}
       <div>
         <h2 className="text-lg font-semibold text-white uppercase tracking-wider flex items-center space-x-2">
           <Settings className="w-5 h-5 text-neutral-400" />
@@ -33,7 +32,6 @@ export const SettingsView: React.FC = () => {
         </p>
       </div>
 
-      {/* API Keys */}
       <div className="ios-liquid-card border-glow-subtle rounded-2xl p-6 space-y-4 relative overflow-hidden">
         <div className="absolute inset-x-0 top-0 h-[1.5px] apple-liquid-specular pointer-events-none" />
         <div className="flex items-center space-x-2 text-white font-semibold text-xs uppercase">
@@ -63,7 +61,6 @@ export const SettingsView: React.FC = () => {
         </div>
       </div>
 
-      {/* Evaluator Thresholds */}
       <div className="ios-liquid-card border-glow-subtle rounded-2xl p-6 space-y-5 relative overflow-hidden">
         <div className="absolute inset-x-0 top-0 h-[1.5px] apple-liquid-specular pointer-events-none" />
         <div className="flex items-center space-x-2 text-white font-semibold text-xs uppercase">
@@ -112,7 +109,6 @@ export const SettingsView: React.FC = () => {
         </div>
       </div>
 
-      {/* Webhook Alerts */}
       <div className="ios-liquid-card border-glow-subtle rounded-2xl p-6 space-y-4 relative overflow-hidden">
         <div className="absolute inset-x-0 top-0 h-[1.5px] apple-liquid-specular pointer-events-none" />
         <div className="flex items-center space-x-2 text-white font-semibold text-xs uppercase">
@@ -133,7 +129,6 @@ export const SettingsView: React.FC = () => {
         </div>
       </div>
 
-      {/* Save action */}
       <div className="flex items-center justify-end space-x-3 pt-2">
         {saved && <span className="text-emerald-400">Settings saved successfully!</span>}
         <button

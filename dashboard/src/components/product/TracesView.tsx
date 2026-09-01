@@ -238,7 +238,6 @@ export const TracesView: React.FC<TracesViewProps> = ({
         return;
       }
 
-      // 1-4: Switch perspective views
       if (e.key === '1') {
         e.preventDefault();
         setViewPerspective('tree');
@@ -253,13 +252,11 @@ export const TracesView: React.FC<TracesViewProps> = ({
         setViewPerspective('evidence');
       }
 
-      // C: Curate span into dataset
       if (e.key.toLowerCase() === 'c' && !e.metaKey && !e.ctrlKey) {
         e.preventDefault();
         handleCurate();
       }
 
-      // E: Export CSV
       if (e.key.toLowerCase() === 'e' && !e.metaKey && !e.ctrlKey) {
         e.preventDefault();
         handleDownloadCSV();
@@ -347,7 +344,6 @@ export const TracesView: React.FC<TracesViewProps> = ({
 
   return (
     <div className="space-y-6 pb-28">
-      {/* Top Filter & Perspective Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-lg font-mono font-semibold text-white uppercase tracking-wider flex items-center space-x-2">
@@ -359,7 +355,6 @@ export const TracesView: React.FC<TracesViewProps> = ({
           </p>
         </div>
 
-        {/* Action Controls & View Perspective Switcher */}
         <div className="flex flex-wrap items-center gap-2">
           {onOpenShortcutsModal && (
             <button
@@ -402,7 +397,6 @@ export const TracesView: React.FC<TracesViewProps> = ({
             )}
           </button>
 
-          {/* View Perspective Switcher */}
           <div className="flex items-center space-x-1 bg-[#101116] border border-white/[0.08] p-1 rounded-lg">
             <button
               onClick={() => setViewPerspective('tree')}
@@ -448,7 +442,6 @@ export const TracesView: React.FC<TracesViewProps> = ({
         </div>
       </div>
 
-      {/* Global Keyboard Navigation Quick Bar */}
       <div className="flex flex-wrap items-center justify-between text-[11px] font-mono text-neutral-400 px-3.5 py-2 rounded-xl bg-[#090a0d] border border-white/[0.07] shadow-inner gap-2">
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
           <span className="text-neutral-500 uppercase tracking-wider text-[10px] font-semibold flex items-center space-x-1">
@@ -495,7 +488,6 @@ export const TracesView: React.FC<TracesViewProps> = ({
         )}
       </div>
 
-      {/* Dedicated Text-Based Filter Bar */}
       <div className="glass-morphism-v2 rounded-xl p-3 sm:p-3.5 flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-sm border border-white/[0.12]">
         <div className="relative flex-1">
           <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" />
@@ -518,7 +510,6 @@ export const TracesView: React.FC<TracesViewProps> = ({
           )}
         </div>
 
-        {/* Status Filter Chips & Result Counter */}
         <div className="flex flex-wrap items-center gap-2 shrink-0">
           <div className="flex items-center space-x-1 bg-[#08090b] border border-[#191b22] p-1 rounded-lg">
             <button
@@ -572,9 +563,7 @@ export const TracesView: React.FC<TracesViewProps> = ({
         </div>
       </div>
 
-      {/* Main 2-Column Split: Trace List (Left) + Selected Trace Investigation View (Right) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* Left Column: Trace List */}
         <div className="lg:col-span-4 space-y-3">
           <div className="flex items-center space-x-2">
             <div className="relative flex-1">
@@ -670,7 +659,6 @@ export const TracesView: React.FC<TracesViewProps> = ({
             )}
           </div>
 
-          {/* Trace List Pagination Controls Bar */}
           {filteredTraces.length > 0 && (
             <div className="flex items-center justify-between p-2.5 rounded-xl ios-liquid-row border border-white/[0.08] text-xs font-mono text-neutral-400 select-none">
               <div className="flex items-center space-x-2">
@@ -708,7 +696,6 @@ export const TracesView: React.FC<TracesViewProps> = ({
           )}
         </div>
 
-        {/* Right Columns: Selected Trace Multi-View & Span Inspector */}
         {currentTrace && (
           <div
             ref={detailsRef}
@@ -716,18 +703,15 @@ export const TracesView: React.FC<TracesViewProps> = ({
               isDetailsFlash ? 'ring-1 ring-white/30 shadow-[0_0_30px_rgba(255,255,255,0.06)]' : ''
             }`}
           >
-            {/* Persistent In-View Context Navigation Hierarchy Bar */}
             <div className="glass-morphism-v2 border border-white/[0.12] rounded-xl px-4 py-2.5 flex items-center space-x-2 text-xs font-mono overflow-x-auto scrollbar-none shadow-sm">
               <span className="text-neutral-500 uppercase tracking-wider text-[10px] shrink-0">Context Hierarchy:</span>
               
-              {/* Agent Crumb */}
               <span className="text-neutral-300 bg-white/[0.04] px-2 py-0.5 rounded border border-white/[0.08] shrink-0">
                 Agent: <span className="text-white font-medium">{currentTrace.agentName}</span>
               </span>
 
               <ChevronRight className="w-3.5 h-3.5 text-neutral-600 shrink-0" />
 
-              {/* Trace Crumb */}
               <span
                 className={`px-2 py-0.5 rounded border shrink-0 ${
                   currentTrace.status === 'error'
@@ -740,7 +724,6 @@ export const TracesView: React.FC<TracesViewProps> = ({
                 Trace: <span className="font-semibold">{currentTrace.id}</span>
               </span>
 
-              {/* Span Crumb (if selected) */}
               {currentSpan && (
                 <>
                   <ChevronRight className="w-3.5 h-3.5 text-neutral-600 shrink-0" />
@@ -759,7 +742,6 @@ export const TracesView: React.FC<TracesViewProps> = ({
               )}
             </div>
 
-            {/* Trace Overview Ribbon */}
             <div className="glass-morphism-v2 border-glow-subtle rounded-xl p-5 border border-white/[0.12] relative overflow-hidden">
               <div className="absolute inset-x-0 top-0 h-[1.5px] apple-liquid-specular pointer-events-none" />
               <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-white/[0.08] gap-3">
@@ -772,7 +754,6 @@ export const TracesView: React.FC<TracesViewProps> = ({
                   </h3>
                 </div>
 
-                {/* 1-Click Curate into Dataset (Langfuse Loop) */}
                 <button
                   onClick={handleCurate}
                   className="px-3 py-1.5 rounded-lg bg-white/[0.06] hover:bg-white/[0.1] text-neutral-200 text-xs font-mono flex items-center space-x-1.5 transition-colors border border-white/[0.12] hover:border-white/20 shrink-0"
@@ -792,7 +773,6 @@ export const TracesView: React.FC<TracesViewProps> = ({
                 </button>
               </div>
 
-              {/* Trace Stats Row */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-4 font-mono text-xs">
                 <div>
                   <span className="text-neutral-500 block text-[10px]">TOTAL DURATION</span>
@@ -829,7 +809,6 @@ export const TracesView: React.FC<TracesViewProps> = ({
               )}
             </div>
 
-            {/* PERSPECTIVE VIEW: TREE */}
             {viewPerspective === 'tree' && (
               <div className="glass-morphism-v2 border-glow-subtle rounded-xl border border-white/[0.12] p-4 space-y-2 relative overflow-hidden">
                 <div className="absolute inset-x-0 top-0 h-[1.5px] apple-liquid-specular pointer-events-none" />
@@ -883,7 +862,6 @@ export const TracesView: React.FC<TracesViewProps> = ({
               </div>
             )}
 
-            {/* PERSPECTIVE VIEW: TIMELINE LANES */}
             {viewPerspective === 'timeline' && (
               <div className="glass-morphism-v2 border-glow-subtle rounded-xl border border-white/[0.12] p-5 space-y-4 relative overflow-hidden">
                 <div className="absolute inset-x-0 top-0 h-[1.5px] apple-liquid-specular pointer-events-none" />
@@ -917,7 +895,6 @@ export const TracesView: React.FC<TracesViewProps> = ({
                           </span>
                         </div>
 
-                        {/* Waterfall bar */}
                         <div className="h-3.5 bg-black rounded relative overflow-hidden border border-white/[0.08] group-hover:border-white/30 transition-colors duration-250">
                           <div
                             className={`absolute top-0 bottom-0 rounded transition-all duration-250 ${
@@ -940,7 +917,6 @@ export const TracesView: React.FC<TracesViewProps> = ({
               </div>
             )}
 
-            {/* PERSPECTIVE VIEW: FLAME GRAPH */}
             {viewPerspective === 'flame' && (
               <div className="glass-morphism-v2 border-glow-subtle rounded-xl border border-white/[0.12] p-5 space-y-3 font-mono text-xs relative overflow-hidden">
                 <div className="absolute inset-x-0 top-0 h-[1.5px] apple-liquid-specular pointer-events-none" />
@@ -976,7 +952,6 @@ export const TracesView: React.FC<TracesViewProps> = ({
               </div>
             )}
 
-            {/* PERSPECTIVE VIEW: EVALUATORS & EVIDENCE */}
             {viewPerspective === 'evidence' && (
               <div className="glass-morphism-v2 border-glow-subtle rounded-xl border border-white/[0.12] p-5 space-y-5 relative overflow-hidden">
                 <div className="absolute inset-x-0 top-0 h-[1.5px] apple-liquid-specular pointer-events-none" />
@@ -1034,11 +1009,9 @@ export const TracesView: React.FC<TracesViewProps> = ({
               </div>
             )}
 
-            {/* Selected Span Detailed Inspector */}
             {currentSpan && (
               <div className="glass-morphism-v2 border-glow-subtle rounded-xl border border-white/[0.12] overflow-hidden relative">
                 <div className="absolute inset-x-0 top-0 h-[1.5px] apple-liquid-specular pointer-events-none" />
-                {/* Inspector Header */}
                 <div className="bg-white/[0.04] px-6 py-3.5 border-b border-white/[0.12] flex items-center justify-between backdrop-blur-xl">
                   <div className="flex items-center space-x-2">
                     <span className="text-[10px] font-mono uppercase tracking-wider text-neutral-400">
@@ -1054,9 +1027,7 @@ export const TracesView: React.FC<TracesViewProps> = ({
                   </span>
                 </div>
 
-                {/* Solid Scrolling Body */}
                 <div className="p-6 space-y-6 font-mono text-xs">
-                  {/* Prompt & Completion */}
                   {currentSpan.prompt && (
                     <div className="space-y-2">
                       <span className="text-neutral-400 uppercase tracking-wider text-[11px] block">
@@ -1079,7 +1050,6 @@ export const TracesView: React.FC<TracesViewProps> = ({
                     </div>
                   )}
 
-                  {/* Tool Invocations */}
                   {currentSpan.toolArgs && (
                     <div className="space-y-2">
                       <span className="text-neutral-400 uppercase tracking-wider text-[11px] block">
@@ -1102,7 +1072,6 @@ export const TracesView: React.FC<TracesViewProps> = ({
                     </div>
                   )}
 
-                  {/* Causal Evidence Triple */}
                   {currentSpan.evidence && (
                     <div className="p-4 rounded-xl bg-black border border-white/[0.08] space-y-3">
                       <span className="text-white font-semibold uppercase tracking-wider text-[11px] block">

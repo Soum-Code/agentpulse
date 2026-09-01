@@ -17,7 +17,6 @@ export const LiquidBackgroundCanvas: React.FC<LiquidBackgroundCanvasProps> = ({
     const container = containerRef.current;
     if (!container) return;
 
-    // WebGL Scene & Camera
     const scene = new THREE.Scene();
     const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
 
@@ -27,36 +26,35 @@ export const LiquidBackgroundCanvas: React.FC<LiquidBackgroundCanvasProps> = ({
       powerPreference: 'high-performance',
     });
 
-    // Color definitions per palette (Apple iOS refined glass style)
+    // Colour values per palette.
     const getPaletteColors = (pal: 'butter' | 'dark' | 'chalk') => {
       if (pal === 'butter') {
         return {
-          baseColor: new THREE.Color(0xfed72a), // Buttermax signature canary yellow
-          liquidColor1: new THREE.Color(0xfbbf24), // Vibrant light amber
-          liquidColor2: new THREE.Color(0xd97706), // Warm deep honey
-          highlightColor: new THREE.Color(0xfffef0), // Translucent frosted white highlight
-          causticColor: new THREE.Color(0xffffff), // Pristine glass refraction specular
+          baseColor: new THREE.Color(0xfed72a), // canary yellow
+          liquidColor1: new THREE.Color(0xfbbf24), // light amber
+          liquidColor2: new THREE.Color(0xd97706), // deep honey
+          highlightColor: new THREE.Color(0xfffef0), // white highlight
+          causticColor: new THREE.Color(0xffffff), // specular
           contrast: 1.15,
           darkMix: 0.08,
         };
       } else if (pal === 'chalk') {
         return {
-          baseColor: new THREE.Color(0xf8fafc), // Apple studio ceramic pearl
-          liquidColor1: new THREE.Color(0xf1f5f9), // Translucent ice white
-          liquidColor2: new THREE.Color(0xe2e8f0), // Soft glass frosted tint
-          highlightColor: new THREE.Color(0xffffff), // Pure specular sheen
-          causticColor: new THREE.Color(0x38bdf8), // Faint prismatic refraction
+          baseColor: new THREE.Color(0xf8fafc), // pearl
+          liquidColor1: new THREE.Color(0xf1f5f9), // ice white
+          liquidColor2: new THREE.Color(0xe2e8f0), // frosted tint
+          highlightColor: new THREE.Color(0xffffff), // specular
+          causticColor: new THREE.Color(0x38bdf8), // refraction tint
           contrast: 0.9,
           darkMix: 0.02,
         };
       } else {
-        // Dark / Obsidian Apple VisionOS glass
         return {
-          baseColor: new THREE.Color(0x06070a), // Deep atmospheric void
-          liquidColor1: new THREE.Color(0x0f172a), // Translucent slate glass
-          liquidColor2: new THREE.Color(0x1e1b4b), // Subtle prismatic indigo
-          highlightColor: new THREE.Color(0xe0f2fe), // Luminous ice-blue glass top sheen
-          causticColor: new THREE.Color(0x38bdf8), // Electric cyan caustic
+          baseColor: new THREE.Color(0x06070a), // near-black base
+          liquidColor1: new THREE.Color(0x0f172a), // slate
+          liquidColor2: new THREE.Color(0x1e1b4b), // indigo
+          highlightColor: new THREE.Color(0xe0f2fe), // ice-blue sheen
+          causticColor: new THREE.Color(0x38bdf8), // cyan caustic
           contrast: 1.25,
           darkMix: 0.45,
         };
@@ -68,7 +66,6 @@ export const LiquidBackgroundCanvas: React.FC<LiquidBackgroundCanvasProps> = ({
     const initW = container.clientWidth || window.innerWidth || 1920;
     const initH = container.clientHeight || window.innerHeight || 1080;
 
-    // Shader Uniforms
     const uniforms = {
       u_time: { value: 0 },
       u_resolution: { value: new THREE.Vector2(initW, initH) },
@@ -96,7 +93,7 @@ export const LiquidBackgroundCanvas: React.FC<LiquidBackgroundCanvasProps> = ({
     updateSize();
     container.replaceChildren(renderer.domElement);
 
-    // Mouse Tracking with smooth physics & velocity
+    // Cursor position, smoothed, with velocity.
     const mouse = {
       x: 0.5,
       y: 0.5,
@@ -109,7 +106,7 @@ export const LiquidBackgroundCanvas: React.FC<LiquidBackgroundCanvasProps> = ({
       speed: 0,
     };
 
-    // Fluid Liquid Simulation Vertex & Fragment Shaders
+    
     const vertexShader = `
       varying vec2 vUv;
       void main() {
@@ -135,7 +132,6 @@ export const LiquidBackgroundCanvas: React.FC<LiquidBackgroundCanvasProps> = ({
 
       varying vec2 vUv;
 
-      // 2D Simplex Noise / Hash
       vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
       vec2 mod289(vec2 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
       vec3 permute(vec3 x) { return mod289(((x*34.0)+1.0)*x); }
@@ -168,7 +164,7 @@ export const LiquidBackgroundCanvas: React.FC<LiquidBackgroundCanvasProps> = ({
         return 130.0 * dot(m, g);
       }
 
-      // Fractional Brownian Motion for translucent glass depth
+      // Fractional Brownian motion, four octaves.
       float fbm(vec2 p) {
         float total = 0.0;
         float amp = 0.52;
@@ -190,11 +186,9 @@ export const LiquidBackgroundCanvas: React.FC<LiquidBackgroundCanvasProps> = ({
         vec2 mouseP = u_mouse;
         mouseP.x *= aspect;
 
-        // Smooth distance and cursor velocity physics
         float distToMouse = length(p - mouseP);
         float mouseSpeedVal = clamp(u_mouse_speed, 0.0, 3.5);
 
-        // Apple Liquid Glass ripple deformation
         float rippleDecay = exp(-distToMouse * 3.4);
         float dynamicRipple = sin(distToMouse * 24.0 - u_time * 4.5) * 0.035 * rippleDecay * (1.0 + mouseSpeedVal * 0.8);
         
@@ -202,7 +196,7 @@ export const LiquidBackgroundCanvas: React.FC<LiquidBackgroundCanvasProps> = ({
         vec2 glassWavePush = normalize(mouseDir + 0.0001) * (rippleDecay * 0.14 + dynamicRipple);
         vec2 glassVortex = vec2(-mouseDir.y, mouseDir.x) * rippleDecay * (u_mouse_velocity.x * 0.6 + 0.08);
 
-        // Multi-tier domain warping for transparent liquid glass transmission
+        // Two-stage domain warp.
         vec2 q = vec2(0.0);
         q.x = fbm(p * 1.5 + vec2(0.0, u_time * 0.045) + glassWavePush + glassVortex);
         q.y = fbm(p * 1.5 + vec2(u_time * 0.040, 0.0) - glassWavePush);
@@ -213,7 +207,6 @@ export const LiquidBackgroundCanvas: React.FC<LiquidBackgroundCanvasProps> = ({
 
         float f = fbm(p * 1.35 + 1.5 * r + glassWavePush * 1.4);
 
-        // Optical Surface Normal & Refraction Derivatives
         float eps = 0.004;
         float fx = fbm(p + vec2(eps, 0.0) + 1.5 * r) - f;
         float fy = fbm(p + vec2(0.0, eps) + 1.5 * r) - f;
@@ -223,12 +216,12 @@ export const LiquidBackgroundCanvas: React.FC<LiquidBackgroundCanvasProps> = ({
         vec3 viewDir = vec3(0.0, 0.0, 1.0);
         float fresnel = pow(1.0 - max(dot(normal, viewDir), 0.0), 3.2);
 
-        // Specular Top-Light & Moving Spotlight over Mouse
+        // Top light plus a spotlight that follows the cursor.
         vec3 lightPos = vec3(mouseP.x, mouseP.y, 0.95);
         vec3 lightDir = normalize(lightPos - vec3(p, 0.0));
         vec3 halfDir = normalize(lightDir + viewDir);
 
-        // Sharp Apple glass specular highlight & secondary ambient gloss
+        // Specular highlight plus ambient gloss.
         float specTight = pow(max(dot(normal, halfDir), 0.0), 48.0) * 1.25;
         float specBroad = pow(max(dot(normal, halfDir), 0.0), 12.0) * 0.35;
         float totalSpec = specTight + specBroad;
@@ -239,12 +232,10 @@ export const LiquidBackgroundCanvas: React.FC<LiquidBackgroundCanvasProps> = ({
         float dispB = fbm(p * 1.35 + 1.5 * r - vec2(0.003, 0.0));
         vec3 chromaticTear = vec3(dispR, dispG, dispB);
 
-        // Palette-based Refined Glass Composition
         vec3 col = u_base_color;
 
         if (u_palette_mode < 0.5) {
-          // --- BUTTER PALETTE: Translucent Apple Liquid Glass on Canary ---
-          // Smooth optical glass layers with soft amber depth and crystalline white specular caustics
+          // Butter: amber layers with white specular caustics.
           float glassRibbon1 = smoothstep(-0.35, 0.65, dispG);
           float glassRibbon2 = smoothstep(-0.15, 0.75, r.x);
           float deepRefraction = smoothstep(0.40, 0.92, chromaticTear.r * r.y);
@@ -253,26 +244,22 @@ export const LiquidBackgroundCanvas: React.FC<LiquidBackgroundCanvasProps> = ({
           col = mix(col, u_liquid_color2, deepRefraction * u_dark_mix);
           col = mix(col, u_highlight_color, glassRibbon2 * 0.40);
 
-          // Glass Bevel Specular & Translucent Sheen
           col += totalSpec * u_highlight_color * 0.75;
           col += fresnel * u_caustic_color * 0.45;
           col += rippleDecay * vec3(0.09, 0.07, 0.02) * (1.0 + mouseSpeedVal * 1.2);
 
         } else if (u_palette_mode < 1.5) {
-          // --- CHALK PALETTE: Apple Studio Ceramic Liquid Glass ---
-          // Translucent frosted glass with soft chromatic dispersion and pure white bevel highlights
+          // Chalk: frosted layers with white bevel highlights.
           float glassSheen = smoothstep(-0.45, 0.65, f);
           col = mix(u_base_color, u_liquid_color1, glassSheen * 0.45);
           col = mix(col, u_liquid_color2, smoothstep(0.1, 0.85, r.x) * 0.18);
           
-          // Pure crystal specular
           col += totalSpec * 0.65;
           col += fresnel * vec3(0.06, 0.09, 0.12);
           col += rippleDecay * 0.05;
 
         } else {
-          // --- DARK OBSIDIAN PALETTE: Apple VisionOS Space Glass ---
-          // Deep atmospheric glass with translucent cyan-indigo refraction and crystalline edges
+          // Dark: cyan-indigo refraction over a near-black base.
           float glassWave1 = smoothstep(-0.35, 0.75, dispG);
           float glassWave2 = smoothstep(-0.25, 0.68, r.x);
 
@@ -289,7 +276,7 @@ export const LiquidBackgroundCanvas: React.FC<LiquidBackgroundCanvasProps> = ({
           col += rippleDecay * u_caustic_color * (0.10 + mouseSpeedVal * 0.25);
         }
 
-        // Soft subtle peripheral vignette to guarantee maximum text readability
+        // Vignette, to keep overlaid text readable.
         float vignette = 1.0 - smoothstep(0.65, 1.45, length(st - 0.5));
         col = mix(col * 0.94, col, vignette);
 
@@ -319,13 +306,11 @@ export const LiquidBackgroundCanvas: React.FC<LiquidBackgroundCanvasProps> = ({
 
     window.addEventListener('pointermove', handlePointerMove, { passive: true });
 
-    // Resize Observer
     const resizeObserver = new ResizeObserver(() => {
       updateSize();
     });
     resizeObserver.observe(container);
 
-    // Animation Loop
     const clock = new THREE.Clock();
 
     const renderLoop = () => {
@@ -334,7 +319,6 @@ export const LiquidBackgroundCanvas: React.FC<LiquidBackgroundCanvasProps> = ({
       const delta = clock.getDelta();
       const elapsedTime = clock.getElapsedTime();
 
-      // Mouse Smooth Spring Physics
       const prevX = mouse.x;
       const prevY = mouse.y;
       mouse.x += (mouse.targetX - mouse.x) * 0.08;
@@ -344,7 +328,6 @@ export const LiquidBackgroundCanvas: React.FC<LiquidBackgroundCanvasProps> = ({
       mouse.vy = mouse.y - prevY;
       mouse.speed = Math.sqrt(mouse.vx * mouse.vx + mouse.vy * mouse.vy) * 20.0;
 
-      // Update Uniforms
       uniforms.u_time.value = elapsedTime;
       uniforms.u_mouse.value.set(mouse.x, mouse.y);
       uniforms.u_mouse_velocity.value.set(mouse.vx, mouse.vy);

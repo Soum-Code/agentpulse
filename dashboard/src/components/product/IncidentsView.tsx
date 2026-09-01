@@ -23,7 +23,6 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
 
   return (
     <div className="space-y-6 pb-28">
-      {/* Header */}
       <div>
         <h2 className="text-lg font-mono font-semibold text-white uppercase tracking-wider flex items-center space-x-2">
           <AlertTriangle className="w-5 h-5 text-rose-400" />
@@ -34,9 +33,7 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
         </p>
       </div>
 
-      {/* Grid: Incident Roster (Left) + Honeycomb Investigation Spine (Right) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* Left Column: Incidents List */}
         <div className="lg:col-span-5 space-y-3">
           {incidents.map((incident) => {
             const isSelected = currentIncident?.id === incident.id;
@@ -84,11 +81,9 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
           })}
         </div>
 
-        {/* Right Column: Honeycomb Investigation Spine */}
         {currentIncident && (
           <div className="lg:col-span-7 ios-liquid-card border-glow-subtle rounded-2xl overflow-hidden relative">
             <div className="absolute inset-x-0 top-0 h-[1.5px] apple-liquid-specular pointer-events-none" />
-            {/* Header */}
             <div className="px-6 py-4 border-b border-white/[0.12] flex items-center justify-between bg-white/[0.04] backdrop-blur-xl">
               <div>
                 <span className="text-[10px] font-mono uppercase tracking-wider text-neutral-400 block font-medium">
@@ -110,16 +105,13 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
               </div>
             </div>
 
-            {/* Investigation Body */}
             <div className="p-6 space-y-6 font-mono text-xs">
-              {/* Spine Step 1: Problem */}
               <div className="space-y-1.5 border-l-2 border-rose-500/80 pl-4">
                 <div className="text-[10px] uppercase text-neutral-400 font-medium">1. Problem Summary</div>
                 <div className="text-sm font-semibold text-white">{currentIncident.title}</div>
                 <p className="text-neutral-300 leading-relaxed">{currentIncident.summary}</p>
               </div>
 
-              {/* Spine Step 2: Context & Associated Agent */}
               <div className="space-y-1.5 border-l-2 border-white/20 pl-4">
                 <div className="text-[10px] uppercase text-neutral-400 font-medium">2. Originating Agent &amp; Swarm Context</div>
                 <div className="flex items-center justify-between bg-white/[0.03] p-3.5 rounded-xl border border-white/[0.08]">
@@ -137,7 +129,6 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
                 </div>
               </div>
 
-              {/* Spine Step 3: Originating Trace */}
               <div className="space-y-1.5 border-l-2 border-amber-500/80 pl-4">
                 <div className="text-[10px] uppercase text-neutral-400 font-medium">3. Failing Execution Trace</div>
                 <div className="flex items-center justify-between bg-white/[0.03] p-3.5 rounded-xl border border-white/[0.08]">
@@ -155,7 +146,6 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
                 </div>
               </div>
 
-              {/* Spine Step 4: Root Cause */}
               <div className="space-y-1.5 border-l-2 border-rose-500/80 pl-4">
                 <div className="text-[10px] uppercase text-neutral-400 font-medium">4. Root Cause Discrepancy</div>
                 <div className="p-3.5 bg-rose-500/10 rounded-xl border border-rose-500/20 text-rose-200/95 leading-relaxed">
@@ -163,7 +153,6 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
                 </div>
               </div>
 
-              {/* Spine Step 5: Suggested Action & Remediation */}
               <div className="p-4 rounded-xl bg-white/[0.03] border border-white/[0.08] space-y-2">
                 <div className="text-[10px] uppercase text-neutral-400 font-semibold flex items-center space-x-1.5">
                   <Wrench className="w-3.5 h-3.5 text-neutral-400" />

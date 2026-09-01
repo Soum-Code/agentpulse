@@ -69,7 +69,6 @@ export const ActiveContextPanel: React.FC<ActiveContextPanelProps> = ({
 
   const hasAnyContext = !!(selectedAgent || selectedTrace || selectedSpan || selectedIncident);
 
-  // Investigation depth level (1 to 4)
   const depthLevel = (selectedAgent ? 1 : 0) + (selectedTrace ? 1 : 0) + (selectedSpan ? 1 : 0) + (selectedIncident ? 1 : 0);
 
   const handleCopyInvestigationReport = () => {
@@ -136,10 +135,8 @@ export const ActiveContextPanel: React.FC<ActiveContextPanelProps> = ({
       }`}
     >
       <div className="glass-morphism-v2 border-glow-subtle rounded-2xl h-full max-h-[calc(100vh-6.5rem)] flex flex-col relative overflow-hidden border border-white/[0.16] shadow-[0_20px_50px_rgba(0,0,0,0.85)]">
-        {/* Top Liquid Specular Beam */}
         <div className="absolute inset-x-0 top-0 h-[1.5px] apple-liquid-specular pointer-events-none" />
 
-        {/* Panel Header */}
         <div className="px-4 py-3 border-b border-white/[0.12] bg-white/[0.04] backdrop-blur-xl flex items-center justify-between shrink-0">
           <div className="flex items-center space-x-2">
             <div className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.9)] animate-pulse" />
@@ -149,7 +146,6 @@ export const ActiveContextPanel: React.FC<ActiveContextPanelProps> = ({
           </div>
 
           <div className="flex items-center space-x-1">
-            {/* Pin Toggle */}
             <button
               onClick={onTogglePin}
               className={`p-1.5 rounded-lg border transition-all text-neutral-400 hover:text-white ${
@@ -162,7 +158,6 @@ export const ActiveContextPanel: React.FC<ActiveContextPanelProps> = ({
               {isPinned ? <Pin className="w-3.5 h-3.5" /> : <PinOff className="w-3.5 h-3.5" />}
             </button>
 
-            {/* Minimize / Close */}
             <button
               onClick={onToggleOpen}
               className="p-1.5 rounded-lg bg-white/[0.06] border border-white/[0.1] text-neutral-400 hover:text-white hover:bg-white/[0.12] transition-all"
@@ -173,7 +168,6 @@ export const ActiveContextPanel: React.FC<ActiveContextPanelProps> = ({
           </div>
         </div>
 
-        {/* Active Breadcrumb Spine */}
         <div className="px-4 py-2.5 bg-black/30 border-b border-white/[0.08] flex items-center space-x-1.5 text-[11px] font-mono overflow-x-auto scrollbar-none shrink-0">
           <span className="text-neutral-400 liquid-card-label font-sans text-[10px] uppercase tracking-wider shrink-0">
             Flow:
@@ -206,7 +200,6 @@ export const ActiveContextPanel: React.FC<ActiveContextPanelProps> = ({
           </span>
         </div>
 
-        {/* Scrollable Content Body */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4 font-mono text-xs">
           {!hasAnyContext ? (
             <div className="text-center py-8 px-3 space-y-3">
@@ -230,7 +223,6 @@ export const ActiveContextPanel: React.FC<ActiveContextPanelProps> = ({
             </div>
           ) : (
             <>
-              {/* SECTION 1: ACTIVE AGENT CONTEXT */}
               {effectiveAgentName && (
                 <div className="ios-liquid-card border-glow-subtle rounded-xl p-3.5 border border-white/[0.12] space-y-2.5 relative group overflow-hidden">
                   <div className="absolute inset-x-0 top-0 h-[1.5px] apple-liquid-specular pointer-events-none opacity-60" />
@@ -276,7 +268,6 @@ export const ActiveContextPanel: React.FC<ActiveContextPanelProps> = ({
                     </div>
                   </div>
 
-                  {/* Quick Agent Metrics */}
                   {selectedAgent && (
                     <div className="grid grid-cols-2 gap-2 pt-2 border-t border-white/[0.08] text-[11px]">
                       <div>
@@ -298,7 +289,6 @@ export const ActiveContextPanel: React.FC<ActiveContextPanelProps> = ({
                     </div>
                   )}
 
-                  {/* Drift Indicator if present */}
                   {selectedAgent?.driftStatus !== 'normal' && selectedAgent?.driftScore && (
                     <div className="pt-2 border-t border-white/[0.08] flex items-center justify-between text-[11px]">
                       <span className="text-amber-300/90 font-sans flex items-center space-x-1">
@@ -316,7 +306,6 @@ export const ActiveContextPanel: React.FC<ActiveContextPanelProps> = ({
                 </div>
               )}
 
-              {/* SECTION 2: ACTIVE TRACE CONTEXT */}
               {selectedTrace && (
                 <div className="ios-liquid-card border-glow-subtle rounded-xl p-3.5 border border-white/[0.12] space-y-2.5 relative group overflow-hidden">
                   <div className="absolute inset-x-0 top-0 h-[1.5px] apple-liquid-specular pointer-events-none opacity-60" />
@@ -355,7 +344,6 @@ export const ActiveContextPanel: React.FC<ActiveContextPanelProps> = ({
                     </p>
                   </div>
 
-                  {/* Trace Telemetry Breakdown */}
                   <div className="grid grid-cols-3 gap-1.5 pt-2 border-t border-white/[0.08] text-[10px] font-mono tabular-nums">
                     <div className="p-1.5 rounded bg-white/[0.04] border border-white/[0.06]">
                       <div className="text-[9px] font-sans text-neutral-400 uppercase tracking-widest liquid-card-label">
@@ -377,7 +365,6 @@ export const ActiveContextPanel: React.FC<ActiveContextPanelProps> = ({
                     </div>
                   </div>
 
-                  {/* Replay Pivot Shortcut */}
                   <div className="pt-2 border-t border-white/[0.08] flex items-center justify-between">
                     <button
                       onClick={() => onSelectTab('replay')}
@@ -390,7 +377,6 @@ export const ActiveContextPanel: React.FC<ActiveContextPanelProps> = ({
                 </div>
               )}
 
-              {/* SECTION 3: ACTIVE SPAN CONTEXT */}
               {selectedSpan && (
                 <div className="ios-liquid-card border-glow-subtle rounded-xl p-3.5 border border-white/[0.12] space-y-2.5 relative group overflow-hidden">
                   <div className="absolute inset-x-0 top-0 h-[1.5px] apple-liquid-specular pointer-events-none opacity-60" />
@@ -415,7 +401,6 @@ export const ActiveContextPanel: React.FC<ActiveContextPanelProps> = ({
                     </div>
                   </div>
 
-                  {/* Grounding Evidence / Evaluator Summary */}
                   {selectedSpan.evidence && (
                     <div className="p-2 rounded bg-purple-500/10 border border-purple-500/25 space-y-1">
                       <div className="text-[9px] font-sans font-medium uppercase tracking-wider text-purple-300 flex items-center space-x-1">
@@ -428,7 +413,6 @@ export const ActiveContextPanel: React.FC<ActiveContextPanelProps> = ({
                     </div>
                   )}
 
-                  {/* Curate to Golden Dataset (Langfuse Loop Action) */}
                   {onCurateToDataset && selectedTrace && (
                     <div className="pt-2 border-t border-white/[0.08]">
                       <button
@@ -456,7 +440,6 @@ export const ActiveContextPanel: React.FC<ActiveContextPanelProps> = ({
                 </div>
               )}
 
-              {/* SECTION 4: ACTIVE INCIDENT CONTEXT (IF PRESENT) */}
               {selectedIncident && (
                 <div className="ios-liquid-card border-glow-subtle rounded-xl p-3.5 border border-rose-500/30 space-y-2.5 relative group overflow-hidden bg-rose-950/20">
                   <div className="absolute inset-x-0 top-0 h-[1.5px] apple-liquid-specular pointer-events-none opacity-60" />
@@ -488,7 +471,6 @@ export const ActiveContextPanel: React.FC<ActiveContextPanelProps> = ({
           )}
         </div>
 
-        {/* Panel Footer: Quick Actions */}
         <div className="p-3 border-t border-white/[0.12] bg-white/[0.04] backdrop-blur-xl flex items-center justify-between shrink-0 gap-2">
           {hasAnyContext && (
             <button

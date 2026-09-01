@@ -39,7 +39,6 @@ export const ReplayView: React.FC<ReplayViewProps> = ({
 
   return (
     <div className="space-y-6 pb-28">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-lg font-mono font-semibold text-white uppercase tracking-wider flex items-center space-x-2">
@@ -51,7 +50,6 @@ export const ReplayView: React.FC<ReplayViewProps> = ({
           </p>
         </div>
 
-        {/* Trace Selector Dropdown */}
         <select
           value={currentTrace.id}
           onChange={(e) => {
@@ -71,10 +69,8 @@ export const ReplayView: React.FC<ReplayViewProps> = ({
         </select>
       </div>
 
-      {/* Main Replay Console */}
       <div className="ios-liquid-card border-glow-subtle rounded-2xl p-6 space-y-6 font-mono text-xs relative overflow-hidden">
         <div className="absolute inset-x-0 top-0 h-[1.5px] apple-liquid-specular pointer-events-none" />
-        {/* Timeline Scrubbing Bar & Controls */}
         <div className="space-y-3 pb-6 border-b border-white/[0.12]">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
@@ -87,7 +83,6 @@ export const ReplayView: React.FC<ReplayViewProps> = ({
             </div>
           </div>
 
-          {/* Stepper Progress Bar */}
           <div className="grid grid-cols-4 gap-2">
             {spans.map((span, idx) => (
               <div
@@ -107,7 +102,6 @@ export const ReplayView: React.FC<ReplayViewProps> = ({
             ))}
           </div>
 
-          {/* Playback Controls Toolbar */}
           <div className="flex items-center justify-center space-x-3 pt-2">
             <div className="flex items-center space-x-2 p-1.5 rounded-xl ios-ultra-thin-toolbar">
               <button
@@ -137,7 +131,6 @@ export const ReplayView: React.FC<ReplayViewProps> = ({
           </div>
         </div>
 
-        {/* Current Span Time-Travel Snapshot */}
         {activeSpan && (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
@@ -158,7 +151,6 @@ export const ReplayView: React.FC<ReplayViewProps> = ({
               </span>
             </div>
 
-            {/* Prompt/Code */}
             {activeSpan.prompt && (
               <div className="space-y-1">
                 <span className="text-neutral-500 text-[10px] uppercase">Input State:</span>
@@ -168,7 +160,6 @@ export const ReplayView: React.FC<ReplayViewProps> = ({
               </div>
             )}
 
-            {/* Tool / Model Output */}
             {(activeSpan.completion || activeSpan.toolOutput) && (
               <div className="space-y-1">
                 <span className="text-neutral-500 text-[10px] uppercase">Output State:</span>
@@ -178,7 +169,6 @@ export const ReplayView: React.FC<ReplayViewProps> = ({
               </div>
             )}
 
-            {/* Evaluator Discrepancy Quote (if any) */}
             {activeSpan.error && (
               <div className="p-3.5 bg-rose-950/30 rounded-lg border border-rose-900/60 text-rose-300">
                 <strong className="block text-[11px] uppercase">Point of Failure:</strong>

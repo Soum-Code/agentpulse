@@ -45,7 +45,6 @@ pulse = agentpulse.init(
     <AnimatePresence>
       {isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -54,7 +53,6 @@ pulse = agentpulse.init(
             className="fixed inset-0 bg-black/75 backdrop-blur-sm"
           />
 
-          {/* Apple Liquid Glass Modal Surface */}
           <motion.div
             initial={{ opacity: 0, scale: 0.96, y: 10 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -62,10 +60,8 @@ pulse = agentpulse.init(
             transition={{ duration: 0.2, ease: 'easeOut' }}
             className="relative w-full max-w-lg apple-liquid-dock ios-ultra-thin ios-ultra-thin-dock rounded-2xl p-7 text-neutral-100 overflow-hidden shadow-2xl"
           >
-            {/* Top Liquid Specular Reflection */}
             <div className="absolute inset-x-0 top-0 h-[1.5px] apple-liquid-specular pointer-events-none" />
 
-            {/* Header */}
             <div className="flex items-center justify-between mb-6 pb-4 border-b border-neutral-800">
               <div className="flex items-center space-x-3">
                 <div className="w-8 h-8 rounded-lg bg-neutral-800 flex items-center justify-center border border-neutral-700">
@@ -85,7 +81,6 @@ pulse = agentpulse.init(
               </button>
             </div>
 
-            {/* Step content */}
             {step === 'input' && (
               <div className="space-y-4">
                 <div>
@@ -112,7 +107,6 @@ pulse = agentpulse.init(
                   />
                 </div>
 
-                {/* Code instrumentation snippet */}
                 <div className="mt-4 rounded-lg bg-neutral-950/80 border border-neutral-800 p-3.5 relative">
                   <div className="flex items-center justify-between text-xs text-neutral-400 mb-2">
                     <span className="flex items-center space-x-1.5 font-mono">

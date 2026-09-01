@@ -13,11 +13,9 @@ import {
 import { useTelemetry } from './lib/useTelemetry';
 import { api } from './lib/api';
 
-// Public Experience components
 import { PublicExperience } from './components/public/PublicExperience';
 import { LiquidBackgroundCanvas } from './components/public/LiquidBackgroundCanvas';
 
-// Product Experience components
 import { ProductHeader } from './components/product/ProductHeader';
 import { FloatingDock } from './components/product/FloatingDock';
 import { CommandPalette } from './components/product/CommandPalette';
@@ -35,10 +33,9 @@ import { ShortcutsHelpModal } from './components/product/ShortcutsHelpModal';
 import { ActiveContextPanel } from './components/product/ActiveContextPanel';
 
 export default function App() {
-  // Mode state: 'public' (editorial, spatial) vs 'product' (calm, precise, investigative)
+  // 'public' is the marketing page, 'product' is the console.
   const [mode, setMode] = useState<DesignMode>('public');
 
-  // Product tab state
   const [productTab, setProductTab] = useState<ProductTab>('overview');
 
   // Context-Preserving selection states (The Most Important UX Pattern: Agent A ↳ Trace 483 ↳ Span 7)
@@ -65,11 +62,9 @@ export default function App() {
     refresh: refreshTelemetry,
   } = useTelemetry();
 
-  // Command palette and shortcuts help modals
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [isShortcutsHelpOpen, setIsShortcutsHelpOpen] = useState(false);
 
-  // Live telemetry pulse simulator toggle
   const [isSimulatingLive, setIsSimulatingLive] = useState(true);
 
   // Global Keyboard shortcut listener (Cmd+K, ?, chord navigation 'g' + key)
@@ -92,7 +87,6 @@ export default function App() {
         return;
       }
 
-      // Escape closes open modals
       if (e.key === 'Escape') {
         if (isShortcutsHelpOpen) {
           setIsShortcutsHelpOpen(false);
@@ -174,7 +168,6 @@ export default function App() {
   // latencies and evaluator evidence that never came from the backend.
 
   // Handler: curate a span into the benchmark dataset. Field names must match
-  // CurateCaseRequest in backend/app/routers/experiments.py.
   const handleCurateToDataset = async (span: Span, trace: Trace) => {
     try {
       const risk = trace.groundingScore;
@@ -216,7 +209,6 @@ export default function App() {
     }
   };
 
-  // Clear context selections
   const handleClearSelection = () => {
     setSelectedAgent(undefined);
     setSelectedTrace(undefined);
@@ -224,7 +216,6 @@ export default function App() {
     setSelectedIncident(undefined);
   };
 
-  // RENDER: Public Editorial Experience
   if (mode === 'public') {
     return (
       <PublicExperience
@@ -235,15 +226,11 @@ export default function App() {
       />
     );
   }
-
-  // RENDER: Product Investigation Experience (Calm, Precise, Investigative with iOS 26 Liquid Glass)
   return (
     <div className="min-h-screen bg-[#06070a] text-[#F5F5F7] selection:bg-neutral-800 selection:text-white flex flex-col relative overflow-x-hidden">
-      {/* Interactive Liquid Fluid Background */}
       <LiquidBackgroundCanvas palette="dark" className="fixed inset-0 pointer-events-none opacity-45 z-0" />
 
       <div className="relative z-10 flex flex-col min-h-screen">
-        {/* Context-Preserving Header */}
         <ProductHeader
           currentTab={productTab}
           onSelectTab={setProductTab}
@@ -261,9 +248,7 @@ export default function App() {
           onToggleContextPanel={() => setIsContextPanelOpen(prev => !prev)}
         />
 
-        {/* Main Product Layout Container with Pinned / Interactive Active Context Side-Panel */}
         <div className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-28 flex flex-col lg:flex-row gap-6 items-start">
-          {/* Main Investigative Content Surface */}
           <main className="flex-1 min-w-0 w-full">
             {/* The views index into these collections directly, so hold them
                 back until the first poll resolves rather than rendering an
@@ -440,7 +425,6 @@ export default function App() {
             )}
           </main>
 
-          {/* Persistent Active Context Side-Panel */}
           <ActiveContextPanel
             currentTab={productTab}
             onSelectTab={setProductTab}
@@ -460,7 +444,6 @@ export default function App() {
           />
         </div>
 
-      {/* Apple Liquid Glass Floating Navigation Dock */}
       <FloatingDock
         currentTab={productTab}
         onSelectTab={setProductTab}
@@ -470,7 +453,6 @@ export default function App() {
         driftWarningCount={agents.filter(a => a.driftStatus !== 'normal').length}
       />
 
-      {/* Raycast-Style Liquid Glass Command Palette (Cmd+K / Ctrl+K) */}
       <CommandPalette
         isOpen={isCommandPaletteOpen}
         onClose={() => setIsCommandPaletteOpen(false)}
@@ -493,7 +475,6 @@ export default function App() {
         onSwitchToPublic={() => setMode('public')}
       />
 
-      {/* Power User Global Shortcuts Cheat Sheet Modal (?) */}
       <ShortcutsHelpModal
         isOpen={isShortcutsHelpOpen}
         onClose={() => setIsShortcutsHelpOpen(false)}

@@ -23,7 +23,7 @@ from app.models import (
 )
 
 
-# ─── Traces Router ────────────────────────────────────────────────────
+# Traces Router
 
 traces_router = APIRouter(prefix="/v1/traces", tags=["traces"])
 
@@ -168,7 +168,7 @@ async def get_trace(trace_id: str):
         }
 
 
-# ─── Agents Router ────────────────────────────────────────────────────
+# Agents Router
 
 agents_router = APIRouter(prefix="/v1/agents", tags=["agents"])
 
@@ -263,7 +263,7 @@ async def get_agent_health(agent_id: str):
         }
 
 
-# ─── Drift Router ─────────────────────────────────────────────────────
+# Drift Router
 
 drift_router = APIRouter(prefix="/v1/drift", tags=["drift"])
 
@@ -305,7 +305,7 @@ async def get_drift_overview():
         return {"agents": overview}
 
 
-# ─── Alerts Router ────────────────────────────────────────────────────
+# Alerts Router
 
 alerts_router = APIRouter(prefix="/v1/alerts", tags=["alerts"])
 
@@ -381,7 +381,7 @@ async def update_alert(alert_id: int, update: AlertUpdate):
         return {"status": "updated", "alert_id": alert_id}
 
 
-# ─── Metrics Router ───────────────────────────────────────────────────
+# Metrics Router
 
 metrics_router = APIRouter(prefix="/v1", tags=["metrics"])
 
@@ -546,11 +546,11 @@ async def health_check():
     verdict = overall_state(api, evaluator, bool(backend["degraded"]))
 
     return {
-        # ─── preserved contract ───────────────────────────────────────
+        # preserved contract
         "status": "healthy",
         "models": models_loaded(),
         "version": "0.1.0",
-        # ─── explicit, machine-readable state ─────────────────────────
+        # explicit, machine-readable state
         "state": verdict["state"],
         "reasons": verdict["reasons"],
         "liveness": liveness(),

@@ -75,7 +75,6 @@ export const FloatingDock: React.FC<FloatingDockProps> = ({
 
   return (
     <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 flex flex-col items-center select-none">
-      {/* Secondary Menu Popover (Apple Liquid Glass) */}
       <AnimatePresence>
         {showSecondaryMenu && (
           <motion.div
@@ -85,7 +84,6 @@ export const FloatingDock: React.FC<FloatingDockProps> = ({
             transition={{ type: 'spring', stiffness: 450, damping: 30 }}
             className="mb-3.5 apple-liquid-dock ios-ultra-thin ios-ultra-thin-dock rounded-2xl p-2 min-w-[290px] shadow-2xl relative overflow-hidden"
           >
-            {/* Top Liquid Specular Reflection */}
             <div className="absolute inset-x-0 top-0 h-[1px] apple-liquid-specular pointer-events-none" />
 
             <div className="text-[10px] font-mono uppercase tracking-wider text-neutral-400 px-3 py-1.5 border-b border-white/[0.08] flex items-center justify-between">
@@ -122,7 +120,6 @@ export const FloatingDock: React.FC<FloatingDockProps> = ({
         )}
       </AnimatePresence>
 
-      {/* Floating Main Dock (Apple Liquid Glass Material & Fluid Spring Physics) */}
       <motion.div
         ref={dockRef}
         onMouseMove={handleMouseMove}
@@ -132,10 +129,8 @@ export const FloatingDock: React.FC<FloatingDockProps> = ({
         transition={{ type: 'spring', stiffness: 400, damping: 30 }}
         className="apple-liquid-dock ios-ultra-thin ios-ultra-thin-dock rounded-2xl p-1.5 flex items-center space-x-1 relative overflow-hidden"
       >
-        {/* Dynamic Liquid Specular Light Sheen */}
         <div className="absolute inset-x-0 top-0 h-[1.5px] apple-liquid-specular pointer-events-none" />
         
-        {/* Interactive Mouse-Tracking Fluid Glow */}
         {mousePos && (
           <div
             className="absolute pointer-events-none rounded-full w-28 h-28 -translate-x-1/2 -translate-y-1/2 blur-xl bg-white/[0.08] transition-opacity duration-200"
@@ -146,12 +141,10 @@ export const FloatingDock: React.FC<FloatingDockProps> = ({
           />
         )}
 
-        {/* Dock Items with Magnification Kinematics */}
         {mainItems.map((item, idx) => {
           const Icon = item.icon;
           const active = currentTab === item.id;
 
-          // Apple Dock Fluid Distance Magnification Physics
           let scale = 1;
           if (hoveredIndex !== null) {
             const distance = Math.abs(hoveredIndex - idx);
@@ -172,7 +165,6 @@ export const FloatingDock: React.FC<FloatingDockProps> = ({
               }}
               className="relative flex items-center space-x-2 px-3.5 py-2 rounded-xl text-xs font-mono transition-colors z-10"
             >
-              {/* Liquid Sliding Pill Transition (Mercury Fluid Effect) */}
               {active && (
                 <motion.div
                   layoutId="apple-liquid-active-pill"
@@ -199,7 +191,6 @@ export const FloatingDock: React.FC<FloatingDockProps> = ({
                 {item.label}
               </span>
 
-              {/* Status Badge with Spring Pop */}
               {item.badge !== undefined && item.badge > 0 && (
                 <motion.span
                   initial={{ scale: 0.8 }}
@@ -213,10 +204,8 @@ export const FloatingDock: React.FC<FloatingDockProps> = ({
           );
         })}
 
-        {/* Apple Refraction Glass Divider */}
         <div className="w-[1px] h-5 bg-white/[0.14] mx-1 relative z-10 shadow-[0_0_1px_rgba(255,255,255,0.2)]" />
 
-        {/* Secondary Popout Trigger */}
         <motion.button
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.94 }}
@@ -238,7 +227,6 @@ export const FloatingDock: React.FC<FloatingDockProps> = ({
           />
         </motion.button>
 
-        {/* Command Palette Trigger */}
         <motion.button
           whileHover={{ scale: 1.08 }}
           whileTap={{ scale: 0.92 }}
@@ -250,7 +238,6 @@ export const FloatingDock: React.FC<FloatingDockProps> = ({
           <Command className="w-4 h-4" />
         </motion.button>
 
-        {/* Keyboard Shortcuts Trigger */}
         {onOpenShortcutsModal && (
           <motion.button
             whileHover={{ scale: 1.08 }}

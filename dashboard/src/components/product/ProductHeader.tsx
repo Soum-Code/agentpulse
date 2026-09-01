@@ -43,12 +43,9 @@ export const ProductHeader: React.FC<ProductHeaderProps> = ({
 
   return (
     <header className="sticky top-0 z-30 ios-ultra-thin ios-ultra-thin-header px-4 sm:px-6 py-2.5 flex items-center justify-between text-xs font-mono relative">
-      {/* Top Specular Beam */}
       <div className="absolute inset-x-0 top-0 h-[1px] liquid-specular-beam pointer-events-none" />
 
-      {/* Context-Preserving Breadcrumb Spine (Hierarchy: Agent A > Trace 483 > Span 7) */}
       <div className="flex items-center space-x-2 overflow-x-auto py-1 scrollbar-none min-w-0 pr-4 z-10">
-        {/* Brand Root: Redirects to Website */}
         <button
           onClick={() => {
             onClearSelection();
@@ -68,7 +65,6 @@ export const ProductHeader: React.FC<ProductHeaderProps> = ({
 
         <ChevronRight className="w-3.5 h-3.5 text-neutral-600 shrink-0" />
 
-        {/* Tab Level / Overview Reset */}
         <button
           onClick={() => {
             onClearSelection();
@@ -80,7 +76,6 @@ export const ProductHeader: React.FC<ProductHeaderProps> = ({
           {currentTab.replace('-', ' ')}
         </button>
 
-        {/* Hierarchy Level 1: Agent */}
         {effectiveAgentName && (
           <>
             <ChevronRight className="w-3.5 h-3.5 text-neutral-600 shrink-0" />
@@ -99,7 +94,6 @@ export const ProductHeader: React.FC<ProductHeaderProps> = ({
           </>
         )}
 
-        {/* Hierarchy Incident Context (if viewing incident) */}
         {selectedIncident && (
           <>
             <ChevronRight className="w-3.5 h-3.5 text-neutral-600 shrink-0" />
@@ -122,7 +116,6 @@ export const ProductHeader: React.FC<ProductHeaderProps> = ({
           </>
         )}
 
-        {/* Hierarchy Level 2: Trace */}
         {selectedTrace && (
           <>
             <ChevronRight className="w-3.5 h-3.5 text-neutral-600 shrink-0" />
@@ -145,7 +138,6 @@ export const ProductHeader: React.FC<ProductHeaderProps> = ({
           </>
         )}
 
-        {/* Hierarchy Level 3: Span */}
         {selectedSpan && (
           <>
             <ChevronRight className="w-3.5 h-3.5 text-neutral-600 shrink-0" />
@@ -165,7 +157,6 @@ export const ProductHeader: React.FC<ProductHeaderProps> = ({
           </>
         )}
 
-        {/* Clear Context button if hierarchy is active */}
         {hasContextHierarchy && (
           <button
             onClick={onClearSelection}
@@ -177,9 +168,7 @@ export const ProductHeader: React.FC<ProductHeaderProps> = ({
         )}
       </div>
 
-      {/* Right Controls */}
       <div className="flex items-center space-x-2.5 shrink-0 z-10">
-        {/* Live Simulator Pulsar */}
         <button
           onClick={onToggleLive}
           className={`flex items-center space-x-2 px-3 py-1 rounded-lg border text-[11px] font-mono transition-all ${
@@ -193,7 +182,6 @@ export const ProductHeader: React.FC<ProductHeaderProps> = ({
           <span className="hidden sm:inline font-semibold">{isSimulatingLive ? 'LIVE INGESTION' : 'STREAM PAUSED'}</span>
         </button>
 
-        {/* Cmd+K Quick Trigger */}
         <button
           onClick={onOpenCommandPalette}
           className="flex items-center space-x-2 liquid-glass-pill text-neutral-300 hover:text-white px-2.5 py-1 rounded-lg transition-all"
@@ -206,7 +194,6 @@ export const ProductHeader: React.FC<ProductHeaderProps> = ({
           </kbd>
         </button>
 
-        {/* Active Context Panel Toggle */}
         {onToggleContextPanel && (
           <button
             onClick={onToggleContextPanel}
@@ -225,7 +212,6 @@ export const ProductHeader: React.FC<ProductHeaderProps> = ({
           </button>
         )}
 
-        {/* Global Keyboard Shortcuts Cheat Sheet Button */}
         {onOpenShortcutsModal && (
           <button
             onClick={onOpenShortcutsModal}
@@ -239,7 +225,6 @@ export const ProductHeader: React.FC<ProductHeaderProps> = ({
           </button>
         )}
 
-        {/* Switch to Public Website view */}
         <button
           onClick={onSwitchToPublic}
           className="text-neutral-300 hover:text-white px-2.5 py-1 rounded-lg hover:bg-white/[0.08] transition-colors flex items-center space-x-1 border border-transparent hover:border-white/[0.12]"
