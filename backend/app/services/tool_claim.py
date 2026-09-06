@@ -88,6 +88,24 @@ SUCCESS_CLAIM_PATTERNS = [
 ]
 
 
+def extract_result_count(text: str | None) -> Optional[int]:
+    """Read the result count out of a tool's own result summary.
+
+    Uses the same COUNT_PATTERNS as claim extraction, so the number a tool
+    reports and the number an agent claims are read the same way. Without this
+    the runner has no result_count to compare against and WRONG_COUNT can
+    never fire.
+    """
+    if not text:
+        return None
+    lowered = text.lower()
+    for pattern in COUNT_PATTERNS:
+        match = re.search(pattern, lowered)
+        if match:
+            return int(match.group(1))
+    return None
+
+
 def extract_claims(text: str) -> list[ToolClaim]:
     """Extract tool-usage claims from agent output text.
     
