@@ -46,7 +46,7 @@ logger = logging.getLogger("agentpulse")
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan: startup and shutdown hooks."""
-    # ── Startup ──
+    # Startup
     logger.info("AgentPulse backend starting...")
 
     # Init database
@@ -136,7 +136,7 @@ async def lifespan(app: FastAPI):
 
     yield
 
-    # ── Shutdown ──
+    # Shutdown
     logger.info("AgentPulse backend shutting down...")
     await close_db()
     logger.info("Shutdown complete")
@@ -155,7 +155,7 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
-    # ── Middleware ──
+    # Middleware
     # Starlette wraps middleware in reverse registration order (last added =
     # outermost = runs first on the way in), so CORSMiddleware must be added
     # last. Otherwise APIKeyMiddleware intercepts and 401s the CORS preflight
@@ -179,7 +179,7 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
-    # ── Routers ──
+    # Routers
     app.include_router(ingest_router)
     app.include_router(traces_router)
     app.include_router(agents_router)
@@ -190,7 +190,7 @@ def create_app() -> FastAPI:
     from app.routers.experiments import router as experiments_router
     app.include_router(experiments_router)
 
-    # ── Root ──
+    # Root
     @app.get("/")
     async def root():
         return {

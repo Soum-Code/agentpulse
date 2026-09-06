@@ -57,7 +57,7 @@ class GroundingResult:
     semantic_similarity: Optional[float] = None
 
 
-# ─── Stage 1: Semantic Similarity ──────────────────────────────────────
+# Stage 1: Semantic Similarity
 
 STAGE1_SAFE_THRESHOLD = 0.85  # Above this: likely grounded, skip Stage 2
 STAGE1_RISK_THRESHOLD = 0.40  # Below this: likely problematic, go to Stage 2
@@ -102,7 +102,7 @@ def compute_semantic_similarity(
         return None
 
 
-# ─── Stage 2: NLI Grounding ───────────────────────────────────────────
+# Stage 2: NLI Grounding
 
 def compute_nli_grounding(
     source_text: str,
@@ -169,7 +169,7 @@ def compute_nli_grounding(
         return None
 
 
-# ─── Two-Stage Cascade ─────────────────────────────────────────────────
+# Two-Stage Cascade
 
 def evaluate_grounding(
     source_text: str,
@@ -215,7 +215,7 @@ def evaluate_grounding(
     return None
 
 
-# ─── Model Loading ─────────────────────────────────────────────────────
+# Model Loading
 
 def load_models(
     nli_model_name: str = "cross-encoder/nli-deberta-v3-small",

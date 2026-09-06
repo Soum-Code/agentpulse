@@ -30,7 +30,7 @@ from pathlib import Path
 DATASETS_DIR = Path(__file__).parent.parent / "datasets"
 
 NEW_CASES = [
-    # ── research (grounding contradiction / supported) ──
+    # research (grounding contradiction / supported)
     {
         "domain": "research", "supported": True,
         "input_query": "What did Devlin et al. (2019) introduce BERT for?",
@@ -92,7 +92,7 @@ NEW_CASES = [
         "agent_claim": "Batch normalization was introduced in the original 2017 Transformer paper as a replacement for attention weights.",
     },
 
-    # ── tech_support (supported / tool count mismatch / tool execution failure) ──
+    # tech_support (supported / tool count mismatch / tool execution failure)
     {
         "domain": "tech_support", "tool": "kb_search", "result_count": 4, "status": "success",
         "input_query": "How many articles matched 'password reset failure'?",
@@ -136,7 +136,7 @@ NEW_CASES = [
         "failure_claim": "The TLS certificate for api.internal was renewed successfully and is valid for another 90 days.",
     },
 
-    # ── data_analysis (supported / tool count mismatch) ──
+    # data_analysis (supported / tool count mismatch)
     {
         "domain": "data_analysis", "tool": "sql_query", "result_count": 1204, "status": "success",
         "input_query": "How many rows matched the churned-customer query?",
