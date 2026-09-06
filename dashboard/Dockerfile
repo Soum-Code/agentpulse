@@ -5,6 +5,10 @@ RUN npm ci
 COPY . .
 ARG VITE_API_KEY=""
 ENV VITE_API_KEY=$VITE_API_KEY
+# The UI reads telemetry from this origin at runtime; without it the build
+# falls back to the dev default of http://localhost:8000.
+ARG VITE_API_URL=""
+ENV VITE_API_URL=$VITE_API_URL
 RUN npm run build
 
 FROM nginx:alpine

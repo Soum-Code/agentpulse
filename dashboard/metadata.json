@@ -1,0 +1,6 @@
+{
+  "name": "AgentPulse",
+  "description": "AI agent observability, evaluation, investigation, and experimentation platform with dual public editorial and calm precision product modes.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
