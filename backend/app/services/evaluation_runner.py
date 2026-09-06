@@ -47,6 +47,7 @@ from app.models import (
     Span,
     Trace,
 )
+from app.services.tool_claim import extract_result_count
 
 logger = logging.getLogger("agentpulse.evaluation_runner")
 
@@ -133,6 +134,7 @@ def run_evaluation_sync(evaluator, payload: dict[str, Any],
     Argument construction is identical to the previous in-router version.
     """
     tool_name = payload.get("tool_name")
+    tool_result_summary = payload.get("tool_result_summary")
     return evaluator.evaluate_span(
         span_id=payload["span_id"],
         trace_id=payload["trace_id"],
@@ -143,8 +145,14 @@ def run_evaluation_sync(evaluator, payload: dict[str, Any],
         upstream_output=prior_agent_outputs[-1][1] if prior_agent_outputs else None,
         prior_agent_outputs=prior_agent_outputs or None,
         tool_calls=(
-            [{"tool_name": tool_name,
-              "result_summary": payload.get("tool_result_summary")}]
+            [{
+                "tool_name": tool_name,
+                "result_summary": tool_result_summary,
+                # Without a result_count the WRONG_COUNT check returns early,
+                # so the tool-claim signal could never fire on this path.
+                "result_count": extract_result_count(tool_result_summary),
+                "status": payload.get("status", "success"),
+            }]
             if tool_name else None
         ),
         status=payload.get("status", "success"),
