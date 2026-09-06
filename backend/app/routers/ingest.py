@@ -272,7 +272,14 @@ async def simulate_pipeline(
             tool_name="academic_search_api",
             tool_result_summary="Found 3 papers: Vaswani (2017), Devlin (2019), Brown (2020)",
             input_summary="Query: transformer architectures",
-            output_summary="Retrieved 3 foundational papers from academic database",
+            # COUNT_PATTERNS needs the noun adjacent to the number, so the
+            # count claim is phrased "retrieved N papers" with no adjective
+            # between them. Clean matches the tool's 3; tool_mismatch claims 10.
+            output_summary=(
+                "Retrieved 3 papers from the academic database"
+                if not is_mismatch
+                else "Retrieved 10 papers from the academic database"
+            ),
             status="success",
         ),
         SpanInput(
