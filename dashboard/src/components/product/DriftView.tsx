@@ -166,10 +166,10 @@ export const DriftView: React.FC<DriftViewProps> = ({
                 <div className="flex items-center justify-between pb-4 border-b border-white/[0.12]">
                   <div className="font-mono text-xs text-white font-semibold flex items-center space-x-2">
                     <Crosshair className="w-4 h-4 text-rose-400" />
-                    <span>2D Embedding Space Vector Scatter (UMAP Projection)</span>
+                    <span>Drift schematic (no projection: the API exposes distances, not coordinates)</span>
                   </div>
                   <span className="text-[11px] font-mono text-neutral-400">
-                    Click points below to inspect execution spans
+                    Illustrative regions, not plotted data
                   </span>
                 </div>
 
@@ -177,18 +177,18 @@ export const DriftView: React.FC<DriftViewProps> = ({
                   <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff05_1px,transparent_1px),linear-gradient(to_bottom,#ffffff05_1px,transparent_1px)] bg-[size:28px_28px]" />
 
                   <div className="absolute left-[15%] top-[35%] w-52 h-44 rounded-full bg-emerald-500/5 border border-emerald-500/20 flex flex-col items-center justify-center p-4">
-                    <span className="text-[10px] font-mono font-bold text-emerald-400">Golden Baseline Region</span>
-                    <span className="text-[9px] font-mono text-emerald-500/70">5,000 verified runs</span>
+                    <span className="text-[10px] font-mono font-bold text-emerald-400">Baseline pool</span>
+                    <span className="text-[9px] font-mono text-emerald-500/70">first 20 samples</span>
                   </div>
 
                   <div className="absolute left-[38%] top-[25%] w-36 h-36 rounded-full bg-amber-500/5 border border-amber-500/20 flex flex-col items-center justify-center p-2">
-                    <span className="text-[10px] font-mono font-bold text-amber-400">Deviation Zone</span>
-                    <span className="text-[9px] font-mono text-amber-500/70">12-30% Δ</span>
+                    <span className="text-[10px] font-mono font-bold text-amber-400">Current window</span>
+                    <span className="text-[9px] font-mono text-amber-500/70">rolling 12 samples</span>
                   </div>
 
                   <div className="absolute right-[12%] top-[20%] w-48 h-48 rounded-full bg-rose-500/10 border-2 border-rose-500/30 flex flex-col items-center justify-center p-4 animate-pulse">
-                    <span className="text-[10px] font-mono font-bold text-rose-300">Critical Drift Cluster</span>
-                    <span className="text-[9px] font-mono text-rose-400/80">&gt; 50% Δ Divergence</span>
+                    <span className="text-[10px] font-mono font-bold text-rose-300">Alert region</span>
+                    <span className="text-[9px] font-mono text-rose-400/80">&gt; 0.300 Δ sustained</span>
                   </div>
 
                   {currentProfile.points.map((pt, idx) => {
@@ -216,15 +216,15 @@ export const DriftView: React.FC<DriftViewProps> = ({
                 <div className="flex items-center justify-between text-xs font-mono text-neutral-400 pt-2 border-t border-neutral-800/80">
                   <span className="flex items-center space-x-1.5">
                     <span className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
-                    <span>Golden Baseline</span>
+                    <span>Baseline pool</span>
                   </span>
                   <span className="flex items-center space-x-1.5">
                     <span className="w-2.5 h-2.5 rounded-full bg-amber-400" />
-                    <span>Deviation Zone</span>
+                    <span>Current window</span>
                   </span>
                   <span className="flex items-center space-x-1.5">
                     <span className="w-2.5 h-2.5 rounded-full bg-rose-400" />
-                    <span>Critical Drift Outliers</span>
+                    <span>Above 0.300 Δ</span>
                   </span>
                 </div>
               </div>
