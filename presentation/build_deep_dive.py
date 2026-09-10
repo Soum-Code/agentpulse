@@ -451,16 +451,26 @@ A(P(
     "about tool usage from prose, and those are compared against what the "
     "trace recorded the tool returning. It catches an agent narrating "
     "“retrieved 10 papers” when the tool returned one."))
+A(P(
+    "For most of the project's life this signal could not fire at all. The "
+    "count comparison returns early unless the tool call carries a numeric "
+    "<font face='Courier'>result_count</font>, and the runner built its tool "
+    "call records with only <font face='Courier'>tool_name</font> and "
+    "<font face='Courier'>result_summary</font>. Called directly with a count "
+    "supplied the detector scored a mismatch at 1.0; through the API it scored "
+    "0.0, and across 1,328 evaluations no span had ever scored above zero."))
+A(P(
+    "The runner now derives <font face='Courier'>result_count</font> from the "
+    "tool's own result summary, using the same patterns that read a count out "
+    "of an agent's prose. Verified end to end: an agent claiming ten papers "
+    "against a tool reporting three scores 1.0 and raises "
+    "TOOL_CLAIM_MISMATCH, while a matching claim scores 0.0 and raises "
+    "nothing."))
 A(note(
-    "This signal does not currently fire. The count comparison returns early "
-    "unless the tool call carries a numeric result_count, and "
-    "evaluation_runner.py builds tool call records with only tool_name and "
-    "result_summary - result_count is never populated on the ingest path. "
-    "Called directly with a count supplied, the detector scores the mismatch "
-    "correctly at 1.0; through the API it scores 0.0. Across 1,328 evaluations "
-    "on the development instance, no evaluation has a non-zero tool-claim "
-    "score, and no TOOL_CLAIM_MISMATCH alert has ever been raised. The "
-    "detector is sound; the wiring is not."))
+    "The detector's own patterns are unchanged, so its documented limits still "
+    "hold: a claim must appear in prose with the count adjacent to the noun, "
+    "and harnesses that emit structured tool_call fields without narrating "
+    "them are still not covered."))
 
 # ---- 10. Risk & alerts -----------------------------------------------------
 A(Spacer(1, 5 * mm)); A(H1("10. Risk aggregation and alerting"))
@@ -635,10 +645,8 @@ A(P(
     "coverage is worse than one that admits gaps."))
 A(table([
     ["Limit", "Detail"],
-    ["Tool-claim signal is inert",
-     "result_count is never populated on the ingest path, so WRONG_COUNT cannot fire. Zero non-zero scores across 1,328 evaluations."],
-    ["Simulator scenario is dead code",
-     "The tool_mismatch scenario computes an is_mismatch flag and never uses it, so it emits the same payload as the clean scenario."],
+    ["Tool-claim needs narrated claims",
+     "The count must appear in prose next to the noun. Harnesses that emit structured tool_call fields without narrating them produce no claim to check."],
     ["Evaluation coverage is partial",
      "1,328 of 20,771 spans carry an evaluation on the development instance, roughly 6 percent. Most spans predate the current worker or were load-test fill."],
     ["Drift needs 32 samples per agent",

@@ -169,7 +169,7 @@ function callout(s, text, opts = {}) {
     ['Grounding', 'Is the output supported by its evidence?', 'MiniLM cosine gate to DeBERTa-v3 NLI', 'Beta'],
     ['Drift / ASI', 'Has this agent shifted from its own baseline?', 'Embedding centroid distance, EMA and windowed', 'Beta'],
     ['Disagreement', 'Do two agents contradict each other?', 'Pairwise NLI within one trace', 'Experimental'],
-    ['Tool-claim', 'Does the claim match what the tool returned?', 'Regex extraction vs recorded tool result', 'Experimental'],
+    ['Tool-claim', 'Does the claim match what the tool returned?', 'Regex extraction vs count parsed from the tool result', 'Experimental'],
   ], { colW: [1.85, 3.5, 4.6, 1.94], fontSize: 12.5 });
   s.addText(
     'Maturity tiers are the project\'s own. Slide 16 states what each tier means in practice.',
@@ -448,10 +448,8 @@ after 14 shifted spans
   const s = slide('What does not work yet', 'Honest limits');
   table(s, [
     ['Limit', 'Detail'],
-    ['Tool-claim signal is inert',
-      'result_count is never populated on the ingest path, so the count check returns early. Zero non-zero scores across 1,328 evaluations.'],
-    ['Simulator scenario is dead code',
-      'The tool_mismatch scenario computes a flag it never uses, so it emits the clean payload.'],
+    ['Tool-claim needs narrated claims',
+      'The count must appear in prose next to the noun. Harnesses that emit structured tool_call fields without narrating them produce no claim to check.'],
     ['Drift needs 32 samples per agent',
       'Short-lived agents never produce a sustained value; the current window does not survive a restart.'],
     ['Benchmark is small',

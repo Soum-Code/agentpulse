@@ -8,7 +8,7 @@ const SCENARIOS = [
   { id: 'clean', label: 'Clean execution (grounded, consistent)' },
   { id: 'hallucination', label: 'Injected contradiction (fires grounding NLI)' },
   { id: 'drift', label: 'Vocabulary shift (same payload as contradiction)' },
-  { id: 'tool_mismatch', label: 'Tool claim mismatch (not yet implemented server-side)' },
+  { id: 'tool_mismatch', label: 'Tool claim mismatch (agent claims 10, tool returns 3)' },
 ];
 
 interface TelemetryLabViewProps {
