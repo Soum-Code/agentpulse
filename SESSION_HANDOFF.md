@@ -1,6 +1,6 @@
 # Session Handoff — AgentPulse Work Log
 
-**Written:** 2026-08-23. **Rewritten clean:** 2026-08-26. **Updated:** 2026-08-27 (Sections 7–9 disagreement/benchmark/positioning; 10 drift diagnosis and fix; 11 tool-claim external test; 12 blocked redesign; 13 competitor audits). **Updated:** 2026-08-28 (Section 14 — external disagreement validation, the last of the three signals to be checked and the third to fail; Section 15 — the productization arc, seven phases from migrations through health/readiness). **Updated:** 2026-08-30 (Section 16 — dashboard unfrozen, the landing-page claim audit, and the half-finished drift restore). **Updated:** 2026-08-31 (Section 17 — Final Review deliverables, the literature survey, and repository access). **Updated:** 2026-09-12 (Section 18 — frontend replaced and wired to the live API, the tool-claim signal made to fire for the first time, and the Compose stack fixed so it actually evaluates).
+**Written:** 2026-08-23. **Rewritten clean:** 2026-08-26. **Updated:** 2026-08-27 (Sections 7–9 disagreement/benchmark/positioning; 10 drift diagnosis and fix; 11 tool-claim external test; 12 blocked redesign; 13 competitor audits). **Updated:** 2026-08-28 (Section 14 — external disagreement validation, the last of the three signals to be checked and the third to fail; Section 15 — the productization arc, seven phases from migrations through health/readiness). **Updated:** 2026-08-30 (Section 16 — dashboard unfrozen, the landing-page claim audit, and the half-finished drift restore). **Updated:** 2026-08-31 (Section 17 — Final Review deliverables, the literature survey, and repository access). **Updated:** 2026-09-12 (Section 18 — frontend replaced and wired to the live API, the tool-claim signal made to fire for the first time, and the Compose stack fixed so it actually evaluates; MIT licence added, closing a claim the README had been making against a missing file).
 
 **Project:** AgentPulse — self-hostable observability SDK for grounding-risk and drift monitoring in multi-agent LLM systems. M.Tech project. Working directory: `C:\MLOPs\3rd sem project\Agentpluse` (renamed from `project one agent`; the venv's editable installs still point at the old path).
 
@@ -31,7 +31,7 @@
 - **The tool-claim signal had never fired once, and now does.** Zero non-zero scores across 1,328 evaluations, because `result_count` was never populated on the ingest path — three breaks plus a fourth that only surfaced after the first three were fixed. Section 18.4. This is the clearest example yet of a detector that benchmarks well and is unreachable in production.
 - **`docker compose up` could never have worked.** No worker service, an undeclared `aiohttp`, a healthcheck calling a `curl` the image does not ship, and another probing an IPv6 `localhost` nginx does not bind. All four fixed and the stack verified end to end. Section 18.5.
 - **Claims needed three separate correction passes**, the last one finding a "UMAP Projection" in the product views after the public page had been cleaned. Assume a sweep missed somewhere until it has been run against rendered output, not source. Section 18.3.
-- **`agentpulse` is public now**, scanned for secrets first. It deliberately still has no LICENSE, pending confirmation of who owns the M.Tech IP — which means all rights reserved. Section 18.8.
+- **`agentpulse` is public now**, scanned for secrets first, and MIT-licensed. The licence was not a new decision: the README badge, the README link and `sdk/pyproject.toml` had all claimed MIT for months against a LICENSE file that did not exist. Section 18.8.
 - **A literature survey now exists: 17 verified works, 9 from 2023 onward.** The papers are real and their limitations accurate, but they have not been read - the table is a reading list still owed. Section 17.3.
 - **The baseline comparison shows the full system losing to its own ablation** (F1 0.842 against 0.941), because drift is a per-agent signal folded into a per-claim score. Kept in the deck with the mechanism and the nine-day staleness caveat. Section 17.4.
 - **`main` has a second writer and no branch protection** - the Free plan does not offer it on private repos. Section 17.5.
@@ -1165,8 +1165,13 @@ outside the slide. Caught by a geometry check, not by eye.
   `hello-cloudbuild-app`, `hello-cloudbuild-env`, `hello-world-mlops`), taking the account
   from 18 to 13.
 - MIT licences added to nine code repositories. `CAR` (Apache-2.0) and `agenttrace` (MIT)
-  were left alone. **`agentpulse` deliberately has none** pending confirmation of who owns
-  the M.Tech IP.
+  were left alone. **`agentpulse` was left unlicensed at first**, pending confirmation of
+  who owns the M.Tech IP, and licensed MIT once the user decided. That turned out not to be
+  a new decision at all: the README badge, the README's `MIT. See [LICENSE](LICENSE)` link
+  and `sdk/pyproject.toml`'s metadata had all claimed MIT while the file was missing, so the
+  repository went public claiming a licence it did not have. Adding it made three existing
+  claims true rather than introducing a fourth. `backend/pyproject.toml`, which had no
+  licence field at all, now declares MIT too.
 - 277 decorative comments stripped from the frontend and 27 Python banner comments
   simplified. Verified code-identical: with comments stripped from both sides, all 25
   changed files compared equal to HEAD.
@@ -1188,7 +1193,6 @@ New and still open:
 
 - **The dashboard has no test framework.** Every frontend fix this session rests on type
   checking, a successful build, and manual verification against a live backend.
-- **`agentpulse` has no LICENSE** while being public, which means all rights reserved.
 - **Three superseded presentation drafts** (`AgentPulse.pptx`, `AgentPulse_Final_Review.pptx`,
   `AgentPulse_Speech_Notes.pdf`) are still tracked, along with their now-dead generators.
 - **`hybrid-moe-codegen` carries 83 MB of model weights in git**; removing them needs a
