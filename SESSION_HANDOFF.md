@@ -1,8 +1,8 @@
 # Session Handoff — AgentPulse Work Log
 
-**Written:** 2026-08-23. **Rewritten clean:** 2026-08-26. **Updated:** 2026-08-27 (Sections 7–9 disagreement/benchmark/positioning; 10 drift diagnosis and fix; 11 tool-claim external test; 12 blocked redesign; 13 competitor audits). **Updated:** 2026-08-28 (Section 14 — external disagreement validation, the last of the three signals to be checked and the third to fail; Section 15 — the productization arc, seven phases from migrations through health/readiness). **Updated:** 2026-08-30 (Section 16 — dashboard unfrozen, the landing-page claim audit, and the half-finished drift restore). **Updated:** 2026-08-31 (Section 17 — Final Review deliverables, the literature survey, and repository access).
+**Written:** 2026-08-23. **Rewritten clean:** 2026-08-26. **Updated:** 2026-08-27 (Sections 7–9 disagreement/benchmark/positioning; 10 drift diagnosis and fix; 11 tool-claim external test; 12 blocked redesign; 13 competitor audits). **Updated:** 2026-08-28 (Section 14 — external disagreement validation, the last of the three signals to be checked and the third to fail; Section 15 — the productization arc, seven phases from migrations through health/readiness). **Updated:** 2026-08-30 (Section 16 — dashboard unfrozen, the landing-page claim audit, and the half-finished drift restore). **Updated:** 2026-08-31 (Section 17 — Final Review deliverables, the literature survey, and repository access). **Updated:** 2026-09-12 (Section 18 — frontend replaced and wired to the live API, the tool-claim signal made to fire for the first time, and the Compose stack fixed so it actually evaluates).
 
-**Project:** AgentPulse — self-hostable observability SDK for grounding-risk and drift monitoring in multi-agent LLM systems. M.Tech project. Working directory: `C:\MLOPs\3rd sem project\project one agent`.
+**Project:** AgentPulse — self-hostable observability SDK for grounding-risk and drift monitoring in multi-agent LLM systems. M.Tech project. Working directory: `C:\MLOPs\3rd sem project\Agentpluse` (renamed from `project one agent`; the venv's editable installs still point at the old path).
 
 **User context:** Prefers Hinglish, direct/terse communication, wants things actually done not just discussed, dislikes overclaiming. The entire multi-session arc has been about replacing fake/inflated numbers with real measured ones — treat that as the standing bar for any new work, not just past work.
 
@@ -27,6 +27,11 @@
 - **The drift baseline restore was only half a fix, and that is the most consequential find of the session.** The restore brought back the EMA centroid but not the window pools, so `DRIFT_DETECTED` was blind for 32 spans per agent after every restart. Fixed and verified live. Section 16.3.
 - **The new landing page shipped ten claims with no basis in the repo** — a grounding F1 that appears nowhere, an SDK command that does not exist, SOC2/HIPAA readiness, an Apache licence with no LICENSE file, and a whitepaper citing a results file that was never created. All corrected. Section 16.4; treat it as the standing example of why marketing copy needs the same evidence bar as a report.
 - **The Final Review deck and speaker notes exist** in `presentation/`, built against the actual four-checklist rubric rather than a generic format. Never visually rendered - open the deck before relying on it. Section 17.2.
+- **The dashboard was replaced wholesale and wired to the live API.** The upstream repository renders entirely from `mockTelemetry.ts` and makes no HTTP calls; an adapter layer now maps six endpoints onto its view models, and fields the backend does not measure render as an em-dash rather than a zero. Section 18.2.
+- **The tool-claim signal had never fired once, and now does.** Zero non-zero scores across 1,328 evaluations, because `result_count` was never populated on the ingest path — three breaks plus a fourth that only surfaced after the first three were fixed. Section 18.4. This is the clearest example yet of a detector that benchmarks well and is unreachable in production.
+- **`docker compose up` could never have worked.** No worker service, an undeclared `aiohttp`, a healthcheck calling a `curl` the image does not ship, and another probing an IPv6 `localhost` nginx does not bind. All four fixed and the stack verified end to end. Section 18.5.
+- **Claims needed three separate correction passes**, the last one finding a "UMAP Projection" in the product views after the public page had been cleaned. Assume a sweep missed somewhere until it has been run against rendered output, not source. Section 18.3.
+- **`agentpulse` is public now**, scanned for secrets first. It deliberately still has no LICENSE, pending confirmation of who owns the M.Tech IP — which means all rights reserved. Section 18.8.
 - **A literature survey now exists: 17 verified works, 9 from 2023 onward.** The papers are real and their limitations accurate, but they have not been read - the table is a reading list still owed. Section 17.3.
 - **The baseline comparison shows the full system losing to its own ablation** (F1 0.842 against 0.941), because drift is a per-agent signal folded into a per-claim score. Kept in the deck with the mechanism and the nine-day staleness caveat. Section 17.4.
 - **`main` has a second writer and no branch protection** - the Free plan does not offer it on private repos. Section 17.5.
@@ -1014,5 +1019,179 @@ These were true at the end of Section 16 and are still true:
   leaves the instance with no evaluator until it is started by hand.
 - **Evaluation coverage is ~6%.** An empty queue means nothing is waiting, not that
   everything has been scored.
+
+---
+
+## 18. Frontend replaced, tool-claim made to work, and the stack deployed (2026-09-12)
+
+Six commits on `main` since the collaborator's push. The session began as a review of that
+push and ended with a Compose deployment that actually evaluates spans.
+
+### 18.1 Reviewing b7dc43c, and one false alarm of my own
+
+`SkSahoo98` pushed a comic-theme dashboard rework (4,745 insertions, CommandSurface split
+into seven files). The earlier honesty fixes on `BentoPillars.tsx` survived it. One
+regression did not: `WhitepaperModal.tsx:153` had reverted to `Self-hosted · Apache 2.0`
+while the repository still ships no LICENSE file.
+
+I also reported the dashboard rendering completely unstyled with a Tailwind
+"content is missing or empty" warning. **That was my own setup, not their bug.** Tailwind
+resolves its `content` globs against `process.cwd()`, not against Vite's `--root`, and I was
+starting Vite from the worktree. Started from inside `dashboard/`, the stylesheet went from
+19 KB to 79 KB with every utility present. Now documented in `STARTUP_GUIDE.md` 7.3.
+
+### 18.2 The frontend was replaced wholesale
+
+`Soum-Code/frontend` renders entirely from `src/data/mockTelemetry.ts` and makes no HTTP
+calls at all. Dropping it in as-is would have put invented numbers on screen, so the swap
+came with a wiring layer:
+
+- `src/lib/adapters.ts` maps `/v1/agents`, `/v1/drift`, `/v1/traces`, `/v1/alerts`,
+  `/v1/datasets` and `/v1/experiments` onto the UI's view models.
+- `src/lib/useTelemetry.ts` polls every 10s, lists traces first, then hydrates spans.
+- Curate, simulate and acknowledge call the real endpoints.
+- The synthetic telemetry pulse, which fabricated a trace with invented latency and
+  evaluator evidence every twelve seconds, was removed.
+
+Fields with no backend source (cost, per-agent tokens, framework, tools, version, root
+cause, win rate, embedding coordinates) are optional in `types.ts` and left undefined; the
+views render an em-dash rather than a plausible zero.
+
+Real defects found while wiring:
+
+- **The drift count treated "no baseline yet" as drifting**, reporting all 51 agents as
+  flagged. It now counts only agents whose windows filled and exceeded the threshold.
+- **`successRate` was emitted as a ratio but rendered as a percentage**, so 100% success
+  displayed as 1%.
+- **Nineteen unguarded reads** of now-optional fields crashed `OverviewView` on first paint.
+
+### 18.3 Claims corrected, in three separate passes
+
+The landing page carried figures the codebase does not support: `< 1.4 ms` ingestion,
+`0.02% CPU` overhead, `12 Live Swarms`, `98.4% Confidence`, a `v2.4` version badge, and a
+scripted walkthrough presented under `agentpulse://live-telemetry` with a pulsing
+`STREAM ACTIVE` badge.
+
+**Four OpenTelemetry claims were false.** There is no OTel dependency, import, or
+semantic-convention mapping anywhere; `SpanInput` is a custom schema. The comparison table
+now says so explicitly.
+
+**All four SDK snippets referenced API that does not exist** — `pulse.init`, `@observe`,
+`instrument_langgraph`, `instrument_crewai` — and the LlamaIndex and TypeScript tabs
+described integrations that were never written. The real exports are `AgentPulse` with a
+`.monitor()` decorator, `instrument_graph(graph, pulse)`, `CrewAIAdapter` and
+`LangChainAdapter`. There is no JS SDK.
+
+A third pass was needed later: the **product** `DriftView` still called its panel a
+"UMAP Projection" with a "5,000 verified runs" region. No UMAP exists in the codebase, and
+that panel cannot plot anything because the API exposes distances rather than coordinates.
+The first sweep had covered only the public page.
+
+### 18.4 The tool-claim signal never worked, and now does
+
+Across 1,328 evaluations no span had ever scored above zero on tool-claim, and no
+`TOOL_CLAIM_MISMATCH` alert had ever been raised. Three separate breaks:
+
+1. `evaluation_runner` built its tool-call record with only `tool_name` and
+   `result_summary`. `_check_count_mismatch` returns early unless `result_count` is set, so
+   the comparison never ran.
+2. There was no way to derive that count. `tool_claim.extract_result_count()` now reads it
+   from the tool's own result summary using the same `COUNT_PATTERNS` that read counts out
+   of an agent's prose.
+3. The simulator computed `is_mismatch` and never used it, so `tool_mismatch` emitted the
+   clean payload byte for byte — both scored an identical 0.0073.
+
+A fourth problem surfaced only after the first three were fixed: `COUNT_PATTERNS` requires
+the noun adjacent to the number, so `"Retrieved 3 foundational papers"` extracted no claim
+at all. **The clean case had been silently unmatched too.** Both scenarios now read
+`"Retrieved N papers"`.
+
+Verified live: `tool_mismatch` scores 1.0 and raises the alert, `clean` scores 0.0 and
+raises nothing. The detector's own patterns are untouched, so its benchmarked behaviour is
+unchanged.
+
+### 18.5 Compose could never have worked
+
+Four faults, each blocking the next:
+
+1. **`docker-compose.yml` defined no worker service.** A Compose deployment accepted spans
+   and never evaluated them. Both the deep dive and the deck had claimed it built "the API,
+   worker and dashboard"; that was my error and is corrected in both.
+2. **`aiohttp` was never declared** by the backend, though `services/alerting.py` imports it
+   for webhooks. It resolved in dev only because the SDK declares it and shares the venv.
+   Both containers crash-looped on `ModuleNotFoundError`.
+3. **The backend healthcheck shelled out to `curl`**, which `python:3.11-slim` does not
+   ship, so the container could never report healthy.
+4. **The dashboard healthcheck probed `localhost`**, which resolves to `::1` first inside
+   the container while nginx binds IPv4 only. Every probe was refused.
+
+Faults 3 and 4 had never been observed because the stack had never been run to completion.
+
+### 18.6 Drift verified end to end, three times
+
+`window_centroid_distance` had produced a value zero times in the instance's history.
+Driving a fresh agent through 20 baseline spans then 14 on an unrelated topic produces it
+reliably:
+
+```
+after 20 baseline spans   baseline_pool 19,  window null
+after 14 shifted spans    window 0.879-0.929,  spike 0.27-0.32,  ASI 100 -> ~52
+                          -> DRIFT_DETECTED raised on the window, not the spike
+```
+
+In the Docker run the spike finished at **0.272, below the 0.300 threshold**, while the
+window read 0.879. Alerting on the spike would have missed it entirely.
+
+### 18.7 Deliverables
+
+- `presentation/AgentPulse_Deep_Dive.pdf` — 11 pages, 17 sections, generator
+  `build_deep_dive.py`.
+- `presentation/AgentPulse_Project_Deck.pptx` — 18 slides, generator
+  `build_project_deck.js`.
+- `STARTUP_GUIDE.md` — fresh clone to verified instance, with the failure modes actually
+  hit on this machine.
+
+Both deliverables were rebuilt twice: once for the docker-compose correction, once after
+tool-claim started firing. A generator bug worth recording: pptxgenjs's `LAYOUT_16x9` is
+10 x 5.625in, not 13.33 x 7.5in, so every coordinate fell off the canvas — 132 shapes
+outside the slide. Caught by a geometry check, not by eye.
+
+### 18.8 Repository housekeeping
+
+- `Soum-Code/agentpulse` is now **public**. Scanned first: no `.env` ever committed, no
+  database tracked, no secret patterns in tracked files or history. The one hit was the
+  documented placeholder `change-me-to-a-secure-key`.
+- Five tutorial or empty repositories were deleted by the user (`Friday`, `Friday-Setup`,
+  `hello-cloudbuild-app`, `hello-cloudbuild-env`, `hello-world-mlops`), taking the account
+  from 18 to 13.
+- MIT licences added to nine code repositories. `CAR` (Apache-2.0) and `agenttrace` (MIT)
+  were left alone. **`agentpulse` deliberately has none** pending confirmation of who owns
+  the M.Tech IP.
+- 277 decorative comments stripped from the frontend and 27 Python banner comments
+  simplified. Verified code-identical: with comments stripped from both sides, all 25
+  changed files compared equal to HEAD.
+
+### 18.9 Standing operational facts
+
+Unchanged from 17.6 and still true:
+
+- **`alembic_version` reads `8d86fee0d663`** while the schema already has
+  `window_centroid_distance`. Reconcile with `alembic stamp c4b7e91a2f08` before any
+  `upgrade head`.
+- **The venv's editable installs point at the pre-rename path.** Every command this session
+  used `PYTHONPATH=backend;sdk/src`, and the worker needed a `_worker_launcher.py` shim.
+  Fix with `pip install -e backend -e sdk`.
+- **Evaluation coverage on the local database is ~6%** (1,328 of 20,790 spans). The Docker
+  volume is a separate, fully-evaluated 69-span demo set.
+
+New and still open:
+
+- **The dashboard has no test framework.** Every frontend fix this session rests on type
+  checking, a successful build, and manual verification against a live backend.
+- **`agentpulse` has no LICENSE** while being public, which means all rights reserved.
+- **Three superseded presentation drafts** (`AgentPulse.pptx`, `AgentPulse_Final_Review.pptx`,
+  `AgentPulse_Speech_Notes.pdf`) are still tracked, along with their now-dead generators.
+- **`hybrid-moe-codegen` carries 83 MB of model weights in git**; removing them needs a
+  history rewrite.
 
 ---
