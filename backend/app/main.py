@@ -9,7 +9,9 @@ Lifecycle:
 from __future__ import annotations
 
 import logging
+import os
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -190,15 +192,30 @@ def create_app() -> FastAPI:
     from app.routers.experiments import router as experiments_router
     app.include_router(experiments_router)
 
-    # Root
-    @app.get("/")
-    async def root():
-        return {
-            "name": "AgentPulse",
-            "version": "0.1.0",
-            "docs": "/docs",
-            "health": "/v1/health",
-        }
+    # Optionally serve a built dashboard from this same process.
+    #
+    # Platforms that run one container and expose one port -- Hugging Face
+    # Spaces among them -- cannot run the API and an nginx dashboard as
+    # separate services. When AGENTPULSE_STATIC_DIR points at a Vite build,
+    # the SPA is mounted at / and takes over the root route; /v1/* and /docs
+    # are registered above and still win, because mounts are matched last.
+    static_dir = os.getenv("AGENTPULSE_STATIC_DIR", "").strip()
+    serving_spa = bool(static_dir) and Path(static_dir).is_dir()
+
+    if not serving_spa:
+        @app.get("/")
+        async def root():
+            return {
+                "name": "AgentPulse",
+                "version": "0.1.0",
+                "docs": "/docs",
+                "health": "/v1/health",
+            }
+    else:
+        # html=True makes unknown paths fall back to index.html, which a
+        # client-routed SPA needs on deep links and hard refreshes.
+        app.mount("/", StaticFiles(directory=static_dir, html=True), name="dashboard")
+        logger.info("Serving dashboard from %s", static_dir)
 
     return app
 
