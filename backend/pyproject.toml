@@ -29,6 +29,11 @@ dependencies = [
     "optimum-onnx[onnxruntime]~=0.1.0",
     "python-dotenv>=1.0,<2.0",
     "python-multipart>=0.0.9",
+    # services/alerting.py imports aiohttp for webhook delivery. It was never
+    # declared, so it only resolved in dev environments where the SDK (which
+    # does declare it) happened to be installed alongside. A container built
+    # from this file alone crashed on import.
+    "aiohttp>=3.9,<4.0",
 ]
 
 [tool.hatch.build.targets.wheel]

@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   backend:
     build: ./backend
@@ -19,10 +17,30 @@ services:
       - AGENTPULSE_MODEL_CACHE_DIR=/models
       - AGENTPULSE_LOCAL_DEV_MODE=false
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/v1/health"]
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/v1/health', timeout=5).status == 200 else 1)"]
       interval: 30s
       timeout: 10s
       retries: 3
+
+  # Without this service the stack accepts spans and never evaluates them:
+  # /v1/health/evaluator returns 503 and no score, drift value or alert is
+  # ever produced. It reuses the backend image, overriding only the command.
+  worker:
+    build: ./backend
+    command: ["python", "-m", "app.worker"]
+    volumes:
+      - agentpulse_data:/data
+      - ./models:/models
+    env_file:
+      - .env
+    environment:
+      - AGENTPULSE_DATABASE_URL=sqlite+aiosqlite:////data/agentpulse.db
+      - AGENTPULSE_MODEL_CACHE_DIR=/models
+      - AGENTPULSE_LOCAL_DEV_MODE=false
+    depends_on:
+      # The API creates the schema on startup; the worker must not race it.
+      - backend
+    restart: unless-stopped
 
   dashboard:
     build:
@@ -30,12 +48,13 @@ services:
       dockerfile: Dockerfile
       args:
         VITE_API_KEY: ${AGENTPULSE_API_KEY:-change-me-to-a-secure-key}
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:8000}
     ports:
       - "5173:5173"
     depends_on:
       - backend
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:5173/"]
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:5173/"]
       interval: 30s
       timeout: 10s
       retries: 3
