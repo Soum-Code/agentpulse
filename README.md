@@ -23,7 +23,7 @@ Existing LLM observability tools trace tokens, latency, and cost well, but treat
 ## What it does
 
 - Instruments LangGraph pipelines with near-zero overhead (LangChain and CrewAI adapters are not yet implemented).
-- Scores every span for grounding risk using a two-stage cascade: MiniLM embedding similarity, then DeBERTa NLI when the embedding stage is ambiguous.
+- Scores every span for grounding risk with two models run in sequence: MiniLM embedding similarity and a DeBERTa NLI classifier. Both run on every span; the NLI result is the score, and the similarity is kept alongside it.
 - Validates tool-claim assertions deterministically (tool name, result counts) against actual tool execution records.
 - Detects contradictions between agents in a multi-agent pipeline.
 - Tracks per-agent drift (embedding centroid shift, tool-use entropy, error rate) as a single 0-100 Agent Stability Index.
