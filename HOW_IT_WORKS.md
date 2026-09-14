@@ -128,8 +128,29 @@ The decorator builds a span **before** running the function, runs it, times it, 
 - **It never blocks the agent.** `transport.enqueue(span)` is fire-and-forget.
 - **It fails open.** Any SDK exception is logged and the original function is re-run, so a bug in the observability layer cannot take down the agent.
 - **It propagates the trace.** The returned dict gets `__agentpulse_trace_id` and `__agentpulse_parent_span_id` stamped into it, which is how a LangGraph state dict carries the trace to the next node and the waterfall gets its parent-child shape.
+- **It parents what runs inside it.** While the wrapped function executes, the decorator makes its own span the active context, so an instrumented LLM call made inside a monitored node becomes that node's child rather than its sibling. The context is restored afterwards; leaking it would attach the next node to the wrong parent.
 
 Sampling happens here too: `config.sampling_rate < 1.0` drops spans before any work is done.
+
+### Step 1b — or the SDK wraps the LLM client instead
+
+The decorator reads its first positional argument as a LangGraph state dict, which meant a pipeline built any other way could not be seen at all. `pulse.instrument_llm(client)` takes the other route:
+
+```python
+client = pulse.instrument_llm(OpenAI())
+```
+
+It wraps the client's completion method — `chat.completions.create` for OpenAI, `messages.create` for Anthropic, sync or async — so every call emits an LLM span with the model, token counts and latency.
+
+This is the more useful place to stand, not just the more general one. The prompt and the completion are exactly the input/output pair `evaluate_grounding` compares, so instrumenting here is what makes a grounding score possible without LangGraph.
+
+Three deliberate limits:
+
+- It wraps the **instance** passed in, not the library's module globals. Global patching would reach calls made by code you do not control, which sounds useful until an unrelated library's traffic appears in your traces and cannot be switched off.
+- **Streaming** calls record timing, model and status but no output text. The content is not available at call time, and consuming the stream to capture it would change the caller's behaviour. The span carries `metadata.output_captured = false` so an empty output reads as absent rather than broken — and no grounding score is produced for it.
+- The **capture flags still apply**. A prompt is the most sensitive thing this SDK ever touches, so with the defaults the span carries hashes and token counts but no text.
+
+Instrumenting the same client twice is a no-op rather than emitting two spans per call, and passing something that is not an OpenAI or Anthropic client raises `UnsupportedClientError` rather than instrumenting nothing silently.
 
 ### Step 2 — privacy filtering decides what text survives
 

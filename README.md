@@ -27,7 +27,8 @@ Existing LLM observability tools trace tokens, latency, and cost well, but treat
 
 ## What it does
 
-- Instruments LangGraph pipelines with near-zero overhead (LangChain and CrewAI adapters are not yet implemented).
+- Instruments LangGraph pipelines with near-zero overhead.
+- Works without any agent framework by wrapping an OpenAI or Anthropic client directly, which is also where the prompt and completion the grounding evaluator compares are available. (Dedicated LangChain and CrewAI adapters are still not implemented.)
 - Scores every span for grounding risk with two models run in sequence: MiniLM embedding similarity and a DeBERTa NLI classifier. Both run on every span; the NLI result is the score, and the similarity is kept alongside it.
 - Validates tool-claim assertions deterministically (tool name, result counts) against actual tool execution records.
 - Detects contradictions between agents in a multi-agent pipeline.
@@ -103,6 +104,31 @@ adapter.instrument_graph(graph, {
 
 app = graph.compile()
 ```
+
+Without a framework, by wrapping the LLM client:
+
+```python
+from openai import OpenAI
+from agentpulse import AgentPulse
+
+pulse = AgentPulse(
+    endpoint="http://localhost:8000",
+    capture_inputs=True,
+    capture_outputs=True,
+)
+client = pulse.instrument_llm(OpenAI())
+
+client.chat.completions.create(          # recorded, scored, unchanged
+    model="gpt-4o-mini",
+    messages=[{"role": "user", "content": "..."}],
+)
+```
+
+Every completion becomes an LLM span carrying the model, token counts and
+latency. With the capture flags on it also carries the prompt and the
+completion, which is the pair grounding compares — so this is the path to a
+grounding score for agents that are not built on LangGraph. Anthropic clients
+work the same way, sync or async.
 
 Using the decorator directly:
 
