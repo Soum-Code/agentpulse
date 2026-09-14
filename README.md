@@ -2,16 +2,21 @@
 
 A lightweight, self-hostable observability SDK for continuous grounding-risk and drift monitoring in multi-agent LLM systems.
 
+**Live demo:** https://agentpulse-demo.centralindia.cloudapp.azure.com — a running instance with real evaluated telemetry, not screenshots.
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-indigo.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688.svg)](https://fastapi.tiangolo.com)
-[![React 18](https://img.shields.io/badge/React-18.3+-61DAFB.svg)](https://reactjs.org/)
-[![Tests](https://img.shields.io/badge/Tests-99%2F99%20Passed-brightgreen.svg)](tests/)
+[![React 19](https://img.shields.io/badge/React-19.0+-61DAFB.svg)](https://react.dev/)
+[![Tests](https://img.shields.io/badge/tests-pytest-0A9EDC.svg)](tests/)
 
 Existing LLM observability tools trace tokens, latency, and cost well, but treat quality evaluation as an optional, sampled add-on. AgentPulse instead runs a real evaluator (grounding, tool-claim validation, inter-agent disagreement, drift) on every captured span, so it becomes the default signal rather than a periodic check.
 
 ## Documentation
 
+- [HOW_IT_WORKS.md](HOW_IT_WORKS.md) — start here: one span from the SDK decorator to the screen, every threshold and constant read out of the source
+- [STARTUP_GUIDE.md](STARTUP_GUIDE.md) — running it locally, with the failures you are likely to hit
+- [deploy/azure/README.md](deploy/azure/README.md) — putting it on a public host with TLS
 - [PROJECT_REPORT.md](PROJECT_REPORT.md) — architecture and mathematical formulation
 - [THRESHOLD_ANALYSIS.md](THRESHOLD_ANALYSIS.md) — ablation study and threshold sweep, with dev/test separation
 - [GROUNDING_SCORE_CALIBRATION_REPORT.md](GROUNDING_SCORE_CALIBRATION_REPORT.md) — neutral-vs-contradiction weighting fix for the grounding-score formula
@@ -34,18 +39,31 @@ Existing LLM observability tools trace tokens, latency, and cost well, but treat
 ### Install
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/Soum-Code/agentpulse.git
 cd agentpulse
 pip install -e "./sdk[dev]"
 pip install -e "./backend[dev]"
 ```
 
-### Run the backend
+> Install from source only. The name `agentpulse` on PyPI belongs to an unrelated
+> project, so `pip install agentpulse` will fetch someone else's package rather
+> than this one.
+
+### Run the API
 
 ```bash
-cd backend
-uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+uvicorn app.main:app --app-dir backend --host 127.0.0.1 --port 8000
 ```
+
+### Run the evaluation worker
+
+```bash
+cd backend && python -m app.worker
+```
+
+**This process is not optional.** The API accepts spans and returns 202 without it,
+but nothing is ever evaluated: no grounding score, no drift, no alerts. The first
+start takes 30-60 seconds while MiniLM and DeBERTa load.
 
 ### Run the dashboard
 
@@ -56,6 +74,11 @@ npm run dev
 ```
 
 Open `http://localhost:5173`.
+
+Grounding compares a span's captured input against its captured output, and capture
+is off by default. To see grounding scores at all, set `AGENTPULSE_CAPTURE_INPUTS`
+and `AGENTPULSE_CAPTURE_OUTPUTS` to `true` — otherwise the signal is silently absent
+rather than wrong.
 
 ## SDK usage
 
@@ -100,6 +123,12 @@ pytest tests/ -v
 python benchmarks/run_benchmarks.py
 ```
 
+Current state: **207 passed, 2 failed** out of 209. Both failures are in
+`tests/test_durable_queue.py::TestCrashRecovery`, where SQLite reports a disk I/O
+error reading a WAL database immediately after the test SIGKILLs the worker holding
+it. This reproduces on Windows and is under investigation; it is a test-harness
+problem as far as we can tell, but that has not been proven.
+
 Current benchmark results (`benchmarks/benchmark_results.json`, CPU-only):
 
 | Measurement | P50 | P95 |
@@ -108,7 +137,7 @@ Current benchmark results (`benchmarks/benchmark_results.json`, CPU-only):
 | SDK decorator overhead | 0.005 ms | — |
 | MiniLM embedding inference | 15.1 ms | 18.5 ms |
 | DeBERTa NLI inference | 88.5 ms | 140.5 ms |
-| Full evaluator cascade | 122.3 ms | 172.2 ms |
+| Full evaluator (both models) | 122.3 ms | 172.2 ms |
 
 ## Docker deployment
 
