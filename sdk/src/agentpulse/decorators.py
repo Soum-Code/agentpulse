@@ -28,7 +28,13 @@ from datetime import datetime, timezone
 from typing import Any, Callable, Optional
 
 from agentpulse.config import AgentPulseConfig
-from agentpulse.context import TraceContext, ensure_context, set_current_context
+from agentpulse.context import (
+    TraceContext,
+    ensure_context,
+    get_current_context,
+    reset_current_context,
+    set_current_context,
+)
 from agentpulse.privacy import PrivacyFilter
 from agentpulse.schemas.enums import EventType, SpanKind, SpanStatus
 from agentpulse.schemas.events import SpanPayload
@@ -82,8 +88,16 @@ def create_monitor_decorator(
                 span = _build_pre_span(state, _agent_id, _agent_role, span_kind, event_type, config)
                 start = time.perf_counter()
 
-                # Execute the actual agent node
-                result = await func(*args, **kwargs)
+                # Execute the actual agent node, with this span as the active
+                # parent. Anything instrumented inside it -- an LLM call wrapped
+                # by integrations.llm, a nested monitored function -- then hangs
+                # off this node instead of becoming its sibling, which is what
+                # makes the trace a tree rather than a flat list.
+                token = _push_child_context(span.span_id)
+                try:
+                    result = await func(*args, **kwargs)
+                finally:
+                    _pop_context(token)
 
                 duration_ms = (time.perf_counter() - start) * 1000
                 _finalize_span(span, result, duration_ms, state, config, privacy, capture_state)
@@ -122,7 +136,12 @@ def create_monitor_decorator(
                 span = _build_pre_span(state, _agent_id, _agent_role, span_kind, event_type, config)
                 start = time.perf_counter()
 
-                result = func(*args, **kwargs)
+                # See the async wrapper: this is what parents nested spans.
+                token = _push_child_context(span.span_id)
+                try:
+                    result = func(*args, **kwargs)
+                finally:
+                    _pop_context(token)
 
                 duration_ms = (time.perf_counter() - start) * 1000
                 _finalize_span(span, result, duration_ms, state, config, privacy, capture_state)
@@ -148,6 +167,23 @@ def create_monitor_decorator(
         return sync_wrapper
 
     return decorator
+
+
+def _push_child_context(span_id: str):
+    """Make `span_id` the parent for anything instrumented inside this call.
+
+    Returns a token for `_pop_context`, or None if there was no context to
+    descend from -- in which case there is nothing to restore either.
+    """
+    ctx = get_current_context()
+    if ctx is None:
+        return None
+    return set_current_context(ctx.child(span_id))
+
+
+def _pop_context(token) -> None:
+    if token is not None:
+        reset_current_context(token)
 
 
 def _build_pre_span(
