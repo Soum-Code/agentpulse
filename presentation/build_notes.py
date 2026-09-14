@@ -251,7 +251,7 @@ F += rule(4, 10)
 F.append(Paragraph("Numbers worth having ready", S_H2))
 rows = [
     ["Grounding cascade F1", "0.963", "held-out v1.0_test, Config C"],
-    ["Stage 1 gate / full cascade", "27.8 ms / 215.9 ms", "ablation_results.json"],
+    ["MiniLM only / DeBERTa only / shipped", "27.8 / 188.1 / 215.9 ms", "ablation_results.json"],
     ["Drift false alarms", "91.7% to 1.5%", "before and after the rebuild"],
     ["Drift detection / AUC", "0.9192 / 0.991", "111 held-out tasks"],
     ["Drift coverage", "24.5%", "always quote with the accuracy"],

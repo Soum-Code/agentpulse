@@ -392,25 +392,38 @@ For drift, remember Section 4.4: you need 32 evaluated spans for that agent befo
 
 Read this section before a viva.
 
-### 10.1 The "two-stage cascade" does not cascade
+### 10.1 The "cascade" does not gate — docstrings corrected
 
-`grounding.py`'s module docstring says:
-
-> Stage 2: DeBERTa NLI (accurate, slower ~80ms) — only when Stage 1 is ambiguous
-
-`STAGE1_SAFE_THRESHOLD = 0.85` and `STAGE1_RISK_THRESHOLD = 0.40` are defined right below it. But `evaluate_grounding()` reads:
+`grounding.py` used to describe itself as running DeBERTa "only when Stage 1 is ambiguous", with `STAGE1_SAFE_THRESHOLD = 0.85` and `STAGE1_RISK_THRESHOLD = 0.40` sitting underneath that sentence. `evaluate_grounding()` never implemented it:
 
 ```python
-similarity = compute_semantic_similarity(source_text, claim_text)   # stage 1
-result = compute_nli_grounding(source_text, claim_text)             # stage 2
+similarity = compute_semantic_similarity(source_text, claim_text)
+result = compute_nli_grounding(source_text, claim_text)
 if result:
     result.semantic_similarity = similarity
     return result
 ```
 
-There is no gate. **Stage 2 runs on every span.** `STAGE1_RISK_THRESHOLD` is never read anywhere in the codebase — only mentioned in a comment in `disagreement.py`. `STAGE1_SAFE_THRESHOLD` is used in exactly one place: the fallback branch that runs when the NLI model failed to load.
+There is no branch between the two calls. **Both models run on every span.**
 
-So what exists is not a cost-saving cascade. It is: run both models, prefer NLI, and degrade to similarity-only if NLI is unavailable. That is a reasonable design — but it is a different design, and the Stage 1 cost is added to every evaluation rather than saving anything.
+The ablation data proves it independently, without reading the code at all — from `experiments/results/ablation_results.json`:
+
+| Configuration | Latency |
+| :--- | ---: |
+| A — MiniLM only | 27.83 ms |
+| B — DeBERTa only | 188.07 ms |
+| C — shipped | **215.90 ms** |
+
+215.90 is 27.83 + 188.07. A gated cascade would land somewhere *between* 27.83 and 215.90, weighted by how often the gate fired. Landing exactly on the sum means it never fired.
+
+**The docstrings now say this, and the behaviour is unchanged on purpose.** Adding the gate would alter the score of every span whose similarity clears the threshold, which would leave `THRESHOLD_ANALYSIS.md`, `GROUNDING_SCORE_CALIBRATION_REPORT.md` and `LLM_JUDGE_COMPARISON_REPORT.md` describing a system that no longer runs. If the gate is ever wanted it is a measured experiment, not an edit.
+
+The two constants were kept rather than deleted:
+
+- `STAGE1_SAFE_THRESHOLD` is genuinely read, in one place — the fallback branch that runs when the NLI model failed to load, where it decides whether a similarity-only result is labelled `entailment` or `neutral`.
+- `STAGE1_RISK_THRESHOLD` is read nowhere. It stays because `disagreement.py` documents its `RELEVANCE_FLOOR` as reusing this value; delete the constant and that provenance comment points at nothing.
+
+So the honest description of the design: run both models, prefer NLI, degrade to similarity-only if NLI is unavailable. Stage 1 costs ~28 ms on every evaluation rather than saving anything — a real trade, made knowingly, since the similarity is also what the drift signal consumes.
 
 ### 10.2 Liveness and readiness probes require authentication
 
@@ -429,7 +442,7 @@ It has already caused one silent failure: `deploy/huggingface/seed_demo.py` prob
 
 ### 10.3 `RISK_WEIGHTS["semantic"]` is dead
 
-Declared at 0.15, never read by `_aggregate_risk()`.
+Declared at 0.15, never read by `_aggregate_risk()`. `PROJECT_REPORT.md` already records this as "a known gap between the configuration and the implementation, not an intentional design choice" — repeated here so the aggregation section above is not read as describing four contributing signals when only three contribute.
 
 ### 10.4 The embedding model has no ONNX path
 

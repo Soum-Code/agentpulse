@@ -300,7 +300,7 @@ F.append(Paragraph("Numbers to have ready", S_H2))
 rows = [
     ["Grounding F1", "0.963", "held-out v1.0_test, Config C"],
     ["Precision / recall / FPR", "0.929 / 1.000 / 0.059", "same run"],
-    ["Stage 1 gate / full cascade", "27.8 ms / 215.9 ms", "ablation_results.json"],
+    ["MiniLM only / DeBERTa only / shipped", "27.8 / 188.1 / 215.9 ms", "ablation_results.json"],
     ["Best baseline (D, no drift)", "F1 0.941", "full system 0.842 - see slide 7"],
     ["Drift false alarms", "91.7% to 1.5%", "before and after rebuild"],
     ["Drift detection / AUC", "0.9192 / 0.991", "111 held-out tasks"],
