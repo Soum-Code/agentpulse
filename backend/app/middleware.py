@@ -18,12 +18,36 @@ logger = logging.getLogger("agentpulse.middleware")
 class APIKeyMiddleware(BaseHTTPMiddleware):
     """Validate X-API-Key header on ingest endpoints."""
 
-    PUBLIC_EXACT = {"/", "/docs", "/openapi.json", "/v1/health"}
+    # Liveness and readiness are reachable without a key on purpose. They exist
+    # for Kubernetes probes, load balancers and uptime monitors, none of which
+    # carry credentials -- requiring a key made every such probe report the
+    # service permanently unhealthy, which is the exact opposite of what these
+    # endpoints are for.
+    #
+    # /v1/health/evaluator is deliberately NOT public: it reports worker counts,
+    # inference backend distribution and degradation reasons. That is
+    # operational detail, not a yes/no probe answer.
+    PUBLIC_EXACT = {
+        "/", "/docs", "/openapi.json",
+        "/v1/health", "/v1/health/live", "/v1/health/ready",
+    }
     PUBLIC_PREFIXES = ("/v1/ws/", "/static", "/assets")
 
     async def dispatch(self, request: Request, call_next):
-        # Skip auth for health check, docs, dashboard, and WebSocket
         path = request.url.path
+
+        # Public endpoints still need to know whether a valid key came with the
+        # request, so one of them can decide how much detail to return.
+        presented = request.headers.get("X-API-Key")
+        # Local dev mode already waives auth for reads, so a GET there is as
+        # trusted as a keyed request. Treating it as unauthenticated would leave
+        # one endpoint redacting detail while every other one returned it.
+        request.state.authenticated = (
+            (bool(presented) and presented == settings.api_key)
+            or (settings.local_dev_mode and request.method == "GET")
+        )
+
+        # Skip auth for health check, docs, dashboard, and WebSocket
         if path in self.PUBLIC_EXACT or path.startswith(self.PUBLIC_PREFIXES):
             return await call_next(request)
 

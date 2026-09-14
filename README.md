@@ -123,11 +123,13 @@ pytest tests/ -v
 python benchmarks/run_benchmarks.py
 ```
 
-Current state: **207 passed, 2 failed** out of 209. Both failures are in
-`tests/test_durable_queue.py::TestCrashRecovery`, where SQLite reports a disk I/O
-error reading a WAL database immediately after the test SIGKILLs the worker holding
-it. This reproduces on Windows and is under investigation; it is a test-harness
-problem as far as we can tell, but that has not been proven.
+Current state: **211 passed**.
+
+`tests/test_durable_queue.py::TestCrashRecovery` is intermittent on Windows. It
+sometimes fails with a SQLite disk I/O error reading a WAL database immediately
+after the test SIGKILLs the worker holding it, and passes on a clean run. The
+flakiness looks like leftover WAL state from a previous run in the same session
+rather than a defect in the queue, but that has not been proven.
 
 Current benchmark results (`benchmarks/benchmark_results.json`, CPU-only):
 
