@@ -43,7 +43,7 @@ from typing import Any, Optional
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import EvaluationJob, RetentionRun, WorkerHeartbeat
+from app.models import Evaluation, EvaluationJob, RetentionRun, WorkerHeartbeat
 
 # A worker that has not written a heartbeat in this long is presumed gone.
 # Comfortably above the heartbeat interval so a slow beat is not read as death.
@@ -265,6 +265,69 @@ def derive_state(*, api_ready: bool, api_degraded: bool, workers: dict,
     return {"state": state, "reasons": reasons}
 
 
+async def signal_coverage(session: AsyncSession, sample: int = 200) -> dict[str, Any]:
+    """How often each signal actually produced a value, over recent evaluations.
+
+    A signal can be absent without anything being broken, and that is the
+    failure mode this exists to make visible.
+
+    Grounding compares a span's captured input against its captured output. The
+    SDK's capture flags -- AGENTPULSE_CAPTURE_INPUTS and _CAPTURE_OUTPUTS --
+    default to false, so a correctly installed deployment with a healthy worker
+    can evaluate every span it receives and never produce a single grounding
+    score. No exception is raised and nothing is logged; `evaluator.py` simply
+    skips the step when either text is missing. From the outside that is
+    indistinguishable from a broken evaluator.
+
+    Coverage of 0.0 against a non-zero sample says "switched off", which is a
+    different problem from "failing" and has a different fix.
+
+    Tool-claim and disagreement are conditional by nature -- a span with no tool
+    call cannot produce a tool-claim score -- so low coverage there is normal
+    and is reported without comment.
+    """
+    rows = (
+        await session.execute(
+            select(
+                Evaluation.grounding_score,
+                Evaluation.tool_claim_score,
+                Evaluation.disagreement_score,
+            )
+            .order_by(Evaluation.id.desc())
+            .limit(sample)
+        )
+    ).all()
+
+    total = len(rows)
+    if total == 0:
+        return {"sample_size": 0, "signals": {}, "notes": []}
+
+    def ratio(index: int) -> float:
+        return round(sum(1 for r in rows if r[index] is not None) / total, 4)
+
+    grounding = ratio(0)
+    notes = []
+    if grounding == 0.0:
+        notes.append(
+            "No grounding score in the last {n} evaluations. Grounding needs both "
+            "input_summary and output_summary on the span, and the SDK does not "
+            "capture either unless AGENTPULSE_CAPTURE_INPUTS and "
+            "AGENTPULSE_CAPTURE_OUTPUTS are set to true. If that is deliberate "
+            "(they default to false for privacy) this is expected; otherwise the "
+            "grounding signal is switched off rather than failing.".format(n=total)
+        )
+
+    return {
+        "sample_size": total,
+        "signals": {
+            "grounding": grounding,
+            "tool_claim": ratio(1),
+            "disagreement": ratio(2),
+        },
+        "notes": notes,
+    }
+
+
 async def collect_platform_health(session: AsyncSession) -> dict[str, Any]:
     """The full self-monitoring picture."""
     from app.config import settings
@@ -306,6 +369,7 @@ async def collect_platform_health(session: AsyncSession) -> dict[str, Any]:
             "by_status": counts,
         },
         "evaluation_timing": await evaluation_timing(session),
+        "signal_coverage": await signal_coverage(session),
         "reliability": await retry_and_failure_stats(session),
         "workers": fleet,
         "retention": {"last_run": await last_retention_run(session)},

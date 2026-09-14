@@ -58,6 +58,32 @@ class MalformedJobError(ValueError):
 
 REQUIRED_FIELDS = ("span_id", "trace_id", "agent_id")
 
+# Grounding is skipped, silently and by design, when a span carries no captured
+# text. That is the single most confusing state this system can be in: the
+# worker is healthy, jobs succeed, and the column the whole project is about
+# stays empty. Logged once per process rather than per span, because at one line
+# per evaluation it would be noise and get filtered out -- which is how it
+# stayed invisible in the first place.
+_warned_no_text = False
+
+
+def _warn_if_no_text_once(payload: dict[str, Any]) -> None:
+    global _warned_no_text
+    if _warned_no_text:
+        return
+    if payload.get("input_summary") and payload.get("output_summary"):
+        return
+    _warned_no_text = True
+    logger.warning(
+        "Span %s carries no captured input/output text, so grounding was not "
+        "evaluated. The SDK omits this text unless AGENTPULSE_CAPTURE_INPUTS and "
+        "AGENTPULSE_CAPTURE_OUTPUTS are true; both default to false. Evaluations "
+        "will keep succeeding with no grounding score until that changes. "
+        "Reported once per worker process; see signal_coverage in /v1/platform "
+        "for the ongoing rate.",
+        payload.get("span_id"),
+    )
+
 
 def parse_payload(payload_json: str) -> dict[str, Any]:
     try:
@@ -325,6 +351,7 @@ async def execute_job(evaluator, payload_json: str, loop, executor) -> bool:
     guard suppressed a duplicate).
     """
     payload = parse_payload(payload_json)
+    _warn_if_no_text_once(payload)
     priors = await fetch_prior_agent_outputs(payload["trace_id"], payload["span_id"])
 
     result = await loop.run_in_executor(

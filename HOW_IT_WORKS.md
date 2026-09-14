@@ -425,20 +425,28 @@ The two constants were kept rather than deleted:
 
 So the honest description of the design: run both models, prefer NLI, degrade to similarity-only if NLI is unavailable. Stage 1 costs ~28 ms on every evaluation rather than saving anything — a real trade, made knowingly, since the similarity is also what the drift signal consumes.
 
-### 10.2 Liveness and readiness probes require authentication
+### 10.2 Liveness and readiness probes — fixed
 
-Measured on the live deployment:
+They used to require an API key while `/v1/health` did not:
 
 ```
 /v1/health            no-key=200   with-key=200
 /v1/health/live       no-key=401   with-key=200
 /v1/health/ready      no-key=401   with-key=200
-/v1/health/evaluator  no-key=401   with-key=200
 ```
 
-This is backwards. `live` and `ready` are exactly the endpoints Kubernetes, Azure Load Balancer and uptime monitors probe *without* credentials.
+That is backwards. `live` and `ready` exist for Kubernetes probes, load balancers and uptime monitors, none of which carry credentials — so every one of them read the service as permanently unhealthy. It also made `deploy/huggingface/seed_demo.py` fail silently: its probe sent no key, so it retried for two minutes and exited printing `"[seed] API never became reachable; skipping"`, which reads like a successful run.
 
-It has already caused one silent failure: `deploy/huggingface/seed_demo.py` probes `/v1/health/live` with no key, retries for two minutes, prints `"[seed] API never became reachable; skipping"` and exits having seeded nothing — which reads like a successful run.
+Both are now reachable without a key. `/v1/health/evaluator` deliberately still is not — it reports worker counts, inference backend distribution and degradation reasons, which is operational detail rather than a yes/no probe answer.
+
+`/v1/health/ready` answers at two levels of detail. Anyone gets the verdict; only a key holder gets the diagnosis:
+
+```
+no key   -> {"ready": true}
+with key -> {"ready": true, "checks": {"database": {...}}, "reasons": []}
+```
+
+`checks` carries the raw database exception string, which on failure can name a file path or connection target. A probe needs the status code, not that.
 
 ### 10.3 `RISK_WEIGHTS["semantic"]` is dead
 
