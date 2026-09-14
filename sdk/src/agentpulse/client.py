@@ -142,6 +142,44 @@ class AgentPulse:
             capture_state=capture_state,
         )
 
+    def instrument_llm(self, client: Any, agent_id: Optional[str] = None) -> Any:
+        """Record a span for every completion this client produces.
+
+        Works with the OpenAI and Anthropic SDKs, sync or async, and needs no
+        agent framework -- which is the point. The `@monitor` decorator reads its
+        first argument as a LangGraph state dict, so anyone not using LangGraph
+        had no way in. Every agent calls an LLM, so wrapping that call reaches
+        all of them.
+
+        It is also the most useful place to capture from: the prompt and the
+        completion are exactly the input/output pair the grounding evaluator
+        compares, so this is what makes grounding available off LangGraph.
+
+            pulse = AgentPulse(endpoint="http://localhost:8000",
+                               capture_inputs=True, capture_outputs=True)
+            client = pulse.instrument_llm(OpenAI())
+
+        Returns the same client, wrapped in place. Calling it twice on one
+        client is a no-op rather than emitting two spans per call.
+
+        The capture flags still apply. With both false -- the default -- spans
+        carry hashes and token counts but no text, and grounding cannot run on
+        them. `/v1/platform` reports that as a grounding coverage of 0.0.
+
+        Raises UnsupportedClientError if `client` is not an OpenAI or Anthropic
+        client, rather than silently instrumenting nothing.
+        """
+        from agentpulse.integrations.llm import instrument_client
+
+        self._ensure_transport()
+        return instrument_client(
+            client,
+            transport=self._transport,
+            config=self._config,
+            privacy=self._privacy,
+            agent_id=agent_id,
+        )
+
     def create_trace(self, pipeline_id: Optional[str] = None) -> TraceContext:
         """Manually create a new trace context.
         
