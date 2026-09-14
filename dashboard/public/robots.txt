@@ -1,0 +1,12 @@
+# The dashboard is a client-rendered SPA, so crawlers only see content after
+# executing its JavaScript. Allowing the crawl and declaring the sitemap is
+# what makes that attempt possible at all; without these two files the demo
+# deployment has no route into a search index.
+#
+# /v1/ is the API. It requires a key and returns JSON, so there is nothing
+# there for a crawler to index and no reason to spend its budget on it.
+User-agent: *
+Allow: /
+Disallow: /v1/
+
+Sitemap: https://agentpulse-demo.centralindia.cloudapp.azure.com/sitemap.xml
