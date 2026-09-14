@@ -162,6 +162,69 @@ az vm restart -g agentpulse-rg -n agentpulse-vm
 sudo docker compose logs caddy | grep -c "trying to solve challenge"
 ```
 
+## Getting the site into Google
+
+Nothing links to this deployment, so Google has no route to discover it. Search
+Console is how you tell it the site exists — and it will not index a site it
+cannot reach.
+
+The token in every method below is issued by Google against your account. It
+cannot be generated here or guessed; start the flow at
+<https://search.google.com/search-console>, add the site as a **URL prefix**
+property, and Google gives you one.
+
+### Method 1 — HTML file
+
+Google hands you a file named something like `google7f3a9c2e1b8d4056.html`
+containing a single line. Put it in `dashboard/public/`, rebuild the dashboard
+and redeploy; anything in that directory is served from the site root, the same
+way `robots.txt` is.
+
+This method requires the server to answer **404** for a file that does not
+exist. Google deliberately requests a random filename and refuses to verify if
+that returns 200 — otherwise a server that answers 200 for everything would let
+anyone claim ownership of it.
+
+A single-page app fails that test by default: its catch-all hands the
+application shell to every path. `dashboard/nginx.conf` therefore returns a real
+404 for paths that look like files, and keeps the shell for application routes.
+Confirm both before starting verification:
+
+```bash
+curl -sI https://<hostname>/googleDOESNOTEXIST.html | head -1   # 404
+curl -sI https://<hostname>/traces                  | head -1   # 200
+```
+
+Google checks with a HEAD request, which is what `-I` sends.
+
+### Method 2 — meta tag
+
+Google gives you a tag instead of a file:
+
+```html
+<meta name="google-site-verification" content="YOUR_TOKEN_HERE" />
+```
+
+Put it inside `<head>` in `dashboard/index.html`, rebuild, redeploy. This method
+does not involve the 404 probe at all, so it works on any SPA regardless of how
+the server is configured.
+
+DNS verification is not available here: the `cloudapp.azure.com` name belongs to
+Azure, and TXT records cannot be added to it.
+
+### After verifying
+
+Submit the sitemap — `https://<hostname>/sitemap.xml` — under **Sitemaps**.
+
+Two things to expect rather than worry about. Indexing takes days to weeks, not
+hours. And the dashboard renders client-side, so Google has to execute its
+JavaScript to see any content; the GitHub repository is the more likely thing to
+surface in a search.
+
+Google re-checks the tag or file periodically. If a later build drops it, the
+site quietly loses its verified status, so keep whichever one you use in the
+repository rather than hand-placing it on the server.
+
 ## Cost control
 
 A stopped VM still bills; only a deallocated one does not. The public IP and
