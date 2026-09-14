@@ -62,6 +62,16 @@ def set_current_context(ctx: TraceContext) -> contextvars.Token:
     return _current_context.set(ctx)
 
 
+def reset_current_context(token: contextvars.Token) -> None:
+    """Restore whatever context was active before `set_current_context`.
+
+    Without this, a decorator that pushes a child context leaks it to whatever
+    runs next in the same task -- the following sibling node would attach itself
+    under the previous node instead of its real parent.
+    """
+    _current_context.reset(token)
+
+
 def ensure_context(
     state: dict | None = None,
     pipeline_id: str | None = None,
