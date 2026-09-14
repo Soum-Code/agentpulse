@@ -1,8 +1,24 @@
 """NLI-based grounding evaluator using DeBERTa-v3-small.
 
-Two-stage cascade:
-  Stage 1: MiniLM semantic similarity (cheap, fast ~20ms)
-  Stage 2: DeBERTa NLI (accurate, slower ~80ms) — only when Stage 1 is ambiguous
+Both stages run on every span. MiniLM produces a semantic similarity and
+DeBERTa produces the entailment/neutral/contradiction distribution; when the
+NLI model is available its result is what `evaluate_grounding` returns, and the
+similarity rides along on the result for context. MiniLM is not a gate.
+
+This is worth stating plainly because an earlier version of this docstring
+described Stage 2 as running "only when Stage 1 is ambiguous", and the two
+threshold constants below still read like gates. They are not, and never were
+in this code: `evaluate_grounding` has no branch that skips the NLI call. The
+measurements agree — `experiments/results/ablation_results.json` records MiniLM
+alone at 27.83 ms, DeBERTa alone at 188.07 ms and the shipped configuration at
+215.9 ms, which is their sum rather than a weighted mix.
+
+So the design is: run both, prefer NLI, fall back to similarity only when the
+NLI model failed to load. Stage 1 therefore costs ~28 ms on every evaluation
+instead of saving anything. That is a real trade and it is made knowingly: the
+similarity is used by the drift signal and is useful context on the result, and
+gating on it would change the scores every calibration figure in this project
+was measured against.
 
 Design decisions:
 - ONNX Runtime for CPU inference optimization
@@ -59,8 +75,20 @@ class GroundingResult:
 
 # Stage 1: Semantic Similarity
 
-STAGE1_SAFE_THRESHOLD = 0.85  # Above this: likely grounded, skip Stage 2
-STAGE1_RISK_THRESHOLD = 0.40  # Below this: likely problematic, go to Stage 2
+# Neither constant gates anything. They were written for a cascade that skips
+# the NLI call, which this module does not implement.
+#
+# STAGE1_SAFE_THRESHOLD is read in exactly one place: the fallback branch of
+# `evaluate_grounding`, which runs only when the NLI model failed to load. There
+# it decides whether a similarity-only result is labelled "entailment" or
+# "neutral".
+STAGE1_SAFE_THRESHOLD = 0.85
+
+# STAGE1_RISK_THRESHOLD is read nowhere in this codebase. It is kept because
+# `disagreement.py` documents its RELEVANCE_FLOOR as reusing this value, so the
+# constant is the recorded origin of that 0.40 rather than dead weight. Delete
+# it and that provenance comment points at nothing.
+STAGE1_RISK_THRESHOLD = 0.40
 
 # grounding_score = contradiction_prob + NEUTRAL_RISK_WEIGHT * neutral_prob.
 # DeBERTa NLI classifies verbatim/near-verbatim premise-hypothesis pairs as
@@ -175,13 +203,18 @@ def evaluate_grounding(
     source_text: str,
     claim_text: str,
 ) -> Optional[GroundingResult]:
-    """Two-stage cascade grounding evaluation.
-    
-    Stage 1: Semantic similarity (MiniLM, ~15ms)
-      - Computes embedding cosine similarity.
-      
-    Stage 2: NLI grounding (DeBERTa-v3 cross-encoder, ~80ms)
-      - Classifies premise-hypothesis entailment, contradiction, and neutral probabilities.
+    """Score how well `claim_text` is supported by `source_text`.
+
+    Runs MiniLM similarity and then the DeBERTa NLI classifier, unconditionally
+    and in that order. There is no threshold between them: the similarity does
+    not decide whether the NLI call happens.
+
+    When NLI returns a result it is the answer, carrying the similarity along
+    as `semantic_similarity`. The similarity-only result below is a degraded
+    path, reached only when the NLI model is not loaded -- it keeps the
+    evaluator producing scores instead of `None`, at lower quality.
+
+    Returns None when either text is empty or when neither model is available.
     """
     if not source_text or not claim_text:
         return None
