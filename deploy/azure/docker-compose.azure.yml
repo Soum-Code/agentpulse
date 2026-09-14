@@ -1,0 +1,43 @@
+# Overlay for the public Azure VM deployment. Use it alongside the base file:
+#
+#   docker compose -f docker-compose.yml -f deploy/azure/docker-compose.azure.yml up -d
+#
+# It is deliberately not named docker-compose.override.yml. Compose loads that
+# name automatically, which would pull a public TLS setup — and a hostname
+# nobody else owns — into every local `docker compose up`.
+services:
+  backend:
+    # No host port: the browser reaches the API through nginx on the dashboard
+    # container, so publishing 8000 to the internet only widens the exposure.
+    ports: !override []
+    restart: unless-stopped
+
+  worker:
+    restart: unless-stopped
+
+  dashboard:
+    # Caddy fronts this on 80/443; nothing needs to reach it from the host.
+    ports: !override []
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      AGENTPULSE_SITE_ADDRESS: ${AGENTPULSE_SITE_ADDRESS:?set it to the public hostname, e.g. agentpulse-demo.centralindia.cloudapp.azure.com}
+    volumes:
+      - ./deploy/azure/Caddyfile:/etc/caddy/Caddyfile:ro
+      # Issued certificates live here. Deleting this volume makes Caddy request
+      # a fresh certificate on every start, which will eventually trip Let's
+      # Encrypt's rate limit for the hostname and leave the site without TLS.
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - dashboard
+    restart: unless-stopped
+
+volumes:
+  caddy_data:
+  caddy_config:
