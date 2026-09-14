@@ -1,0 +1,25 @@
+# Without these, Git guesses whether a file is text. It guessed wrong on the
+# PDFs in presentation/ and warned that it would rewrite their line endings,
+# which for a binary means corrupting it. The round trip happened to be clean
+# that time; marking them binary means it does not depend on luck.
+*.pdf   binary
+*.pptx  binary
+*.docx  binary
+*.xlsx  binary
+*.png   binary
+*.webp  binary
+*.jpg   binary
+*.mp4   binary
+*.gguf  binary
+*.onnx  binary
+*.db    binary
+
+# Normalise text in the repository, whatever the checkout platform does.
+*.py    text
+*.js    text
+*.ts    text
+*.tsx   text
+*.md    text
+*.json  text
+*.yml   text
+*.yaml  text

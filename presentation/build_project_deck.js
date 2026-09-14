@@ -250,8 +250,37 @@ def run_agent_pipeline(user_query: str):
     'Batched async transport over aiohttp.',
     'Prompt capture is opt-in; without it spans carry structure and hashes, not text.',
     'Redaction runs in your process, before the wire.',
-    'Adapters: LangGraph, CrewAI, LangChain. Explicit wrappers, not monkey-patching.',
+    'Two entry points: the decorator above for LangGraph, and instrument_llm() for everything else.',
+    'LangChain and CrewAI adapter classes exist but raise NotImplementedError.',
   ], { x: 7.7, y: 1.8, w: 4.9, h: 3.5, fontSize: 13 });
+}
+
+// ------------------------------------------------- 6b. Framework-independent
+{
+  const s = slide('One line, and no framework required', 'Reach');
+  code(s,
+`from openai import OpenAI
+from agentpulse import AgentPulse
+
+pulse  = AgentPulse(endpoint="http://localhost:8000",
+                    capture_inputs=True, capture_outputs=True)
+client = pulse.instrument_llm(OpenAI())
+
+client.chat.completions.create(       # recorded, scored, unchanged
+    model="gpt-4o-mini",
+    messages=[{"role": "user", "content": "..."}],
+)`,
+    { w: 6.7, h: 3.1, fontSize: 11.5 });
+  bullets(s, [
+    'The decorator reads its first argument as a LangGraph state dict, so anyone not on LangGraph had no way in.',
+    'Every agent calls an LLM. Wrapping that call reaches all of them with one implementation.',
+    'It is also the most useful place to stand: the prompt and the completion are the exact pair the grounding evaluator compares.',
+    'OpenAI and Anthropic, sync or async. The client instance is wrapped, not the library globals.',
+  ], { x: 7.7, y: 1.8, w: 4.9, h: 3.1, fontSize: 12.5 });
+  callout(s,
+    'Demonstrated end to end: a prompt saying the Eiffel Tower is in Paris, a completion saying Berlin. ' +
+    'Grounding 0.9999, label high_risk, GROUNDING_FAILURE and HIGH_HALLUCINATION_RISK both raised. No framework in that path.',
+    { y: 5.2, h: 0.95 });
 }
 
 // ---------------------------------------------------------------- 7. Queue
@@ -274,25 +303,26 @@ def run_agent_pipeline(user_query: str):
 
 // ---------------------------------------------------------------- 8. Cascade
 {
-  const s = slide('Cheap model first, expensive model only when unsure', 'Evaluation');
+  const s = slide('Two models, both run on every span', 'Evaluation');
   code(s,
 `  span (input_summary, output_summary)
         |
-        v
-  Stage 1 - MiniLM-L6-v2 embeddings, cosine similarity     ~27.8 ms
+        +--> MiniLM-L6-v2 embeddings, cosine similarity      27.8 ms
+        |      (also feeds the drift signal)
         |
-        +--  cosine > 0.85  -->  accept as grounded, stop
-        |
-        v  otherwise escalate
-  Stage 2 - DeBERTa-v3-small cross-encoder NLI             ~188 ms
-        |
-        +--> entailment / contradiction / neutral
-             -> grounding_risk in [0, 1]`,
-    { h: 3.5, fontSize: 12 });
+        +--> DeBERTa-v3-small cross-encoder NLI             188.1 ms
+               |
+               +--> entailment / contradiction / neutral
+                    -> grounding_risk in [0, 1]
+                                                   ---------------
+                                        shipped:    215.9 ms = sum`,
+    { h: 3.4, fontSize: 12 });
   bullets(s, [
-    'Both models run on local CPU through ONNX Runtime, with a PyTorch fallback. No prompt text leaves the host.',
-    'Thresholds picked on a 21-case dev split, applied unchanged to a 30-case held-out test split.',
-  ], { y: 5.5, h: 1.2, fontSize: 13.5 });
+    'Not a gated cascade. There is no threshold between the stages: the NLI result is the score whenever the model is loaded.',
+    'The ablation proves it without reading the code - 215.9 ms is exactly 27.8 + 188.1. A gate that ever fired would land between them.',
+    'MiniLM alone is the fallback for when the NLI model fails to load, not a short-circuit.',
+    'Both run on local CPU through ONNX Runtime, with a PyTorch fallback. No prompt text leaves the host.',
+  ], { y: 5.2, h: 1.6, fontSize: 12.5 });
 }
 
 // ---------------------------------------------------------------- 9. Results
@@ -407,40 +437,41 @@ after 14 shifted spans
   const s = slide('The system reports on itself', 'Operations');
   table(s, [
     ['Endpoint', 'Answers'],
-    ['/v1/health/live', 'Is the process up?'],
-    ['/v1/health/ready', 'Can it serve traffic? (database reachable)'],
+    ['/v1/health/live', 'Is the process up? Answers without an API key, for probes.'],
+    ['/v1/health/ready', 'Can it serve traffic? Public verdict; the diagnosis needs the key.'],
     ['/v1/health/evaluator', 'Is any worker alive? Returns 503 when none, by contract.'],
     ['/v1/platform', 'Composite state, queue depth by status, worker roster, timing percentiles.'],
   ], { colW: [3.2, 8.69], fontSize: 12.5 });
   bullets(s, [
     'Ready and evaluator-ready are separate on purpose: the API can correctly accept spans while nothing is evaluating them.',
     'Workers heartbeat; stale after 90 seconds. Retention deletes past retention_days and records what it removed.',
-    'docker compose builds the API and dashboard only - it defines no worker service, so a Compose deployment stores spans without evaluating them.',
+    'Compose defines the worker as its own service, so a Compose deployment evaluates rather than only storing.',
+    'signal_coverage on /v1/platform reports how often each signal produced a value, so a signal switched off by configuration is distinguishable from one that is failing.',
   ], { y: 4.35, h: 1.9, fontSize: 13.5 });
 }
 
 // ---------------------------------------------------------------- 15. Evidence
 {
-  const s = slide('What the running system produces', 'Observed');
-  table(s, [
-    ['Measure', 'Value'],
-    ['Spans ingested', '20,771'],
-    ['Traces', '20,623'],
-    ['Evaluations written', '1,328'],
-    ['Alerts raised', '98'],
-    ['Agents tracked', '51'],
-  ], { colW: [3.0, 2.2], w: 5.2, fontSize: 12.5 });
+  const s = slide('What can be checked, and where', 'Evidence');
   table(s, [
     ['Check', 'Result'],
-    ['Python test suite', '209 passed'],
-    ['Evaluation latency (live)', 'p50 253 ms, p95 497 ms'],
-    ['Grounding F1 (v1.0_test)', '0.963'],
+    ['Python + SDK test suite', '226 passed'],
+    ['Dashboard test suite', '32 passed'],
     ['Dashboard typecheck / build', 'clean / passes'],
-    ['Frontend unit tests', 'none configured'],
-  ], { x: 6.4, colW: [3.6, 2.8], w: 6.4, fontSize: 12.5 });
+    ['Grounding F1 (v1.0_test)', '0.963'],
+    ['Evaluator latency (ablation)', '215.9 ms'],
+  ], { colW: [3.6, 2.4], w: 6.0, fontSize: 12.5 });
+  table(s, [
+    ['Deployed instance', 'Value'],
+    ['Public URL', 'agentpulse-demo.centralindia.cloudapp.azure.com'],
+    ['TLS', "Let's Encrypt, auto-renewed by Caddy"],
+    ['Survives reboot', 'yes - verified twice, data intact'],
+    ['Signals firing', 'grounding, drift, ASI, tool-claim'],
+  ], { x: 6.4, colW: [2.4, 4.0], w: 6.4, fontSize: 11 });
   callout(s,
-    'Evaluation covers 1,328 of 20,771 stored spans, about 6 percent. Most predate the current worker or were load-test fill.',
-    { y: 5.35, h: 0.8 });
+    'The dashboard test suite was verified by mutation rather than by passing: reintroducing the severity bug failed one test, ' +
+    'reintroducing the absolute-URL bug failed three. A test that passes proves nothing about what it would catch.',
+    { y: 5.35, h: 0.9 });
 }
 
 // ---------------------------------------------------------------- 16. Limits
@@ -451,13 +482,15 @@ after 14 shifted spans
     ['Tool-claim needs narrated claims',
       'The count must appear in prose next to the noun. Harnesses that emit structured tool_call fields without narrating them produce no claim to check.'],
     ['Drift needs 32 samples per agent',
-      'Short-lived agents never produce a sustained value; the current window does not survive a restart.'],
+      'Twenty baseline plus twelve window. Short-lived agents never produce a sustained value. Both pools are persisted, so a restart no longer resets them.'],
     ['Benchmark is small',
       '30 held-out cases. Enough to demonstrate the pipeline, not to claim generalisation.'],
     ['Not OpenTelemetry',
       'The span schema is custom. No OTel dependency, import or semantic-convention mapping.'],
     ['Single-node storage',
       'SQLite with WAL. Suited to self-hosted single-instance use, not multi-writer deployment.'],
+    ['Grounding misreads rounded numbers',
+      '"7.61 billion" against "approximately 7.6 billion" scores 0.922 risk. Reproducible, and deliberately unpatched: fixing from one observed case is fitting to one data point.'],
   ], { colW: [3.5, 8.39], fontSize: 11.5 });
 }
 
@@ -465,11 +498,11 @@ after 14 shifted spans
 {
   const s = slide('Where the work goes next', 'Next');
   bullets(s, [
-    'Populate result_count on the ingest path so the tool-claim signal can fire, and make the simulator scenario exercise it.',
-    'Persist the current drift window so sustained detection survives a restart.',
     'Expand the benchmark past 30 cases and re-run the ablation before making any generalisation claim.',
-    'Add a frontend test framework; the console currently rests on type checking and manual verification.',
-    'Backfill evaluations for stored spans to lift coverage above six percent.',
+    'Publish the SDK to an installable package; the name agentpulse on PyPI belongs to an unrelated project.',
+    'Extend dashboard tests from the mapping layer to the components.',
+    'Settle whether the crash-recovery test failure on Windows is a harness problem or a real WAL recovery gap.',
+    'Decide the gated cascade on measurement: it would cut latency and change every calibrated figure, so it is an experiment, not an edit.',
   ], { y: 1.75, h: 3.6, fontSize: 15 });
   callout(s,
     'The system works end to end and its measurements are reproducible. The gaps above are known, located in the code, and stated rather than hidden.',
