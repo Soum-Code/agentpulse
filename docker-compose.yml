@@ -48,7 +48,10 @@ services:
       dockerfile: Dockerfile
       args:
         VITE_API_KEY: ${AGENTPULSE_API_KEY:-change-me-to-a-secure-key}
-        VITE_API_URL: ${VITE_API_URL:-http://localhost:8000}
+        # Empty means same-origin: the SPA calls /v1/... and nginx proxies it
+        # to the backend service. Baking an absolute URL here would point every
+        # visitor's browser at their own machine rather than the server.
+        VITE_API_URL: ${VITE_API_URL:-}
     ports:
       - "5173:5173"
     depends_on:
