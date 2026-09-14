@@ -14,7 +14,8 @@ Existing LLM observability tools trace tokens, latency, and cost well, but treat
 
 ## Documentation
 
-- [HOW_IT_WORKS.md](HOW_IT_WORKS.md) — start here: one span from the SDK decorator to the screen, every threshold and constant read out of the source
+- [FLOW.md](FLOW.md) — start here: what the system does and why, in plain language, following one real call from your code to a red incident on screen
+- [HOW_IT_WORKS.md](HOW_IT_WORKS.md) — the specification: one span from the SDK decorator to the screen, every threshold and constant read out of the source
 - [STARTUP_GUIDE.md](STARTUP_GUIDE.md) — running it locally, with the failures you are likely to hit
 - [deploy/azure/README.md](deploy/azure/README.md) — putting it on a public host with TLS
 - [PROJECT_REPORT.md](PROJECT_REPORT.md) — architecture and mathematical formulation
