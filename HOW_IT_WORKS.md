@@ -347,7 +347,7 @@ A metric that is `None` is skipped, never treated as zero.
 
 ## 7. Where to look, and what you are looking at
 
-Eight pages, grouped by what you are trying to do.
+Ten pages, grouped by what you are trying to do.
 
 | Page | Component | What it answers |
 | :--- | :--- | :--- |
