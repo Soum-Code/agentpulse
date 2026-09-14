@@ -1,0 +1,11 @@
+# Terminates TLS for the public deployment and proxies to the dashboard's
+# nginx, which in turn proxies /v1/ to the backend. Caddy obtains and renews
+# the Let's Encrypt certificate itself; no cron job or manual step is needed.
+#
+# AGENTPULSE_SITE_ADDRESS must be the hostname that resolves to this machine.
+# A certificate cannot be issued for a bare IP address, so a DNS name is
+# required — on Azure the free *.cloudapp.azure.com name is enough.
+{$AGENTPULSE_SITE_ADDRESS} {
+	encode gzip
+	reverse_proxy dashboard:5173
+}

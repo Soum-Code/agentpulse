@@ -1,0 +1,17 @@
+# Docker does not read .gitignore, so local development files reach the build
+# context unless they are listed here. `.env` in particular was being copied in
+# and overriding the VITE_API_URL passed as a build argument, which baked a
+# localhost API address into every image.
+.env
+.env.*
+!.env.example
+
+node_modules
+dist
+build
+.vite
+
+*.log
+.DS_Store
+.git
+.gitignore
