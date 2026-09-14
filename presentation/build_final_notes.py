@@ -14,6 +14,14 @@ from reportlab.platypus import (
     Spacer, Table, TableStyle,
 )
 
+import os as _os
+
+# Written next to this script rather than the caller's working directory.
+# A bare filename meant that running this from the repo root dropped the
+# PDF there while the copy in presentation/ stayed stale, and the script
+# still printed that it had written it.
+_OUT_PATH = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), "AgentPulse_Final_Review_Notes.pdf")
+
 INK = colors.HexColor("#141922")
 DIM = colors.HexColor("#4A5464")
 FAINT = colors.HexColor("#8B94A4")
@@ -76,7 +84,7 @@ def header(canvas, doc):
 
 
 doc = BaseDocTemplate(
-    "AgentPulse_Final_Review_Notes.pdf", pagesize=A4,
+    _OUT_PATH, pagesize=A4,
     leftMargin=22 * mm, rightMargin=22 * mm, topMargin=20 * mm, bottomMargin=20 * mm,
     title="AgentPulse - Final Review Speaker Notes", author="Somnath Reddy",
 )
@@ -332,4 +340,4 @@ F.append(Paragraph(
     "file.</font>", S_BODY))
 
 doc.build(F)
-print("written: AgentPulse_Final_Review_Notes.pdf")
+print("written:", _OUT_PATH)
