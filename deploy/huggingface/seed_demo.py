@@ -31,14 +31,28 @@ def _post(path: str, payload: dict, timeout: int = 120) -> dict:
 
 
 def _wait_for_api(attempts: int = 60) -> bool:
+    """Wait for the API, sending the key.
+
+    This probe used to go out bare. On any deployment with authentication on it
+    came back 401 every time, so the loop ran its full two minutes and the
+    script exited having seeded nothing -- while printing a line that reads like
+    a successful run. Liveness no longer requires a key, but the header is sent
+    anyway so this keeps working against an older backend.
+    """
+    req = urllib.request.Request(
+        BASE + "/v1/health/live", headers={"X-API-Key": KEY}
+    )
+    last = None
     for _ in range(attempts):
         try:
-            with urllib.request.urlopen(BASE + "/v1/health/live", timeout=5) as r:
+            with urllib.request.urlopen(req, timeout=5) as r:
                 if r.status == 200:
                     return True
-        except Exception:
-            pass
+        except Exception as exc:
+            last = exc
         time.sleep(2)
+    if last is not None:
+        print(f"[seed] last probe error: {type(last).__name__}: {last}")
     return False
 
 

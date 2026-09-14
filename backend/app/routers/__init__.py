@@ -6,7 +6,7 @@ import json
 from datetime import datetime, timezone, timedelta
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException, Query, Response
+from fastapi import APIRouter, HTTPException, Query, Request, Response
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select, func, col
@@ -472,7 +472,7 @@ async def liveness_probe():
 
 
 @metrics_router.get("/health/ready")
-async def readiness_probe(response: Response):
+async def readiness_probe(request: Request, response: Response):
     """Readiness: can THIS process serve requests?
 
     Checks the database and nothing else. Models are deliberately excluded: the
@@ -489,6 +489,13 @@ async def readiness_probe(response: Response):
         result = await api_readiness(session)
     if not result["ready"]:
         response.status_code = 503
+
+    # An unauthenticated caller gets the verdict, not the diagnosis. `checks`
+    # carries the raw database exception string, which on failure can name a
+    # file path or connection target -- fine for an operator holding the key,
+    # not something to hand to anyone who can reach the port.
+    if not getattr(request.state, "authenticated", False):
+        return {"ready": result["ready"]}
     return result
 
 

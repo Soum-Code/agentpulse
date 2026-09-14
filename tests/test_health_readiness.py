@@ -316,6 +316,54 @@ class TestHealthEndpoints:
         assert "ready" in body
         assert "database" in body["checks"]
 
+    def test_probes_answer_without_a_key(self):
+        """Orchestrators probe these without credentials.
+
+        Requiring a key here made every load balancer and uptime monitor read
+        the service as permanently unhealthy -- the opposite of what a liveness
+        or readiness endpoint is for.
+        """
+        from app.config import settings
+
+        original = settings.local_dev_mode
+        settings.local_dev_mode = False
+        try:
+            with self.client() as client:
+                assert client.get("/v1/health/live").status_code == 200
+                assert client.get("/v1/health/ready").status_code in (200, 503)
+                # The evaluator probe stays behind the key: it reports worker
+                # counts, backend distribution and degradation reasons, which is
+                # operational detail rather than a yes/no probe answer.
+                assert client.get("/v1/health/evaluator").status_code == 401
+        finally:
+            settings.local_dev_mode = original
+
+    def test_readiness_withholds_diagnosis_from_unauthenticated_callers(self):
+        """The verdict is public; the reason behind it is not.
+
+        `checks` carries the raw database exception string, which on failure can
+        name a file path or connection target. A probe needs the status code,
+        not the diagnosis.
+        """
+        from app.config import settings
+
+        original = settings.local_dev_mode
+        settings.local_dev_mode = False
+        try:
+            with self.client() as client:
+                anon = client.get("/v1/health/ready").json()
+                keyed = client.get(
+                    "/v1/health/ready",
+                    headers={"X-API-Key": settings.api_key},
+                ).json()
+        finally:
+            settings.local_dev_mode = original
+
+        assert "ready" in anon
+        assert "checks" not in anon
+        assert "reasons" not in anon
+        assert "database" in keyed["checks"]
+
     def test_evaluator_endpoint_503_when_no_worker(self):
         """A deployment system must see a non-200 when nothing can evaluate.
 
