@@ -1202,13 +1202,22 @@ New and still open:
 
 ## 19. Deployed publicly, and the claims that did not survive contact with it (2026-09-15)
 
-Eleven pull requests, #4 through #14, all merged to `main` and all live. The
+Thirteen pull requests, #4 through #16, all merged to `main` and all live. The
 theme running through them: putting the system somewhere real, and then finding
 out which of its documented claims were true.
 
 ### 19.1 It is deployed, on a URL that outlives the laptop
 
 **https://agentpulse.centralindia.cloudapp.azure.com**
+
+The hostname was originally `agentpulse-demo`, which read as though the instance
+were a mock rather than the running system -- it was only the DNS label picked
+when the public IP was created. Renaming it (#16) took a restart for Caddy to
+obtain a certificate for the new name, about thirty seconds of downtime, and
+eleven reference updates across nine files. Two of those would have broken
+quietly: `sitemap.xml` and the `canonical` link would have kept pointing search
+engines at a name that no longer resolves. **The old hostname is gone**, so any
+link shared before the rename is dead.
 
 Azure for Students, chosen after checking the alternatives rather than by
 default. The constraint that decided it is not price but memory: the evaluation
@@ -1451,7 +1460,10 @@ New and open:
 - **Grounding misreads rounded numbers** — "7.61 billion" against "approximately
   7.6 billion" scores 0.922 risk. Reproducible, and deliberately unpatched:
   fixing from one observed case is fitting to one data point.
-- **Google Search Console verification is not done.** The site is ready for it;
-  the token has to come from the account doing the verifying.
+- **Google Search Console verification is not done.** The site is ready for it --
+  it returns a real 404 for missing files, which verification requires. The token
+  has to come from the account doing the verifying, and the property must be
+  created against the current hostname; one made against `agentpulse-demo` will
+  never verify.
 
 ---
