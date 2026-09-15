@@ -88,8 +88,8 @@ Azure DNS label is enough:
 
 ```bash
 az network public-ip update -g agentpulse-rg -n agentpulse-vmPublicIP \
-  --dns-name agentpulse-demo
-# -> agentpulse-demo.centralindia.cloudapp.azure.com
+  --dns-name agentpulse
+# -> agentpulse.centralindia.cloudapp.azure.com
 ```
 
 ## Install and run

@@ -4,6 +4,8 @@ The short version of how this works, start to finish, in plain language.
 
 For exact thresholds, formulas and file references, read [HOW_IT_WORKS.md](HOW_IT_WORKS.md). This page is the story; that one is the specification.
 
+**Running instance:** <https://agentpulse.centralindia.cloudapp.azure.com> — the screens described here, with real evaluated telemetry behind them.
+
 ---
 
 ## 1. The problem

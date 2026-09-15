@@ -9,4 +9,4 @@ User-agent: *
 Allow: /
 Disallow: /v1/
 
-Sitemap: https://agentpulse-demo.centralindia.cloudapp.azure.com/sitemap.xml
+Sitemap: https://agentpulse.centralindia.cloudapp.azure.com/sitemap.xml

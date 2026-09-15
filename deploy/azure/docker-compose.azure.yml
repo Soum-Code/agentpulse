@@ -26,7 +26,7 @@ services:
       - "80:80"
       - "443:443"
     environment:
-      AGENTPULSE_SITE_ADDRESS: ${AGENTPULSE_SITE_ADDRESS:?set it to the public hostname, e.g. agentpulse-demo.centralindia.cloudapp.azure.com}
+      AGENTPULSE_SITE_ADDRESS: ${AGENTPULSE_SITE_ADDRESS:?set it to the public hostname, e.g. agentpulse.centralindia.cloudapp.azure.com}
     volumes:
       - ./deploy/azure/Caddyfile:/etc/caddy/Caddyfile:ro
       # Issued certificates live here. Deleting this volume makes Caddy request
