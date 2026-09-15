@@ -155,7 +155,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
       { tab: 'datasets', title: 'Curated Golden Datasets', sub: 'Regression test cases curated from production spans', cat: 'experiments', icon: Database },
       { tab: 'replay', title: 'Deterministic Time-Travel Replay', sub: 'Step-by-step state & token debugger', cat: 'traces', icon: Play },
       { tab: 'telemetry-lab', title: 'Synthetic Telemetry Stress Lab', sub: 'Inject anomalies & test automated evaluators', cat: 'all', icon: Cpu },
-      { tab: 'settings', title: 'SDK Keys & Retention Rules', sub: 'OpenTelemetry exporters & security parameters', cat: 'settings', icon: Settings }
+      { tab: 'settings', title: 'SDK Keys & Retention Rules', sub: 'Span ingestion endpoint & retention parameters', cat: 'settings', icon: Settings }
     ];
 
     navSurfaces.forEach((ns) => {
