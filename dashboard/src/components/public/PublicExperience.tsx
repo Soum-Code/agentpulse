@@ -49,52 +49,58 @@ export const PublicExperience: React.FC<PublicExperienceProps> = ({ onEnterProdu
   // butter = yellow on black, dark = near-black, chalk = light.
   const [palette, setPalette] = useState<'butter' | 'dark' | 'chalk'>('dark');
 
-  const handleCopyPip = (textToCopy = 'pip install agentpulse') => {
+  const handleCopyPip = (textToCopy = 'pip install -e "./sdk[dev]"') => {
     navigator.clipboard.writeText(textToCopy);
     setPipCopied(true);
     setTimeout(() => setPipCopied(false), 2000);
   };
 
+  // This is a real trace, not an illustration. It was produced by sending the
+  // call below through the running stack: the SDK emitted the span, the API
+  // queued it, the worker ran DeBERTa on it, and the two alerts at the end
+  // were raised by the alert engine. Every number here came back from that run.
+  //
+  // It replaced a generic SQL-hallucination story that had never been executed.
   const storySteps = [
     {
-      title: 'Agent Dispatches Plan',
-      actor: 'Autonomous SQL Synthesizer',
+      title: 'Instrument the client',
+      actor: 'pulse.instrument_llm',
       type: 'agent',
       status: 'ok',
-      code: 'orchestrator.plan_cohort_query(input="Q3 cohort retention by tier")',
-      detail: 'Generated 3-stage execution plan: schema catalog query, dialect compilation, and warehouse dry-run.',
-      tokens: 284,
-      latency: '1.2ms'
+      code: 'client = pulse.instrument_llm(OpenAI())',
+      detail: 'One line, no framework. The wrapper records every completion this client produces and never blocks the call.',
+      tokens: 0,
+      latency: '0.005ms'
     },
     {
-      title: 'Tool Catalog Lookup',
-      actor: 'schema_catalog_lookup',
-      type: 'tool',
-      status: 'ok',
-      code: 'schema_catalog.lookup(tables=["analytics.fact_cohort_v3"])',
-      detail: 'Warehouse schema returned 4 valid columns: [tenant_id, tier_identifier_code, signup_epoch, bytes_ingested].',
-      tokens: 142,
-      latency: '4.8ms'
-    },
-    {
-      title: 'Model Generates SQL',
-      actor: 'gemini-2.5-flash',
+      title: 'The agent asks, and is told the answer',
+      actor: 'gpt-4o-mini',
       type: 'model',
       status: 'warning',
-      code: 'SELECT tenant_id, usage_tier_id FROM fact_cohort_v3 WHERE signup_epoch > 1704067200',
-      detail: 'Model hallucinated column name `usage_tier_id` instead of reflected `tier_identifier_code` due to prompt cache pollution.',
-      tokens: 890,
-      latency: '340ms'
+      code: '"Where is the Eiffel Tower? It stands in Paris, France."\n-> "The Eiffel Tower is located in Berlin, Germany."',
+      detail: 'Fluent, confident, well formed, and contradicted by the prompt it was given. Nothing raised an exception; the agent moved on.',
+      tokens: 59,
+      latency: '—'
     },
     {
-      title: 'Evaluator Flags Discrepancy',
-      actor: 'evaluator.schema_grounding',
+      title: 'Span accepted, evaluation queued',
+      actor: 'POST /v1/ingest',
+      type: 'tool',
+      status: 'ok',
+      code: '202 Accepted  ->  evaluation_jobs (SQLite WAL, 120s lease)',
+      detail: 'The API stores the span and returns. It loads no models and waits for nothing, so the agent is never slowed by evaluation.',
+      tokens: 0,
+      latency: '< 5ms'
+    },
+    {
+      title: 'The worker reads it as a contradiction',
+      actor: 'DeBERTa-v3-small (local CPU)',
       type: 'evaluator',
       status: 'error',
-      code: 'grounding_evaluator.evaluate(sql, schema_context) -> score: 0.42 (REJECT)',
-      detail: 'Observed 2 non-grounded identifiers. Caught before warehouse query execution cost was incurred.',
-      tokens: 104,
-      latency: '8.4ms'
+      code: 'premise: Paris  |  hypothesis: Berlin\n-> contradiction  ->  grounding_score 0.9999  (stage2)',
+      detail: 'GROUNDING_FAILURE and HIGH_HALLUCINATION_RISK raised, both HIGH. No LLM was called to reach this: one classifier, on CPU.',
+      tokens: 0,
+      latency: '215.9ms'
     }
   ];
 
@@ -107,7 +113,7 @@ export const PublicExperience: React.FC<PublicExperienceProps> = ({ onEnterProdu
       metric: '< 0.005ms SDK overhead',
       metricLabel: 'tests/test_sdk.py',
       diagramTitle: 'Span Tree',
-      features: ['LangGraph and CrewAI integrations', 'Per-span latency and token counts', 'Prompt & tool call argument payload serialization']
+      features: ['LangGraph nodes, or any OpenAI / Anthropic client', 'Per-span latency and token counts', 'Prompt & tool call argument payload serialization']
     },
     {
       label: 'UNDERSTAND',
@@ -388,6 +394,74 @@ chain.invoke({"question": user_query})`
                 }`}
               >
                 Observe. Evaluate. Investigate. Calm, precise observability engineered for multi-agent reasoning, behavioral drift, and closed-loop research.
+              </p>
+            </div>
+
+            {/* Readers assume an evaluator calls a large model behind the scenes,
+                and price, latency and determinism all follow from that
+                assumption. This says otherwise before they form it. The figures
+                are the measured ones and are labelled with where they come
+                from, because two different runs produce two different latency
+                numbers and mixing them invites the obvious question. */}
+            <div
+              className={`rounded-xl border px-5 py-4 max-w-lg ${
+                palette === 'butter'
+                  ? 'border-neutral-900/20 bg-white/50'
+                  : palette === 'chalk'
+                  ? 'border-neutral-300 bg-neutral-50'
+                  : 'border-neutral-800 bg-neutral-900/40'
+              }`}
+            >
+              <p
+                className={`text-sm font-semibold ${
+                  palette === 'dark' ? 'text-[#F5F5F7]' : 'text-neutral-900'
+                }`}
+              >
+                AgentPulse never calls an LLM to judge.
+              </p>
+              <p
+                className={`text-xs leading-relaxed mt-1.5 ${
+                  palette === 'dark' ? 'text-neutral-400' : 'text-neutral-600'
+                }`}
+              >
+                Two small models on local CPU &mdash; MiniLM for embeddings, DeBERTa-v3-small
+                as an NLI classifier. No judge prompt, no API key, no per-check bill, and the
+                same input scores the same every time.
+              </p>
+              <div
+                className={`grid grid-cols-3 gap-3 mt-3 pt-3 border-t text-[11px] font-mono ${
+                  palette === 'dark' ? 'border-neutral-800' : 'border-neutral-300'
+                }`}
+              >
+                <div>
+                  <div className={palette === 'dark' ? 'text-[#F5F5F7]' : 'text-neutral-900'}>203 ms</div>
+                  <div className={palette === 'dark' ? 'text-neutral-500' : 'text-neutral-500'}>
+                    median, 30-case judge benchmark
+                  </div>
+                </div>
+                <div>
+                  <div className={palette === 'dark' ? 'text-[#F5F5F7]' : 'text-neutral-900'}>0 tokens</div>
+                  <div className={palette === 'dark' ? 'text-neutral-500' : 'text-neutral-500'}>
+                    it classifies, it does not generate
+                  </div>
+                </div>
+                <div>
+                  <div className={palette === 'dark' ? 'text-[#F5F5F7]' : 'text-neutral-900'}>15.6&times;</div>
+                  <div className={palette === 'dark' ? 'text-neutral-500' : 'text-neutral-500'}>
+                    faster than an 8B judge, same split
+                  </div>
+                </div>
+              </div>
+              <p
+                className={`text-[11px] leading-relaxed mt-3 pt-3 border-t ${
+                  palette === 'dark'
+                    ? 'text-neutral-500 border-neutral-800'
+                    : 'text-neutral-500 border-neutral-300'
+                }`}
+              >
+                That judge scored higher on accuracy &mdash; F1 1.000 against 0.963 &mdash; and
+                the two disagreed on one case out of thirty, a rounded number the classifier
+                read as a contradiction. Both figures are ours.
               </p>
             </div>
 
@@ -1342,7 +1416,7 @@ chain.invoke({"question": user_query})`
 
         <div className="grid grid-cols-1 sm:grid-cols-5 gap-3.5">
           {[
-            { step: '01', title: 'Production Trace', desc: 'Capture anomaly in live swarm', tag: 'OTel Ingestion' },
+            { step: '01', title: 'Production Trace', desc: 'Capture anomaly in live swarm', tag: 'Span Ingestion' },
             { step: '02', title: '1-Click Curate', desc: 'Isolate failing span to dataset', tag: 'Data Slicing' },
             { step: '03', title: 'Golden Dataset', desc: 'Maintain versioned benchmarks', tag: 'Ground Truth' },
             { step: '04', title: 'Run Experiment', desc: 'Test prompt/model candidates', tag: 'Eval Matrix' },
