@@ -1467,3 +1467,138 @@ New and open:
   never verify.
 
 ---
+
+## 20. Three external audits, and what was left after checking them (2026-09-16)
+
+PRs #18 and #19. Three architectural critiques arrived in sequence, each
+written with more confidence than the last. Between them they surfaced four real
+defects. They also asserted a good deal that is not so, and the useful record
+here is which was which — because the same proposals will come back.
+
+### 20.1 The landing page was still making claims the backend had stopped making
+
+The backend has been audited for invented claims repeatedly. The page in front
+of it never had.
+
+| Claim | Where | Reality |
+| :--- | :--- | :--- |
+| "OpenTelemetry-compatible telemetry stream" | `ConnectModal.tsx:72` | No OTel dependency, exporter or semantic-convention mapping exists |
+| "OpenTelemetry exporters & security parameters" | `CommandPalette.tsx:158` | same |
+| `tag: 'OTel Ingestion'` | `PublicExperience.tsx:1345` | same |
+| `pip install agentpulse` on the copy button | `PublicExperience.tsx:52` | That PyPI name belongs to an unrelated project |
+| "LangGraph, CrewAI, LlamaIndex" | `AgentsView.tsx:39` | Only LangGraph has an adapter; no LlamaIndex code exists at all |
+| "LangGraph and CrewAI integrations" | OBSERVE phase | same |
+| "4 active swarms" | `AgentsView.tsx:39` | Hardcoded, and disagreed with the backend |
+
+The OpenTelemetry one was worse than a stray claim: **the page contradicted
+itself.** Line 1513 already read "AgentPulse span schema (not OpenTelemetry)".
+Somebody had corrected one spot and left three.
+
+The walkthrough told a generic story about a hallucinated SQL column against
+`fact_cohort_v3` — a trace that had never been executed. It now carries the one
+that was: `instrument_llm(OpenAI())`, a prompt placing the Eiffel Tower in
+Paris, a completion placing it in Berlin, 202 at ingest, and DeBERTa returning
+contradiction at 0.9999 with both alerts raised.
+
+And nothing on the site said **AgentPulse never calls an LLM to judge** — the
+grep returned nothing. That is the single assumption every reader brings, and
+price, latency and determinism all follow from it. The hero now states it, with
+each figure labelled by the run that produced it, and with the part that does
+not flatter us in the same panel: the 8B judge scored F1 1.000 against our
+0.963.
+
+### 20.2 Two real limits, made observable rather than fixed
+
+**The NLI model reads at most 512 tokens.** Premise and hypothesis share that
+budget, so a long premise is what gets cut. Measured:
+
+```
+short premise :   19 tokens   truncated=False   score 0.9998
+long premise  : 2719 tokens   truncated=True    score 0.9697
+```
+
+2,207 tokens discarded, and the call returned a perfectly ordinary-looking
+number. A retrieved context whose supporting passage sits past the cut is scored
+against evidence the model never saw.
+
+`GroundingResult` now carries `input_tokens` and `input_truncated`; the worker
+logs it once per process. **The premise is deliberately not windowed** — that
+would fix the blindness and alter every figure in `THRESHOLD_ANALYSIS.md` and
+`GROUNDING_SCORE_CALIBRATION_REPORT.md`. Same argument that kept the cascade
+gate out in 19.3: an experiment, not an edit.
+
+**The SDK's send buffer was an unbounded list.** The audit's stated mechanism
+was wrong — a failed send goes to the fallback file rather than staying in
+memory. The real one: `_ensure_transport` returns quietly when there is no
+running event loop, so the flush task never starts, and every span then
+accumulates in the agent's own process forever, sending nothing and saying
+nothing. For an SDK whose promise is that it cannot break what it observes, that
+is the wrong failure to have.
+
+Bounded at `max_buffered_spans`, 10,000 by default. Oldest first, since a
+backlog makes recent spans the useful ones; drops counted in
+`stats['total_dropped']` and reported once.
+
+Eleven tests cover both, including that each warning fires once rather than per
+span — per-span noise is precisely how both stayed invisible.
+
+### 20.3 What the audits got wrong, recorded so it is not re-proposed
+
+Roughly half of what arrived did not survive a grep.
+
+| Asserted | Checked |
+| :--- | :--- |
+| "DriftView still references a UMAP Projection across 5,000 verified runs" | `grep -rn UMAP` across the dashboard returns **nothing**. `DriftView.tsx:169` already reads "no projection: the API exposes distances, not coordinates" |
+| UMAP at `PublicExperience.tsx:120` and `1580` | Line 120 is the drift feature list, already correctly describing window-vs-baseline centroid shift and ASI. Line 1580 is `</span>` |
+| "OTel-Native Span Tree" | That string does not exist anywhere |
+| Fixes at `ConnectModal.tsx:76`, `CommandPalette.tsx:274` | The real lines are 72 and 158; those numbers hold unrelated code |
+| "Lease Poisoning (No DLQ)" | `STATUS_DEAD_LETTER`, `DEFAULT_MAX_ATTEMPTS = 3` and `available_at` backoff all exist. The "industry standard" column described what the code already did |
+| "Unredacted Sensitive Ingestion — SOC 2, HIPAA, PCI-DSS violation" | `privacy.py` compiles redaction patterns and applies them before transport, and capture defaults to false |
+| "Manual UI regression checks" | 237 automated tests |
+| "SQLite writer locks at ~2,000 writes/sec" | Never measured on this system |
+
+The third audit went further and described UI panels it claimed to have already
+implemented, advertising `BufferConfig`, `ScrubbingPolicy`,
+`.github/workflows/agent_regression_gate.yml`, DuckDB ingestion and INT8 ONNX.
+**None of those exist in this codebase**, and `.github/workflows` is not a
+directory here. Implementing that page would have put API signatures on the site
+that a developer would import and fail on — the exact defect 20.1 had just
+finished removing, and worse, because a wrong install command wastes a minute
+while a fabricated API wastes an afternoon.
+
+### 20.4 The pattern, which is the point
+
+Each audit contained something real and worth acting on. The 512-token limit is
+a genuine blind spot that was documented nowhere, and it would not have been
+found by reading this project's own notes.
+
+Each also contained confident, specific, plausible statements — file paths, line
+numbers, percentages — that were false. Confidence and specificity carried no
+information about correctness.
+
+The cost of checking is about two minutes per claim. The cost of not checking
+was, in the third case, a landing page advertising an SDK that does not exist.
+
+That is the failure mode this project was built to detect, arriving from
+outside, about itself.
+
+### 20.5 Standing facts
+
+Closed since 19.10:
+
+- ~~Grounding misreads rounded numbers, undocumented in the UI~~ — the judge
+  comparison including our lower F1 is now in the hero panel.
+
+Unchanged and still true, plus:
+
+- **The 512-token window is a model property, not a setting.** Raising
+  `MAX_NLI_TOKENS` would not give DeBERTa-v3-small a longer memory. Sliding-window
+  evaluation remains unimplemented and would need re-measuring the calibration
+  reports before it could ship.
+- **`.github/workflows` does not exist.** There is no CI; the 269 tests run
+  locally. A gate that blocks PRs on contradiction rate is a reasonable idea and
+  has simply not been built.
+- **`pip install agentpulse` still fetches an unrelated package.** The site and
+  README now say so rather than hiding it.
+
+---
