@@ -88,20 +88,62 @@ def hard_kill(proc: subprocess.Popen) -> None:
         pass
 
 
+def _connect(db: Path, timeout: float = 10.0) -> sqlite3.Connection:
+    """Open the database, tolerating the window after a worker is hard-killed.
+
+    Windows releases a dead process's file handles asynchronously. Reading a
+    WAL database in that window raises `sqlite3.OperationalError: disk I/O
+    error` from the recovery path, so these tests failed intermittently -- about
+    one run in three -- immediately after `hard_kill`.
+
+    That was measured, not assumed. The database from a failing run opens
+    cleanly afterwards, reports `PRAGMA integrity_check = ok`, and contains
+    exactly what the test asserts: one job, status running, attempts 1, lease
+    set, no evaluation. The durability property held; the reader was early.
+
+    The retry is bounded and re-raises, so a database that is genuinely
+    unreadable still fails the test rather than hanging or passing quietly.
+    Nothing about the assertions changes -- they run on the same real data.
+    """
+    deadline = time.time() + timeout
+    while True:
+        try:
+            return sqlite3.connect(str(db))
+        except sqlite3.OperationalError:
+            if time.time() >= deadline:
+                raise
+            time.sleep(0.05)
+
+
 def jobs(db: Path) -> list[dict]:
-    conn = sqlite3.connect(str(db))
+    conn = _connect(db)
     conn.row_factory = sqlite3.Row
-    rows = [dict(r) for r in conn.execute("SELECT * FROM evaluation_jobs")]
-    conn.close()
-    return rows
+    try:
+        return [dict(r) for r in _retry_query(conn, "SELECT * FROM evaluation_jobs")]
+    finally:
+        conn.close()
+
+
+def _retry_query(conn: sqlite3.Connection, sql: str, params: tuple = (),
+                 timeout: float = 10.0):
+    """Connecting can succeed while the first read still hits WAL recovery."""
+    deadline = time.time() + timeout
+    while True:
+        try:
+            return conn.execute(sql, params).fetchall()
+        except sqlite3.OperationalError:
+            if time.time() >= deadline:
+                raise
+            time.sleep(0.05)
 
 
 def count(db: Path, table: str, where: str = "", params: tuple = ()) -> int:
-    conn = sqlite3.connect(str(db))
+    conn = _connect(db)
     sql = f"SELECT COUNT(*) FROM {table}" + (f" WHERE {where}" if where else "")
-    n = conn.execute(sql, params).fetchone()[0]
-    conn.close()
-    return n
+    try:
+        return _retry_query(conn, sql, params)[0][0]
+    finally:
+        conn.close()
 
 
 def fast_forward_availability(db: Path) -> int:
@@ -110,7 +152,7 @@ def fast_forward_availability(db: Path) -> int:
     Returns how many rows were actually in the future -- so a caller can assert
     that backoff really deferred the job rather than silently doing nothing.
     """
-    conn = sqlite3.connect(str(db))
+    conn = _connect(db)
     pending = conn.execute(
         "SELECT COUNT(*) FROM evaluation_jobs "
         "WHERE status='queued' AND available_at > datetime('now')"
