@@ -37,6 +37,8 @@ class AsyncTransport:
         self._total_sent = 0
         self._total_failed = 0
         self._total_fallback = 0
+        self._total_dropped = 0
+        self._warned_overflow = False
 
     async def start(self) -> None:
         """Start the transport: create HTTP session and flush loop."""
@@ -74,7 +76,33 @@ class AsyncTransport:
         )
 
     def enqueue(self, span: SpanPayload) -> None:
-        """Add a span to the send buffer. Non-blocking."""
+        """Add a span to the send buffer. Non-blocking, and bounded.
+
+        The bound matters when the flush loop is not running -- `_ensure_transport`
+        returns quietly if there is no event loop to start it on, and then nothing
+        ever drains this. Without a ceiling the agent's own process grows until it
+        dies, which is the one thing this SDK promises not to do.
+
+        The oldest span goes first: if telemetry is backing up, the recent spans
+        are the ones worth keeping. Dropping is counted and reported rather than
+        done quietly -- a silent drop would make the console look merely idle.
+        """
+        limit = getattr(self._config, "max_buffered_spans", 10_000)
+        if len(self._buffer) >= limit:
+            self._buffer.pop(0)
+            self._total_dropped += 1
+            if not self._warned_overflow:
+                self._warned_overflow = True
+                logger.warning(
+                    "AgentPulse span buffer reached %d and is dropping the oldest "
+                    "span per new one. The transport is not draining -- usually "
+                    "because it was never started (no running event loop when "
+                    "AgentPulse was constructed), or because the backend is "
+                    "unreachable. Telemetry is being lost; the agent is not "
+                    "affected. Reported once; see stats['total_dropped'] for the count.",
+                    limit,
+                )
+
         self._buffer.append(span)
         # Flush immediately if buffer is full
         if len(self._buffer) >= self._config.batch_size:
@@ -179,4 +207,8 @@ class AsyncTransport:
             "total_sent": self._total_sent,
             "total_failed": self._total_failed,
             "total_fallback": self._total_fallback,
+            # Spans discarded because the buffer hit its ceiling. Non-zero means
+            # telemetry was lost, which is worth knowing before concluding the
+            # console is simply quiet.
+            "total_dropped": self._total_dropped,
         }

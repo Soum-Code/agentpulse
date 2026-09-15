@@ -72,6 +72,19 @@ class GroundingResult:
     latency_ms: float
     semantic_similarity: Optional[float] = None
 
+    # DeBERTa reads at most 512 tokens of premise and hypothesis combined. Past
+    # that the rest of the premise is dropped, and the score is computed from
+    # evidence the model never saw -- a long RAG context can have its supporting
+    # passage cut off and the claim then reads as unsupported.
+    #
+    # Nothing about that was observable: the call returns a normal-looking score
+    # either way. These two fields make it observable. They do not change the
+    # score, which is deliberate -- windowing the premise would alter every
+    # figure in THRESHOLD_ANALYSIS.md and GROUNDING_SCORE_CALIBRATION_REPORT.md,
+    # so it belongs in an experiment with its own measurements.
+    input_tokens: Optional[int] = None
+    input_truncated: bool = False
+
 
 # Stage 1: Semantic Similarity
 
@@ -102,6 +115,12 @@ STAGE1_RISK_THRESHOLD = 0.40
 # sweep, the self-comparison demonstration, and the held-out test-split
 # improvement this produced (F1 0.703 -> 0.963, FPR 0.647 -> 0.059).
 NEUTRAL_RISK_WEIGHT = 0.5
+
+# DeBERTa-v3-small's position embeddings stop here. Premise and hypothesis share
+# the budget, so a long premise is what gets cut. This is a property of the
+# model, not a configuration choice, which is why it is a constant rather than a
+# setting -- raising it would not give the model a longer memory.
+MAX_NLI_TOKENS = 512
 
 
 def compute_semantic_similarity(
@@ -148,13 +167,23 @@ def compute_nli_grounding(
     try:
         start = time.perf_counter()
 
-        # Tokenize
+        # Tokenize once without truncation purely to learn the true length,
+        # then again with it. The second pass costs well under a millisecond
+        # against ~188 ms of inference, which is a cheap price for knowing
+        # whether the model actually saw the evidence it was asked about.
+        # verbose=False: this pass is *meant* to exceed the limit, and the
+        # tokenizer's own warning ("will result in indexing errors") is both
+        # noisy and wrong here -- the inference pass below truncates properly.
+        full = _nli_tokenizer(source_text, claim_text, truncation=False, verbose=False)
+        input_tokens = len(full["input_ids"])
+        input_truncated = input_tokens > MAX_NLI_TOKENS
+
         inputs = _nli_tokenizer(
             source_text,
             claim_text,
             return_tensors="pt",
             truncation=True,
-            max_length=512,
+            max_length=MAX_NLI_TOKENS,
             padding=True,
         )
 
@@ -190,6 +219,8 @@ def compute_nli_grounding(
             label=label,
             evaluation_stage="stage2",
             latency_ms=round(latency_ms, 2),
+            input_tokens=input_tokens,
+            input_truncated=input_truncated,
         )
 
     except Exception as exc:

@@ -125,7 +125,7 @@ async def researcher_node(state):
 
 The decorator builds a span **before** running the function, runs it, times it, then fills in the result. Three properties are deliberate:
 
-- **It never blocks the agent.** `transport.enqueue(span)` is fire-and-forget.
+- **It never blocks the agent.** `transport.enqueue(span)` is fire-and-forget, and the buffer behind it is bounded at `max_buffered_spans` (10,000 by default). The bound matters because `_ensure_transport` gives up quietly when there is no running event loop — the flush task never starts, and an unbounded buffer would then grow inside the agent's own process forever, sending nothing and saying nothing. At the ceiling the oldest span is dropped, counted in `stats['total_dropped']`, and reported once.
 - **It fails open.** Any SDK exception is logged and the original function is re-run, so a bug in the observability layer cannot take down the agent.
 - **It propagates the trace.** The returned dict gets `__agentpulse_trace_id` and `__agentpulse_parent_span_id` stamped into it, which is how a LangGraph state dict carries the trace to the next node and the waterfall gets its parent-child shape.
 - **It parents what runs inside it.** While the wrapped function executes, the decorator makes its own span the active context, so an instrumented LLM call made inside a monitored node becomes that node's child rather than its sibling. The context is restored afterwards; leaking it would attach the next node to the wrong parent.
@@ -250,6 +250,10 @@ The `0.5` is `NEUTRAL_RISK_WEIGHT` and it is the most carefully justified consta
 `0.5` was chosen as a principled default, not fitted — the dev split was too small to discriminate between candidate weights. Say that plainly if asked.
 
 Score runs 0.0 (grounded) → 1.0 (ungrounded).
+
+**The model reads at most 512 tokens.** Premise and hypothesis share that budget, so a long premise is what gets cut. A retrieved context whose supporting passage sits past the cut produces a score computed from evidence the model never saw — and the call returns a perfectly ordinary-looking number either way.
+
+That is a property of DeBERTa-v3-small, not a setting; raising the constant would not give it a longer memory. What changed is that it is no longer silent: the result carries `input_tokens` and `input_truncated`, and the worker logs it once per process. Windowing the premise would fix the blindness but alter every score in the calibration reports, so it belongs in an experiment rather than an edit.
 
 ### 4.2 Tool-claim — `services/tool_claim.py`
 
