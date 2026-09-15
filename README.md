@@ -150,13 +150,7 @@ pytest tests/ -v
 python benchmarks/run_benchmarks.py
 ```
 
-Current state: **211 passed**.
-
-`tests/test_durable_queue.py::TestCrashRecovery` is intermittent on Windows. It
-sometimes fails with a SQLite disk I/O error reading a WAL database immediately
-after the test SIGKILLs the worker holding it, and passes on a clean run. The
-flakiness looks like leftover WAL state from a previous run in the same session
-rather than a defect in the queue, but that has not been proven.
+Current state: **226 passed**, plus 32 in the dashboard (`cd dashboard && npm test`).
 
 Current benchmark results (`benchmarks/benchmark_results.json`, CPU-only):
 
