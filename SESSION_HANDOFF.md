@@ -1208,7 +1208,7 @@ out which of its documented claims were true.
 
 ### 19.1 It is deployed, on a URL that outlives the laptop
 
-**https://agentpulse-demo.centralindia.cloudapp.azure.com**
+**https://agentpulse.centralindia.cloudapp.azure.com**
 
 Azure for Students, chosen after checking the alternatives rather than by
 default. The constraint that decided it is not price but memory: the evaluation

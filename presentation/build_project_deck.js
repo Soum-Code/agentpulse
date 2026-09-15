@@ -463,7 +463,7 @@ after 14 shifted spans
   ], { colW: [3.6, 2.4], w: 6.0, fontSize: 12.5 });
   table(s, [
     ['Deployed instance', 'Value'],
-    ['Public URL', 'agentpulse-demo.centralindia.cloudapp.azure.com'],
+    ['Public URL', 'agentpulse.centralindia.cloudapp.azure.com'],
     ['TLS', "Let's Encrypt, auto-renewed by Caddy"],
     ['Survives reboot', 'yes - verified twice, data intact'],
     ['Signals firing', 'grounding, drift, ASI, tool-claim'],
