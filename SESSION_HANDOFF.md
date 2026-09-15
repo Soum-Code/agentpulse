@@ -1199,3 +1199,259 @@ New and still open:
   history rewrite.
 
 ---
+
+## 19. Deployed publicly, and the claims that did not survive contact with it (2026-09-15)
+
+Eleven pull requests, #4 through #14, all merged to `main` and all live. The
+theme running through them: putting the system somewhere real, and then finding
+out which of its documented claims were true.
+
+### 19.1 It is deployed, on a URL that outlives the laptop
+
+**https://agentpulse-demo.centralindia.cloudapp.azure.com**
+
+Azure for Students, chosen after checking the alternatives rather than by
+default. The constraint that decided it is not price but memory: the evaluation
+worker measures **1.148 GB** resident, because `grounding.py` loads the
+embedding model through SentenceTransformer and therefore pulls in torch no
+matter what `AGENTPULSE_USE_ONNX` says. Koyeb, Render, Northflank and every
+other no-card free tier caps at 512 MB. Hugging Face Docker Spaces became
+PRO-only. Oracle wanted a credit card. Azure for Students does not.
+
+| | |
+| :--- | :--- |
+| VM | `agentpulse-vm`, Ubuntu 24.04, Central India |
+| Size | `Standard_B2als_v2` — 2 vCPU, 3.8 GB, 60 GB disk |
+| Cost | $24.67/month, so the $100 credit lasts about four months |
+| TLS | Caddy, Let's Encrypt, renewed by itself |
+| Ports published | Caddy's 80 and 443 only |
+
+The backend and dashboard publish no host ports at all; everything reaches them
+over the compose network. Two deliberate reboots confirmed the stack returns on
+its own, the data survives, and Caddy reuses the stored certificate instead of
+re-issuing — which matters, because repeated issuance would trip Let's Encrypt's
+rate limit for the hostname.
+
+`deploy/azure/` carries the overlay and a README written as the deployment
+actually went, including the resource providers a new subscription must register
+before `az vm create` stops failing unhelpfully.
+
+### 19.2 Two bugs that would have made the deployment useless
+
+**The dashboard would have shown every visitor an empty console.**
+`VITE_API_URL` was baked into the bundle as `http://localhost:8000` from two
+independent places: `dashboard/.env` reached the image through `COPY . .`
+because Docker does not read `.gitignore`, and the root `.env` is auto-loaded by
+compose for `${VITE_API_URL:-}` interpolation, so the empty default never
+applied. Either alone was enough. Every visitor's browser would have called
+their own machine.
+
+**nginx dropped the backend after any restart.** `proxy_pass
+http://backend:8000` resolves the name once at startup and caches it.
+Recreating the backend gives it a new IP, and every proxied request then
+returned 502 until nginx was restarted too — which is exactly what happened
+mid-deploy. Resolving through a variable against Docker's embedded DNS moves the
+lookup to request time; confirmed by recreating the backend and watching the
+site recover in twelve seconds with no restart.
+
+Both had been latent for weeks. Neither would have shown up without deploying.
+
+### 19.3 The "two-stage cascade" does not cascade
+
+`grounding.py` described itself as running DeBERTa "only when Stage 1 is
+ambiguous", with `STAGE1_SAFE_THRESHOLD` and `STAGE1_RISK_THRESHOLD` defined
+beneath that sentence. `evaluate_grounding()` has no such branch. Both models
+run on every span.
+
+The ablation data proves it without reading any code:
+
+| Configuration | Latency |
+| :--- | ---: |
+| MiniLM only | 27.83 ms |
+| DeBERTa only | 188.07 ms |
+| shipped | **215.90 ms** |
+
+215.90 is their sum. A gate that ever fired would land between them.
+
+**The documentation moved; the behaviour did not.** Adding the gate would change
+the score of every span whose similarity clears the threshold, leaving
+`THRESHOLD_ANALYSIS.md`, `GROUNDING_SCORE_CALIBRATION_REPORT.md` and
+`LLM_JUDGE_COMPARISON_REPORT.md` describing a system that no longer runs. It is
+an experiment with its own measurements, not an edit. Both constants were kept:
+`STAGE1_SAFE_THRESHOLD` is genuinely read in the NLI-unavailable fallback, and
+`STAGE1_RISK_THRESHOLD` is the recorded origin of `disagreement.py`'s
+`RELEVANCE_FLOOR`.
+
+### 19.4 Three silent failures made audible
+
+A monitoring tool that fails quietly is worse than one that fails loudly.
+
+**Liveness and readiness required an API key** while `/v1/health` did not — so
+every Kubernetes probe, load balancer and uptime monitor read the service as
+permanently unhealthy. Both are public now. `/v1/health/evaluator` deliberately
+is not: it reports worker counts, backend distribution and degradation reasons.
+Readiness answers at two levels — anyone gets `{"ready": bool}`, a key holder
+also gets `checks`, which carries the raw database exception string and on
+failure can name a file path or connection target.
+
+**`seed_demo.py` reported success after doing nothing.** Its probe sent no key,
+got 401 for two minutes, and exited printing "API never became reachable;
+skipping". This actually happened during the Azure deployment.
+
+**Grounding can be switched off with nothing saying so.** The capture flags
+default to false, so a correctly installed deployment with a healthy worker can
+evaluate every span and never produce a grounding score — `evaluator.py` simply
+skips the step. `/v1/platform` now reports `signal_coverage`, derived from
+recent evaluations rather than a counter so it survives restarts, and says
+explicitly that a coverage of 0.0 means switched off rather than failing. The
+worker logs the same once per process; once per span would be noise, which is
+how it stayed invisible.
+
+### 19.5 The product stopped being LangGraph-only
+
+This was the largest functional gap in the project. `@monitor` reads its first
+argument as a LangGraph state dict, and `langchain.py` and `crewai.py` are
+21-line classes whose every method raises `NotImplementedError`. Anyone using
+the OpenAI or Anthropic SDK directly could not use AgentPulse at all.
+
+```python
+client = pulse.instrument_llm(OpenAI())
+```
+
+Every agent calls an LLM, so wrapping that call reaches all of them with one
+implementation — and it is the most useful place to stand rather than merely the
+most general, because the prompt and the completion are exactly the pair
+`evaluate_grounding` compares.
+
+Verified end to end against the running stack, not only in tests. A prompt
+saying the Eiffel Tower is in Paris and a completion saying Berlin produced
+`span_kind=LLM`, model and tokens recorded, grounding **0.9999** at stage2,
+label `high_risk`, and both `GROUNDING_FAILURE` and `HIGH_HALLUCINATION_RISK`.
+No framework in that path.
+
+Three limits, chosen rather than incidental: it wraps the client instance rather
+than the library globals, streaming records the call but not the output
+(`metadata.output_captured = false`), and the capture flags still apply.
+
+The decorator also now pushes its own span as the active context while the
+wrapped function runs. Without that, an LLM call inside a monitored node became
+its sibling rather than its child — the waterfall was a flat list wearing a
+tree's shape.
+
+### 19.6 Tests: the frontend has some, and the WAL flake is resolved
+
+**The dashboard had no test framework at all.** It now has Vitest and 32 tests,
+placed over `adapters.ts` and `api.ts` — the two files where every user-visible
+defect in this project has originated. `adapters.ts` carries a rule TypeScript
+cannot enforce ("every field is either read from the API or left undefined"),
+because `number | undefined` accepts a cheerful `0` as readily as a real
+measurement, so most of those tests check that absent stays absent.
+
+Verified by mutation rather than by passing: reintroducing the severity
+case-sensitivity bug failed one test, reintroducing the absolute-URL bug failed
+three.
+
+**The crash-recovery flake was diagnosed, not suppressed.**
+`test_worker_killed_mid_evaluation_recovers_exactly_once` failed about one run
+in three with `disk I/O error`, and it guards the headline durability claim — so
+it mattered whether it was the harness or the queue losing data.
+
+A failing run was captured with `--basetemp` retained. That same database opens
+cleanly afterwards, reports `integrity_check = ok`, and holds exactly what the
+test asserts: one job, running, attempts 1, lease set, no evaluation. Windows
+releases a dead process's handles asynchronously and the read landed inside that
+window. A standalone probe killing a worker the same way never reproduced it,
+which ruled out an ordering bug.
+
+The helpers retry, bounded at ten seconds and re-raising after — verified
+against a path SQLite can never open, which raises at the bound rather than
+looping. Eight consecutive passes; suite is **226**, plus 32 in the dashboard.
+
+### 19.7 Documentation now has three levels
+
+- **`FLOW.md`** (198 lines) — plain language, following the Eiffel Tower call
+  from one line of code to a red incident. States early that there is no LLM
+  judging anything, since that is what readers assume.
+- **`HOW_IT_WORKS.md`** (478 lines) — the specification. Section 10 records
+  every place the code disagrees with its own documentation.
+- **`STARTUP_GUIDE.md`** — running it, with the failures to expect.
+
+`README.md` was carrying three false claims: a React 18 badge against
+`package.json`'s 19.0.1, a hardcoded "Tests 99/99 Passed", and a quickstart that
+**never mentioned the evaluation worker** — follow it and you get an API that
+accepts spans and evaluates none of them, with no error saying why.
+
+### 19.8 Discoverability, and the name
+
+Topics, homepage, a `v0.1.0` release, `robots.txt`, `sitemap.xml`, `canonical`
+and `og:url`. And a real blocker found in the process: the SPA returned **200
+for every path that does not exist**, so a mistyped asset URL got HTML under a
+`.js` address — and Google Search Console refuses to verify a site that cannot
+404, because a server answering 200 for everything would let anyone claim it.
+nginx now 404s paths that look like files and keeps the shell for routes.
+
+**The name is contested and cannot win a search.** PyPI's `agentpulse` belongs
+to someone else, AvePoint ships a commercial AgentPulse, `agentpulses.com` is a
+hosted SaaS, and at least four other GitHub repositories use the name — one of
+which, `proveai-agentpulse`, also does drift detection for multi-agent systems.
+The decision taken was to keep the name: renaming touches 876 occurrences across
+176 files including the env prefix and the deployed hostname, and the academic
+deliverable does not depend on search ranking.
+
+### 19.9 The deck, and 5.9 GB of disk
+
+Six claims on the project deck had stopped being true in both directions —
+adapters that do not exist, a gated cascade that never gated, a Compose file
+said to lack the worker it has; and drift-window persistence and a frontend test
+framework listed as missing when both exist. Slide 15 reported 20,771 spans and
+1,328 evaluations from a database that no longer exists and figures recorded
+nowhere in the repository, so it was rebuilt around what can be produced on
+request.
+
+Two bugs surfaced doing it. The notes scripts wrote their PDF to a bare
+filename, so running them from the repo root dropped it there while the copy in
+`presentation/` stayed stale — and printed that it had written it. And there was
+no `.gitattributes`, so Git had decided the PDFs were text and intended to
+rewrite their line endings.
+
+Deleted: `models/gguf/Qwen3-8B-Q4_K_M.gguf` (4.7 GB, the LLM-judge baseline —
+its results and the gold labels it produced remain), a duplicate 1.2 GB model
+cache under `backend/`, a stale SQLite database, an abandoned clone, and four
+agent prompt files. Note that `backend/models/` **returns** whenever the suite
+runs from that directory.
+
+### 19.10 Standing facts, updated
+
+Closed since 18.9:
+
+- ~~The dashboard has no test framework~~ — Vitest, 32 tests.
+- ~~`_worker_launcher.py` shim~~ — deleted.
+- ~~Evaluation coverage ~6% (1,328 of 20,790)~~ — that database is gone;
+  `/v1/platform` now reports `signal_coverage` from live data instead.
+
+Still true:
+
+- **`alembic_version` reads `8d86fee0d663`** while the schema already has
+  `window_centroid_distance`. Reconcile with `alembic stamp c4b7e91a2f08` before
+  any `upgrade head`.
+- **The venv's editable installs point at the pre-rename path.** Every command
+  still needs `PYTHONPATH="backend;sdk/src"`. Fix with
+  `pip install -e backend -e sdk`.
+- **Three superseded presentation drafts** are still tracked with their
+  generators. `build_final_notes.py` still produces notes for one of them.
+- **`hybrid-moe-codegen` carries 83 MB of model weights in git.**
+
+New and open:
+
+- **`pip install agentpulse` fetches someone else's package.** The SDK installs
+  from source only.
+- **Dashboard tests cover `lib/` only**; no component is tested.
+- **LangChain and CrewAI adapters remain stubs.** `instrument_llm` covers much of
+  the same ground, but neither adapter exists.
+- **Grounding misreads rounded numbers** — "7.61 billion" against "approximately
+  7.6 billion" scores 0.922 risk. Reproducible, and deliberately unpatched:
+  fixing from one observed case is fitting to one data point.
+- **Google Search Console verification is not done.** The site is ready for it;
+  the token has to come from the account doing the verifying.
+
+---
