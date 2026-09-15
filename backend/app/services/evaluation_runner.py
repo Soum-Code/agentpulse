@@ -66,6 +66,12 @@ REQUIRED_FIELDS = ("span_id", "trace_id", "agent_id")
 # stayed invisible in the first place.
 _warned_no_text = False
 
+# Same treatment for premise truncation. DeBERTa sees at most 512 tokens, so a
+# long retrieved context can have the passage that supports the claim cut off --
+# and the score still comes back looking ordinary. Reported once per process for
+# the same reason: per span it would be noise.
+_warned_truncated = False
+
 
 def _warn_if_no_text_once(payload: dict[str, Any]) -> None:
     global _warned_no_text
@@ -359,6 +365,23 @@ async def execute_job(evaluator, payload_json: str, loop, executor) -> bool:
         functools.partial(run_evaluation_sync, evaluator, payload, priors),
     )
 
+    _warn_if_truncated_once(result)
     written = await persist_results(payload, result)
     await persist_drift_baselines(evaluator.drift_detector, {payload["agent_id"]})
     return written
+
+
+def _warn_if_truncated_once(result) -> None:
+    global _warned_truncated
+    if _warned_truncated or result.grounding is None:
+        return
+    if not getattr(result.grounding, "input_truncated", False):
+        return
+    _warned_truncated = True
+    logger.warning(
+        "Grounding premise exceeded the NLI model's 512-token window (%s tokens) "
+        "and was truncated. Evidence past that point was not read, so the score "
+        "reflects only the part the model saw. Long retrieved contexts are the "
+        "usual cause. Reported once per worker process.",
+        getattr(result.grounding, "input_tokens", "unknown"),
+    )
