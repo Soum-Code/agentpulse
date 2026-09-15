@@ -69,7 +69,7 @@ pulse = agentpulse.init(
                 </div>
                 <div>
                   <h3 className="text-base font-semibold tracking-tight text-white">Connect Agent Runtime</h3>
-                  <p className="text-xs text-neutral-400">Initialize OpenTelemetry-compatible telemetry stream</p>
+                  <p className="text-xs text-neutral-400">Initialize the AgentPulse span stream (POST /v1/ingest)</p>
                 </div>
               </div>
               <button

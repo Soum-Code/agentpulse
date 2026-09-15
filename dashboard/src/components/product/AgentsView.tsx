@@ -35,8 +35,12 @@ export const AgentsView: React.FC<AgentsViewProps> = ({
             <Bot className="w-5 h-5 text-neutral-400" />
             <span>Autonomous Agent Roster</span>
           </h2>
+          {/* The count comes from the roster rather than a constant: a hardcoded
+              "4 active swarms" disagreed with whatever the backend actually
+              returned. LlamaIndex and CrewAI were listed here as supported
+              frameworks; neither adapter exists. */}
           <p className="text-xs font-mono text-neutral-400 mt-1">
-            4 active swarms &nbsp;·&nbsp; LangGraph, CrewAI, LlamaIndex & Custom Orchestrators
+            {agents.length} {agents.length === 1 ? 'agent' : 'agents'} &nbsp;·&nbsp; LangGraph nodes and instrumented OpenAI / Anthropic clients
           </p>
         </div>
 
