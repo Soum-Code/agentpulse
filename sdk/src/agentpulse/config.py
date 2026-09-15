@@ -60,6 +60,19 @@ class AgentPulseConfig:
 
     # Transport
     batch_size: int = 10
+
+    # An upper bound on spans held in memory before the transport has sent them.
+    #
+    # The buffer used to be an unbounded list. Normally that is harmless -- a
+    # failed send is written to the fallback file rather than retained -- but
+    # `_ensure_transport` gives up silently when there is no running event loop,
+    # and in that case the flush task never starts. Every span then accumulates
+    # in the agent's own process, forever, with nothing sent and nothing said.
+    #
+    # An observability SDK is supposed to be the thing that cannot take down
+    # what it observes, so it takes a ceiling. At roughly 1-2 KB per serialized
+    # span this is some tens of megabytes at worst.
+    max_buffered_spans: int = 10_000
     flush_interval_ms: int = 100
     max_retries: int = 3
     timeout_seconds: float = 5.0
