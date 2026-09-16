@@ -1461,11 +1461,12 @@ New and open:
 - **Grounding misreads rounded numbers** — "7.61 billion" against "approximately
   7.6 billion" scores 0.922 risk. Reproducible, and deliberately unpatched:
   fixing from one observed case is fitting to one data point.
-- **Google Search Console verification is not done.** The site is ready for it --
-  it returns a real 404 for missing files, which verification requires. The token
-  has to come from the account doing the verifying, and the property must be
-  created against the current hostname; one made against `agentpulse-demo` will
-  never verify.
+- ~~**Google Search Console verification is not done.**~~ Verified 2026-09-16
+  via the meta-tag method; the token lives in `dashboard/index.html` so a later
+  build cannot silently drop it and un-verify the property. Indexing is a
+  separate matter and takes days to weeks. Expect the repository to surface in a
+  search before the site does: it is a client-rendered SPA with no backlinks,
+  and the name is contested by a commercial product of the same name.
 
 ---
 
