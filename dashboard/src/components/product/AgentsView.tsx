@@ -41,7 +41,7 @@ export const AgentsView: React.FC<AgentsViewProps> = ({
             <span>Autonomous Agent Roster</span>
           </h2>
           <p className="text-xs font-mono text-neutral-400 mt-1">
-            4 active swarms &nbsp;·&nbsp; LangGraph, CrewAI & Custom Orchestrators &nbsp;·&nbsp; Real-time latency & drift monitoring
+            4 active swarms &nbsp;·&nbsp; LangGraph, LangGraph & Custom Orchestrators &nbsp;·&nbsp; Real-time latency & drift monitoring
           </p>
         </div>
 

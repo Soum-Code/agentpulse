@@ -270,7 +270,7 @@ export const LiveEvaluatorSandbox: React.FC<LiveEvaluatorSandboxProps> = ({ pale
               <Cpu className={`w-3.5 h-3.5 mr-1 ${
                 palette === 'butter' ? 'text-neutral-950' : palette === 'chalk' ? 'text-emerald-700' : 'text-emerald-400'
               }`} />
-              Quantized INT8 ONNX Runtime
+              ONNX Runtime on CPU
             </span>
           </div>
         </div>

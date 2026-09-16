@@ -2,15 +2,28 @@
  *
  * Fields the AgentPulse API does not produce are optional, not required.
  *
- * These interfaces were first written against mock telemetry, where every field
- * has a value because somebody typed one. Required fields are fine there and
- * wrong here: `adapters.ts` maps real responses and leaves anything the backend
- * never measured undefined, on the rule that an invented value is
- * indistinguishable from a measured one. Marking those fields required would
- * make the compiler demand the invention.
+ * These were first written against mock telemetry, where every field has a
+ * value because somebody typed one. Required is fine there and wrong here:
+ * `adapters.ts` maps real responses and leaves anything the backend never
+ * measured undefined, on the rule that an invented value is indistinguishable
+ * from a measured one. Marking them required makes the compiler demand the
+ * invention -- and a component that then reads them crashes the console.
  */
 export type DesignMode = 'public' | 'product';
 export type ColorPalette = 'butter' | 'dark' | 'chalk';
+export type ChalkSurfacePreset = 'classic-white' | 'sepia-slate' | 'emerald-graphite' | 'custom';
+
+export interface ChalkSurfaceConfig {
+  id: ChalkSurfacePreset;
+  name: string;
+  subtitle: string;
+  hex: string;
+  cardBg: string;
+  borderColor: string;
+  textColor: string;
+  moteColor: string;
+}
+
 export type TextDensity = 'compact' | 'comfortable';
 export type ChronologicalSortOrder = 'reverse-chronological' | 'chronological';
 
