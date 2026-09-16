@@ -62,12 +62,12 @@ export const TelemetryLabView: React.FC<TelemetryLabViewProps> = ({
         errorSummary,
         driftDetected,
         groundingScore,
-        tags: ['synthetic-lab', failureMode, targetAgent.framework.toLowerCase()],
+        tags: ['synthetic-lab', failureMode, (targetAgent.framework ?? 'agent').toLowerCase()],
         spans: [
           {
             id: `sp-lab-01`,
             traceId: newTraceId,
-            name: `${targetAgent.framework.toLowerCase()}.pipeline_runner`,
+            name: `${(targetAgent.framework ?? 'agent').toLowerCase()}.pipeline_runner`,
             type: 'agent',
             status,
             startOffsetMs: 0,

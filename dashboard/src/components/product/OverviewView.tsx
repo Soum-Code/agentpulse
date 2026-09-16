@@ -323,16 +323,31 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
                       <div className="text-[10px] font-sans text-neutral-400 uppercase tracking-widest font-normal mt-0.5 liquid-card-label">success rate</div>
                     </div>
                     <div>
+                      {/* driftStatus is undefined until an agent has enough
+                          evaluated spans for the window metric -- 20 baseline
+                          plus 12 current. The adapter leaves it absent rather
+                          than guessing 'normal', because claiming stability the
+                          backend never measured is the one thing it must not do.
+                          This component was written against mock data where the
+                          field is always set, and `.toUpperCase()` on the real
+                          thing threw, taking the whole console down with it. */}
                       <div
                         className={`text-[10px] font-mono tabular-nums font-medium uppercase tracking-wider px-2.5 py-1 rounded-lg border shadow-xs ${
-                          agent.driftStatus === 'normal'
+                          agent.driftStatus === undefined
+                            ? 'border-white/[0.08] text-neutral-500 bg-white/[0.03]'
+                            : agent.driftStatus === 'normal'
                             ? 'border-white/[0.12] text-neutral-200 bg-white/[0.06]'
                             : agent.driftStatus === 'deviation'
                             ? 'border-amber-500/40 text-amber-300 bg-amber-500/20 shadow-[0_0_14px_rgba(245,158,11,0.15)]'
                             : 'border-rose-500/40 text-rose-300 bg-rose-500/20 shadow-[0_0_14px_rgba(244,63,94,0.15)]'
                         }`}
+                        title={
+                          agent.driftStatus === undefined
+                            ? 'Window drift needs 20 baseline and 12 current spans before it reports'
+                            : undefined
+                        }
                       >
-                        {agent.driftStatus.toUpperCase()}
+                        {agent.driftStatus?.toUpperCase() ?? 'NO BASELINE'}
                       </div>
                     </div>
                   </div>
@@ -647,8 +662,15 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
 
                 <div className="flex items-center justify-between text-[11px] font-mono tabular-nums text-neutral-400 pt-2.5 border-t border-white/[0.08] liquid-card-metric">
                   <span className="font-medium text-neutral-200">{trace.durationMs}ms</span>
-                  <span>{trace.totalTokens.toLocaleString()} tok</span>
-                  <span className="text-neutral-200 font-medium">${trace.cost.toFixed(4)}</span>
+                  {/* totalTokens is absent when no span recorded counts, and the
+                      backend has no cost model at all. Both were rendered
+                      unconditionally and threw on the first real trace. */}
+                  {trace.totalTokens !== undefined && (
+                    <span>{trace.totalTokens.toLocaleString()} tok</span>
+                  )}
+                  {trace.cost !== undefined && (
+                    <span className="text-neutral-200 font-medium">${trace.cost.toFixed(4)}</span>
+                  )}
                 </div>
               </div>
             );

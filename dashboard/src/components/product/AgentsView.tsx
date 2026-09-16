@@ -24,8 +24,11 @@ export const AgentsView: React.FC<AgentsViewProps> = ({
 
   const filteredAgents = agents.filter(a =>
     a.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    a.framework.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    a.model.toLowerCase().includes(searchQuery.toLowerCase())
+    // framework and model have no source in the AgentPulse span schema, so the
+    // adapter leaves them undefined. Searching used to throw on the first agent
+    // that came from real data rather than from the mock file.
+    (a.framework ?? '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (a.model ?? '').toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
@@ -181,11 +184,21 @@ export const AgentsView: React.FC<AgentsViewProps> = ({
                 </div>
                 <div className="p-3 rounded-xl ios-liquid-row border border-white/[0.12]">
                   <span className="text-neutral-400 block text-[10px]">VERSION</span>
-                  <span className="text-white font-bold mt-1 block">{currentAgent.version}</span>
+                  {/* Neither version nor cost has a source in the span schema. The
+                      adapter leaves both undefined; rendering them anyway printed
+                      "undefined" and threw on .toFixed. An em dash says "not
+                      recorded" without implying a value was measured and lost. */}
+                  <span className="text-white font-bold mt-1 block">
+                    {currentAgent.version ?? <span className="text-neutral-600">&mdash;</span>}
+                  </span>
                 </div>
                 <div className="p-3 rounded-xl ios-liquid-row border border-white/[0.12]">
                   <span className="text-neutral-400 block text-[10px]">EST. HOURLY COST</span>
-                  <span className="text-emerald-400 font-bold mt-1 block">${currentAgent.costPerHour.toFixed(2)}/hr</span>
+                  <span className="text-emerald-400 font-bold mt-1 block">
+                    {currentAgent.costPerHour !== undefined
+                      ? `$${currentAgent.costPerHour.toFixed(2)}/hr`
+                      : <span className="text-neutral-600">&mdash;</span>}
+                  </span>
                 </div>
               </div>
 
@@ -201,10 +214,19 @@ export const AgentsView: React.FC<AgentsViewProps> = ({
               <div>
                 <span className="text-xs font-mono text-neutral-400 uppercase tracking-wider block mb-2 flex items-center space-x-1.5">
                   <Wrench className="w-3.5 h-3.5 text-neutral-400" />
-                  <span>Bound Tool Handlers ({currentAgent.tools.length})</span>
+                  <span>Bound Tool Handlers ({currentAgent.tools?.length ?? 0})</span>
                 </span>
                 <div className="flex flex-wrap gap-2">
-                  {currentAgent.tools.map((tool) => (
+                  {/* The backend records a tool name per span, not a roster per
+                      agent, so this list is empty against real data rather than
+                      short. Saying so beats an empty box that reads as "this
+                      agent calls no tools". */}
+                  {(currentAgent.tools ?? []).length === 0 && (
+                    <span className="font-mono text-xs text-neutral-600">
+                      Not recorded &mdash; tool names are attached to spans, not to agents
+                    </span>
+                  )}
+                  {(currentAgent.tools ?? []).map((tool) => (
                     <span
                       key={tool}
                       className="px-2.5 py-1 rounded-lg ios-liquid-row border border-white/[0.12] font-mono text-xs text-neutral-200 font-semibold shadow-xs"
