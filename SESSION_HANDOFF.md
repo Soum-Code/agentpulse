@@ -1378,10 +1378,10 @@ looping. Eight consecutive passes; suite is **226**, plus 32 in the dashboard.
 
 ### 19.7 Documentation now has three levels
 
-- **`FLOW.md`** (198 lines) — plain language, following the Eiffel Tower call
+- **`FLOW.md`** — plain language, following the Eiffel Tower call
   from one line of code to a red incident. States early that there is no LLM
   judging anything, since that is what readers assume.
-- **`HOW_IT_WORKS.md`** (478 lines) — the specification. Section 10 records
+- **`HOW_IT_WORKS.md`** — the specification. Section 10 records
   every place the code disagrees with its own documentation.
 - **`STARTUP_GUIDE.md`** — running it, with the failures to expect.
 
@@ -1403,9 +1403,10 @@ nginx now 404s paths that look like files and keeps the shell for routes.
 to someone else, AvePoint ships a commercial AgentPulse, `agentpulses.com` is a
 hosted SaaS, and at least four other GitHub repositories use the name — one of
 which, `proveai-agentpulse`, also does drift detection for multi-agent systems.
-The decision taken was to keep the name: renaming touches 876 occurrences across
-176 files including the env prefix and the deployed hostname, and the academic
-deliverable does not depend on search ranking.
+The decision taken was to keep the name: renaming touches the name in roughly nine hundred places across the repository
+-- `git grep -ic agentpulse` for the current figure -- including the env prefix
+and the deployed hostname, and the academic deliverable does not depend on
+search ranking.
 
 ### 19.9 The deck, and 5.9 GB of disk
 
