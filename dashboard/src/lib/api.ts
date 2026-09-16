@@ -138,6 +138,20 @@ function requestUrl(baseUrl: string, path: string): string {
   return baseUrl ? `${baseUrl}${path}` : path;
 }
 
+
+/** A key as the API returns it: everything except the hash, which never leaves
+ *  the server, and never the plaintext, which is shown once at creation. */
+export interface ApiKeySummary {
+  id: number;
+  prefix: string;
+  label: string;
+  owner_id: string;
+  created_at: string | null;
+  revoked_at: string | null;
+  last_used_at: string | null;
+  active: boolean;
+}
+
 export function websocketUrlFor(connection: AgentPulseConnection): string {
   const baseUrl = normalizeBaseUrl(connection.baseUrl);
   const resolvedBase = baseUrl || window.location.origin;
@@ -176,6 +190,23 @@ export function createApiClient(connection: AgentPulseConnection) {
     getEvaluatorReadiness: () => fetchApi<EvaluatorReadiness>('/v1/health/evaluator'),
     getPlatformHealth: () => fetchApi<PlatformHealth>('/v1/platform'),
     getMetrics: () => fetchApi<Metrics>('/v1/metrics'),
+
+    // API keys. The plaintext in createApiKey's response is the only copy that
+    // will ever exist -- the backend stores a hash and cannot return it again.
+    createApiKey: (ownerId: string, label = '') =>
+      fetchApi<{ key: string; id: number; prefix: string; label: string; warning: string }>(
+        '/v1/keys',
+        { method: 'POST', body: JSON.stringify({ owner_id: ownerId, label }) },
+      ),
+    listApiKeys: (ownerId: string) =>
+      fetchApi<{ keys: ApiKeySummary[]; total: number }>(
+        `/v1/keys?owner_id=${encodeURIComponent(ownerId)}`,
+      ),
+    revokeApiKey: (ownerId: string, keyId: number) =>
+      fetchApi<{ revoked: boolean; id: number }>(
+        `/v1/keys/${keyId}?owner_id=${encodeURIComponent(ownerId)}`,
+        { method: 'DELETE' },
+      ),
     getTraces: (limit = 50, offset = 0) =>
       fetchApi<{ traces: TraceListItem[]; total: number }>(`/v1/traces?limit=${limit}&offset=${offset}`),
     getTrace: (traceId: string) =>

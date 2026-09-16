@@ -75,7 +75,11 @@ export const LiveTailStream: React.FC<LiveTailProps> = ({ palette }) => {
     if (!isStreaming) return;
 
     const interval = setInterval(() => {
-      const isAnomalous = Math.random() < 0.3; // 30% chance of contradiction for demo
+      // Generated here, not received. The panel illustrates the shape of a span
+      // feed; it is labelled as an illustration above rather than presented as
+      // telemetry, because a fabricated score beside a real-looking verdict is
+      // the confusion this project exists to surface.
+      const isAnomalous = Math.random() < 0.3;
       const randomAgent = AGENT_NAMES[Math.floor(Math.random() * AGENT_NAMES.length)];
       const randomAction = ACTIONS[Math.floor(Math.random() * ACTIONS.length)];
       
@@ -124,17 +128,19 @@ export const LiveTailStream: React.FC<LiveTailProps> = ({ palette }) => {
               <span className={`w-1.5 h-1.5 rounded-full animate-ping mr-1.5 ${palette === 'chalk' ? 'bg-rose-600' : 'bg-red-400'}`} />
               Live Ingestion Stream
             </span>
-            <span className={`text-xs font-mono ${palette === 'chalk' ? 'text-neutral-600' : 'text-neutral-300'}`}>Datadog APM Live Tail Equivalent</span>
+            <span className={`text-xs font-mono ${palette === 'chalk' ? 'text-neutral-600' : 'text-neutral-300'}`}>Illustration &mdash; what a span feed looks like</span>
           </div>
           <h3 className={`text-2xl sm:text-3xl font-black mt-2 tracking-tight font-sans ${
             palette === 'chalk' ? 'text-neutral-950' : 'text-white drop-shadow-[0_2px_12px_rgba(0,0,0,0.6)]'
           }`}>
-            Real-Time Span Ingestion Feed
+            Span Ingestion Feed
           </h3>
           <p className={`text-xs sm:text-sm mt-1 max-w-2xl leading-relaxed ${
             palette === 'chalk' ? 'text-neutral-600' : 'text-neutral-300'
           }`}>
-            Incoming telemetry streams into the FastAPI ingress gateway at sub-3ms latency while local CPU workers evaluate each step.
+            An animation of the shape telemetry takes: spans arrive, the API accepts them,
+            and a worker scores each one. The rows below are generated in your browser to
+            show the format &mdash; the running console at /app streams the real thing.
           </p>
         </div>
 
