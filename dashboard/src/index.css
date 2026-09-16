@@ -20,14 +20,45 @@
   }
 
   /* Code and tabular numbers font */
-  .font-mono {
+  .font-mono, kbd, code, pre, .tabular-nums {
     font-family: var(--font-mono);
     font-feature-settings: "tnum" 1, "zero" 1;
+    font-variant-numeric: tabular-nums;
   }
 
   .font-serif {
     font-family: var(--font-serif);
   }
+}
+
+/* Micro-Interactions & Tactile Press Physics */
+.tactile-press {
+  transition: transform 0.08s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
+}
+.tactile-press:active {
+  transform: scale(0.982);
+}
+
+/* Tactile Inset Keycaps */
+.keycap-bevel {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.04) 100%);
+  box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.28), 0 1px 2px rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+/* Phosphor Telemetry Glows */
+.phosphor-emerald {
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.6), 0 0 3px rgba(16, 185, 129, 0.9);
+}
+.phosphor-amber {
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.6), 0 0 3px rgba(245, 158, 11, 0.9);
+}
+.phosphor-rose {
+  box-shadow: 0 0 10px rgba(244, 63, 94, 0.65), 0 0 3px rgba(244, 63, 94, 0.95);
+}
+.phosphor-cyan {
+  box-shadow: 0 0 10px rgba(6, 182, 212, 0.6), 0 0 3px rgba(6, 182, 212, 0.9);
 }
 
 /* ==========================================================================
@@ -132,14 +163,200 @@
 }
 
 .ios-ultra-thin-chalk {
-  background: rgba(255, 255, 255, 0.65) !important;
-  backdrop-filter: blur(44px) saturate(200%) contrast(105%) !important;
-  -webkit-backdrop-filter: blur(44px) saturate(200%) contrast(105%) !important;
-  border: 1px solid rgba(0, 0, 0, 0.10) !important;
+  background-color: rgba(255, 255, 255, 0.94) !important;
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(248, 250, 252, 0.92) 100%) !important;
+  backdrop-filter: blur(40px) saturate(160%) !important;
+  -webkit-backdrop-filter: blur(40px) saturate(160%) !important;
+  border: 1px solid rgba(226, 232, 240, 0.95) !important;
   box-shadow: 
-    0 16px 36px -8px rgba(0, 0, 0, 0.08),
-    inset 0 1px 1.5px 0 rgba(255, 255, 255, 0.9),
-    inset 0 0 0 1px rgba(0, 0, 0, 0.04) !important;
+    0 1px 3px 0 rgba(15, 23, 42, 0.04),
+    0 12px 32px -4px rgba(15, 23, 42, 0.06),
+    inset 0 1px 0 0 #ffffff !important;
+}
+
+.chalk-tactile-card {
+  background-color: #ffffff !important;
+  background-image: linear-gradient(180deg, #ffffff 0%, #fafbfd 100%) !important;
+  backdrop-filter: blur(32px) saturate(150%) !important;
+  -webkit-backdrop-filter: blur(32px) saturate(150%) !important;
+  border: 1px solid rgba(226, 232, 240, 0.95) !important;
+  box-shadow: 
+    0 1px 3px 0 rgba(15, 23, 42, 0.03),
+    0 6px 16px -2px rgba(15, 23, 42, 0.04),
+    0 16px 36px -6px rgba(15, 23, 42, 0.05),
+    inset 0 1px 0 0 #ffffff !important;
+  position: relative;
+  overflow: hidden;
+  transform: translateZ(0);
+  transition: 
+    transform 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 0.2s ease,
+    background-color 0.2s ease;
+  will-change: transform, box-shadow;
+}
+
+/* Wiped clean state */
+.chalk-tactile-card.is-wiping,
+.chalk-tactile-card.wiping-clean,
+.chalk-tactile-card[data-wiping="true"] {
+  opacity: 0.15 !important;
+  transform: scale(0.98) !important;
+  box-shadow: 0 1px 2px 0 rgba(15, 23, 42, 0.02) !important;
+  pointer-events: none;
+}
+
+/* Crisp, elegant tactile hover elevation */
+.chalk-tactile-card:hover {
+  background-color: #ffffff !important;
+  border-color: rgba(203, 213, 225, 1) !important;
+  transform: translateY(-2px);
+  box-shadow: 
+    0 2px 6px -1px rgba(15, 23, 42, 0.04),
+    0 10px 24px -4px rgba(15, 23, 42, 0.06),
+    0 24px 48px -8px rgba(15, 23, 42, 0.08),
+    inset 0 1px 0 0 #ffffff !important;
+}
+
+.chalk-tactile-card:active {
+  transform: translateY(0px) scale(0.998);
+  box-shadow: 
+    0 1px 3px 0 rgba(15, 23, 42, 0.04),
+    0 4px 12px -2px rgba(15, 23, 42, 0.04),
+    inset 0 1px 0 0 #ffffff !important;
+  transition-duration: 0.1s;
+}
+
+/* Static Aged Classroom Surface: Ambient Chalk Dust-Mote Drift Pseudo-Elements */
+.chalk-tactile-card::before,
+.chalk-tactile-card::after {
+  content: "";
+  position: absolute;
+  inset: -60px;
+  pointer-events: none;
+  z-index: 0;
+  border-radius: inherit;
+}
+
+/* Primary floating dust-mote layer */
+.chalk-tactile-card::before {
+  background-image: 
+    radial-gradient(1.5px 1.5px at 14% 22%, rgba(100, 116, 139, 0.45) 0%, transparent 100%),
+    radial-gradient(1px 1px at 32% 58%, rgba(148, 163, 184, 0.5) 0%, transparent 100%),
+    radial-gradient(2px 2px at 48% 18%, rgba(71, 85, 105, 0.35) 0%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 62% 74%, rgba(148, 163, 184, 0.4) 0%, transparent 100%),
+    radial-gradient(1px 1px at 78% 36%, rgba(100, 116, 139, 0.45) 0%, transparent 100%),
+    radial-gradient(2.5px 2.5px at 89% 68%, rgba(148, 163, 184, 0.3) 0%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 24% 84%, rgba(100, 116, 139, 0.35) 0%, transparent 100%),
+    radial-gradient(1px 1px at 70% 12%, rgba(148, 163, 184, 0.5) 0%, transparent 100%);
+  background-size: 280px 280px;
+  opacity: 0.32;
+  animation: chalk-dust-mote-drift-1 24s ease-in-out infinite alternate;
+}
+
+/* Secondary complementary drifting motes with offset cycle */
+.chalk-tactile-card::after {
+  background-image: 
+    radial-gradient(1px 1px at 18% 44%, rgba(148, 163, 184, 0.4) 0%, transparent 100%),
+    radial-gradient(2px 2px at 36% 82%, rgba(100, 116, 139, 0.35) 0%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 54% 28%, rgba(71, 85, 105, 0.4) 0%, transparent 100%),
+    radial-gradient(1px 1px at 68% 66%, rgba(148, 163, 184, 0.45) 0%, transparent 100%),
+    radial-gradient(2px 2px at 84% 18%, rgba(100, 116, 139, 0.3) 0%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 94% 88%, rgba(148, 163, 184, 0.35) 0%, transparent 100%),
+    radial-gradient(1px 1px at 42% 48%, rgba(100, 116, 139, 0.4) 0%, transparent 100%);
+  background-size: 340px 340px;
+  opacity: 0.22;
+  animation: chalk-dust-mote-drift-2 32s ease-in-out infinite alternate;
+}
+
+/* Gentle Brownian convective drift simulating dust floating across an aged classroom */
+@keyframes chalk-dust-mote-drift-1 {
+  0% {
+    transform: translate3d(0, 0, 0);
+    opacity: 0.20;
+  }
+  25% {
+    transform: translate3d(8px, -14px, 0);
+    opacity: 0.45;
+  }
+  50% {
+    transform: translate3d(-6px, -28px, 0);
+    opacity: 0.16;
+  }
+  75% {
+    transform: translate3d(12px, -42px, 0);
+    opacity: 0.40;
+  }
+  100% {
+    transform: translate3d(-4px, -56px, 0);
+    opacity: 0.22;
+  }
+}
+
+@keyframes chalk-dust-mote-drift-2 {
+  0% {
+    transform: translate3d(0, 0, 0);
+    opacity: 0.16;
+  }
+  20% {
+    transform: translate3d(-10px, 12px, 0);
+    opacity: 0.36;
+  }
+  45% {
+    transform: translate3d(6px, -16px, 0);
+    opacity: 0.12;
+  }
+  70% {
+    transform: translate3d(-14px, -32px, 0);
+    opacity: 0.42;
+  }
+  100% {
+    transform: translate3d(8px, -48px, 0);
+    opacity: 0.18;
+  }
+}
+
+@keyframes chalk-edge-highlight-pan {
+  0% {
+    background-position: 0% 0%;
+    opacity: 0;
+  }
+  3% {
+    opacity: 0.9;
+  }
+  24% {
+    background-position: 100% 100%;
+    opacity: 0.9;
+  }
+  28%, 100% {
+    background-position: 100% 100%;
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chalk-tactile-card {
+    animation: none !important;
+  }
+  .chalk-tactile-card::before,
+  .chalk-tactile-card::after {
+    animation: none !important;
+    transform: none !important;
+    opacity: 0.18 !important;
+  }
+}
+
+.chalk-canvas-grid {
+  background-image: 
+    radial-gradient(rgba(148, 163, 184, 0.22) 1px, transparent 1px),
+    linear-gradient(to right, rgba(226, 232, 240, 0.4) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(226, 232, 240, 0.4) 1px, transparent 1px);
+  background-size: 24px 24px, 96px 96px, 96px 96px;
+}
+
+.chalk-specular {
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.95) 20%, #ffffff 50%, rgba(255, 255, 255, 0.95) 80%, transparent 100%);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
 }
 
 /* ==========================================================================
@@ -306,33 +523,31 @@
 
 /* iOS 26 Premium Translucent Liquid Glass Dashboard Surface System */
 .glass-morphism-v2 {
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.08) 0%, rgba(16, 20, 28, 0.45) 30%, rgba(6, 8, 12, 0.45) 100%) !important;
-  backdrop-filter: blur(80px) saturate(230%) contrast(108%) !important;
-  -webkit-backdrop-filter: blur(80px) saturate(230%) contrast(108%) !important;
-  border: 1px solid rgba(255, 255, 255, 0.16) !important;
+  background: linear-gradient(180deg, rgba(16, 20, 30, 0.84) 0%, rgba(10, 12, 18, 0.92) 100%) !important;
+  backdrop-filter: blur(48px) saturate(210%) contrast(106%) !important;
+  -webkit-backdrop-filter: blur(48px) saturate(210%) contrast(106%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.10) !important;
   box-shadow: 
-    0 24px 54px -12px rgba(0, 0, 0, 0.75),
-    0 10px 20px -4px rgba(0, 0, 0, 0.4),
-    inset 0 1.5px 1.5px 0 rgba(255, 255, 255, 0.45),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.08),
-    inset 0 -1.5px 2px 0 rgba(0, 0, 0, 0.5) !important;
+    0 20px 48px -12px rgba(0, 0, 0, 0.8),
+    0 8px 16px -4px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.16),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.03) !important;
   position: relative;
-  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .ios-liquid-card {
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.09) 0%, rgba(18, 22, 32, 0.55) 30%, rgba(7, 9, 14, 0.55) 100%) !important;
-  backdrop-filter: blur(64px) saturate(230%) contrast(108%) !important;
-  -webkit-backdrop-filter: blur(64px) saturate(230%) contrast(108%) !important;
-  border: 1px solid rgba(255, 255, 255, 0.16) !important;
+  background: linear-gradient(180deg, rgba(18, 22, 34, 0.86) 0%, rgba(11, 14, 20, 0.94) 100%) !important;
+  backdrop-filter: blur(48px) saturate(210%) contrast(106%) !important;
+  -webkit-backdrop-filter: blur(48px) saturate(210%) contrast(106%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.10) !important;
   box-shadow: 
-    0 24px 54px -12px rgba(0, 0, 0, 0.75),
-    0 10px 20px -4px rgba(0, 0, 0, 0.4),
-    inset 0 1.5px 1.5px 0 rgba(255, 255, 255, 0.42),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.08),
-    inset 0 -1.5px 2px 0 rgba(0, 0, 0, 0.5) !important;
+    0 24px 54px -12px rgba(0, 0, 0, 0.85),
+    0 8px 16px -4px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.18),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.04) !important;
   position: relative;
-  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 /* Tiered Editorial Typography Hierarchy within Liquid Cards */
@@ -366,33 +581,72 @@
 
 .ios-liquid-card-interactive {
   cursor: pointer;
+  pointer-events: auto !important;
+  touch-action: manipulation;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
-  transition: 
-    backdrop-filter 0.45s cubic-bezier(0.16, 1, 0.3, 1),
-    -webkit-backdrop-filter 0.45s cubic-bezier(0.16, 1, 0.3, 1),
-    opacity 0.45s cubic-bezier(0.16, 1, 0.3, 1),
-    background 0.45s cubic-bezier(0.16, 1, 0.3, 1),
-    border-color 0.45s cubic-bezier(0.16, 1, 0.3, 1),
-    transform 0.45s cubic-bezier(0.16, 1, 0.3, 1),
-    box-shadow 0.45s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  transform-style: preserve-3d;
+  perspective: 1200px;
   will-change: transform, backdrop-filter, opacity, box-shadow;
+  /* Accurate and immediate cursor hit detection with zero artificial delay */
+  animation-delay: 0s !important;
+  transition-delay: 0s !important;
+  transition: border-color 0.12s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.12s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.12s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.ios-liquid-card-interactive:hover {
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.15) 0%, rgba(24, 30, 44, 0.62) 30%, rgba(10, 13, 20, 0.65) 100%) !important;
-  backdrop-filter: blur(80px) saturate(250%) contrast(112%) !important;
-  -webkit-backdrop-filter: blur(80px) saturate(250%) contrast(112%) !important;
-  opacity: 0.98;
-  border-color: rgba(255, 255, 255, 0.32) !important;
-  transform: translateY(-2.5px) scale(1.002);
-  box-shadow: 
-    0 32px 64px -12px rgba(0, 0, 0, 0.85),
-    0 14px 28px -4px rgba(0, 0, 0, 0.5),
-    inset 0 2px 2.5px 0 rgba(255, 255, 255, 0.6),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.14),
-    0 0 30px -4px rgba(255, 255, 255, 0.08) !important;
+/* Ensure background specular sheen, beams, and decorative layers never steal or delay pointer hit-detection */
+.ios-liquid-card-interactive .apple-liquid-specular,
+.ios-liquid-card-interactive .liquid-specular-beam,
+.ios-liquid-card-interactive [aria-hidden="true"]:not(button):not(a),
+.ios-liquid-card-interactive .pointer-events-none,
+.ios-liquid-card-interactive::before,
+.ios-liquid-card-interactive::after {
+  pointer-events: none !important;
+}
+
+/* Ensure nested buttons, links, inputs, and interactive badges maintain immediate click and hover resolution */
+.ios-liquid-card-interactive button,
+.ios-liquid-card-interactive a,
+.ios-liquid-card-interactive input,
+.ios-liquid-card-interactive select,
+.ios-liquid-card-interactive [role="button"],
+.ios-liquid-card-interactive [tabindex="0"] {
+  pointer-events: auto !important;
+  position: relative;
+  z-index: 10;
+  transition-delay: 0s !important;
+  animation-delay: 0s !important;
+}
+
+.ios-liquid-card-interactive.ios-liquid-card-expanded {
+  z-index: 30 !important;
+}
+
+.ios-liquid-card-interactive [class*="line-clamp"],
+.ios-liquid-card-interactive .truncate {
+  transition: max-height 0.32s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.22s ease;
+}
+
+.ios-liquid-card-interactive [class*="line-clamp"].ios-liquid-text-unclamped,
+.ios-liquid-card-interactive.ios-liquid-card-expanded [class*="line-clamp"] {
+  -webkit-line-clamp: unset !important;
+  line-clamp: unset !important;
+  display: block !important;
+  -webkit-box-orient: unset !important;
+  overflow: visible !important;
+}
+
+.ios-liquid-card-interactive .truncate.ios-liquid-text-unclamped,
+.ios-liquid-card-interactive.ios-liquid-card-expanded .truncate {
+  white-space: normal !important;
+  overflow: visible !important;
+  text-overflow: unset !important;
+}
+
+.ios-liquid-card-interactive > *:not(.apple-liquid-specular) {
+  transform-style: preserve-3d;
+  will-change: transform;
 }
 
 .ios-liquid-kpi {
@@ -419,23 +673,23 @@
 }
 
 .ios-liquid-row {
-  background: rgba(255, 255, 255, 0.04);
-  backdrop-filter: blur(24px) saturate(200%);
-  -webkit-backdrop-filter: blur(24px) saturate(200%);
-  border: 1px solid rgba(255, 255, 255, 0.10);
+  background: rgba(14, 17, 26, 0.72);
+  backdrop-filter: blur(28px) saturate(200%);
+  -webkit-backdrop-filter: blur(28px) saturate(200%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   box-shadow: 
-    0 8px 24px -4px rgba(0, 0, 0, 0.45),
-    inset 0 1px 1px 0 rgba(255, 255, 255, 0.25);
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    0 8px 24px -4px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.12);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .ios-liquid-row:hover {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.28);
+  background: rgba(22, 27, 40, 0.85);
+  border-color: rgba(255, 255, 255, 0.22);
   box-shadow: 
-    0 12px 28px -4px rgba(0, 0, 0, 0.6),
-    inset 0 1px 1.5px 0 rgba(255, 255, 255, 0.45),
-    0 0 20px -2px rgba(255, 255, 255, 0.05);
+    0 12px 28px -4px rgba(0, 0, 0, 0.65),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.25),
+    0 0 20px -2px rgba(255, 255, 255, 0.04);
 }
 
 .apple-liquid-specular {
@@ -572,3 +826,214 @@
 .animate-subtle-pulse {
   animation: subtle-pulse 2.8s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
+
+/* ==========================================================================
+   Calm Mode: Ultra-Low-Contrast Grayscale 'Deep Zen' Atmosphere
+   Engineered for long-duration investigation sessions to minimize eye fatigue.
+   Replaces high-contrast specular glows and hyper-saturated neon highlights
+   with tranquil monochromatic zinc tones, soft contrast levels, and muted luminance.
+   ========================================================================== */
+
+.calm-mode-zen {
+  --bg-base: #0a0b0d;
+  --text-primary: #d6d8df;
+  --text-secondary: #8c909b;
+  --text-muted: #565963;
+  --border-editorial: rgba(255, 255, 255, 0.05);
+  background-color: #0a0b0d !important;
+  color: #cfd2da !important;
+  transition: background-color 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+              color 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+              filter 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Soften all interactive cards in Calm Mode */
+.calm-mode-zen .ios-liquid-card,
+.calm-mode-zen .ios-liquid-card-interactive {
+  background: rgba(14, 15, 19, 0.72) !important;
+  border-color: rgba(255, 255, 255, 0.06) !important;
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.4) !important;
+}
+
+.calm-mode-zen .ios-liquid-card-interactive:hover {
+  background: rgba(20, 22, 28, 0.8) !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+  box-shadow: 0 6px 24px -2px rgba(0, 0, 0, 0.5) !important;
+}
+
+/* Dampen specular sheen to soft matte in Calm Mode */
+.calm-mode-zen .apple-liquid-specular,
+.calm-mode-zen .liquid-specular-beam {
+  opacity: 0.18 !important;
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.3) 50%, transparent 100%) !important;
+}
+
+/* Ultra-thin header & dock calm adaptations */
+.calm-mode-zen .ios-ultra-thin,
+.calm-mode-zen .ios-ultra-thin-header,
+.calm-mode-zen .ios-ultra-thin-dock {
+  background: rgba(12, 13, 16, 0.8) !important;
+  backdrop-filter: blur(40px) saturate(100%) contrast(98%) !important;
+  -webkit-backdrop-filter: blur(40px) saturate(100%) contrast(98%) !important;
+  border-color: rgba(255, 255, 255, 0.07) !important;
+  box-shadow: 0 12px 32px -4px rgba(0, 0, 0, 0.6) !important;
+}
+
+/* Soften vivid status indicators into calm zen monochrome tones */
+.calm-mode-zen [class*="bg-emerald-"],
+.calm-mode-zen [class*="bg-cyan-"],
+.calm-mode-zen [class*="bg-rose-"],
+.calm-mode-zen [class*="bg-amber-"],
+.calm-mode-zen [class*="bg-purple-"] {
+  filter: grayscale(85%) brightness(92%);
+}
+
+.calm-mode-zen [class*="text-emerald-"],
+.calm-mode-zen [class*="text-cyan-"],
+.calm-mode-zen [class*="text-rose-"],
+.calm-mode-zen [class*="text-amber-"],
+.calm-mode-zen [class*="text-purple-"] {
+  filter: grayscale(70%) brightness(105%);
+}
+
+/* Calm pill & badge softening */
+.calm-mode-zen .liquid-glass-emerald,
+.calm-mode-zen .liquid-glass-cyan,
+.calm-mode-zen .liquid-glass-rose,
+.calm-mode-zen .liquid-glass-amber,
+.calm-mode-zen .liquid-glass-purple {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  color: #d1d5db !important;
+  box-shadow: none !important;
+}
+
+/* Subdue live pulsing effects for minimal motion distraction */
+.calm-mode-zen .animate-pulse {
+  animation-duration: 4.5s !important;
+  opacity: 0.75;
+}
+
+/* Neutralize glow borders */
+.calm-mode-zen .border-glow-subtle,
+.calm-mode-zen .border-glow-cyan,
+.calm-mode-zen .border-glow-emerald {
+  box-shadow: none !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* ==========================================================================
+   Text Density & Typography Scale System
+   Allows toggling between 'Comfortable' (default spacious) and 'Compact' (dense)
+   ========================================================================== */
+
+/* Comfortable Mode (Spacious & relaxed line height for easy reading) */
+.density-comfortable {
+  --density-font-scale: 1;
+  --density-line-height: 1.55;
+  --density-letter-spacing: -0.011em;
+}
+
+/* Compact Mode (High Information Density for trace logs, tables, spans, and metrics) */
+.density-compact {
+  --density-font-scale: 0.88;
+  --density-line-height: 1.35;
+  --density-letter-spacing: -0.018em;
+  letter-spacing: -0.016em;
+  font-size: 11.5px;
+}
+
+/* Scaled typography classes in Compact Mode */
+.density-compact .text-xs {
+  font-size: 10.5px !important;
+  line-height: 1.3 !important;
+}
+
+.density-compact .text-sm {
+  font-size: 12px !important;
+  line-height: 1.35 !important;
+}
+
+.density-compact .text-base {
+  font-size: 13.5px !important;
+  line-height: 1.4 !important;
+}
+
+.density-compact .text-lg {
+  font-size: 15px !important;
+  line-height: 1.35 !important;
+}
+
+.density-compact .text-\[11px\] {
+  font-size: 9.75px !important;
+  line-height: 1.25 !important;
+}
+
+.density-compact .text-\[10px\] {
+  font-size: 9px !important;
+  line-height: 1.2 !important;
+}
+
+.density-compact .text-\[9px\] {
+  font-size: 8px !important;
+  line-height: 1.15 !important;
+}
+
+/* Compact Layout & Table Spacing */
+.density-compact table td,
+.density-compact table th {
+  padding-top: 0.35rem !important;
+  padding-bottom: 0.35rem !important;
+}
+
+.density-compact .ios-liquid-card {
+  padding: 1.15rem !important;
+}
+
+.density-compact .p-6 {
+  padding: 1.15rem !important;
+}
+
+.density-compact .p-5 {
+  padding: 0.95rem !important;
+}
+
+.density-compact .p-4 {
+  padding: 0.8rem !important;
+}
+
+.density-compact .py-3 {
+  padding-top: 0.5rem !important;
+  padding-bottom: 0.5rem !important;
+}
+
+.density-compact .py-4 {
+  padding-top: 0.65rem !important;
+  padding-bottom: 0.65rem !important;
+}
+
+.density-compact .py-5 {
+  padding-top: 0.75rem !important;
+  padding-bottom: 0.75rem !important;
+}
+
+.density-compact .space-y-6 > :not([hidden]) ~ :not([hidden]) {
+  --tw-space-y-reverse: 0;
+  margin-top: calc(1.1rem * calc(1 - var(--tw-space-y-reverse))) !important;
+  margin-bottom: calc(1.1rem * var(--tw-space-y-reverse)) !important;
+}
+
+.density-compact .space-y-4 > :not([hidden]) ~ :not([hidden]) {
+  --tw-space-y-reverse: 0;
+  margin-top: calc(0.75rem * calc(1 - var(--tw-space-y-reverse))) !important;
+  margin-bottom: calc(0.75rem * var(--tw-space-y-reverse)) !important;
+}
+
+.density-compact .gap-6 {
+  gap: 1rem !important;
+}
+
+.density-compact .gap-4 {
+  gap: 0.75rem !important;
+}
+

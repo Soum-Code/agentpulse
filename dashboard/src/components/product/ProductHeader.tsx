@@ -1,6 +1,7 @@
 import React from 'react';
-import { ChevronRight, Radio, Search, ExternalLink, X, Keyboard, PanelRight } from 'lucide-react';
-import { ProductTab, Agent, Trace, Span, Incident } from '../../types';
+import { ChevronRight, Radio, Search, ExternalLink, X, Keyboard, PanelRight, Moon, Sun, Layers, User, LogIn, ChevronDown, Sparkles } from 'lucide-react';
+import { ProductTab, Agent, Trace, Span, Incident, TelemetryProject } from '../../types';
+import { User as FirebaseUser } from 'firebase/auth';
 
 interface ProductHeaderProps {
   currentTab: ProductTab;
@@ -17,6 +18,12 @@ interface ProductHeaderProps {
   onOpenShortcutsModal?: () => void;
   isContextPanelOpen?: boolean;
   onToggleContextPanel?: () => void;
+  isCalmMode?: boolean;
+  onToggleCalmMode?: () => void;
+  currentUser?: FirebaseUser | null;
+  activeProject?: TelemetryProject | null;
+  onOpenAuth?: () => void;
+  onOpenProjectSelector?: () => void;
 }
 
 export const ProductHeader: React.FC<ProductHeaderProps> = ({
@@ -34,6 +41,12 @@ export const ProductHeader: React.FC<ProductHeaderProps> = ({
   onOpenShortcutsModal,
   isContextPanelOpen,
   onToggleContextPanel,
+  isCalmMode = false,
+  onToggleCalmMode,
+  currentUser,
+  activeProject,
+  onOpenAuth,
+  onOpenProjectSelector
 }) => {
   // Derive effective agent name if trace is present but selectedAgent wasn't explicitly set
   const effectiveAgentName = selectedAgent?.name || selectedTrace?.agentName;
@@ -43,9 +56,12 @@ export const ProductHeader: React.FC<ProductHeaderProps> = ({
 
   return (
     <header className="sticky top-0 z-30 ios-ultra-thin ios-ultra-thin-header px-4 sm:px-6 py-2.5 flex items-center justify-between text-xs font-mono relative">
+      {/* Top Specular Beam */}
       <div className="absolute inset-x-0 top-0 h-[1px] liquid-specular-beam pointer-events-none" />
 
+      {/* Context-Preserving Breadcrumb Spine (Hierarchy: Agent A > Trace 483 > Span 7) */}
       <div className="flex items-center space-x-2 overflow-x-auto py-1 scrollbar-none min-w-0 pr-4 z-10">
+        {/* Brand Root: Redirects to Website */}
         <button
           onClick={() => {
             onClearSelection();
@@ -65,6 +81,7 @@ export const ProductHeader: React.FC<ProductHeaderProps> = ({
 
         <ChevronRight className="w-3.5 h-3.5 text-neutral-600 shrink-0" />
 
+        {/* Tab Level / Overview Reset */}
         <button
           onClick={() => {
             onClearSelection();
@@ -73,9 +90,10 @@ export const ProductHeader: React.FC<ProductHeaderProps> = ({
           className="text-neutral-400 hover:text-white capitalize transition-colors shrink-0 px-1.5 py-0.5 rounded hover:bg-white/[0.06]"
           title={`Active view: ${currentTab}. Click to return to Overview.`}
         >
-          {currentTab.replace('-', ' ')}
+          {currentTab === 'performance' ? 'Performance Metrics (APM)' : currentTab.replace('-', ' ')}
         </button>
 
+        {/* Hierarchy Level 1: Agent */}
         {effectiveAgentName && (
           <>
             <ChevronRight className="w-3.5 h-3.5 text-neutral-600 shrink-0" />
@@ -94,6 +112,7 @@ export const ProductHeader: React.FC<ProductHeaderProps> = ({
           </>
         )}
 
+        {/* Hierarchy Incident Context (if viewing incident) */}
         {selectedIncident && (
           <>
             <ChevronRight className="w-3.5 h-3.5 text-neutral-600 shrink-0" />
@@ -116,6 +135,7 @@ export const ProductHeader: React.FC<ProductHeaderProps> = ({
           </>
         )}
 
+        {/* Hierarchy Level 2: Trace */}
         {selectedTrace && (
           <>
             <ChevronRight className="w-3.5 h-3.5 text-neutral-600 shrink-0" />
@@ -138,6 +158,7 @@ export const ProductHeader: React.FC<ProductHeaderProps> = ({
           </>
         )}
 
+        {/* Hierarchy Level 3: Span */}
         {selectedSpan && (
           <>
             <ChevronRight className="w-3.5 h-3.5 text-neutral-600 shrink-0" />
@@ -157,6 +178,7 @@ export const ProductHeader: React.FC<ProductHeaderProps> = ({
           </>
         )}
 
+        {/* Clear Context button if hierarchy is active */}
         {hasContextHierarchy && (
           <button
             onClick={onClearSelection}
@@ -168,36 +190,40 @@ export const ProductHeader: React.FC<ProductHeaderProps> = ({
         )}
       </div>
 
+      {/* Right Controls */}
       <div className="flex items-center space-x-2.5 shrink-0 z-10">
+        {/* Live Simulator Pulsar */}
         <button
           onClick={onToggleLive}
-          className={`flex items-center space-x-2 px-3 py-1 rounded-lg border text-[11px] font-mono transition-all ${
+          className={`flex items-center space-x-2 px-3 py-1 rounded-lg border text-[11px] font-mono transition-all tactile-press ${
             isSimulatingLive
-              ? 'liquid-glass-emerald text-emerald-200'
+              ? 'liquid-glass-emerald text-emerald-200 shadow-[0_0_12px_rgba(16,185,129,0.2)]'
               : 'bg-white/[0.03] border-white/[0.08] text-neutral-400 hover:text-neutral-200 hover:bg-white/[0.06]'
           }`}
           title="Toggle live synthetic telemetry stream"
         >
-          <Radio className={`w-3 h-3 ${isSimulatingLive ? 'text-emerald-400 animate-pulse' : 'text-neutral-500'}`} />
+          <Radio className={`w-3 h-3 ${isSimulatingLive ? 'text-emerald-400 phosphor-emerald animate-pulse' : 'text-neutral-500'}`} />
           <span className="hidden sm:inline font-semibold">{isSimulatingLive ? 'LIVE INGESTION' : 'STREAM PAUSED'}</span>
         </button>
 
+        {/* Cmd+K Quick Trigger */}
         <button
           onClick={onOpenCommandPalette}
-          className="flex items-center space-x-2 liquid-glass-pill text-neutral-300 hover:text-white px-2.5 py-1 rounded-lg transition-all"
+          className="flex items-center space-x-2 liquid-glass-pill text-neutral-300 hover:text-white px-2.5 py-1 rounded-lg transition-all tactile-press"
           title="Open Command Palette (Cmd+K / Ctrl+K)"
         >
           <Search className="w-3 h-3 text-neutral-400" />
           <span className="hidden md:inline">Jump to...</span>
-          <kbd className="bg-black/60 text-neutral-200 px-1.5 py-0.5 rounded border border-white/[0.14] text-[10px] font-mono font-bold">
+          <kbd className="keycap-bevel text-neutral-200 px-1.5 py-0.5 rounded text-[10px] font-mono font-bold">
             ⌘K
           </kbd>
         </button>
 
+        {/* Active Context Panel Toggle */}
         {onToggleContextPanel && (
           <button
             onClick={onToggleContextPanel}
-            className={`flex items-center space-x-1.5 px-2.5 py-1 rounded-lg border text-xs font-mono transition-all ${
+            className={`flex items-center space-x-1.5 px-2.5 py-1 rounded-lg border text-xs font-mono transition-all tactile-press ${
               isContextPanelOpen
                 ? 'liquid-glass-pill text-emerald-300 border-emerald-500/40 bg-emerald-500/15'
                 : 'liquid-glass-pill text-neutral-300 hover:text-white'
@@ -207,27 +233,92 @@ export const ProductHeader: React.FC<ProductHeaderProps> = ({
             <PanelRight className={`w-3.5 h-3.5 ${isContextPanelOpen ? 'text-emerald-400' : 'text-neutral-400'}`} />
             <span className="hidden xl:inline font-sans text-xs">Active Context</span>
             {hasContextHierarchy && (
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 phosphor-emerald animate-pulse" />
             )}
           </button>
         )}
 
+        {/* Calm Mode (Deep Zen Theme) Toggle */}
+        {onToggleCalmMode && (
+          <button
+            onClick={onToggleCalmMode}
+            className={`flex items-center space-x-1.5 px-2.5 py-1 rounded-lg border text-xs font-mono transition-all tactile-press ${
+              isCalmMode
+                ? 'liquid-glass-pill text-neutral-200 border-neutral-600 bg-neutral-800/80 shadow-[0_0_12px_rgba(255,255,255,0.06)]'
+                : 'liquid-glass-pill text-neutral-300 hover:text-white'
+            }`}
+            title={`Calm Mode: ${isCalmMode ? 'Active (Deep Zen Grayscale)' : 'Inactive (High-Contrast Dark)'}. Click to toggle.`}
+            aria-label="Toggle Calm Mode Deep Zen Theme"
+          >
+            <Moon className={`w-3.5 h-3.5 ${isCalmMode ? 'text-neutral-300' : 'text-neutral-400'}`} />
+            <span className="hidden xl:inline font-sans text-xs">
+              {isCalmMode ? 'Deep Zen' : 'Calm'}
+            </span>
+          </button>
+        )}
+
+        {/* Global Keyboard Shortcuts Cheat Sheet Button */}
         {onOpenShortcutsModal && (
           <button
             onClick={onOpenShortcutsModal}
-            className="flex items-center space-x-1.5 liquid-glass-pill text-neutral-300 hover:text-white px-2.5 py-1 rounded-lg transition-all"
+            className="flex items-center space-x-1.5 liquid-glass-pill text-neutral-300 hover:text-white px-2.5 py-1 rounded-lg transition-all tactile-press"
             title="Keyboard Shortcuts Cheat Sheet (Press ?)"
           >
             <Keyboard className="w-3.5 h-3.5 text-neutral-400" />
-            <kbd className="bg-black/60 text-neutral-200 px-1.5 py-0.5 rounded border border-white/[0.14] text-[10px] font-mono font-bold">
+            <kbd className="keycap-bevel text-neutral-200 px-1.5 py-0.5 rounded text-[10px] font-mono font-bold">
               ?
             </kbd>
           </button>
         )}
 
+        {/* Project Selector Trigger */}
+        {onOpenProjectSelector && (
+          <button
+            onClick={onOpenProjectSelector}
+            className="flex items-center space-x-1.5 px-2.5 py-1 rounded-lg border border-amber-400/30 bg-amber-400/10 hover:bg-amber-400/20 text-amber-300 transition-all tactile-press text-xs font-mono"
+            title="Switch or create Agent Telemetry Project in Firestore"
+          >
+            <Layers className="w-3.5 h-3.5 text-amber-300" />
+            <span className="hidden sm:inline font-bold truncate max-w-[120px]">
+              {activeProject ? activeProject.name : 'Default Project'}
+            </span>
+            <ChevronDown className="w-3 h-3 text-amber-400/70" />
+          </button>
+        )}
+
+        {/* Auth / Profile Trigger */}
+        {onOpenAuth && (
+          <button
+            onClick={onOpenAuth}
+            className={`flex items-center space-x-1.5 px-2.5 py-1 rounded-lg border transition-all tactile-press text-xs font-mono ${
+              currentUser
+                ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/25'
+                : 'bg-white/5 border-white/10 text-neutral-300 hover:text-white hover:bg-white/10'
+            }`}
+            title={currentUser ? `Signed in as ${currentUser.displayName || currentUser.email || 'Developer'}` : 'Sign In with Firebase'}
+          >
+            {currentUser ? (
+              <>
+                <div className="w-3.5 h-3.5 rounded-full bg-emerald-400/30 border border-emerald-400 flex items-center justify-center text-[9px] font-bold text-emerald-200">
+                  {currentUser.displayName ? currentUser.displayName[0].toUpperCase() : 'U'}
+                </div>
+                <span className="hidden md:inline truncate max-w-[110px]">
+                  {currentUser.displayName || (currentUser.isAnonymous ? 'Guest' : 'Developer')}
+                </span>
+              </>
+            ) : (
+              <>
+                <LogIn className="w-3.5 h-3.5 text-amber-300" />
+                <span className="font-semibold text-amber-300">Sign In</span>
+              </>
+            )}
+          </button>
+        )}
+
+        {/* Switch to Public Website view */}
         <button
           onClick={onSwitchToPublic}
-          className="text-neutral-300 hover:text-white px-2.5 py-1 rounded-lg hover:bg-white/[0.08] transition-colors flex items-center space-x-1 border border-transparent hover:border-white/[0.12]"
+          className="text-neutral-300 hover:text-white px-2.5 py-1 rounded-lg hover:bg-white/[0.08] transition-colors flex items-center space-x-1 border border-transparent hover:border-white/[0.12] tactile-press"
           title="Switch to Editorial Public Landing"
         >
           <span className="hidden lg:inline font-medium">Public Site</span>

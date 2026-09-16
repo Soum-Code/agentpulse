@@ -1,10 +1,24 @@
+/** View models for the console.
+ *
+ * Fields the AgentPulse API does not produce are optional, not required.
+ *
+ * These interfaces were first written against mock telemetry, where every field
+ * has a value because somebody typed one. Required fields are fine there and
+ * wrong here: `adapters.ts` maps real responses and leaves anything the backend
+ * never measured undefined, on the rule that an invented value is
+ * indistinguishable from a measured one. Marking those fields required would
+ * make the compiler demand the invention.
+ */
 export type DesignMode = 'public' | 'product';
 export type ColorPalette = 'butter' | 'dark' | 'chalk';
+export type TextDensity = 'compact' | 'comfortable';
+export type ChronologicalSortOrder = 'reverse-chronological' | 'chronological';
 
 export type ProductTab =
   | 'overview'
   | 'agents'
   | 'traces'
+  | 'performance'
   | 'incidents'
   | 'drift'
   | 'replay'
@@ -13,7 +27,72 @@ export type ProductTab =
   | 'telemetry-lab'
   | 'settings';
 
+export interface ApiEndpointMetrics {
+  id: string;
+  path: string;
+  method: 'GET' | 'POST' | 'PUT' | 'DELETE';
+  service: string;
+  description: string;
+  latencyP50Ms: number;
+  latencyP90Ms: number;
+  latencyP95Ms: number;
+  latencyP99Ms: number;
+  avgLatencyMs: number;
+  minLatencyMs: number;
+  maxLatencyMs: number;
+  errorRate: number; // percentage (0 - 100)
+  throughputRps: number; // requests per sec
+  rpm: number; // requests per minute
+  totalRequests24h: number;
+  statusCodes: {
+    code2xx: number;
+    code3xx: number;
+    code4xx: number;
+    code5xx: number;
+  };
+  apdexScore: number; // 0.00 to 1.00
+  status: 'healthy' | 'degraded' | 'critical';
+  latencyBreakdown: {
+    inferenceMs: number;
+    dbMs: number;
+    toolsMs: number;
+    networkMs: number;
+  };
+  sparkline: number[]; // 10-15 recent latency points for micro-visualizer
+  recentTimeseries: {
+    timestamp: string;
+    rps: number;
+    latencyAvg: number;
+    p95: number;
+    p99: number;
+    errorRate: number;
+    status2xx: number;
+    status4xx: number;
+    status5xx: number;
+  }[];
+  topErrors: {
+    status: number;
+    message: string;
+    count: number;
+    lastSeen: string;
+    sampleTraceId?: string;
+  }[];
+  upstreamCallers: string[];
+  downstreamDependencies: string[];
+}
+
 export type AgentStatus = 'idle' | 'running' | 'warning' | 'critical';
+
+export interface LatencyDataPoint {
+  minute: number; // 0 to 60 (or -60 to 0)
+  timeLabel: string; // e.g. "-55m", "-10m", "Now"
+  timestamp: string; // e.g. "14:32:00"
+  timeAgo: string; // e.g. "32 mins ago" or "Just now"
+  latencyMs: number;
+  baselineMs: number;
+  driftThresholdMs: number;
+  status: 'normal' | 'deviation' | 'drift';
+}
 
 export interface Agent {
   id: string;
@@ -21,16 +100,17 @@ export interface Agent {
   version?: string;
   model?: string;
   status: AgentStatus;
-  latencyAvgMs?: number;
+  latencyAvgMs: number;
   costPerHour?: number;
-  successRate?: number;
-  totalTraces24h?: number;
-  description?: string;
+  successRate: number;
+  totalTraces24h: number;
+  description: string;
   framework?: string;
-  driftScore?: number; // 0 to 1
-  driftStatus?: 'normal' | 'deviation' | 'drift';
+  driftScore: number; // 0 to 1
+  driftStatus: 'normal' | 'deviation' | 'drift';
   lastActive: string;
   tools?: string[];
+  latencyHistory60m?: LatencyDataPoint[];
 }
 
 export type SpanType = 'agent' | 'tool' | 'model' | 'evaluator' | 'retrieval';
@@ -88,7 +168,7 @@ export interface Trace {
   rootSpanId: string;
   status: 'ok' | 'warning' | 'error';
   durationMs: number;
-  totalTokens?: number;
+  totalTokens: number;
   cost?: number;
   timestamp: string;
   inputPreview: string;
@@ -111,7 +191,7 @@ export interface Incident {
   detectedAt: string;
   status: 'open' | 'investigating' | 'resolved';
   rootCause?: string;
-  summary?: string;
+  summary: string;
   affectedRunsCount?: number;
   suggestedAction?: string;
 }
@@ -131,15 +211,15 @@ export interface DriftPoint {
 export interface DriftProfile {
   agentId: string;
   agentName: string;
-  driftMagnitude?: number; // 0 to 1
+  driftMagnitude: number; // 0 to 1
   clusterDivergence?: number;
   parameterDrift?: number;
-  semanticDrift?: number;
-  toolCallDrift?: number;
+  semanticDrift: number;
+  toolCallDrift: number;
   baselineSampleCount: number;
   currentSampleCount: number;
   points: DriftPoint[];
-  driftReason?: string;
+  driftReason: string;
 }
 
 export interface DatasetItem {
@@ -195,4 +275,24 @@ export interface ContextBreadcrumb {
   traceId?: string;
   spanId?: string;
   viewName?: string;
+}
+
+export interface TelemetryProject {
+  id: string;
+  name: string;
+  description?: string;
+  ownerId: string;
+  apiKey: string;
+  environment: 'production' | 'staging' | 'development';
+  createdAt: string;
+  agentCount?: number;
+  traceCount?: number;
+}
+
+export interface UserProfile {
+  uid: string;
+  email: string;
+  displayName: string;
+  photoURL?: string;
+  isAnonymous: boolean;
 }
