@@ -95,7 +95,7 @@ export const TracesView: React.FC<TracesViewProps> = ({
         t.agentId.toLowerCase().includes(q) ||
         t.status.toLowerCase().includes(q) ||
         t.inputPreview.toLowerCase().includes(q) ||
-        t.tags.some(tag => tag.toLowerCase().includes(q))
+        (t.tags ?? []).some(tag => tag.toLowerCase().includes(q))
       );
     });
 
