@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Bot, Terminal, Activity, ArrowRight, ShieldCheck, Wrench, Search, ChevronRight } from 'lucide-react';
 import { Agent, Trace } from '../../types';
+import { AgentLatencySparkline } from './AgentLatencySparkline';
 
 interface AgentsViewProps {
   agents: Agent[];
@@ -23,24 +24,21 @@ export const AgentsView: React.FC<AgentsViewProps> = ({
 
   const filteredAgents = agents.filter(a =>
     a.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (a.framework ?? '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (a.model ?? '').toLowerCase().includes(searchQuery.toLowerCase())
+    a.framework.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    a.model.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
     <div className="space-y-6 pb-28">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      {/* Search and Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 anime-tab-card">
         <div>
           <h2 className="text-lg font-mono font-semibold text-white uppercase tracking-wider flex items-center space-x-2">
             <Bot className="w-5 h-5 text-neutral-400" />
             <span>Autonomous Agent Roster</span>
           </h2>
-          {/* The count comes from the roster rather than a constant: a hardcoded
-              "4 active swarms" disagreed with whatever the backend actually
-              returned. LlamaIndex and CrewAI were listed here as supported
-              frameworks; neither adapter exists. */}
           <p className="text-xs font-mono text-neutral-400 mt-1">
-            {agents.length} {agents.length === 1 ? 'agent' : 'agents'} &nbsp;·&nbsp; LangGraph nodes and instrumented OpenAI / Anthropic clients
+            4 active swarms &nbsp;·&nbsp; LangGraph, CrewAI & Custom Orchestrators &nbsp;·&nbsp; Real-time latency & drift monitoring
           </p>
         </div>
 
@@ -56,7 +54,9 @@ export const AgentsView: React.FC<AgentsViewProps> = ({
         </div>
       </div>
 
+      {/* Main Split Layout: Agent List (Left) + Detailed Agent Inspector (Right) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        {/* Left Column: Agent Cards with Recharts 60m Sparklines */}
         <div className="lg:col-span-5 space-y-3">
           {filteredAgents.map((agent) => {
             const isSelected = currentAgent?.id === agent.id;
@@ -65,7 +65,7 @@ export const AgentsView: React.FC<AgentsViewProps> = ({
               <div
                 key={agent.id}
                 onClick={() => onSelectAgent(agent)}
-                className={`p-4 rounded-xl cursor-pointer transition-all duration-250 relative overflow-hidden group ${
+                className={`p-4 rounded-xl cursor-pointer transition-all duration-250 relative overflow-hidden group anime-tab-row ${
                   isSelected
                     ? 'glass-morphism-v2 border-glow-subtle border-white/40 shadow-[0_0_30px_rgba(255,255,255,0.08)]'
                     : 'ios-liquid-row text-neutral-300'
@@ -108,8 +108,13 @@ export const AgentsView: React.FC<AgentsViewProps> = ({
                   </span>
                 </div>
 
-                <div className="mt-3 pt-3 border-t border-white/[0.08] flex items-center justify-between text-[11px] font-mono text-neutral-400">
-                  <span className="text-neutral-300 font-medium">{agent.totalTraces24h != null ? `${agent.totalTraces24h.toLocaleString()} traces/24h` : String.fromCharCode(8212)}</span>
+                {/* 60-Minute Recharts Sparkline */}
+                <div className="mt-3 pt-2.5 border-t border-white/[0.06]">
+                  <AgentLatencySparkline agent={agent} variant="compact" />
+                </div>
+
+                <div className="mt-2.5 pt-2.5 border-t border-white/[0.06] flex items-center justify-between text-[11px] font-mono text-neutral-400">
+                  <span className="text-neutral-300 font-medium">{agent.totalTraces24h.toLocaleString()} traces/24h</span>
                   <span className="text-neutral-300 font-medium">{agent.latencyAvgMs}ms avg</span>
                   <span className={agent.successRate < 90 ? 'text-rose-400 font-bold' : 'text-emerald-400 font-bold'}>
                     {agent.successRate}% OK
@@ -120,9 +125,11 @@ export const AgentsView: React.FC<AgentsViewProps> = ({
           })}
         </div>
 
+        {/* Right Column: Selected Agent Deep Dive */}
         {currentAgent && (
-          <div className="lg:col-span-7 glass-morphism-v2 border-glow-subtle rounded-2xl overflow-hidden relative">
+          <div className="lg:col-span-7 glass-morphism-v2 border-glow-subtle rounded-2xl overflow-hidden relative anime-tab-card">
             <div className="absolute inset-x-0 top-0 h-[1.5px] apple-liquid-specular pointer-events-none" />
+            {/* Inspector Header */}
             <div className="px-6 py-4 border-b border-white/[0.12] flex items-center justify-between bg-white/[0.04] backdrop-blur-xl">
               <div>
                 <span className="text-[10px] font-mono uppercase tracking-wider text-neutral-400 block font-semibold">
@@ -151,6 +158,7 @@ export const AgentsView: React.FC<AgentsViewProps> = ({
               </div>
             </div>
 
+            {/* Inspector Body */}
             <div className="p-6 space-y-6">
               <div>
                 <span className="text-xs font-mono text-neutral-400 uppercase tracking-wider block mb-1">
@@ -161,6 +169,7 @@ export const AgentsView: React.FC<AgentsViewProps> = ({
                 </p>
               </div>
 
+              {/* Specs Grid */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 font-mono text-xs">
                 <div className="p-3 rounded-xl ios-liquid-row border border-white/[0.12]">
                   <span className="text-neutral-400 block text-[10px]">FRAMEWORK</span>
@@ -176,17 +185,26 @@ export const AgentsView: React.FC<AgentsViewProps> = ({
                 </div>
                 <div className="p-3 rounded-xl ios-liquid-row border border-white/[0.12]">
                   <span className="text-neutral-400 block text-[10px]">EST. HOURLY COST</span>
-                  <span className="text-emerald-400 font-bold mt-1 block">{currentAgent.costPerHour != null ? `$${currentAgent.costPerHour.toFixed(2)}/hr` : String.fromCharCode(8212)}</span>
+                  <span className="text-emerald-400 font-bold mt-1 block">${currentAgent.costPerHour.toFixed(2)}/hr</span>
                 </div>
               </div>
 
+              {/* 60-Minute Detailed Latency Telemetry & Drift Analysis (Recharts) */}
+              <div>
+                <span className="text-xs font-mono text-neutral-400 uppercase tracking-wider block mb-2">
+                  Performance & Latency Drift Telemetry (Last 60 Minutes)
+                </span>
+                <AgentLatencySparkline agent={currentAgent} variant="detailed" />
+              </div>
+
+              {/* Tools Inventory */}
               <div>
                 <span className="text-xs font-mono text-neutral-400 uppercase tracking-wider block mb-2 flex items-center space-x-1.5">
                   <Wrench className="w-3.5 h-3.5 text-neutral-400" />
-                  <span>Bound Tool Handlers ({(currentAgent.tools ?? []).length})</span>
+                  <span>Bound Tool Handlers ({currentAgent.tools.length})</span>
                 </span>
                 <div className="flex flex-wrap gap-2">
-                  {(currentAgent.tools ?? []).map((tool) => (
+                  {currentAgent.tools.map((tool) => (
                     <span
                       key={tool}
                       className="px-2.5 py-1 rounded-lg ios-liquid-row border border-white/[0.12] font-mono text-xs text-neutral-200 font-semibold shadow-xs"
@@ -197,6 +215,7 @@ export const AgentsView: React.FC<AgentsViewProps> = ({
                 </div>
               </div>
 
+              {/* Drift & Anomaly Assessment */}
               <div className="p-4 rounded-xl ios-liquid-row border border-white/[0.12] space-y-2">
                 <div className="flex items-center justify-between text-xs font-mono">
                   <span className="text-neutral-400">Drift Anomaly Index:</span>
@@ -232,3 +251,4 @@ export const AgentsView: React.FC<AgentsViewProps> = ({
     </div>
   );
 };
+

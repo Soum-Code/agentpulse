@@ -12,8 +12,7 @@ export const ExperimentsView: React.FC<ExperimentsViewProps> = ({
   experiments,
   datasets
 }) => {
-  const [selectedExpId, setSelectedExpId] = useState<string | null>(null);
-  const selectedExp = experiments.find(e => e.id === selectedExpId) ?? experiments[0];
+  const [selectedExp, setSelectedExp] = useState<Experiment>(experiments[0]);
   const [isRunningSim, setIsRunningSim] = useState(false);
 
   const handleTriggerExperiment = () => {
@@ -25,14 +24,20 @@ export const ExperimentsView: React.FC<ExperimentsViewProps> = ({
 
   return (
     <div className="space-y-6 pb-28">
+      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-lg font-mono font-semibold text-white uppercase tracking-wider flex items-center space-x-2">
-            <FlaskConical className="w-5 h-5 text-neutral-300" />
-            <span>Candidate Evaluation & Experiments</span>
-          </h2>
+          <div className="flex items-center space-x-2">
+            <h2 className="text-lg font-mono font-semibold text-white uppercase tracking-wider flex items-center space-x-2">
+              <FlaskConical className="w-5 h-5 text-neutral-300" />
+              <span>Candidate Evaluation &amp; Experiments</span>
+            </h2>
+            <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-400/10 border border-amber-400/30 text-amber-300 uppercase">
+              MLflow Matrix + CI/CD Gate
+            </span>
+          </div>
           <p className="text-xs font-mono text-neutral-400 mt-1">
-            Braintrust & Langfuse loop: Test candidate models & hardened system prompts against golden benchmark datasets
+            Deterministic Regression Loop: Test prompt candidates &amp; model weights against versioned golden datasets using local CPU DeBERTa &amp; MiniLM without calling an LLM
           </p>
         </div>
 
@@ -46,7 +51,9 @@ export const ExperimentsView: React.FC<ExperimentsViewProps> = ({
         </button>
       </div>
 
+      {/* Grid: Experiment Runs (Left) + Detailed Score Matrix & Diff Comparison (Right) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        {/* Left Column: Experiments List */}
         <div className="lg:col-span-5 space-y-3">
           {experiments.map((exp) => {
             const isSelected = selectedExp.id === exp.id;
@@ -54,8 +61,8 @@ export const ExperimentsView: React.FC<ExperimentsViewProps> = ({
             return (
               <div
                 key={exp.id}
-                onClick={() => setSelectedExpId(exp.id)}
-                className={`p-4 rounded-xl border cursor-pointer transition-all space-y-2 ${
+                onClick={() => setSelectedExp(exp)}
+                className={`p-4 rounded-xl border cursor-pointer transition-all space-y-2 anime-tab-row ${
                   isSelected
                     ? 'bg-neutral-850 border-neutral-500 shadow-md'
                     : 'surface-solid text-neutral-300 hover:bg-neutral-850 surface-hover'
@@ -63,7 +70,7 @@ export const ExperimentsView: React.FC<ExperimentsViewProps> = ({
               >
                 <div className="flex items-center justify-between text-xs font-mono">
                   <span className="text-neutral-400 font-semibold">{exp.id}</span>
-                  <span className="text-emerald-400 font-bold">{exp.winRate != null ? `+${exp.winRate}% Win Rate` : "win rate not recorded"}</span>
+                  <span className="text-emerald-400 font-bold">+{exp.winRate}% Win Rate</span>
                 </div>
 
                 <div className="text-xs font-semibold text-white font-mono">
@@ -75,17 +82,19 @@ export const ExperimentsView: React.FC<ExperimentsViewProps> = ({
                 </div>
 
                 <div className="flex items-center justify-between text-[11px] font-mono text-neutral-400 pt-2 border-t border-neutral-800/80">
-                  <span>Baseline: {exp.baselineScore != null ? `${(exp.baselineScore * 100).toFixed(0)}%` : String.fromCharCode(8212)}</span>
+                  <span>Baseline: {(exp.baselineScore * 100).toFixed(0)}%</span>
                   <ArrowRight className="w-3 h-3 text-neutral-500" />
-                  <span className="text-emerald-400 font-semibold">Candidate: {exp.candidateScore != null ? `${(exp.candidateScore * 100).toFixed(0)}%` : String.fromCharCode(8212)}</span>
+                  <span className="text-emerald-400 font-semibold">Candidate: {(exp.candidateScore * 100).toFixed(0)}%</span>
                 </div>
               </div>
             );
           })}
         </div>
 
+        {/* Right Column: Experiment Comparison Diff Matrix */}
         {selectedExp && (
-          <div className="lg:col-span-7 surface-solid rounded-xl border border-neutral-800 overflow-hidden font-mono text-xs">
+          <div className="lg:col-span-7 surface-solid rounded-xl border border-neutral-800 overflow-hidden font-mono text-xs anime-tab-card">
+            {/* Header (Liquid Glass) */}
             <div className="glass-floating px-6 py-4 border-b border-neutral-800 flex items-center justify-between">
               <div>
                 <span className="text-[10px] uppercase text-neutral-400 tracking-wider block">
@@ -96,11 +105,13 @@ export const ExperimentsView: React.FC<ExperimentsViewProps> = ({
                 </h3>
               </div>
               <span className="text-xs text-neutral-400">
-                {selectedExp.runCount != null ? `${selectedExp.runCount} items evaluated` : "item count not recorded"}
+                {selectedExp.runCount} items evaluated
               </span>
             </div>
 
+            {/* Solid Body */}
             <div className="p-6 space-y-6 bg-[#121316]">
+              {/* Evaluators Applied */}
               <div>
                 <span className="text-neutral-400 uppercase tracking-wider text-[10px] block mb-2">
                   Applied Evaluators ({selectedExp.evaluators.length})
@@ -114,6 +125,7 @@ export const ExperimentsView: React.FC<ExperimentsViewProps> = ({
                 </div>
               </div>
 
+              {/* High-level Insights */}
               <div className="p-4 rounded-xl bg-neutral-950 border border-neutral-800 space-y-1.5">
                 <span className="text-neutral-400 uppercase tracking-wider text-[10px] block font-semibold">
                   Evaluator Findings
@@ -123,12 +135,13 @@ export const ExperimentsView: React.FC<ExperimentsViewProps> = ({
                 </p>
               </div>
 
+              {/* Side-by-Side Comparison Diffs */}
               <div className="space-y-4">
                 <span className="text-neutral-400 uppercase tracking-wider text-[10px] block">
                   Benchmark Item Side-by-Side Diff
                 </span>
 
-                {(selectedExp.comparisonDiffs ?? []).map((diff, idx) => (
+                {selectedExp.comparisonDiffs.map((diff, idx) => (
                   <div key={idx} className="p-4 rounded-xl bg-neutral-950 border border-neutral-800 space-y-3">
                     <div className="text-neutral-400 text-[11px]">
                       <strong className="text-white">Query Input:</strong> "{diff.input}"
