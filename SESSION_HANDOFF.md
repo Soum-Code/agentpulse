@@ -1604,3 +1604,179 @@ Unchanged and still true, plus:
   README now say so rather than hiding it.
 
 ---
+
+## 21. The AI Studio frontend, and the credential it was inventing (2026-09-17)
+
+PRs #24 and #25. A separate repository, `Soum-Code/frontend`, had been taking
+frontend work through AI Studio -- 46 files and ~11k lines of it. Bringing that
+in turned into two jobs: keeping the components while dropping what they
+fabricated, and then building the feature one of them had been pretending to
+have.
+
+### 21.1 It was a UI-only fork that had lost the data layer
+
+The thing that decided the merge strategy, found by diffing the two trees:
+
+| | `agentpulse/dashboard` | `Soum-Code/frontend` |
+| :--- | :--- | :--- |
+| Backend wiring | `api.ts`, `adapters.ts`, `useTelemetry.ts` | **absent** |
+| Data | live, polled | `mockTelemetry.ts` |
+| Tests | 32 | 0 |
+| New components | — | 19 |
+
+So this was never a merge of equals. The incoming repository had more UI and no
+connection to a backend, which is why everything in it looked populated.
+
+**`App.tsx` was restored from main rather than merged.** The incoming one seeded
+state from `INITIAL_*` mocks and, every twelve seconds, pushed a freshly
+invented trace into the list:
+
+```js
+durationMs: 450,
+measured: `Latency: 450ms. Evaluator score: ${isAnomalous ? '0.78' : '0.99'}`
+```
+
+Mixed into real telemetry those are worse than pure mock data, because nothing
+distinguishes them. The public landing page still gets every new component --
+`PublicExperience` renders them -- while the console keeps polling.
+
+### 21.2 Two panels were presenting generated numbers as measurements
+
+**`LiveEvaluatorSandbox`** read *"Live Evaluator Sandbox: Test Without
+Installing"* and *"Watch our dual-stage NLI evaluator classify"*. Underneath:
+keyword matching in the browser, `latency: Math.floor(45 + Math.random() * 25)`,
+and the result labelled `stage2_deberta`. No `fetch`, no `/v1/` call anywhere in
+the file.
+
+**`LiveTailStream`** read *"Real-Time Span Ingestion Feed"* and *"Datadog APM
+Live Tail Equivalent"* while generating every row, contradiction scores
+included, with `Math.random()`.
+
+Both are kept -- an interactive explainer and a feed animation are genuinely
+useful -- and both now say what they are. The generated latency is gone entirely
+rather than replaced: a number produced in the browser sitting beside a
+real-looking verdict is the exact confusion this project exists to surface.
+
+Also removed on the way in: two UMAP projections (the API exposes distances,
+never coordinates), `OTel v1.32 Ingress`, an "OpenTelemetry trace filtering"
+claim, and a `framework: 'LlamaIndex'` label.
+
+Worth noting against Section 20: the audit that claimed UMAP was live in this
+repository was **right about the other one**. It does exist there, twice. The
+refutation in 20.3 was correct for the repository it checked, and the repository
+was never confirmed.
+
+### 21.3 The typecheck found the real disagreement
+
+`types.ts` declared the fields the backend does not produce as **required** --
+`version`, `model`, `framework`, `tools`, `costPerHour`, `sessionId`, `cost`,
+`tags`, `rootCause`, `affectedRunsCount`, `suggestedAction`,
+`clusterDivergence`, `parameterDrift`, and the experiment scoreboard.
+
+Against mock data that fills every field, required is reasonable. Against a real
+adapter it is the compiler **demanding the invention**: `adapters.ts` leaves
+those undefined deliberately, on the rule that a value the backend never
+measured is indistinguishable from one it did.
+
+The build failed on the honesty rather than on the fabrication. They are
+optional now, which is the truthful shape.
+
+### 21.4 The console was minting credentials that could not work
+
+```js
+const keyHash = Math.random().toString(36).substring(2, 10);
+const apiKey = `ap_live_${randomSlug}_${keyHash}`;
+```
+
+Stored in Firestore, displayed with a copy button, and rejected with 401 the
+moment anybody used it -- the backend recognised exactly one credential, a
+string from `AGENTPULSE_API_KEY` compared with `==`. Nothing could be revoked,
+nothing attributed, and granting one caller access meant handing over everybody's
+secret.
+
+`POST /v1/keys`, `GET /v1/keys?owner_id=`, `DELETE /v1/keys/{id}` now exist.
+
+- **Only a hash is stored.** The plaintext is returned once and never written
+  down. SHA-256 rather than a password KDF: these are 32 bytes of
+  `secrets.token_urlsafe`, so there is nothing to brute force and bcrypt would
+  only add latency to a check that runs on every request.
+- **An indexed `key_prefix`** carries the non-secret half, so verification reads
+  one row instead of scanning.
+- **`hmac.compare_digest`**, not `==`. The hashes are not secret, but a
+  short-circuiting compare leaks how much of a guess was right.
+- **The environment key keeps working.** The deployment authenticates with it. A
+  key not shaped like ours is rejected before any query runs, so existing traffic
+  costs nothing.
+- **Revocation writes a timestamp** rather than deleting, so a revoked key stays
+  auditable. Revoke and list are owner-scoped, or an authenticated caller could
+  revoke by guessing an id.
+
+Firebase handles identity and the backend is not asked to. `owner_id` is a
+free-form string holding a Firebase uid today; changing identity provider later
+touches nothing on the server.
+
+Verified on the live deployment, not only in tests:
+
+```
+env key            200     (deployment unbroken)
+created            ap_live_36aca468aa4a_vDoQ5…
+new key            200     (it actually authenticates)
+revoke             200
+after revoke       401
+```
+
+### 21.5 Two test problems worth remembering
+
+Neither was visible from the test that failed.
+
+**The fixture mutated a module-level singleton.** Assigning `settings.api_key`
+and `settings.local_dev_mode` without restoring them broke **twelve unrelated
+tests**, each of which passed in isolation. `monkeypatch.setattr` restores;
+assignment does not.
+
+**`app.database` builds its engine at import time.** A fixture cannot redirect
+the database from inside a test -- by the time any test runs the engine is
+already bound. The first version pointed at a `tmp_path` database and kept
+writing to the default one regardless, silently. These tests now share the
+suite's database, as every other test here does, and mint unique owner ids.
+
+### 21.6 The deployment does not use Alembic
+
+Found while deciding how to apply the migration, and important enough to write
+down: **the VM's database has no `alembic_version` table at all.** Its schema was
+built entirely by `SQLModel.metadata.create_all` in `init_db()`, which runs on
+every startup.
+
+So `alembic upgrade head` was not run, and must not be -- it would try every
+migration from the beginning against a database that already has the tables.
+`create_all` added `api_keys` by itself on restart, 12 tables to 13.
+
+**This works only for new tables.** `create_all` does not add a column, rename
+one, or change a type. The first migration that does any of those will need
+applying by hand, and the version table reconciling first. That is now two
+unrelated Alembic hazards standing at once -- this one, and the local
+`alembic_version` that reads `8d86fee0d663` while the schema is further ahead.
+
+### 21.7 Standing facts
+
+New:
+
+- **The bundle is 2,333 kB**, up from 1,096 kB before this session -- `animejs`,
+  `recharts`, and Firebase, which is only pulled in now that the auth modals
+  render. Large for a landing page; code-splitting is untouched.
+- **Firebase's web config ships in the bundle.** That is by design, since it
+  identifies the project rather than authorising anything. What protects the data
+  is `firestore.rules`.
+- **`Soum-Code/frontend` has a rules gap.** `projects` is owner-scoped but its
+  `spans` subcollection is `allow read, write: if request.auth != null`, and the
+  code calls `signInAnonymously`. Any anonymous user could read or write every
+  project's spans. Nothing writes there yet, so nothing is exposed today.
+- **Two repositories now hold a frontend.** `agentpulse/dashboard` is the
+  deployed one; `Soum-Code/frontend` is where AI Studio writes. Nothing keeps
+  them in step, and this merge was manual.
+
+Still true from 20.5, and now partly addressed: `pip install agentpulse` still
+fetches an unrelated package, and dashboard tests still cover `lib/` only --
+none of the 19 new components has a test.
+
+---
