@@ -150,7 +150,7 @@ pytest tests/ -v
 python benchmarks/run_benchmarks.py
 ```
 
-Current state: **226 passed**, plus 32 in the dashboard (`cd dashboard && npm test`).
+Current state: **237 passed**, plus 32 in the dashboard (`cd dashboard && npm test`).
 
 Current benchmark results (`benchmarks/benchmark_results.json`, CPU-only):
 
