@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hmac
 import logging
 import time
 from collections import defaultdict
@@ -42,8 +43,12 @@ class APIKeyMiddleware(BaseHTTPMiddleware):
         # Local dev mode already waives auth for reads, so a GET there is as
         # trusted as a keyed request. Treating it as unauthenticated would leave
         # one endpoint redacting detail while every other one returned it.
+        #
+        # Only the environment key is checked here. Issued keys need a database
+        # lookup, and this runs before the public-path check -- doing it here
+        # would put a query in front of every health probe and static asset.
         request.state.authenticated = (
-            (bool(presented) and presented == settings.api_key)
+            (bool(presented) and hmac.compare_digest(presented, settings.api_key))
             or (settings.local_dev_mode and request.method == "GET")
         )
 
@@ -56,11 +61,38 @@ class APIKeyMiddleware(BaseHTTPMiddleware):
             return await call_next(request)
 
         # Require API key for mutating requests, or all requests when local_dev_mode is False
-        api_key = request.headers.get("X-API-Key")
-        if not api_key or api_key != settings.api_key:
+        if not presented:
             return JSONResponse(status_code=401, content={"detail": "Invalid or missing API key"})
+        if request.state.authenticated:
+            return await call_next(request)
+        if await _is_valid_issued_key(presented):
+            request.state.authenticated = True
+            return await call_next(request)
+        return JSONResponse(status_code=401, content={"detail": "Invalid or missing API key"})
 
-        return await call_next(request)
+
+async def _is_valid_issued_key(presented: str) -> bool:
+    """Check a key against the api_keys table.
+
+    Reached only when the environment key did not match, so an existing
+    deployment pays nothing for this. A malformed or unrecognised header is
+    rejected by `verify_key` before any query runs, which keeps random traffic
+    off the database.
+
+    Fails closed on error, but does not take the request down with it: a broken
+    database should return 401 rather than 500, because the caller cannot tell
+    the difference and a 500 invites a retry storm against something already
+    struggling.
+    """
+    from app.database import get_session
+    from app.services.api_keys import verify_key
+
+    try:
+        async with get_session() as session:
+            return await verify_key(session, presented) is not None
+    except Exception as exc:  # noqa: BLE001 - authentication must not 500
+        logger.error("API key lookup failed: %s", exc)
+        return False
 
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
