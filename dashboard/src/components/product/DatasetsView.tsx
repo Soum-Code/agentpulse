@@ -11,11 +11,11 @@ export const DatasetsView: React.FC<DatasetsViewProps> = ({
   datasets,
   onNavigateToExperiments
 }) => {
-  const [selectedDatasetId, setSelectedDatasetId] = useState<string | null>(null);
-  const selectedDataset = datasets.find(d => d.id === selectedDatasetId) ?? datasets[0];
+  const [selectedDataset, setSelectedDataset] = useState<Dataset>(datasets[0]);
 
   return (
     <div className="space-y-6 pb-28">
+      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-lg font-mono font-semibold text-white uppercase tracking-wider flex items-center space-x-2">
@@ -36,7 +36,9 @@ export const DatasetsView: React.FC<DatasetsViewProps> = ({
         </button>
       </div>
 
+      {/* Grid: Datasets List (Left) + Item Inspector (Right) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        {/* Left Column: Dataset List */}
         <div className="lg:col-span-5 space-y-3 font-mono text-xs">
           {datasets.map((dataset) => {
             const isSelected = selectedDataset.id === dataset.id;
@@ -44,8 +46,8 @@ export const DatasetsView: React.FC<DatasetsViewProps> = ({
             return (
               <div
                 key={dataset.id}
-                onClick={() => setSelectedDatasetId(dataset.id)}
-                className={`p-4 rounded-xl border cursor-pointer transition-all space-y-2 ${
+                onClick={() => setSelectedDataset(dataset)}
+                className={`p-4 rounded-xl border cursor-pointer transition-all space-y-2 anime-tab-row ${
                   isSelected
                     ? 'bg-neutral-850 border-neutral-500 shadow-md'
                     : 'surface-solid text-neutral-300 hover:bg-neutral-850 surface-hover'
@@ -63,7 +65,7 @@ export const DatasetsView: React.FC<DatasetsViewProps> = ({
                 </p>
 
                 <div className="flex flex-wrap gap-1.5 pt-1">
-                  {(dataset.tags ?? []).map(t => (
+                  {dataset.tags.map(t => (
                     <span key={t} className="text-[10px] text-neutral-400 bg-neutral-900 px-2 py-0.5 rounded border border-neutral-800">
                       #{t}
                     </span>
@@ -74,8 +76,9 @@ export const DatasetsView: React.FC<DatasetsViewProps> = ({
           })}
         </div>
 
+        {/* Right Column: Dataset Items Inspector */}
         {selectedDataset && (
-          <div className="lg:col-span-7 surface-solid rounded-xl border border-neutral-800 overflow-hidden font-mono text-xs">
+          <div className="lg:col-span-7 surface-solid rounded-xl border border-neutral-800 overflow-hidden font-mono text-xs anime-tab-card">
             <div className="glass-floating px-6 py-4 border-b border-neutral-800 flex items-center justify-between">
               <div>
                 <span className="text-[10px] uppercase text-neutral-400 tracking-wider block">
