@@ -455,7 +455,7 @@ after 14 shifted spans
   const s = slide('What can be checked, and where', 'Evidence');
   table(s, [
     ['Check', 'Result'],
-    ['Python + SDK test suite', '226 passed'],
+    ['Python + SDK test suite', '237 passed'],
     ['Dashboard test suite', '32 passed'],
     ['Dashboard typecheck / build', 'clean / passes'],
     ['Grounding F1 (v1.0_test)', '0.963'],
