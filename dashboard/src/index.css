@@ -162,28 +162,138 @@
     inset 0 0 0 1px rgba(0, 0, 0, 0.06) !important;
 }
 
+/* ==========================================================================
+   Chalk Tactile Surface Presets (Classic White, Sepia Slate, Emerald Graphite)
+   ========================================================================== */
+
+:root,
+[data-chalk-surface="classic-white"] {
+  --chalk-surface-bg: #ffffff;
+  --chalk-header-bg: rgba(255, 255, 255, 0.94);
+  --chalk-header-gradient: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(248, 250, 252, 0.92) 100%);
+  --chalk-card-bg: #ffffff;
+  --chalk-card-gradient: linear-gradient(180deg, #ffffff 0%, #fafbfd 100%);
+  --chalk-border: rgba(226, 232, 240, 0.95);
+  --chalk-border-hover: rgba(203, 213, 225, 1);
+  --chalk-shadow-1: rgba(15, 23, 42, 0.03);
+  --chalk-shadow-2: rgba(15, 23, 42, 0.04);
+  --chalk-shadow-3: rgba(15, 23, 42, 0.05);
+  --chalk-grid-dot: rgba(148, 163, 184, 0.22);
+  --chalk-grid-line: rgba(226, 232, 240, 0.4);
+  --chalk-mote-1: rgba(100, 116, 139, 0.45);
+  --chalk-mote-2: rgba(148, 163, 184, 0.5);
+  --chalk-mote-3: rgba(71, 85, 105, 0.35);
+  --chalk-mote-opacity-1: 0.32;
+  --chalk-mote-opacity-2: 0.22;
+}
+
+[data-chalk-surface="sepia-slate"] {
+  --chalk-surface-bg: #f5efe6;
+  --chalk-header-bg: rgba(247, 241, 232, 0.95);
+  --chalk-header-gradient: linear-gradient(180deg, rgba(252, 248, 242, 0.98) 0%, rgba(243, 235, 224, 0.92) 100%);
+  --chalk-card-bg: #faf6ee;
+  --chalk-card-gradient: linear-gradient(180deg, #fffdf8 0%, #f6f0e4 100%);
+  --chalk-border: rgba(223, 212, 195, 0.95);
+  --chalk-border-hover: rgba(196, 181, 159, 1);
+  --chalk-shadow-1: rgba(70, 48, 26, 0.035);
+  --chalk-shadow-2: rgba(70, 48, 26, 0.045);
+  --chalk-shadow-3: rgba(70, 48, 26, 0.06);
+  --chalk-grid-dot: rgba(163, 142, 117, 0.28);
+  --chalk-grid-line: rgba(224, 212, 195, 0.5);
+  --chalk-mote-1: rgba(148, 126, 102, 0.45);
+  --chalk-mote-2: rgba(184, 162, 137, 0.48);
+  --chalk-mote-3: rgba(117, 98, 77, 0.35);
+  --chalk-mote-opacity-1: 0.38;
+  --chalk-mote-opacity-2: 0.28;
+}
+
+[data-chalk-surface="emerald-graphite"] {
+  --chalk-surface-bg: #eaf2ec;
+  --chalk-header-bg: rgba(236, 244, 238, 0.95);
+  --chalk-header-gradient: linear-gradient(180deg, rgba(245, 250, 246, 0.98) 0%, rgba(232, 241, 235, 0.92) 100%);
+  --chalk-card-bg: #f3f9f5;
+  --chalk-card-gradient: linear-gradient(180deg, #fbfefc 0%, #edf5f0 100%);
+  --chalk-border: rgba(194, 220, 203, 0.95);
+  --chalk-border-hover: rgba(153, 191, 168, 1);
+  --chalk-shadow-1: rgba(19, 48, 34, 0.035);
+  --chalk-shadow-2: rgba(19, 48, 34, 0.045);
+  --chalk-shadow-3: rgba(19, 48, 34, 0.06);
+  --chalk-grid-dot: rgba(94, 143, 114, 0.28);
+  --chalk-grid-line: rgba(195, 222, 206, 0.5);
+  --chalk-mote-1: rgba(88, 133, 107, 0.45);
+  --chalk-mote-2: rgba(130, 175, 149, 0.48);
+  --chalk-mote-3: rgba(62, 105, 80, 0.35);
+  --chalk-mote-opacity-1: 0.36;
+  --chalk-mote-opacity-2: 0.26;
+}
+
+[data-chalk-surface] {
+  background-color: var(--chalk-surface-bg, #ffffff);
+  transition: background-color 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Sepia Slate Surface Harmonization */
+[data-chalk-surface="sepia-slate"] .bg-white:not([id*="customizer"]):not([id*="popover"]) {
+  background-color: var(--chalk-card-bg) !important;
+}
+[data-chalk-surface="sepia-slate"] .bg-neutral-50,
+[data-chalk-surface="sepia-slate"] .hover\:bg-neutral-50\/80:hover {
+  background-color: rgba(235, 226, 211, 0.6) !important;
+}
+[data-chalk-surface="sepia-slate"] .border-neutral-200 {
+  border-color: var(--chalk-border) !important;
+}
+[data-chalk-surface="sepia-slate"] .text-neutral-900,
+[data-chalk-surface="sepia-slate"] .text-neutral-950 {
+  color: #23180f !important;
+}
+[data-chalk-surface="sepia-slate"] .text-neutral-700,
+[data-chalk-surface="sepia-slate"] .text-neutral-800 {
+  color: #4a3828 !important;
+}
+
+/* Soft Emerald Graphite Surface Harmonization */
+[data-chalk-surface="emerald-graphite"] .bg-white:not([id*="customizer"]):not([id*="popover"]) {
+  background-color: var(--chalk-card-bg) !important;
+}
+[data-chalk-surface="emerald-graphite"] .bg-neutral-50,
+[data-chalk-surface="emerald-graphite"] .hover\:bg-neutral-50\/80:hover {
+  background-color: rgba(220, 235, 224, 0.6) !important;
+}
+[data-chalk-surface="emerald-graphite"] .border-neutral-200 {
+  border-color: var(--chalk-border) !important;
+}
+[data-chalk-surface="emerald-graphite"] .text-neutral-900,
+[data-chalk-surface="emerald-graphite"] .text-neutral-950 {
+  color: #0d2419 !important;
+}
+[data-chalk-surface="emerald-graphite"] .text-neutral-700,
+[data-chalk-surface="emerald-graphite"] .text-neutral-800 {
+  color: #234333 !important;
+}
+
 .ios-ultra-thin-chalk {
-  background-color: rgba(255, 255, 255, 0.94) !important;
-  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(248, 250, 252, 0.92) 100%) !important;
+  background-color: var(--chalk-header-bg, rgba(255, 255, 255, 0.94)) !important;
+  background-image: var(--chalk-header-gradient, linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(248, 250, 252, 0.92) 100%)) !important;
   backdrop-filter: blur(40px) saturate(160%) !important;
   -webkit-backdrop-filter: blur(40px) saturate(160%) !important;
-  border: 1px solid rgba(226, 232, 240, 0.95) !important;
+  border: 1px solid var(--chalk-border, rgba(226, 232, 240, 0.95)) !important;
   box-shadow: 
-    0 1px 3px 0 rgba(15, 23, 42, 0.04),
-    0 12px 32px -4px rgba(15, 23, 42, 0.06),
+    0 1px 3px 0 var(--chalk-shadow-1, rgba(15, 23, 42, 0.04)),
+    0 12px 32px -4px var(--chalk-shadow-3, rgba(15, 23, 42, 0.06)),
     inset 0 1px 0 0 #ffffff !important;
 }
 
 .chalk-tactile-card {
-  background-color: #ffffff !important;
-  background-image: linear-gradient(180deg, #ffffff 0%, #fafbfd 100%) !important;
+  background-color: var(--chalk-card-bg, #ffffff) !important;
+  background-image: var(--chalk-card-gradient, linear-gradient(180deg, #ffffff 0%, #fafbfd 100%)) !important;
   backdrop-filter: blur(32px) saturate(150%) !important;
   -webkit-backdrop-filter: blur(32px) saturate(150%) !important;
-  border: 1px solid rgba(226, 232, 240, 0.95) !important;
+  border: 1px solid var(--chalk-border, rgba(226, 232, 240, 0.95)) !important;
   box-shadow: 
-    0 1px 3px 0 rgba(15, 23, 42, 0.03),
-    0 6px 16px -2px rgba(15, 23, 42, 0.04),
-    0 16px 36px -6px rgba(15, 23, 42, 0.05),
+    0 1px 3px 0 var(--chalk-shadow-1, rgba(15, 23, 42, 0.03)),
+    0 6px 16px -2px var(--chalk-shadow-2, rgba(15, 23, 42, 0.04)),
+    0 16px 36px -6px var(--chalk-shadow-3, rgba(15, 23, 42, 0.05)),
     inset 0 1px 0 0 #ffffff !important;
   position: relative;
   overflow: hidden;
@@ -208,26 +318,26 @@
 
 /* Crisp, elegant tactile hover elevation */
 .chalk-tactile-card:hover {
-  background-color: #ffffff !important;
-  border-color: rgba(203, 213, 225, 1) !important;
+  background-color: var(--chalk-card-bg, #ffffff) !important;
+  border-color: var(--chalk-border-hover, rgba(203, 213, 225, 1)) !important;
   transform: translateY(-2px);
   box-shadow: 
-    0 2px 6px -1px rgba(15, 23, 42, 0.04),
-    0 10px 24px -4px rgba(15, 23, 42, 0.06),
-    0 24px 48px -8px rgba(15, 23, 42, 0.08),
+    0 2px 6px -1px var(--chalk-shadow-1, rgba(15, 23, 42, 0.04)),
+    0 10px 24px -4px var(--chalk-shadow-2, rgba(15, 23, 42, 0.06)),
+    0 24px 48px -8px var(--chalk-shadow-3, rgba(15, 23, 42, 0.08)),
     inset 0 1px 0 0 #ffffff !important;
 }
 
 .chalk-tactile-card:active {
   transform: translateY(0px) scale(0.998);
   box-shadow: 
-    0 1px 3px 0 rgba(15, 23, 42, 0.04),
-    0 4px 12px -2px rgba(15, 23, 42, 0.04),
+    0 1px 3px 0 var(--chalk-shadow-1, rgba(15, 23, 42, 0.04)),
+    0 4px 12px -2px var(--chalk-shadow-2, rgba(15, 23, 42, 0.04)),
     inset 0 1px 0 0 #ffffff !important;
   transition-duration: 0.1s;
 }
 
-/* Static Aged Classroom Surface: Ambient Chalk Dust-Mote Drift Pseudo-Elements */
+/* Static Aged Classroom Surface: Ambient Chalk Dust-Mote Drift Pseudo-Elements with Proximity Dispersion */
 .chalk-tactile-card::before,
 .chalk-tactile-card::after {
   content: "";
@@ -236,37 +346,78 @@
   pointer-events: none;
   z-index: 0;
   border-radius: inherit;
+  will-change: translate, scale, opacity, transform;
 }
 
-/* Primary floating dust-mote layer */
+/* Primary floating dust-mote layer: fine particles with swift, agile proximity dispersion */
 .chalk-tactile-card::before {
   background-image: 
-    radial-gradient(1.5px 1.5px at 14% 22%, rgba(100, 116, 139, 0.45) 0%, transparent 100%),
-    radial-gradient(1px 1px at 32% 58%, rgba(148, 163, 184, 0.5) 0%, transparent 100%),
-    radial-gradient(2px 2px at 48% 18%, rgba(71, 85, 105, 0.35) 0%, transparent 100%),
-    radial-gradient(1.5px 1.5px at 62% 74%, rgba(148, 163, 184, 0.4) 0%, transparent 100%),
-    radial-gradient(1px 1px at 78% 36%, rgba(100, 116, 139, 0.45) 0%, transparent 100%),
-    radial-gradient(2.5px 2.5px at 89% 68%, rgba(148, 163, 184, 0.3) 0%, transparent 100%),
-    radial-gradient(1.5px 1.5px at 24% 84%, rgba(100, 116, 139, 0.35) 0%, transparent 100%),
-    radial-gradient(1px 1px at 70% 12%, rgba(148, 163, 184, 0.5) 0%, transparent 100%);
+    radial-gradient(1.5px 1.5px at 14% 22%, var(--chalk-mote-1, rgba(100, 116, 139, 0.45)) 0%, transparent 100%),
+    radial-gradient(1px 1px at 32% 58%, var(--chalk-mote-2, rgba(148, 163, 184, 0.5)) 0%, transparent 100%),
+    radial-gradient(2px 2px at 48% 18%, var(--chalk-mote-3, rgba(71, 85, 105, 0.35)) 0%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 62% 74%, var(--chalk-mote-2, rgba(148, 163, 184, 0.4)) 0%, transparent 100%),
+    radial-gradient(1px 1px at 78% 36%, var(--chalk-mote-1, rgba(100, 116, 139, 0.45)) 0%, transparent 100%),
+    radial-gradient(2.5px 2.5px at 89% 68%, var(--chalk-mote-2, rgba(148, 163, 184, 0.3)) 0%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 24% 84%, var(--chalk-mote-1, rgba(100, 116, 139, 0.35)) 0%, transparent 100%),
+    radial-gradient(1px 1px at 70% 12%, var(--chalk-mote-2, rgba(148, 163, 184, 0.5)) 0%, transparent 100%);
   background-size: 280px 280px;
-  opacity: 0.32;
+  opacity: var(--chalk-mote-opacity-1, 0.32);
   animation: chalk-dust-mote-drift-1 24s ease-in-out infinite alternate;
+  translate: var(--mote-disperse-x1, 0px) var(--mote-disperse-y1, 0px);
+  scale: var(--mote-scale1, 1);
+  rotate: var(--mote-rot1, 0deg);
+  transition: 
+    translate 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+    scale 0.36s cubic-bezier(0.16, 1, 0.3, 1),
+    rotate 0.36s cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 0.25s ease;
+  -webkit-mask-image: radial-gradient(
+    circle 90px at calc(var(--mouse-x, -9999px) + 60px) calc(var(--mouse-y, -9999px) + 60px),
+    rgba(0, 0, 0, 0.25) 0%,
+    rgba(0, 0, 0, 0.70) 50%,
+    rgba(0, 0, 0, 1) 90%
+  );
+  mask-image: radial-gradient(
+    circle 90px at calc(var(--mouse-x, -9999px) + 60px) calc(var(--mouse-y, -9999px) + 60px),
+    rgba(0, 0, 0, 0.25) 0%,
+    rgba(0, 0, 0, 0.70) 50%,
+    rgba(0, 0, 0, 1) 90%
+  );
 }
 
-/* Secondary complementary drifting motes with offset cycle */
+/* Secondary complementary drifting motes: larger particles with deeper parallax dispersion */
 .chalk-tactile-card::after {
   background-image: 
-    radial-gradient(1px 1px at 18% 44%, rgba(148, 163, 184, 0.4) 0%, transparent 100%),
-    radial-gradient(2px 2px at 36% 82%, rgba(100, 116, 139, 0.35) 0%, transparent 100%),
-    radial-gradient(1.5px 1.5px at 54% 28%, rgba(71, 85, 105, 0.4) 0%, transparent 100%),
-    radial-gradient(1px 1px at 68% 66%, rgba(148, 163, 184, 0.45) 0%, transparent 100%),
-    radial-gradient(2px 2px at 84% 18%, rgba(100, 116, 139, 0.3) 0%, transparent 100%),
-    radial-gradient(1.5px 1.5px at 94% 88%, rgba(148, 163, 184, 0.35) 0%, transparent 100%),
-    radial-gradient(1px 1px at 42% 48%, rgba(100, 116, 139, 0.4) 0%, transparent 100%);
+    radial-gradient(1px 1px at 18% 44%, var(--chalk-mote-2, rgba(148, 163, 184, 0.4)) 0%, transparent 100%),
+    radial-gradient(2px 2px at 36% 82%, var(--chalk-mote-1, rgba(100, 116, 139, 0.35)) 0%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 54% 28%, var(--chalk-mote-3, rgba(71, 85, 105, 0.4)) 0%, transparent 100%),
+    radial-gradient(1px 1px at 68% 66%, var(--chalk-mote-2, rgba(148, 163, 184, 0.45)) 0%, transparent 100%),
+    radial-gradient(2px 2px at 84% 18%, var(--chalk-mote-1, rgba(100, 116, 139, 0.3)) 0%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 94% 88%, var(--chalk-mote-2, rgba(148, 163, 184, 0.35)) 0%, transparent 100%),
+    radial-gradient(1px 1px at 42% 48%, var(--chalk-mote-1, rgba(100, 116, 139, 0.4)) 0%, transparent 100%);
   background-size: 340px 340px;
-  opacity: 0.22;
+  opacity: var(--chalk-mote-opacity-2, 0.22);
   animation: chalk-dust-mote-drift-2 32s ease-in-out infinite alternate;
+  translate: var(--mote-disperse-x2, 0px) var(--mote-disperse-y2, 0px);
+  scale: var(--mote-scale2, 1);
+  rotate: var(--mote-rot2, 0deg);
+  transition: 
+    translate 0.36s cubic-bezier(0.16, 1, 0.3, 1),
+    scale 0.44s cubic-bezier(0.16, 1, 0.3, 1),
+    rotate 0.44s cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 0.25s ease;
+  -webkit-mask-image: radial-gradient(
+    circle 115px at calc(var(--mouse-x, -9999px) + 60px) calc(var(--mouse-y, -9999px) + 60px),
+    rgba(0, 0, 0, 0.20) 0%,
+    rgba(0, 0, 0, 0.65) 52%,
+    rgba(0, 0, 0, 1) 92%
+  );
+  mask-image: radial-gradient(
+    circle 115px at calc(var(--mouse-x, -9999px) + 60px) calc(var(--mouse-y, -9999px) + 60px),
+    rgba(0, 0, 0, 0.20) 0%,
+    rgba(0, 0, 0, 0.65) 52%,
+    rgba(0, 0, 0, 1) 92%
+  );
 }
 
 /* Gentle Brownian convective drift simulating dust floating across an aged classroom */
@@ -342,21 +493,102 @@
   .chalk-tactile-card::after {
     animation: none !important;
     transform: none !important;
+    translate: 0 0 !important;
+    scale: 1 !important;
+    rotate: 0deg !important;
+    mask-image: none !important;
+    -webkit-mask-image: none !important;
     opacity: 0.18 !important;
   }
 }
 
 .chalk-canvas-grid {
   background-image: 
-    radial-gradient(rgba(148, 163, 184, 0.22) 1px, transparent 1px),
-    linear-gradient(to right, rgba(226, 232, 240, 0.4) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(226, 232, 240, 0.4) 1px, transparent 1px);
+    radial-gradient(var(--chalk-grid-dot, rgba(148, 163, 184, 0.22)) 1px, transparent 1px),
+    linear-gradient(to right, var(--chalk-grid-line, rgba(226, 232, 240, 0.4)) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--chalk-grid-line, rgba(226, 232, 240, 0.4)) 1px, transparent 1px);
   background-size: 24px 24px, 96px 96px, 96px 96px;
 }
 
 .chalk-specular {
   background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.95) 20%, #ffffff 50%, rgba(255, 255, 255, 0.95) 80%, transparent 100%);
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+}
+
+/* ==========================================================================
+   Chalk Tactile Card: Handwritten Annotations, Highlights & Marker Strokes
+   ========================================================================== */
+
+.font-chalk {
+  font-family: 'Caveat', cursive, -apple-system, BlinkMacSystemFont, sans-serif;
+  letter-spacing: 0.02em;
+}
+
+/* Authentic chisel highlighter ribbon simulation with porous ink bleed */
+.chalk-annotation-highlight {
+  display: inline;
+  position: relative;
+  background: linear-gradient(104deg, rgba(250, 204, 21, 0) 0.8%, rgba(250, 204, 21, 0.82) 2.2%, rgba(250, 204, 21, 0.55) 94%, rgba(250, 204, 21, 0) 99.2%);
+  mix-blend-mode: multiply;
+  border-radius: 4px 14px 5px 12px;
+  padding: 0.12em 0.35em;
+  margin: 0 -0.1em;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+  transition: background 0.2s ease, opacity 0.2s ease;
+}
+
+.chalk-annotation-highlight-coral {
+  background: linear-gradient(104deg, rgba(251, 113, 133, 0) 0.8%, rgba(251, 113, 133, 0.82) 2.2%, rgba(251, 113, 133, 0.52) 94%, rgba(251, 113, 133, 0) 99.2%);
+}
+
+.chalk-annotation-highlight-mint {
+  background: linear-gradient(104deg, rgba(74, 222, 128, 0) 0.8%, rgba(74, 222, 128, 0.82) 2.2%, rgba(74, 222, 128, 0.50) 94%, rgba(74, 222, 128, 0) 99.2%);
+}
+
+.chalk-annotation-highlight-cyan {
+  background: linear-gradient(104deg, rgba(56, 189, 248, 0) 0.8%, rgba(56, 189, 248, 0.82) 2.2%, rgba(56, 189, 248, 0.50) 94%, rgba(56, 189, 248, 0) 99.2%);
+}
+
+/* Wavy chalk hand-drawn underline */
+.chalk-annotation-underline {
+  position: relative;
+  display: inline-block;
+}
+
+.chalk-annotation-underline::after {
+  content: "";
+  position: absolute;
+  left: -2px;
+  right: -2px;
+  bottom: -4px;
+  height: 5px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 8' preserveAspectRatio='none'%3E%3Cpath d='M0,4 Q25,8 50,4 T100,4' fill='none' stroke='%23f59e0b' stroke-width='2.6' stroke-linecap='round' stroke-dasharray='100' stroke-opacity='0.85'/%3E%3C/svg%3E");
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  pointer-events: none;
+}
+
+.chalk-annotation-underline-coral::after {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 8' preserveAspectRatio='none'%3E%3Cpath d='M0,4 Q25,8 50,4 T100,4' fill='none' stroke='%23e11d48' stroke-width='2.6' stroke-linecap='round' stroke-dasharray='100' stroke-opacity='0.85'/%3E%3C/svg%3E");
+}
+
+.chalk-annotation-underline-cyan::after {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 8' preserveAspectRatio='none'%3E%3Cpath d='M0,4 Q25,8 50,4 T100,4' fill='none' stroke='%230284c7' stroke-width='2.6' stroke-linecap='round' stroke-dasharray='100' stroke-opacity='0.85'/%3E%3C/svg%3E");
+}
+
+/* Chalk stroke draw animation */
+@keyframes chalk-stroke-draw {
+  0% {
+    stroke-dashoffset: 400;
+  }
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+.animate-chalk-draw {
+  animation: chalk-stroke-draw 0.75s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 /* ==========================================================================

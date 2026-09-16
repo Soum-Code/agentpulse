@@ -5,51 +5,61 @@ interface EnterpriseArchDiagramProps {
   palette: 'butter' | 'dark' | 'chalk';
 }
 
+// What the system is, rather than what it could become.
+//
+// This list previously described DuckDB and Redpanda for the queue, ClickHouse
+// and Parquet for storage, Envoy at the edge, INT8 quantization in the
+// evaluator, a TypeScript SDK, 256-token sliding windows over 32k contexts, and
+// a CI/CD regression gate. None of that exists here. It arrived as a proposal in
+// an external review and was rendered as though it had shipped.
+//
+// The real architecture is worth showing on its own: three processes with a
+// durable queue between them, and no LLM anywhere in the evaluation path.
 const ARCH_NODES = [
   {
     id: 'sdk',
-    step: '01. Bounded Client SDK',
-    title: 'Client Runtime & Ring Buffer',
-    tech: 'Python / TS SDK',
-    badge: 'Zero Leaks',
-    desc: 'Pre-allocated 16MB ring buffer with drop_oldest policy guarantees agent application processes never leak RAM. Auto-redacts credit cards and bearer tokens before sending.',
-    details: ['16MB memory bound ceiling', 'Client-side PII regex sanitizer', 'W3C traceparent propagation']
+    step: '01. Client SDK',
+    title: 'Bounded, fail-open collector',
+    tech: 'Python SDK',
+    badge: 'Never blocks',
+    desc: 'Spans are buffered and sent in the background, so instrumentation cannot slow the agent down. The buffer is bounded at 10,000 spans and drops the oldest first, because a collector that cannot reach its backend must not grow inside the host process.',
+    details: ['Fail-open: SDK errors re-run the agent', 'Redacts email, phone, SSN and secrets before the wire', 'Prompt capture off by default']
   },
   {
     id: 'ingress',
-    step: '02. Ingress Gateway',
-    title: 'Stateless Fast Collector',
-    tech: 'FastAPI / Envoy',
-    badge: '< 3ms Response',
-    desc: 'Lightweight HTTP/2 ingestion endpoints validate schema and return 202 Accepted immediately. Contains zero ML weights, keeping RAM under 85MB per container.',
-    details: ['Token-bucket rate limiting', 'Non-blocking async ingestion', 'Scoped tenant API authentication']
+    step: '02. API',
+    title: 'Accepts and queues, evaluates nothing',
+    tech: 'FastAPI',
+    badge: '202 Accepted',
+    desc: 'Spans are written, an evaluation job is queued, and the request returns. The API loads no models at all, which is why it measures 80 MB against the worker\'s 1.15 GB.',
+    details: ['Writes spans, then queues separately', 'Re-submitting a span is a no-op', 'Rate limited per client']
   },
   {
     id: 'queue',
-    step: '03. Durable Stream Queue',
-    title: 'Append-Only WAL Engine',
-    tech: 'DuckDB WAL / Redpanda',
-    badge: 'At-Least-Once',
-    desc: 'Spans land in high-throughput append-only storage with distributed lease mechanics, eliminating SQLite single-writer lock contention.',
-    details: ['Zero lock serialization', 'Crash-resilient disk persistence', 'Dead-Letter Queue (DLQ) safeguards']
+    step: '03. Durable queue',
+    title: 'At-least-once, written once',
+    tech: 'SQLite WAL',
+    badge: 'Survives SIGKILL',
+    desc: 'A worker leases a job for 120 seconds. If it dies mid-evaluation the lease expires and another worker picks the job up, so nothing is silently lost. Persistence is keyed on span id, so a redelivered job cannot write a second result.',
+    details: ['120s lease, 3 attempts, then dead-letter', 'Idempotent write on span id', 'Verified by killing a worker mid-evaluation']
   },
   {
     id: 'worker',
-    step: '04. Local CPU Evaluator',
-    title: 'Zero-LLM NLI & Centroid',
-    tech: 'ONNX Int8 CPU',
-    badge: '100% Deterministic',
-    desc: 'Quantized DeBERTa-v3 cross-encoder and MiniLM embeddings run on CPU. Sliding 256-token chunking supports 32k+ token contexts with zero OpenAI token costs.',
-    details: ['DeBERTa-v3 chunked max-contradiction', 'MiniLM 384-dim centroid drift', 'No external LLM dependencies']
+    step: '04. Evaluator',
+    title: 'Two small models, local CPU',
+    tech: 'ONNX Runtime',
+    badge: 'No LLM calls',
+    desc: 'MiniLM produces embeddings and DeBERTa-v3-small classifies premise against hypothesis. Both run on CPU, both are deterministic, and neither is an LLM. The NLI model reads at most 512 tokens, and a premise longer than that is reported as truncated rather than scored silently.',
+    details: ['DeBERTa NLI, PyTorch fallback if ONNX is unavailable', 'MiniLM 384-dim centroid drift', 'Zero generation tokens']
   },
   {
-    id: 'analytics',
-    step: '05. Columnar OLAP',
-    title: 'Analytical Telemetry Store',
-    tech: 'ClickHouse / Parquet',
-    badge: '< 50ms Queries',
-    desc: 'Evaluated spans and metrics are indexed into columnar storage for instantaneous p95 latency filtering, agent flamegraphs, and CI/CD regression gates.',
-    details: ['Flamegraphs & causal spans', '30/90/365-day cold tiering', 'CI/CD GitHub Action regression check']
+    id: 'storage',
+    step: '05. Storage',
+    title: 'Single-node, self-hosted',
+    tech: 'SQLite',
+    badge: 'Your machine',
+    desc: 'Spans, evaluations, drift records and alerts share one database. Suited to a self-hosted single instance rather than a multi-writer deployment, and said plainly rather than described as a cluster.',
+    details: ['Retention deletes past retention_days', 'No external service required', 'No data leaves the host']
   }
 ];
 
@@ -95,7 +105,7 @@ export const EnterpriseArchDiagram: React.FC<EnterpriseArchDiagramProps> = ({ pa
           <p className={`text-xs sm:text-sm mt-1 max-w-2xl leading-relaxed ${
             palette === 'chalk' ? 'text-neutral-600' : 'text-neutral-300'
           }`}>
-            Designed for high-concurrency multi-agent swarms. Every component from SDK buffering to INT8 CPU inference is isolated to ensure zero host downtime.
+            Three processes with a durable queue between them. The API accepts spans and evaluates nothing; a separate worker does the inference, so a slow evaluation never slows ingestion.
           </p>
         </div>
       </div>
