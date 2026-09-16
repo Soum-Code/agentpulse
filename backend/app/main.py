@@ -27,6 +27,7 @@ from app.routers import (
     agents_router,
     alerts_router,
     drift_router,
+    keys_router,
     metrics_router,
     traces_router,
 )
@@ -187,6 +188,7 @@ def create_app() -> FastAPI:
     app.include_router(agents_router)
     app.include_router(drift_router)
     app.include_router(alerts_router)
+    app.include_router(keys_router)
     app.include_router(metrics_router)
     app.include_router(ws_router)
     from app.routers.experiments import router as experiments_router

@@ -413,6 +413,59 @@ class RetentionRun(SQLModel, table=True):
     error: Optional[str] = Field(default=None, sa_column=Column(Text))
 
 
+class ApiKeyRecord(SQLModel, table=True):
+    """An issued API key, stored as a hash.
+
+    The backend used to know exactly one key, read from AGENTPULSE_API_KEY and
+    compared directly. That is fine for a single self-hosted instance and
+    useless the moment more than one caller needs its own credential -- there is
+    nothing to revoke, nothing to attribute a span to, and no way to hand
+    somebody access without handing them everybody's access.
+
+    WHY A HASH AND NOT THE KEY
+
+    The plaintext is shown once, at creation, and never stored. A database file
+    that leaks then leaks no working credential. This is the same reason a
+    password is not stored either, with one difference: these keys are 32 bytes
+    of `secrets.token_urlsafe`, not a human-chosen phrase, so there is nothing to
+    brute force and SHA-256 is enough. bcrypt would only add latency to a check
+    that runs on every single request.
+
+    WHY A PREFIX COLUMN
+
+    Verification has to find the right row before it can compare anything.
+    Hashing the presented key and searching by hash would work, but the prefix
+    is indexed and non-secret, so a lookup touches one row instead of scanning.
+    The prefix alone is useless without the rest of the key.
+    """
+
+    __tablename__ = "api_keys"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+
+    # The public half of the key, used only to locate the row.
+    key_prefix: str = Field(index=True, unique=True)
+
+    # SHA-256 of the full key. The key itself is never written down.
+    key_hash: str
+
+    # Whose key this is. Free-form because the backend has no user table of its
+    # own -- the console supplies its own identifier (a Firebase uid today).
+    owner_id: str = Field(index=True)
+    label: str = ""
+
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+    # Revocation is a timestamp rather than a delete, so a revoked key stays
+    # auditable and a spike of 401s can be explained afterwards.
+    revoked_at: Optional[datetime] = None
+
+    # Updated opportunistically, not on every request: writing on each call
+    # would put a database write in the authentication path of every request,
+    # which is exactly where it must not be.
+    last_used_at: Optional[datetime] = None
+
+
 class ExperimentRun(SQLModel, table=True):
     """Recorded metrics and metadata from a reproducible experiment run."""
 

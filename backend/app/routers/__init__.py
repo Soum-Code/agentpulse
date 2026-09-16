@@ -308,6 +308,7 @@ async def get_drift_overview():
 # Alerts Router
 
 alerts_router = APIRouter(prefix="/v1/alerts", tags=["alerts"])
+keys_router = APIRouter(prefix="/v1/keys", tags=["keys"])
 
 
 @alerts_router.get("")
@@ -570,3 +571,70 @@ async def health_check():
             "evaluator model state is under readiness.evaluator."
         ),
     }
+
+
+# ── API keys ─────────────────────────────────────────────────────────────────
+#
+# These endpoints are themselves authenticated, which means a caller needs a
+# working key to mint another one. That is deliberate: the alternative is an
+# unauthenticated endpoint that issues credentials, and the first key has to come
+# from somewhere a stranger cannot reach -- the environment, set by whoever
+# deployed the instance.
+
+
+class CreateKeyRequest(BaseModel):
+    owner_id: str
+    label: str = ""
+
+
+@keys_router.post("", status_code=201)
+async def create_api_key(payload: CreateKeyRequest):
+    """Issue a key and return it once.
+
+    The plaintext appears in this response and nowhere else -- not in the
+    database, not in a log. A caller that loses it revokes the key and issues
+    another; there is no recovery path, by design.
+    """
+    from app.services.api_keys import create_key, redact
+
+    async with get_session() as session:
+        full_key, record = await create_key(
+            session, owner_id=payload.owner_id, label=payload.label
+        )
+
+    return {
+        "key": full_key,
+        "warning": "Store this now. It is not recoverable and will not be shown again.",
+        **redact(record),
+    }
+
+
+@keys_router.get("")
+async def list_api_keys(owner_id: str = Query(..., description="Whose keys to list")):
+    """Keys belonging to one owner, without their hashes."""
+    from app.services.api_keys import list_keys, redact
+
+    async with get_session() as session:
+        rows = await list_keys(session, owner_id)
+    return {"keys": [redact(r) for r in rows], "total": len(rows)}
+
+
+@keys_router.delete("/{key_id}")
+async def revoke_api_key(
+    key_id: int,
+    owner_id: str = Query(..., description="Owner the key must belong to"),
+):
+    """Revoke a key.
+
+    Scoped to the owner so an authenticated caller cannot revoke somebody
+    else's key by guessing its id. Revocation marks a timestamp rather than
+    deleting the row, so the key stays auditable afterwards.
+    """
+    from app.services.api_keys import revoke_key
+
+    async with get_session() as session:
+        ok = await revoke_key(session, owner_id, key_id)
+    if not ok:
+        raise HTTPException(status_code=404, detail="Key not found for this owner")
+    return {"revoked": True, "id": key_id}
+

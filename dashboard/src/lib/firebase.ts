@@ -35,6 +35,7 @@ import {
 // firestore.rules.
 const firebaseConfigJson: Record<string, string | undefined> = {};
 import { TelemetryProject } from '../types';
+import { api } from './api';
 
 // Fallback config matching provisioned project
 export const firebaseConfig = {
@@ -144,9 +145,15 @@ export async function createTelemetryProject(
     environment: 'production' | 'staging' | 'development';
   }
 ): Promise<TelemetryProject> {
-  const keyHash = Math.random().toString(36).substring(2, 10);
-  const randomSlug = projectData.name.toLowerCase().replace(/[^a-z0-9]/g, '-').slice(0, 16) || 'project';
-  const apiKey = `ap_live_${randomSlug}_${keyHash}`;
+  // The key comes from the backend, which is the only thing that can issue one
+  // it will later accept.
+  //
+  // This used to be `Math.random().toString(36)` formatted to look like a
+  // credential. It was displayed with a copy button and rejected with 401 the
+  // moment anyone used it, because the API had never heard of it -- a key that
+  // looks real and is not is worse than no key at all.
+  const issued = await api.createApiKey(userId, projectData.name);
+  const apiKey = issued.key;
 
   const docRef = await addDoc(collection(db, 'projects'), {
     name: projectData.name,

@@ -31,6 +31,11 @@ import { TelemetryLabView } from './components/product/TelemetryLabView';
 import { SettingsView } from './components/product/SettingsView';
 import { ShortcutsHelpModal } from './components/product/ShortcutsHelpModal';
 import { ActiveContextPanel } from './components/product/ActiveContextPanel';
+import { AuthModal } from './components/product/AuthModal';
+import { ProjectSelectorModal } from './components/product/ProjectSelectorModal';
+import { auth, onAuthStateChanged, subscribeToUserProjects } from './lib/firebase';
+import type { User as FirebaseUser } from 'firebase/auth';
+import type { TelemetryProject } from './types';
 
 export default function App() {
   // 'public' is the marketing page, 'product' is the console.
@@ -61,6 +66,38 @@ export default function App() {
     connected,
     refresh: refreshTelemetry,
   } = useTelemetry();
+
+  // Sign-in and project selection.
+  //
+  // Firebase handles identity; the AgentPulse backend does not know about users
+  // and is not being asked to. What it does know about is keys: creating a
+  // project calls POST /v1/keys with the Firebase uid as its owner, and the key
+  // that comes back is one the API will actually accept. Before this, the
+  // console generated a key-shaped string locally, showed it with a copy
+  // button, and every use of it returned 401.
+  const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(null);
+  const [projects, setProjects] = useState<TelemetryProject[]>([]);
+  const [activeProject, setActiveProject] = useState<TelemetryProject | null>(null);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [isProjectSelectorOpen, setIsProjectSelectorOpen] = useState(false);
+
+  useEffect(() => onAuthStateChanged(auth, setCurrentUser), []);
+
+  useEffect(() => {
+    if (!currentUser) {
+      setProjects([]);
+      setActiveProject(null);
+      return;
+    }
+    return subscribeToUserProjects(currentUser.uid, (projs) => {
+      setProjects(projs);
+      setActiveProject((curr) =>
+        curr && projs.some((p) => p.id === curr.id)
+          ? projs.find((p) => p.id === curr.id) ?? null
+          : projs[0] ?? null,
+      );
+    });
+  }, [currentUser]);
 
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [isShortcutsHelpOpen, setIsShortcutsHelpOpen] = useState(false);
@@ -240,6 +277,10 @@ export default function App() {
           selectedIncident={selectedIncident}
           onClearSelection={handleClearSelection}
           onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
+          currentUser={currentUser}
+          activeProject={activeProject}
+          onOpenAuth={() => setIsAuthModalOpen(true)}
+          onOpenProjectSelector={() => setIsProjectSelectorOpen(true)}
           onSwitchToPublic={() => setMode('public')}
           isSimulatingLive={isSimulatingLive}
           onToggleLive={() => setIsSimulatingLive(prev => !prev)}
@@ -478,6 +519,28 @@ export default function App() {
       <ShortcutsHelpModal
         isOpen={isShortcutsHelpOpen}
         onClose={() => setIsShortcutsHelpOpen(false)}
+      />
+
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        currentUser={currentUser}
+      />
+
+      <ProjectSelectorModal
+        isOpen={isProjectSelectorOpen}
+        onClose={() => setIsProjectSelectorOpen(false)}
+        currentUser={currentUser}
+        projects={projects}
+        activeProject={activeProject}
+        onSelectProject={(proj) => {
+          setActiveProject(proj);
+          setIsProjectSelectorOpen(false);
+        }}
+        onOpenAuth={() => {
+          setIsProjectSelectorOpen(false);
+          setIsAuthModalOpen(true);
+        }}
       />
       </div>
     </div>
