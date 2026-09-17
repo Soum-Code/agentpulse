@@ -257,6 +257,21 @@ body {
   100% { opacity: 0; }
 }
 
+/* ─── Inspector slide-over ───────────────────────────────────────────
+   Narrow-viewport entry for the trace inspector. Deliberately short and
+   flat -- a panel that bounces or scales draws attention to itself during
+   a task where the engineer is reading, not watching. Reduced-motion is
+   handled by the global rule at the end of this file.                    */
+
+.inspector-enter {
+  animation: inspector-in 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes inspector-in {
+  from { opacity: 0; transform: translateX(12px); }
+  to   { opacity: 1; transform: none; }
+}
+
 /* ─── Entrance stagger ───────────────────────────────────────────────
    Applied to bento children. Index is supplied inline as --i.           */
 

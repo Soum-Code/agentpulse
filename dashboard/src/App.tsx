@@ -19,6 +19,7 @@ import {
   Meter, Stat, EmptyState, riskTone, asiTone, toneText, Waveform,
   type RiskTone,
 } from './components/ui';
+import { TraceWorkspace, type TraceFocus } from './views/TraceWorkspace';
 
 // ─── Types & Enums ─────────────────────────────────────────────────────
 
@@ -828,6 +829,7 @@ function EvidenceInspectorPanel({
 function IncidentInboxView({
   alerts,
   onCurateTrace,
+  onOpenTrace,
   onAcknowledgeAlert,
   acknowledgingAlertIds,
   actionError,
@@ -836,6 +838,7 @@ function IncidentInboxView({
 }: {
   alerts: AlertItem[];
   onCurateTrace: (al: AlertItem) => void;
+  onOpenTrace: (al: AlertItem) => void;
   onAcknowledgeAlert: (alertId: number) => Promise<void>;
   acknowledgingAlertIds: Set<number>;
   actionError: string | null;
@@ -1068,6 +1071,20 @@ function IncidentInboxView({
 
                       <td className="px-4 py-2.5 text-right">
                         <div className="flex items-center justify-end gap-2">
+                          {/* Open in the Trace Workspace, carrying both the
+                              trace and the agent this alert names so the
+                              investigation starts where the triage left off. */}
+                          {al.trace_id && (
+                            <button
+                              onClick={() => onOpenTrace(al)}
+                              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded border border-line hover:border-line-strong bg-surface-2 hover:bg-surface-3 text-ink text-2xs font-mono font-medium cursor-pointer transition-colors"
+                              title="Open this trace in the Trace Workspace"
+                            >
+                              <Route className="w-3 h-3" aria-hidden="true" />
+                              <span>Open trace</span>
+                            </button>
+                          )}
+
                           {/* Acknowledge Action */}
                           {al.acknowledged ? (
                             <span className="inline-flex items-center gap-1 px-2 py-1 text-2xs font-mono text-ink-faint">
@@ -2220,17 +2237,27 @@ function TelemetryLabStudio({
 // ─── 12. Command Palette Modal ─────────────────────────────────────────
 
 function CommandPalette({
-  isOpen, onClose, onSelectAction
+  isOpen, onClose, onSelectAction, selectedAgentId
 }: {
   isOpen: boolean;
   onClose: () => void;
   onSelectAction: (id: string) => void;
+  selectedAgentId: string | null;
 }) {
   const [search, setSearch] = useState('');
 
   const actions = [
     { id: 'nav-overview', label: 'Navigate: Overview Control Plane', category: 'Navigation' },
     { id: 'nav-traces', label: 'Navigate: Execution Traces', category: 'Navigation' },
+    // Offered only when an agent is actually selected, so the command surface
+    // never advertises a context it does not have.
+    ...(selectedAgentId
+      ? [{
+          id: 'nav-traces-agent',
+          label: `View traces: @${selectedAgentId}`,
+          category: 'Navigation',
+        }]
+      : []),
     { id: 'nav-incidents', label: 'Navigate: Incident Inbox', category: 'Navigation' },
     { id: 'nav-replay', label: 'Navigate: Incident Replay Debugger', category: 'Navigation' },
     { id: 'nav-drift', label: 'Navigate: Drift & Stability Matrix', category: 'Navigation' },
@@ -2301,326 +2328,6 @@ function CommandPalette({
   );
 }
 
-// ─── 13. Traces Forensic View ───────────────────────────────────────────
-
-function TracesForensicView({
-  traces,
-  agents,
-}: {
-  traces: TraceListItem[];
-  agents: Agent[];
-}) {
-  const [selectedTraceId, setSelectedTraceId] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'ALL' | 'CRITICAL' | 'WARN' | 'OK'>('ALL');
-  const [traceDetail, setTraceDetail] = useState<{ trace: TraceListItem; spans: SpanDetail[]; alerts: AlertItem[] } | null>(null);
-  const [selectedSpan, setSelectedSpan] = useState<SpanDetail | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  // Default selection to first trace
-  useEffect(() => {
-    if (!selectedTraceId && traces.length > 0) {
-      setSelectedTraceId(traces[0].trace_id);
-    }
-  }, [traces, selectedTraceId]);
-
-  // Fetch selected trace detail with strict failure hygiene
-  useEffect(() => {
-    if (!selectedTraceId) {
-      setTraceDetail(null);
-      setSelectedSpan(null);
-      return;
-    }
-
-    let isMounted = true;
-    setIsLoading(true);
-    setError(null);
-    // State hygiene: immediately clear previous spans and selection
-    setTraceDetail(null);
-    setSelectedSpan(null);
-
-    api.getTrace(selectedTraceId)
-      .then((res) => {
-        if (!isMounted) return;
-        setTraceDetail(res);
-        if (res.spans && res.spans.length > 0) {
-          const sorted = [...res.spans].sort(
-            (a, b) => (b.evaluation?.overall_risk_score ?? -1) - (a.evaluation?.overall_risk_score ?? -1)
-          );
-          setSelectedSpan(sorted[0] || res.spans[0]);
-        }
-      })
-      .catch((err) => {
-        if (!isMounted) return;
-        setError(err.message || 'Failed to retrieve trace session');
-        setTraceDetail(null);
-        setSelectedSpan(null);
-      })
-      .finally(() => {
-        if (isMounted) setIsLoading(false);
-      });
-
-    return () => {
-      isMounted = false;
-    };
-  }, [selectedTraceId]);
-
-  // Filter traces strictly against real fields on TraceListItem
-  const filteredTraces = useMemo(() => {
-    return traces.filter((t) => {
-      // Search matching trace_id, pipeline_id, service_name
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase().trim();
-        const matchesId = t.trace_id.toLowerCase().includes(q);
-        const matchesPipeline = t.pipeline_id ? t.pipeline_id.toLowerCase().includes(q) : false;
-        const matchesService = t.service_name ? t.service_name.toLowerCase().includes(q) : false;
-        if (!matchesId && !matchesPipeline && !matchesService) return false;
-      }
-
-      // Status/risk filter
-      if (statusFilter === 'CRITICAL') {
-        const isHighRisk = t.overall_risk_score !== null && t.overall_risk_score > 0.7;
-        const isError = t.status.toLowerCase() === 'error' || t.status.toLowerCase() === 'critical';
-        return isHighRisk || isError;
-      }
-      if (statusFilter === 'WARN') {
-        return t.overall_risk_score !== null && t.overall_risk_score >= 0.4 && t.overall_risk_score <= 0.7;
-      }
-      if (statusFilter === 'OK') {
-        const isLowRisk = t.overall_risk_score !== null && t.overall_risk_score < 0.4;
-        const isSuccess = t.status.toLowerCase() === 'success' || t.status.toLowerCase() === 'ok';
-        return isLowRisk || isSuccess;
-      }
-      return true;
-    });
-  }, [traces, searchQuery, statusFilter]);
-
-  // Compute duration metrics for selected trace spans
-  const { detailTotalDurationMs, detailMinStartTime } = useMemo(() => {
-    const spans = traceDetail?.spans || [];
-    if (spans.length === 0) return { detailTotalDurationMs: 1, detailMinStartTime: 0 };
-    let minStart = Infinity;
-    let maxEnd = -Infinity;
-    let sumLatency = 0;
-
-    for (const s of spans) {
-      const start = s.start_time ? new Date(s.start_time).getTime() : 0;
-      const lat = s.latency_ms ?? 0;
-      sumLatency += lat;
-      if (start > 0) {
-        minStart = Math.min(minStart, start);
-        maxEnd = Math.max(maxEnd, start + lat);
-      }
-    }
-
-    const calculated = maxEnd > minStart ? maxEnd - minStart : sumLatency || 1;
-    return {
-      detailTotalDurationMs: Math.max(calculated, 1),
-      detailMinStartTime: minStart === Infinity ? 0 : minStart,
-    };
-  }, [traceDetail?.spans]);
-
-  return (
-    <div className="space-y-4">
-      <SectionHead
-        title="Execution Traces & Forensics"
-        sub="Deep inspection of multi-agent span hierarchies, evaluated grounding claims, and execution trees"
-        right={<Eyebrow>{filteredTraces.length} / {traces.length} traces</Eyebrow>}
-      />
-
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-        {/* Left Column: Trace List Filter & Master View */}
-        <div className="lg:col-span-4 space-y-3">
-          <Tile className="p-3 space-y-3" hover={false} index={0}>
-            {/* Search Input */}
-            <div className="relative">
-              <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-ink-faint pointer-events-none" aria-hidden="true" />
-              <input
-                type="text"
-                placeholder="Search trace ID, pipeline, service..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                aria-label="Filter execution traces"
-                className="w-full pl-8.5 pr-8 py-1.5 bg-surface-2 border border-line focus:border-signal/50 rounded font-mono text-xs text-ink placeholder:text-ink-faint outline-none transition-colors"
-              />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery('')}
-                  aria-label="Clear search"
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-ink-faint hover:text-ink text-xs font-mono"
-                >
-                  <X className="w-3 h-3" />
-                </button>
-              )}
-            </div>
-
-            {/* Filter Buttons */}
-            <div className="grid grid-cols-4 gap-1 text-2xs font-mono">
-              {(['ALL', 'CRITICAL', 'WARN', 'OK'] as const).map((filter) => (
-                <button
-                  key={filter}
-                  onClick={() => setStatusFilter(filter)}
-                  className={cx(
-                    'py-1 text-center rounded border transition-colors cursor-pointer uppercase',
-                    statusFilter === filter
-                      ? 'bg-surface-3 border-line-strong text-ink font-semibold'
-                      : 'border-line/60 text-ink-faint hover:text-ink hover:border-line'
-                  )}
-                >
-                  {filter}
-                </button>
-              ))}
-            </div>
-          </Tile>
-
-          {/* Master Trace List */}
-          <div className="space-y-1.5 max-h-[calc(100vh-280px)] overflow-y-auto pr-1">
-            {filteredTraces.length === 0 ? (
-              <Tile className="p-6 text-center text-xs font-mono text-ink-faint" hover={false} index={1}>
-                No traces match the active filter criteria.
-              </Tile>
-            ) : (
-              filteredTraces.map((t) => {
-                const isSelected = selectedTraceId === t.trace_id;
-                return (
-                  <button
-                    key={t.trace_id}
-                    onClick={() => setSelectedTraceId(t.trace_id)}
-                    aria-selected={isSelected}
-                    className={cx(
-                      'w-full tile p-3 text-left cursor-pointer transition-all duration-150',
-                      isSelected ? 'tile-active bracket-on' : 'tile-hover',
-                    )}
-                  >
-                    <div className="flex items-center justify-between gap-2 mb-1.5">
-                      <span className="font-mono text-xs font-semibold text-signal truncate">
-                        {t.trace_id.slice(0, 18)}…
-                      </span>
-                      <RiskScorePill score={t.overall_risk_score} />
-                    </div>
-
-                    <div className="flex items-center justify-between text-2xs font-mono text-ink-dim">
-                      <span className="truncate max-w-[150px]">{t.pipeline_id || t.service_name || 'Unavailable'}</span>
-                      <span className="tnum shrink-0 text-ink-faint">{t.total_spans} spans</span>
-                    </div>
-
-                    <div className="flex items-center justify-between text-2xs font-mono text-ink-faint mt-1 pt-1 border-t border-line/40">
-                      <span>{t.status}</span>
-                      <span className="tnum">{new Date(t.start_time).toLocaleTimeString()}</span>
-                    </div>
-                  </button>
-                );
-              })
-            )}
-          </div>
-        </div>
-
-        {/* Right Column: Detailed Forensic Span Tree & Inspector */}
-        <div className="lg:col-span-8 space-y-4">
-          {isLoading ? (
-            <Tile className="p-12 flex flex-col items-center justify-center space-y-3" hover={false} index={1}>
-              <RefreshCw className="w-6 h-6 text-signal animate-spin" aria-hidden="true" />
-              <p className="text-xs font-mono text-ink-dim">Loading trace session telemetry...</p>
-            </Tile>
-          ) : error ? (
-            <Tile className="p-6 text-center space-y-2 border border-state-bad/30 bg-state-bad/[0.04]" hover={false} index={1}>
-              <p className="text-xs font-mono font-semibold text-state-bad">Failed to retrieve trace session</p>
-              <p className="text-2xs font-mono text-ink-faint">{error}</p>
-            </Tile>
-          ) : !traceDetail ? (
-            <Tile className="p-12 text-center" hover={false} index={1}>
-              <EmptyState
-                icon={<Route className="w-7 h-7" />}
-                title="No trace selected"
-                hint="Select an execution session from the left to inspect its span tree and claims."
-              />
-            </Tile>
-          ) : (
-            <div className="space-y-4">
-              {/* Selected Trace Header Card */}
-              <Tile className="p-4 space-y-2.5" hover={false} index={1}>
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2.5 border-b border-line">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <Eyebrow>Trace ID</Eyebrow>
-                      <span className="font-mono text-xs font-semibold text-signal truncate">
-                        {traceDetail.trace.trace_id}
-                      </span>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2 mt-1 text-2xs font-mono text-ink-dim">
-                      <span>Service: <strong className="text-ink">{traceDetail.trace.service_name}</strong></span>
-                      <span>&bull;</span>
-                      <span>Pipeline: <strong className="text-ink">{traceDetail.trace.pipeline_id || 'Unavailable'}</strong></span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-3 shrink-0">
-                    <div className="text-right">
-                      <Eyebrow>Total Duration</Eyebrow>
-                      <div className="font-mono text-xs font-semibold tnum text-ink">
-                        {detailTotalDurationMs.toFixed(1)}ms
-                      </div>
-                    </div>
-                    <div className="pl-3 border-l border-line">
-                      <RiskScorePill score={traceDetail.trace.overall_risk_score} label="Session Risk" />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex flex-wrap items-center justify-between text-2xs font-mono text-ink-faint pt-0.5">
-                  <span>Start: {new Date(traceDetail.trace.start_time).toLocaleString()}</span>
-                  <span>Recorded Spans: {traceDetail.spans.length}</span>
-                </div>
-              </Tile>
-
-              {/* Side-by-side: Span Tree and Evidence Inspector */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Span Tree Explorer */}
-                <Tile className="p-4 flex flex-col h-full space-y-3" hover={false} index={2}>
-                  <div className="flex items-center justify-between border-b border-line pb-2.5">
-                    <div>
-                      <h3 className="text-sm font-semibold text-ink tracking-tight">Span Hierarchy</h3>
-                      <p className="text-2xs font-mono text-ink-faint">
-                        {traceDetail.spans.length} spans recorded in session
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex-1 overflow-y-auto max-h-[580px] pr-1">
-                    {traceDetail.spans.length === 0 ? (
-                      <div className="py-12 text-center text-xs font-mono text-ink-faint">
-                        No recorded spans found for this trace.
-                      </div>
-                    ) : (
-                      <SpanTreeView
-                        spans={traceDetail.spans}
-                        selectedSpanId={selectedSpan?.span_id}
-                        onSelectSpan={setSelectedSpan}
-                        totalDurationMs={detailTotalDurationMs}
-                        minStartTime={detailMinStartTime}
-                      />
-                    )}
-                  </div>
-                </Tile>
-
-                {/* Evidence & Grounding Inspector (Reused primitive!) */}
-                <div className="h-full">
-                  <EvidenceInspectorPanel
-                    selectedSpan={selectedSpan}
-                    agents={agents}
-                    isLoading={false}
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // ─── Main Application Container ────────────────────────────────────────
 
 export function App() {
@@ -2634,6 +2341,15 @@ export function App() {
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [isRunningLab, setIsRunningLab] = useState(false);
   const [activeStrategy, setActiveStrategy] = useState<ReasoningStrategy>('ALL');
+  // Carries the context the Trace Workspace was entered with -- which trace,
+  // and which agent the operator came from -- so arriving from an incident or
+  // the command surface does not drop the question being asked.
+  const [traceFocus, setTraceFocus] = useState<TraceFocus | null>(null);
+
+  const openTraceWorkspace = useCallback((focus: TraceFocus) => {
+    setTraceFocus(focus);
+    setCurrentPage('traces');
+  }, []);
 
   // Curate Modal
   const [curatingAlert, setCuratingAlert] = useState<AlertItem | null>(null);
@@ -2770,7 +2486,8 @@ export function App() {
 
   const handleCommandPaletteAction = (actionId: string) => {
     if (actionId === 'nav-overview') setCurrentPage('overview');
-    else if (actionId === 'nav-traces') setCurrentPage('traces');
+    else if (actionId === 'nav-traces') { setTraceFocus(null); setCurrentPage('traces'); }
+    else if (actionId === 'nav-traces-agent') openTraceWorkspace({ agentId: selectedAgentId });
     else if (actionId === 'nav-incidents') setCurrentPage('incidents');
     else if (actionId === 'nav-replay') setCurrentPage('incident-replay');
     else if (actionId === 'nav-drift') setCurrentPage('drift');
@@ -2834,8 +2551,18 @@ export function App() {
   };
   const meta = PAGE_META[currentPage];
 
+  // The Trace Workspace manages its own internal scrolling across three
+  // regions, so it takes the viewport rather than sitting in the padded,
+  // page-scrolling shell every other view uses.
+  const isWorkspacePage = currentPage === 'traces';
+
   return (
-    <div className="min-h-screen flex bg-void text-ink font-sans">
+    <div
+      className={cx(
+        'flex bg-void text-ink font-sans',
+        isWorkspacePage ? 'h-screen overflow-hidden' : 'min-h-screen',
+      )}
+    >
       <div className="deck-wash" aria-hidden="true" />
 
       <SideRail
@@ -2858,7 +2585,12 @@ export function App() {
         />
 
       {/* Main Workspace Area */}
-      <main className="flex-1 p-6 overflow-y-auto">
+      <main
+        className={cx(
+          'flex-1',
+          isWorkspacePage ? 'min-h-0 overflow-hidden' : 'p-6 overflow-y-auto',
+        )}
+      >
         {currentPage === 'overview' ? (
           <div className="space-y-5">
             {/* Signature readout: composite risk as a live trace, not a static number */}
@@ -2916,11 +2648,14 @@ export function App() {
             </div>
           </div>
         ) : currentPage === 'traces' ? (
-          <TracesForensicView traces={traces} agents={agents} />
+          <TraceWorkspace traces={traces} agents={agents} focus={traceFocus} />
         ) : currentPage === 'incidents' ? (
           <IncidentInboxView
             alerts={alerts}
             onCurateTrace={(al) => setCuratingAlert(al)}
+            onOpenTrace={(al) =>
+              openTraceWorkspace({ traceId: al.trace_id, agentId: al.agent_id })
+            }
             onAcknowledgeAlert={handleAcknowledgeAlert}
             acknowledgingAlertIds={acknowledgingAlertIds}
             actionError={incidentActionError}
@@ -2953,6 +2688,7 @@ export function App() {
         isOpen={isCommandPaletteOpen}
         onClose={() => setIsCommandPaletteOpen(false)}
         onSelectAction={handleCommandPaletteAction}
+        selectedAgentId={selectedAgentId}
       />
       </div>
     </div>
