@@ -2100,12 +2100,72 @@ Asked to delete it. Committed and pushed the work first, as
 else. **Check what a worktree holds before removing it** -- `git worktree
 remove` would have taken it with no warning.
 
-### 22.10 Standing facts
+### 22.10 Rehearsing the demo found the fifth round, one day later
+
+The standing facts in 22.11 end by saying to expect a fifth. Asked to rehearse
+the demo and show it, and it was on the screen before the rehearsal had started.
+
+The rehearsal itself works, and is worth stating because it is the thing to
+repeat before presenting: Telemetry Lab → Tool-claim mismatch → Run scenario
+returns `5 spans accepted`, and `TOOL_CLAIM_MISMATCH` with `mismatch_rate=1.0`
+appears in Incidents about 30 seconds later, with a diagnosis panel carrying the
+trace id and a Jump to Trace Waterfall control. Thirty seconds is long enough to
+need filling; the numbers section of DEMO.md covers it.
+
+**The hero card was the fifth round.** `AnimeAgentSwarmRadar` takes two props,
+`palette` and `onInspectTraces`. It has no data source whatsoever, and it was
+badged `LIVE INGESTION`.
+
+Technologies named that this project does not use:
+
+| claimed | actual |
+| :--- | :--- |
+| `OTEL RING BUFFER` | no OpenTelemetry anywhere; two docstrings mention the conventions, nothing imports it |
+| `gRPC · v2` | aiohttp over HTTP; `grpc` appears nowhere in `sdk` or `backend` |
+| `Zero-Copy Ring Buffer (128MB)` | a `list[SpanPayload]` that calls `self._buffer.copy()` to batch, capped at 10,000 **spans**, dropping oldest |
+| `stream.agentpulse.internal` | no such host |
+
+Numbers with nothing behind them, two of which contradicted the deck outright:
+
+| shown | measured |
+| :--- | :--- |
+| `54.2 ms` | 215.9 ms |
+| `99.98%` | F1 0.963 |
+| `14,280 spans/s` | no measured throughput exists |
+| `16 Swarms Active` | hardcoded -- the same defect as the "4 active swarms" fixed in `AgentsView` during 19.x |
+
+Replaced with what is true, and the badge now reads `ILLUSTRATION`.
+
+**A smaller one, worth recording because it is the opposite mistake.** The hero
+read `< 4.2ms Ingestion`. `experiments/results/latency_profiles.json` measured
+`8_http_ingestion_overhead` at mean 0.981 ms, p99 1.124. So 4.2 was not false --
+1.124 is under 4.2 -- but it came from nowhere and understated the result about
+fourfold. The page also disagreed with itself: two places further down already
+read "Sub-1.2ms Fanout". Somebody had the right number and the hero kept an
+older one. Now `< 1.2ms`.
+
+**What found it is the part to carry forward.** Not a grep, not the typecheck,
+not 260 tests, not a bundle scan -- all of those were green while this was
+serving. It was found by opening the page in order to do something else with it.
+The two prior rounds were found the same way: 21.7 by loading the console, 22.4
+by rehearsing a demo step.
+
+### 22.11 Standing facts
 
 New:
 
-- **Four times now, shipped code has described capabilities that do not exist.**
-  21.10 predicted the fourth and it was already live. Expect a fifth.
+- **Five times now, shipped code has described capabilities that do not exist.**
+  21.10 predicted the fourth and it was already live; this list predicted the
+  fifth and 22.10 found it the next day, in the hero card. Expect a sixth, and
+  assume it is serving right now.
+- **A component with no data props must not say LIVE.** The radar card had two
+  props, neither of them data, and a pulsing `LIVE INGESTION` badge. If a panel
+  is drawn rather than measured, label it `ILLUSTRATION` and let the console
+  carry the real figures.
+- **Opening the page is the check that keeps working.** Every round so far was
+  found by using the product, never by a grep, a typecheck, a test run or a
+  bundle scan -- all of which were green while the claims were serving. Build a
+  habit of clicking through the deployed site, not only diffing it.
 - **`vite build` does not typecheck.** A green build says nothing about whether
   a view can render. Run `npm run lint` separately; it is the only thing that
   found a 1,110-line file that never compiled.
