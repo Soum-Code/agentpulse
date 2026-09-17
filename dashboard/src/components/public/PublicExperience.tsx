@@ -171,7 +171,7 @@ export const PublicExperience: React.FC<PublicExperienceProps> = ({ onEnterProdu
       code: 'POST /v1/ingest -> 202 Accepted\nINSERT INTO spans_queue (status="pending")',
       detail: 'API process stays ultra-lean (80MB RAM) without loading heavy ML weights. Spans leased durably in SQLite WAL queue.',
       tokens: 0,
-      latency: '4.2ms'
+      latency: '1.1ms'
     },
     {
       title: 'DeBERTa NLI Worker Evaluates',
@@ -189,9 +189,9 @@ export const PublicExperience: React.FC<PublicExperienceProps> = ({ onEnterProdu
     {
       label: 'OBSERVE',
       subtitle: 'Decoupled Low-Overhead Ingestion',
-      description: 'Capture every agent prompt, completion, tool parameter, and span asynchronously. API returns 202 Accepted in under 5ms, staying lean at 80MB RAM.',
+      description: 'Capture every agent prompt, completion, tool parameter, and span asynchronously. API returns 202 Accepted in about a millisecond, staying lean at 80MB RAM.',
       badge: 'Zero Overhead',
-      metric: '< 4.2ms Ingestion',
+      metric: '< 1.2ms Ingestion',
       metricLabel: '202 Accepted',
       diagramTitle: 'Decoupled Span Stream',
       features: ['Native pulse.instrument_llm() & @pulse.monitor() decorators', 'Durable SQLite WAL queue leases for worker consumption', 'Zero ML weights in ingestion path — fits in 80MB RAM']
@@ -702,7 +702,7 @@ async def researcher_node(state):
                     palette === 'butter' ? 'text-neutral-950' : palette === 'chalk' ? 'text-neutral-900' : 'text-neutral-100'
                   }`}
                 >
-                  &lt; <AnimeInteractiveCounter targetValue={4.2} decimals={1} suffix=" ms" />
+                  &lt; <AnimeInteractiveCounter targetValue={1.2} decimals={1} suffix=" ms" />
                 </span>
               </div>
               <div>
