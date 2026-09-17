@@ -22,9 +22,18 @@ export interface EvaluatorReadiness {
   reasons: string[];
 }
 
+/** A pair of percentiles as /v1/platform reports them. Either can be null when
+ *  nothing has been sampled yet, and null must stay null on the way to the UI. */
+export interface Percentiles {
+  p50: number | null;
+  p95: number | null;
+  p99?: number | null;
+}
+
 export interface PlatformHealth {
   state: 'healthy' | 'degraded' | 'backlogged' | 'failing' | 'starting';
   reasons: string[];
+  checked_at?: string;
   evaluation_queue: {
     depth: number;
     backlog_threshold: number;
@@ -36,9 +45,52 @@ export interface PlatformHealth {
       dead_letter?: number;
     };
   };
+  evaluation_timing?: {
+    sample_size: number;
+    queue_wait_ms?: Percentiles;
+    evaluation_ms?: Percentiles;
+    end_to_end_ms?: Percentiles;
+  };
+  reliability?: {
+    jobs_total: number;
+    jobs_completed: number;
+    terminal_failures: number;
+    failure_rate: number;
+    retry_count: number;
+  };
+  signal_coverage?: {
+    sample_size: number;
+    signals?: Record<string, number | null>;
+    notes?: string[];
+  };
+  // In-process counters. They reset when the API restarts, which the backend
+  // says in its own `note` field and which this view repeats -- a request total
+  // that silently restarted at zero would read as an outage.
+  runtime_counters?: {
+    uptime_seconds?: number;
+    process_started_at?: string;
+    ingestion?: {
+      spans_accepted_total?: number;
+      spans_failed_total?: number;
+      spans_duplicate_total?: number;
+      jobs_enqueued_total?: number;
+      enqueue_failures_total?: number;
+      spans_per_sec_1m?: number;
+    };
+    api?: {
+      requests_total?: number;
+      server_errors_total?: number;
+      requests_per_sec_1m?: number;
+      latency_ms?: Percentiles & { samples?: number };
+    };
+    note?: string;
+  };
   workers: {
     alive?: number;
     registered?: number;
+    stale?: number;
+    stale_after_seconds?: number;
+    backend_distribution?: Record<string, number>;
   };
 }
 
