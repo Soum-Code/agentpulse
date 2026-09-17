@@ -83,15 +83,53 @@ client = pulse.instrument_llm(OpenAI())
 
 ---
 
+## 3.5 What is actually running — know this cold
+
+Someone will ask whether a real LLM is involved. Answer it before they ask;
+being caught on it is much worse than volunteering it.
+
+**No model generates the agent text anywhere in this project.**
+
+- `POST /v1/simulate` writes five spans whose outputs are string literals in
+  `backend/app/routers/ingest.py`. The scenario flag picks between two versions
+  of each string.
+- `demo/research_assistant.py` is a five-node LangGraph pipeline with no
+  `openai` or `anthropic` import in it at all.
+- `instrument_llm()` is tested against stub clients. The OpenAI and Anthropic
+  SDKs are not test dependencies; the tests exercise the two things the wrapper
+  reads — the module a client's class comes from, and the response shape.
+
+**What is real is everything downstream of the text.** MiniLM and DeBERTa
+genuinely run, on CPU, on whatever strings they are handed. The queue leases and
+retries. The alert rules fire off measured scores. The drift maths runs on real
+embeddings. The grounding benchmark — F1 0.963 — is real inference over a real
+held-out split.
+
+Say it like this:
+
+> The agent outputs are fixtures. The judgement is real.
+>
+> AgentPulse is the observability layer, not the agent. It does not need to
+> generate the text in order to evaluate it — and fixtures are better for a demo,
+> because the failure is reproducible and you get the same score every time.
+> Point it at a live OpenAI client with one line and it scores that instead.
+
+What that costs, stated plainly if pressed:
+
+> It means I have measured the evaluator carefully and I have not yet measured
+> the system against live production traffic. Those are different claims and I am
+> only making the first one.
+
+---
+
 ## 4. Break it live — 3 minutes
 
 **This is the demo.** Everything before it is setup.
 
-Fire the scenario from a terminal. **Do not use the Telemetry Lab for this** —
-its inject button sends a malformed request that the API rejects with 422, and
-the dashboard swallows the error, so nothing happens and nothing says why.
+Open the **Telemetry Lab**, choose **Tool-claim mismatch**, press **Run
+scenario**. It answers `5 spans accepted` immediately.
 
-Have this ready in a terminal, with `$KEY` already exported:
+If the console is unavailable, the same thing from a terminal:
 
 ```bash
 curl -s -X POST https://agentpulse.centralindia.cloudapp.azure.com/v1/simulate \
@@ -99,7 +137,7 @@ curl -s -X POST https://agentpulse.centralindia.cloudapp.azure.com/v1/simulate \
   -d '{"scenario":"tool_mismatch","query":"Retrieval claim check"}'
 ```
 
-It answers `{"accepted":5,...}` immediately. While it runs:
+While it runs:
 
 > I am running a five-agent research pipeline. The retriever agent is going to
 > claim it found 10 papers. The tool actually returned 3. Nothing will error, and
@@ -185,6 +223,12 @@ Do not skip this. In a review it is worth more than another feature.
 
 ## Questions you should expect
 
+**Is a real LLM in the loop?**
+> Not for generating the agent text — those are fixtures, and section 3.5 says
+> why that is the right choice for a demo. Everything downstream is real: the two
+> models run on CPU and produce the scores you see, and one line points the SDK
+> at a live OpenAI or Anthropic client instead.
+
 **Why not an LLM judge?**
 > Cost and latency. A judge bills per token and adds seconds, so teams sample. I
 > chose to score every span instead. The measured cost of that choice is narrower
@@ -225,5 +269,5 @@ Do not skip this. In a review it is worth more than another feature.
 | Drift shows null | Expected under 32 spans for that agent. Say so — it is the design, not a failure. |
 | Sign-in error appears | You clicked Sign In. Close it; the demo does not need an account. |
 | Site is slow on first load | The bundle is 2.4 MB and is not code-split. It is on the next-steps list. |
-| Telemetry Lab inject does nothing | Known bug, which is why section 4 uses curl. `TelemetryLabView` passes a whole `Trace` object to a handler that expects a scenario string, so `POST /v1/simulate` returns 422 and the dashboard logs it to the console and moves on. |
 | Someone clicks the APM Performance tab | Known bug: the tab is reachable but renders nothing. Say so and move on. |
+| The Lab shows a red error | It is telling you the truth — the API refused the run. Read the message; it carries the status. Fall back to the curl command. |
