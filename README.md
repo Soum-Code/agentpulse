@@ -150,7 +150,13 @@ pytest tests/ -v
 python benchmarks/run_benchmarks.py
 ```
 
-Current state: **237 passed**, plus 32 in the dashboard (`cd dashboard && npm test`).
+Current state: **260 passed**, plus 32 in the dashboard (`cd dashboard && npm test`).
+
+If that total comes out lower, check the SDK is installed into the environment
+you are running from: a stale editable install made `test_e2e_langgraph.py` and
+`test_integrations.py` stop collecting without failing anything, and pytest
+happily reported green over the reduced suite. `pytest tests/ --collect-only -q`
+should end in 260.
 
 Current benchmark results (`benchmarks/benchmark_results.json`, CPU-only):
 

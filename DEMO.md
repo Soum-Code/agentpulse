@@ -269,5 +269,5 @@ Do not skip this. In a review it is worth more than another feature.
 | Drift shows null | Expected under 32 spans for that agent. Say so — it is the design, not a failure. |
 | Sign-in error appears | You clicked Sign In. Close it; the demo does not need an account. |
 | Site is slow on first load | The bundle is 2.4 MB and is not code-split. It is on the next-steps list. |
-| Someone clicks the APM Performance tab | Known bug: the tab is reachable but renders nothing. Say so and move on. |
+| Someone clicks the APM Performance tab | It works, and it is worth showing. It reports this instance's own API latency percentiles, ingestion counters, queue-wait and evaluation timings, and the worker roster. If it says FAILING, read it out — that means the API is up and nothing is evaluating, which is exactly the distinction the platform check exists to make. |
 | The Lab shows a red error | It is telling you the truth — the API refused the run. Read the message; it carries the status. Fall back to the curl command. |
