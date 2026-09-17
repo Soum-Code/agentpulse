@@ -93,6 +93,10 @@ function table(s, rows, opts = {}) {
   s.addTable(body, {
     x: opts.x || M, y: opts.y || 1.75, w: opts.w || W - 2 * M,
     colW: opts.colW,
+    // Without rowH the file carries no row height and PowerPoint sizes each
+    // row itself, so the table's real extent is unknown until it is opened.
+    // Pass it wherever something sits below the table.
+    ...(opts.rowH ? { rowH: opts.rowH } : {}),
     border: { type: 'solid', color: RULE, pt: 0.5 },
     autoPage: false,
     valign: 'middle',
@@ -125,6 +129,47 @@ function callout(s, text, opts = {}) {
     x: M + 0.24, y: y + 0.1, w: W - 2 * M - 0.48, h: h - 0.2,
     fontSize: opts.fontSize || 12.5, color: WARN, italic: true, valign: 'middle',
   });
+}
+
+// A labelled box in a flow diagram. Drawn rather than typed as ASCII so the
+// stages stay readable from the back of a room.
+function box(s, x, y, w, h, title, sub, opts = {}) {
+  s.addShape(pptx.ShapeType.roundRect, {
+    x, y, w, h, rectRadius: 0.05,
+    fill: { color: opts.fill || 'FFFFFF' },
+    line: { color: opts.line || ACCENT, width: 1.25 },
+  });
+  s.addText(title, {
+    x: x + 0.08, y: y + 0.13, w: w - 0.16, h: 0.3,
+    fontSize: opts.titleSize || 12, bold: true, color: INK, align: 'center',
+  });
+  if (sub) {
+    s.addText(sub, {
+      x: x + 0.08, y: y + 0.46, w: w - 0.16, h: h - 0.56,
+      fontSize: opts.subSize || 10, color: MUTED, align: 'center', valign: 'top',
+      lineSpacingMultiple: 1.1,
+    });
+  }
+}
+
+function arrow(s, x1, y1, x2, y2, label) {
+  s.addShape(pptx.ShapeType.line, {
+    x: x1, y: y1, w: x2 - x1, h: y2 - y1,
+    line: { color: MUTED, width: 1.5, endArrowType: 'triangle' },
+  });
+  if (label) {
+    // Kept inside the gap between the two boxes. Allowing it to bleed wider
+    // centres it nicely on an empty slide and prints it on top of the boxes on
+    // a full one.
+    const horizontal = Math.abs(y2 - y1) < 0.01;
+    s.addText(label, {
+      x: horizontal ? x1 - 0.08 : x1 + 0.12,
+      y: horizontal ? y1 - 0.3 : (y1 + y2) / 2 - 0.13,
+      w: horizontal ? (x2 - x1) + 0.16 : 1.9,
+      h: 0.24, fontSize: 8.5, color: MUTED,
+      align: horizontal ? 'center' : 'left',
+    });
+  }
 }
 
 // ---------------------------------------------------------------- 1. Title
@@ -184,30 +229,56 @@ function callout(s, text, opts = {}) {
 // ---------------------------------------------------------------- 4. Architecture
 {
   const s = slide('Four processes, deliberately separated', 'Architecture');
-  code(s,
-`  Agent pipeline  (LangGraph / CrewAI / LangChain / plain Python)
-        |
-        |  SDK: buffers spans, flushes in batches, fails open
-        v
-  +--------------------------+
-  |  FastAPI ingest API      |  POST /v1/ingest -> 202 Accepted
-  |  loads no ML models      |  validate, dedupe, persist, enqueue
-  +--------------------------+
-        |                                ^
-        | evaluation_jobs (SQLite)       | REST + WebSocket
-        v                                |
-  +--------------------------+     +---------------------+
-  |  Evaluation worker       |     |  React dashboard    |
-  |  MiniLM + DeBERTa (ONNX) |     |  polls every 10 s   |
-  |  leases, retries, scores |     +---------------------+
-  +--------------------------+
-        |
-        v
-  SQLite (WAL) - 11 tables`,
-    { h: 4.35, fontSize: 11 });
+
+  const BY = 1.95;   // top row
+  const BH = 1.4;
+  const BW = 2.35;
+  // Gaps are 0.79in rather than the minimum that fits, because each one has to
+  // hold an arrow label without printing it over a box.
+  const XS = [0.72, 3.86, 7.00, 10.14];
+
+  box(s, XS[0], BY, BW, BH, 'Your agent + SDK',
+    'buffers spans, flushes in batches, fails open');
+  box(s, XS[1], BY, BW, BH, 'Ingest API',
+    'validate, dedupe, persist, enqueue\n202 Accepted, loads no models');
+  box(s, XS[2], BY, BW, BH, 'Durable queue',
+    '120 s lease, 3 attempts,\nthen dead_letter');
+  box(s, XS[3], BY, BW, BH, 'Evaluation worker',
+    'MiniLM + DeBERTa\n215.9 ms, ~1.15 GB resident');
+
+  const MID = BY + BH / 2;
+  arrow(s, XS[0] + BW, MID, XS[1], MID, 'spans');
+  arrow(s, XS[1] + BW, MID, XS[2], MID, '1 job / span');
+  arrow(s, XS[2] + BW, MID, XS[3], MID, 'lease');
+
+  // Three processes share one file; the connectors carry no arrowhead because
+  // each of them both reads and writes.
+  const BAR_Y = 3.95;
+  for (const x of [XS[1], XS[2], XS[3]]) {
+    s.addShape(pptx.ShapeType.line, {
+      x: x + BW / 2, y: BY + BH, w: 0, h: BAR_Y - (BY + BH),
+      line: { color: RULE, width: 1.25 },
+    });
+  }
+  s.addShape(pptx.ShapeType.rect, {
+    x: XS[1], y: BAR_Y, w: XS[3] + BW - XS[1], h: 0.58,
+    fill: { color: PANEL }, line: { color: RULE, width: 0.75 },
+  });
+  s.addText('SQLite (WAL)  ·  spans, evaluations, jobs, baselines, alerts  ·  11 tables', {
+    x: XS[1], y: BAR_Y, w: XS[3] + BW - XS[1], h: 0.58,
+    fontSize: 11, color: INK, align: 'center', valign: 'middle',
+  });
+
+  box(s, 0.72, 4.85, 3.6, 0.78, 'React dashboard', 'reads only', { line: RULE });
+  s.addText(
+    'No arrow into the dashboard, because it holds no database connection: it polls the same REST API the SDK '
+    + 'writes to, every 10 seconds, plus a WebSocket for live spans.',
+    { x: 4.6, y: 4.9, w: 8.0, h: 0.7, fontSize: 11.5, color: MUTED, valign: 'top' },
+  );
+
   callout(s,
     'The API holds no models: loading them cost ~1.24 GB resident and ~20 s of startup for a capability no route used.',
-    { y: 6.3, h: 0.72 });
+    { y: 6.05, h: 0.72 });
 }
 
 // ---------------------------------------------------------------- 5. Flow
@@ -224,6 +295,53 @@ function callout(s, text, opts = {}) {
     ['7', 'Persist', 'Evaluation and drift rows written idempotently, keyed on span id.'],
     ['8', 'Alert', 'Threshold rules fire, subject to a 900 s cooldown and a 50/hour cap.'],
   ], { colW: [0.55, 1.9, 9.44], fontSize: 12 });
+}
+
+// ------------------------------------------------- 5b. Worked example
+{
+  const s = slide('One real call, end to end', 'How it works');
+  code(s,
+`prompt       Where is the Eiffel Tower?
+             It stands in Paris, France.
+
+answer       The Eiffel Tower is located
+             in Berlin, Germany.
+
+             HTTP 200, fluent, on time.
+             Nothing raised, nothing logged.
+
+---- what the worker then asks DeBERTa ----
+
+premise      the Eiffel Tower stands in
+             Paris, France
+
+hypothesis   the Eiffel Tower is located
+             in Berlin, Germany
+
+verdict      contradiction, near-total
+             confidence  ->  grounding 0.9999`,
+    { w: 6.3, h: 3.8, fontSize: 10.5 });
+
+  table(s, [
+    ['#', 'What happens'],
+    ['1', 'One line added:  pulse.instrument_llm(OpenAI())'],
+    ['2', 'The client is called exactly as before, and is not slowed'],
+    ['3', 'The SDK packages a span and sends it in the background'],
+    ['4', 'The API persists it, enqueues a job, replies 202 Accepted'],
+    ['5', 'A worker leases the job and runs both models'],
+    ['6', 'DeBERTa returns contradiction, so grounding is 0.9999'],
+    ['7', 'Two alerts fire; the dashboard shows a red incident'],
+  ], { x: 7.35, w: 5.26, colW: [0.38, 4.88], fontSize: 10.5, rowH: 0.3 });
+
+  code(s,
+`GROUNDING_FAILURE         HIGH
+HIGH_HALLUCINATION_RISK   HIGH`,
+    { x: 7.35, y: 4.5, w: 5.26, h: 0.82, fontSize: 11 });
+
+  callout(s,
+    'Total elapsed, under a second, and the agent never slowed down. No framework was in that path: the only '
+    + 'integration was instrument_llm() around an OpenAI client. This trace is real, not an illustration.',
+    { y: 5.62, h: 0.95 });
 }
 
 // ---------------------------------------------------------------- 6. SDK
@@ -424,7 +542,7 @@ after 14 shifted spans
   const s = slide('The console reads the same API anyone would', 'Dashboard');
   bullets(s, [
     'React 19 + TypeScript + Vite. A public page, and a product console that polls a live instance every 10 seconds.',
-    'Nine views: overview, agents, traces with a span waterfall, incidents, drift, replay, experiments, datasets, telemetry lab.',
+    'Ten views: overview, agents, traces with a span waterfall, incidents, drift, replay, experiments, datasets, telemetry lab, settings.',
     'Waterfall bars are positioned from recorded start_time, so they read as a timeline rather than a bar chart.',
     'Fields with no backend source - cost, per-agent tokens, framework, embedding coordinates - render as an em-dash, not a zero.',
     'Engine readiness reads platform.state: with no worker alive it says failing, not a hardcoded online.',
@@ -455,7 +573,7 @@ after 14 shifted spans
   const s = slide('What can be checked, and where', 'Evidence');
   table(s, [
     ['Check', 'Result'],
-    ['Python + SDK test suite', '237 passed'],
+    ['Python + SDK test suite', '260 passed'],
     ['Dashboard test suite', '32 passed'],
     ['Dashboard typecheck / build', 'clean / passes'],
     ['Grounding F1 (v1.0_test)', '0.963'],
@@ -501,7 +619,7 @@ after 14 shifted spans
     'Expand the benchmark past 30 cases and re-run the ablation before making any generalisation claim.',
     'Publish the SDK to an installable package; the name agentpulse on PyPI belongs to an unrelated project.',
     'Extend dashboard tests from the mapping layer to the components.',
-    'Settle whether the crash-recovery test failure on Windows is a harness problem or a real WAL recovery gap.',
+    'Consolidate the console: it lives in two repositories with nothing keeping them in step, which is how unbuilt features have reached the landing page more than once.',
     'Decide the gated cascade on measurement: it would cut latency and change every calibrated figure, so it is an experiment, not an edit.',
   ], { y: 1.75, h: 3.6, fontSize: 15 });
   callout(s,
