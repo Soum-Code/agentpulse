@@ -13,9 +13,11 @@ from agentpulse.schemas.enums import EventType, SpanKind, SpanStatus
 class SpanPayload(BaseModel):
     """A single agent execution span sent to the backend.
     
-    Follows OpenTelemetry W3C TraceContext conventions:
-    - trace_id: 32-char hex string
-    - span_id: 16-char hex string
+    The ids this SDK generates follow W3C TraceContext shapes -- 32-char hex for
+    trace_id, 16-char for span_id, via generate_trace_id and generate_span_id.
+    The field constraints below are deliberately wider than that, so an id
+    minted elsewhere is still accepted. Conforming is what we emit, not what we
+    require, and nothing here maps to OpenTelemetry semantic conventions.
     """
 
     trace_id: str = Field(..., min_length=16, max_length=64)
