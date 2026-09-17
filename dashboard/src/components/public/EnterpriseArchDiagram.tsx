@@ -93,9 +93,9 @@ export const EnterpriseArchDiagram: React.FC<EnterpriseArchDiagramProps> = ({ pa
                 ? 'bg-amber-100 border border-amber-300 text-amber-900'
                 : 'bg-amber-400/20 border border-amber-400/40 text-amber-300 shadow-[0_0_12px_rgba(245,158,11,0.25)]'
             }`}>
-              Datadog &amp; MLflow Grade
+              Self-hosted
             </span>
-            <span className={`text-xs font-mono ${palette === 'chalk' ? 'text-neutral-600' : 'text-neutral-300'}`}>Enterprise Pipeline Specification</span>
+            <span className={`text-xs font-mono ${palette === 'chalk' ? 'text-neutral-600' : 'text-neutral-300'}`}>Pipeline architecture</span>
           </div>
           <h3 className={`text-2xl sm:text-3xl font-black mt-2 tracking-tight font-sans ${
             palette === 'chalk' ? 'text-neutral-950' : 'text-white drop-shadow-[0_2px_12px_rgba(0,0,0,0.6)]'

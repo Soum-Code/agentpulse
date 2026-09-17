@@ -264,7 +264,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
       icon: any;
     }> = [
       { tab: 'overview', title: 'System Overview & Percentiles', sub: 'P50/P99 latency, cost burn & fleet health', cat: 'all', icon: Activity },
-      { tab: 'performance', title: 'Performance Metrics (APM)', sub: 'Datadog-style API response times, error rates & throughput', cat: 'all', icon: Gauge },
+      { tab: 'performance', title: 'Performance Metrics (APM)', sub: 'API latency percentiles, ingestion counters, queue and worker state', cat: 'all', icon: Gauge },
       { tab: 'agents', title: 'Autonomous Agent Roster', sub: 'Swarm runtime, framework specs & tool bindings', cat: 'agents', icon: Bot },
       { tab: 'traces', title: 'Trace Investigation & Tree', sub: 'LangSmith / Weave waterfall execution trees', cat: 'traces', icon: Activity },
       { tab: 'incidents', title: 'Incident Root Cause Analysis', sub: 'Causal chain & failure discrepancies', cat: 'incidents', icon: AlertTriangle },
