@@ -241,13 +241,14 @@ export default function App() {
 
   // Handler: run a scenario in the backend simulator. The resulting spans come
   // back through the normal telemetry poll once the worker has evaluated them.
-  const handleInjectSyntheticTrace = async (scenario: string, query?: string) => {
-    try {
-      await api.simulatePipeline(scenario, query ?? 'Telemetry Lab run');
-      refreshTelemetry();
-    } catch (err) {
-      console.warn('Simulation failed:', err);
-    }
+  //
+  // Deliberately does not catch. This runs because someone pressed a button, so
+  // a refusal has to reach them; swallowing it into console.warn is what made
+  // the Lab look like it worked while the API was answering 422.
+  const handleRunScenario = async (scenario: string, query: string) => {
+    const result = await api.simulatePipeline(scenario, query);
+    refreshTelemetry();
+    return result;
   };
 
   // Handler: acknowledge an incident against the alerts API.
@@ -467,10 +468,7 @@ export default function App() {
             )}
 
             {productTab === 'telemetry-lab' && (
-              <TelemetryLabView
-                agents={agents}
-                onInjectSyntheticTrace={handleInjectSyntheticTrace}
-              />
+              <TelemetryLabView onRunScenario={handleRunScenario} />
             )}
 
             {productTab === 'settings' && (
