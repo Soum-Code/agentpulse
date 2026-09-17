@@ -33,7 +33,7 @@ export const ExperimentsView: React.FC<ExperimentsViewProps> = ({
               <span>Candidate Evaluation &amp; Experiments</span>
             </h2>
             <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-400/10 border border-amber-400/30 text-amber-300 uppercase">
-              MLflow Matrix + CI/CD Gate
+              From /v1/experiments
             </span>
           </div>
           <p className="text-xs font-mono text-neutral-400 mt-1">
