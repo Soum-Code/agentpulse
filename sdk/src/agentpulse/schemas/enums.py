@@ -18,7 +18,14 @@ class EventType(str, Enum):
 
 
 class SpanKind(str, Enum):
-    """OpenTelemetry-compatible span kind."""
+    """What kind of step a span represents.
+
+    Not OpenTelemetry's SpanKind, despite an earlier docstring saying so.
+    OTel's values are INTERNAL, SERVER, CLIENT, PRODUCER and CONSUMER; of those
+    only INTERNAL appears here, and AGENT, LLM, TOOL and HANDOFF are not OTel
+    span kinds at all. These describe agent steps, which is what this schema is
+    for -- the deck states plainly that the span schema is custom.
+    """
 
     AGENT = "AGENT"
     LLM = "LLM"
