@@ -575,17 +575,18 @@ after 14 shifted spans
     ['Check', 'Result'],
     ['Python + SDK test suite', '260 passed'],
     ['Dashboard test suite', '32 passed'],
-    ['Dashboard typecheck / build', 'clean / passes'],
+    ['Dashboard build', 'passes'],
+    ['Dashboard typecheck', '1 error, in dead code'],
     ['Grounding F1 (v1.0_test)', '0.963'],
     ['Evaluator latency (ablation)', '215.9 ms'],
-  ], { colW: [3.6, 2.4], w: 6.0, fontSize: 12.5 });
+  ], { colW: [3.6, 2.4], w: 6.0, fontSize: 12.5, rowH: 0.3 });
   table(s, [
     ['Deployed instance', 'Value'],
     ['Public URL', 'agentpulse.centralindia.cloudapp.azure.com'],
     ['TLS', "Let's Encrypt, auto-renewed by Caddy"],
     ['Survives reboot', 'yes - verified twice, data intact'],
     ['Signals firing', 'grounding, drift, ASI, tool-claim'],
-  ], { x: 6.4, colW: [2.4, 4.0], w: 6.4, fontSize: 11 });
+  ], { x: 6.4, colW: [2.4, 4.0], w: 6.4, fontSize: 11, rowH: 0.3 });
   callout(s,
     'The dashboard test suite was verified by mutation rather than by passing: reintroducing the severity bug failed one test, ' +
     'reintroducing the absolute-URL bug failed three. A test that passes proves nothing about what it would catch.',
@@ -618,7 +619,7 @@ after 14 shifted spans
   bullets(s, [
     'Expand the benchmark past 30 cases and re-run the ablation before making any generalisation claim.',
     'Publish the SDK to an installable package; the name agentpulse on PyPI belongs to an unrelated project.',
-    'Extend dashboard tests from the mapping layer to the components.',
+    'Extend dashboard tests from the mapping layer to the components, and remove the APM tab that is reachable from the dock and the command palette but renders nothing.',
     'Consolidate the console: it lives in two repositories with nothing keeping them in step, which is how unbuilt features have reached the landing page more than once.',
     'Decide the gated cascade on measurement: it would cut latency and change every calibrated figure, so it is an experiment, not an edit.',
   ], { y: 1.75, h: 3.6, fontSize: 15 });

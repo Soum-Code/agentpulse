@@ -67,7 +67,7 @@ export const PublicExperience: React.FC<PublicExperienceProps> = ({ onEnterProdu
   const [activeDriftView, setActiveDriftView] = useState<'spatial' | 'analytical'>('spatial');
   const [activeLoopStep, setActiveLoopStep] = useState<number>(0);
   const [isWipingLoopCard, setIsWipingLoopCard] = useState(false);
-  const [selectedSdkFramework, setSelectedSdkFramework] = useState<'python' | 'langgraph' | 'crewai' | 'enterprise_ring_buffer' | 'github_action'>('python');
+  const [selectedSdkFramework, setSelectedSdkFramework] = useState<'python' | 'langgraph'>('python');
   
   // Palette mode: 'butter' (Iconic Buttermax canary yellow & deep black), 'dark' (Cyber obsidian), 'chalk' (Studio light)
   const [palette, setPalette] = useState<'butter' | 'dark' | 'chalk'>('dark');
@@ -254,52 +254,16 @@ async def researcher_node(state):
     # Span context propagates automatically via trace_id
     papers = await search_tool(state["query"])
     return {"messages": papers}`,
-    crewai: `from agentpulse import AgentPulse
-from agentpulse.adapters import CrewAIAdapter
-from crewai import Agent, Crew, Task
-
-pulse = AgentPulse(endpoint="http://localhost:8000")
-adapter = CrewAIAdapter(pulse)
-
-researcher = Agent(role="Researcher", goal="Synthesize scientific papers")
-# Tracks agent steps, tool calls, and cross-agent contradictions
-crew = Crew(agents=[researcher], tasks=[...])`,
-    enterprise_ring_buffer: `# Enterprise Hardened Configuration (Bounded Ring Buffer + PII Sanitization)
-from agentpulse import AgentPulse, BufferConfig, ScrubbingPolicy
-
-pulse = AgentPulse(
-    endpoint="https://telemetry.internal.company.com/v1",
-    api_key="ap_live_org_948f_secret",
-    buffer_config=BufferConfig(
-        max_buffer_size_mb=16,            # Strict 16MB bounded memory cap
-        overflow_strategy="drop_oldest",  # Prevents agent OOM or process blocking
-        flush_interval_ms=500
-    ),
-    scrubbing_policy=ScrubbingPolicy(
-        mask_credit_cards=True,          # Client-side PCI-DSS redaction
-        mask_ssn=True,                   # Client-side HIPAA redaction
-        mask_bearer_tokens=True,         # Auto-strips sk-*, Bearer, AWS secrets
-        custom_patterns=[r"corp_token_[a-zA-Z0-9]{32}"]
-    )
-)`,
-    github_action: `# .github/workflows/agent_regression_gate.yml
-name: AgentPulse Regression Shield
-on: [pull_request]
-
-jobs:
-  evaluate_agent:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Run Deterministic Regression Evaluation
-        uses: agentpulse/eval-action@v1
-        with:
-          endpoint: "https://agentpulse.company.internal"
-          api-key: \${{ secrets.AGENTPULSE_API_KEY }}
-          benchmark-dataset: "customer-support-v4-golden"
-          max-contradiction-threshold: "0.15"  # DeBERTa-v3 local NLI gate
-          min-agent-stability-index: "92.0"    # MiniLM centroid stability
-          fail-on-regression: true`
+    // Only the two integrations that work are shown. Three others were here
+    // and were removed because none of them ran:
+    //
+    //   crewai                  imported from agentpulse.adapters, which is not
+    //                           a module (it is agentpulse.integrations), and
+    //                           CrewAIAdapter.__init__ raises NotImplementedError
+    //   enterprise_ring_buffer  BufferConfig and ScrubbingPolicy appear in no
+    //                           Python file in this repository
+    //   github_action           there is no .github directory, and no such
+    //                           published action
   };
 
   const customChalkStyle = (palette === 'chalk' && chalkSurface === 'custom' && chalkCustomColor) ? ({
@@ -2069,10 +2033,7 @@ jobs:
             <div className="flex flex-wrap items-center gap-2">
               {[
                 { id: 'python', label: 'Python Native (OpenAI/Anthropic)' },
-                { id: 'langgraph', label: 'LangGraph' },
-                { id: 'crewai', label: 'CrewAI' },
-                { id: 'enterprise_ring_buffer', label: 'Enterprise Bounded Buffer + PII' },
-                { id: 'github_action', label: 'CI/CD GitHub Action' }
+                { id: 'langgraph', label: 'LangGraph' }
               ].map((fw) => (
                 <button
                   key={fw.id}
