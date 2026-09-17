@@ -1873,3 +1873,266 @@ fetches an unrelated package, and dashboard tests still cover `lib/` only --
 none of the 19 new components has a test.
 
 ---
+
+## 22. The fourth round arrived, and two views were inventing their own numbers (2026-09-17)
+
+Started as "add a favicon". Six merged PRs later (#30 through #35) the typecheck
+is clean for the first time, two components have stopped fabricating
+measurements, and the prediction at the end of 21.10 turned out to be correct.
+
+Ended at `1f752de` on main, `d4247d3` deployed. Backend 260 passed, dashboard 32
+passed, `tsc --noEmit` clean, site 200.
+
+### 22.1 The favicon, and the one trap in writing one
+
+`/favicon.ico` had been 404 on every cold load, because browsers request it by
+name whether or not the HTML links it.
+
+The mark is the pulse trace from `ProductHeader`'s live status dot, emerald
+`#34d399` on `#050505`. Three files in `dashboard/public/`: an SVG for current
+browsers, a 16/32/48 `.ico`, and a 180px PNG for iOS.
+
+There is no SVG rasteriser in this environment, so `scripts/generate_favicon.py`
+holds a hand port of the SVG's path rather than a render of it. Nothing about
+editing one forces the other to change, so `tests/test_favicon.py` compares
+them. It was checked against two mutations -- a changed `stroke-width` and a
+moved coordinate -- and caught both.
+
+**Pillow silently drops any requested `.ico` size larger than the image `save()`
+is called on.** The first version of the script asked for 16, 32 and 48, called
+`save()` on the 16px layer, and wrote a single-size icon with no warning. The
+test asserts all three sizes for that reason.
+
+### 22.2 The fourth round of fabricated claims was already live
+
+21.10 said "three times now, incoming code has described capabilities that do
+not exist; expect a fourth." The fourth was found within the hour, and it had
+been serving on the public site the whole time.
+
+The landing page's SDK section had five framework tabs. Three did not work:
+
+| tab | what was wrong |
+| :--- | :--- |
+| CrewAI | imports from `agentpulse.adapters`, which is not a module -- it is `agentpulse.integrations` -- and `CrewAIAdapter.__init__` raises `NotImplementedError`, so the snippet dies on its second line |
+| Enterprise Bounded Buffer + PII | `BufferConfig`, `ScrubbingPolicy`, `max_buffer_size_mb`, `mask_credit_cards` appear in **no Python file in the repository** |
+| CI/CD GitHub Action | there is no `.github` directory, and no published `agentpulse/eval-action` |
+
+The prose directly above those tabs already read "A CrewAI adapter does not
+exist yet" -- above a tab rendering working-looking CrewAI code. Only `python`
+and `langgraph` remain; both were checked against the SDK.
+
+Found by reading the file while looking for something else, not by any check
+that was running. Worth noting how little it took: opening
+`PublicExperience.tsx` and reading the snippet strings.
+
+### 22.3 A broken editable install had been hiding two test files
+
+`import agentpulse` failed from anywhere. The venv's editable installs pointed
+at `C:\MLOPs\3rd sem project\project one agent\sdk`, a path from before the
+project was renamed, which no longer exists.
+
+The consequence is the part to remember: `test_e2e_langgraph.py` and
+`test_integrations.py` **stopped collecting without failing the run**. Pytest
+reported a green pass count that silently excluded them. Every test figure
+quoted in the deck and the handoff since the rename has been over a reduced
+suite.
+
+Reinstalled both editable against the real checkout. Collection went 253 -> 260.
+
+Also observed: `test_worker_module_starts_and_loads_models` failed once under
+full-suite memory pressure and passed in isolation, then passed in every
+subsequent full run. Not chased further, and not claimed to be diagnosed.
+
+### 22.4 The Telemetry Lab announced success it never had
+
+The inject button did nothing, and reported that it had worked.
+
+`TelemetryLabView` declared its prop `(trace: Trace) => void` and called it with
+a whole `Trace` object. The handler in `App.tsx` was
+`(scenario: string, query?: string)` and forwarded the first argument to
+`api.simulatePipeline`. The API answered 422, `"Input should be a valid
+string"`. `App.tsx` caught that into `console.warn`. The panel then rendered
+"Injected Trace tr-48213 into live stream".
+
+The fabricated Trace is the worse half. It carried a grounding score chosen by a
+switch statement -- `0.96`, `0.38`, `0.74`, `0.88` -- an evaluator named "Schema
+Groundedness" that does not exist, `Math.random()` for cost, tokens and
+duration, and a 1.2 second `setTimeout` so it looked like work. This project's
+own rule, inverted: a value nothing measured, displayed as though something had.
+
+Its four failure modes did not exist either. `schema_drift`,
+`low_confidence_ocr` and `tool_timeout` are not scenarios; `ingest.py` accepts
+`clean`, `hallucination`, `tool_mismatch`, `drift`. The "Target Agent Swarm"
+select had no effect at all -- the simulator's five agent ids are fixed.
+
+Rewritten so the server runs the scenario and the evaluator produces the scores.
+`handleRunScenario` deliberately does not catch: it runs because someone pressed
+a button, so a refusal has to reach them.
+
+**`tsc` did not catch the type mismatch, and the reason matters.**
+`dashboard/tsconfig.json` has no `strict` flag at all, so it defaults to false:
+`strictFunctionTypes`, `strictNullChecks` and `noImplicitAny` are all off.
+Passing a `(scenario: string, query?: string)` handler where a
+`(trace: Trace) => void` prop is expected is an error under
+`strictFunctionTypes` and silent without it.
+
+### 22.5 A passing build hid a view that could never render
+
+The APM tab was reachable from the dock, the command palette and an Overview
+card. It set the header to "Performance Metrics (APM)" and rendered nothing:
+`App.tsx` had no `'performance'` branch and `PerformanceView` was imported
+nowhere.
+
+It could not have been wired up. 1,110 lines of per-endpoint APM importing
+`../../data/mockPerformanceMetrics`, a module never committed -- there is no
+`src/data` directory at all. That was the **single error** `tsc --noEmit`
+reported, and `vite build` does not typecheck, which is why a passing build hid
+a view that could never have worked.
+
+Nor could it be wired to real data:
+
+```python
+COUNTERS.record_api_request(duration_ms=..., status_code=...)   # no path
+```
+
+`RequestMetricsMiddleware` records a duration and a status code and **does not
+record the path**, so no per-route figure exists anywhere in the system. Wiring
+the old view up meant shipping the mock.
+
+`/v1/platform` was already serving real numbers -- API latency percentiles,
+ingestion counters, queue-wait and evaluation timings, queue depth by status,
+reliability, worker roster. Rebuilt on those at about a seventh of the size.
+Missing values render as an em-dash. The footer repeats the backend's own
+warning that the counters are in-process and reset on restart, because a request
+total that silently restarted at zero would read as an outage.
+
+### 22.6 Google sign-in, and where the fault actually was
+
+Not in this repository. The Firebase project's authorized-domains list held only
+the `firebaseapp.com` and `web.app` defaults plus four AI Studio `run.app`
+origins. The deployed hostname was not on it, so Firebase refused the OAuth
+popup with `auth/unauthorized-domain` -- **before the window opens**, which is
+why the button looked like it did nothing.
+
+Diagnosed without touching an account, by reading the project's own config:
+
+```
+GET https://identitytoolkit.googleapis.com/v1/projects?key=<web api key>
+```
+
+The modal did surface errors, but only `popup-blocked` and
+`popup-closed-by-user` had written messages; everything else fell through to
+`err.message`, so a project misconfiguration reached the visitor as a raw SDK
+sentence about a console they may not be able to open. `authErrorMessage()` now
+names the failures that retrying will never fix, and for `unauthorized-domain`
+puts the current hostname in the message so the domain to add is right there.
+
+The user added the domain. Verified three ways: the config now lists it;
+replicating the SDK's own hostname check from the live page returns
+`allowed: true`; and clicking the button produces `auth/popup-blocked`, **not**
+`auth/unauthorized-domain` -- Firebase got as far as attempting the popup, which
+it would not have done if the domain were still refused.
+
+`localhost` is still absent, which Firebase normally adds by default. Only
+matters for local `npm run dev` sign-in.
+
+### 22.7 Nothing in this project calls an LLM
+
+Asked directly -- which multi-agent pipeline produces the demo results -- and
+the honest answer is worth recording plainly, because it will be asked again:
+
+- `POST /v1/simulate` writes five spans whose outputs are **string literals** in
+  `backend/app/routers/ingest.py`. The scenario flag picks between two versions.
+- `demo/research_assistant.py` is a five-node LangGraph pipeline with no
+  `openai` or `anthropic` import anywhere in it.
+- `instrument_llm()` is tested against stub clients; the SDKs are not test
+  dependencies.
+
+Everything downstream of the text is real: MiniLM and DeBERTa run on CPU on
+whatever strings they are handed, the queue leases and retries, the alert rules
+fire off measured scores, the drift maths runs on real embeddings, and the F1
+0.963 benchmark is real inference over a real held-out split.
+
+The framing that holds up: **the agent outputs are fixtures, the judgement is
+real.** AgentPulse is the observability layer, not the agent.
+
+### 22.8 The deck, and a demo script written by running it
+
+The architecture slide was ASCII art in a monospace box; it is now drawn with
+shapes. A new slide walks one real call end to end -- Paris in, Berlin out, the
+premise/hypothesis pair, 0.9999, two alerts.
+
+Corrections made while there:
+
+- "Nine views" was wrong and omitted `settings`. Ten render.
+- Test count 237 -> 260.
+- An open question about the Windows crash-recovery flake was **already answered
+  in 19.6** of this very document. The deck was asking something its own
+  documentation had settled.
+- Later, "typecheck: 1 error, in dead code" -> clean, once 22.5 landed.
+
+`table()` gained `rowH`. Without it the file carries no row height and PowerPoint
+sizes rows itself, so a table's extent is unknown until someone opens it.
+
+**Rendering the slides to images caught what reading the code did not:** arrow
+labels printing on top of the boxes. `python-pptx` plus PIL is enough.
+
+`DEMO.md` is eight to ten minutes, and was written by running it -- the
+`tool_mismatch` scenario fired against the deployed instance and
+`TOOL_CLAIM_MISMATCH` appeared 25 seconds later with `mismatch_rate=1.0`. That
+rehearsal is what exposed 22.4.
+
+### 22.9 The stale worktree, and what was inside it
+
+`.claude/worktrees/check-f88a0c` was 76 commits behind main and held uncommitted
+work from 2026-08-29: a trace-workspace UI, roughly 70 kB across
+`views/TraceWorkspace.tsx`, seven files in `components/trace/`, `lib/trace.ts`,
+and modified `App.tsx` and `index.css`.
+
+It was also serving a dev server. `preview_start` resolved `launch.json` from
+the session's original launch directory rather than the entered worktree, so the
+"dashboard" under test was that stale checkout -- Vite 5.4.21, title "AgentPulse
+Dashboard", no `dashboard/public` at all. A favicon check ran against the wrong
+build and reported 404s that meant nothing.
+
+Asked to delete it. Committed and pushed the work first, as
+`claude/check-f88a0c` at `b8531b8`, because it existed on no branch and nowhere
+else. **Check what a worktree holds before removing it** -- `git worktree
+remove` would have taken it with no warning.
+
+### 22.10 Standing facts
+
+New:
+
+- **Four times now, shipped code has described capabilities that do not exist.**
+  21.10 predicted the fourth and it was already live. Expect a fifth.
+- **`vite build` does not typecheck.** A green build says nothing about whether
+  a view can render. Run `npm run lint` separately; it is the only thing that
+  found a 1,110-line file that never compiled.
+- **A component that invents its own numbers is the failure mode to look for.**
+  Two were found in one session -- `TelemetryLabView`'s grounding scores and
+  `PerformanceView`'s per-endpoint APM -- and both looked like working features.
+- **Test counts can be quietly wrong.** A stale editable install removed two
+  files from collection without failing anything. Check `--collect-only` totals
+  against the number you expect before quoting one.
+- **Verify a fix by making it fail.** The Lab was confirmed by running it
+  normally *and* by patching `fetch` to return 500 and watching the error reach
+  the UI. The success path alone would not have shown that the old code
+  swallowed refusals.
+- **The dashboard has 33 components and 32 tests, all on `adapters.ts` and
+  `api.ts`.** No component has one. Corrects "19 new components" in 21.10, which
+  was a remembered figure; counting the files gave 33.
+- **"Typecheck clean" means less than it sounds.** `dashboard/tsconfig.json`
+  sets no `strict` flag, so `strictNullChecks`, `noImplicitAny` and
+  `strictFunctionTypes` are all off. That last one is why the Lab's
+  `Trace`-for-`string` mismatch compiled. The deck now cites a clean typecheck
+  as evidence; it is evidence of less than a reader would assume, and turning
+  `strict` on is unexamined work with an unknown error count behind it.
+- **`favicon.ico` now returns 200**, superseding the 21.10 entry.
+
+Left deliberately unfixed, both in `dashboard/src/index.css`, both confirmed
+with the user: the `max-height` transition at the line-clamp expansion (the real
+fix is structural, not CSS) and `.chalk-canvas-grid`, which is the Chalk theme's
+graph-paper surface. Ignores are persisted in `.impeccable/config.json`.
+
+---
