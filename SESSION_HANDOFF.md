@@ -1607,7 +1607,7 @@ Unchanged and still true, plus:
 
 ## 21. The AI Studio frontend, and the credential it was inventing (2026-09-17)
 
-PRs #24 and #25. A separate repository, `Soum-Code/frontend`, had been taking
+PRs #24, #25, #27 and #28. A separate repository, `Soum-Code/frontend`, had been taking
 frontend work through AI Studio -- 46 files and ~11k lines of it. Bringing that
 in turned into two jobs: keeping the components while dropping what they
 fabricated, and then building the feature one of them had been pretending to
@@ -1757,7 +1757,89 @@ applying by hand, and the version table reconciling first. That is now two
 unrelated Alembic hazards standing at once -- this one, and the local
 `alembic_version` that reads `8d86fee0d663` while the schema is further ahead.
 
-### 21.7 Standing facts
+### 21.7 The console went black on real data
+
+PR #27. Opening the workspace after the merge showed nothing at all. One line:
+
+```tsx
+{agent.driftStatus.toUpperCase()}
+```
+
+`driftStatus` is undefined until an agent has 32 evaluated spans, because the
+adapter leaves it absent rather than guessing `'normal'` (see 4.4 and the rule in
+21.3). `OverviewView` was written against mock telemetry where the field is
+always set, so the first real agent threw and React unmounted the tree.
+
+The same collision sat in five more places, each reachable by clicking
+something: agent search read `framework` and `model`, the agent detail printed
+`version` and `costPerHour.toFixed()` and mapped over `tools`, a trace card
+called `toFixed` on `cost` and `toLocaleString` on `totalTokens`, and trace
+search read `tags`. None of those fields has a source in the span schema.
+
+**Guarding alone would have been the wrong fix.** A careless default turns
+`$undefined/hr` into `$0.00/hr`, and an empty tools array reads as "this agent
+calls no tools" -- both claim a measurement that was never taken. The absent ones
+render an em dash, and the tool roster says what it is: tool names are attached
+to spans, not to agents.
+
+Worth noting how it was found. The bug was invisible from the outside -- the
+landing page rendered perfectly, and only the console crashed. It took loading
+the deployed site in a browser and reading the console error, which is the check
+that had been skipped when the merge was verified by grepping the bundle.
+
+### 21.8 An entire architecture section that was never built
+
+PR #28, and the more instructive half of it.
+
+The previous merge brought in a section titled "Enterprise Pipeline
+Specification" and shipped it live. It described the system as:
+
+| Claimed | Actual |
+| :--- | :--- |
+| DuckDB WAL / Redpanda | SQLite |
+| ClickHouse / Parquet | SQLite |
+| FastAPI / Envoy | FastAPI |
+| INT8-quantized ONNX | not quantized |
+| Python / TS SDK | Python only |
+| Sliding 256-token windows, 32k+ contexts | 512-token hard limit, documented in 20.2 |
+| GitHub Action PR gate | `.github/workflows` does not exist |
+| "Auto-redacts credit cards" | emails, phones, SSNs, secrets -- no card pattern |
+| Baseline cluster of "5,000 runs" | a schematic |
+
+This is the third audit's proposal from 20.3 -- the one whose contents were
+checked and found not to exist -- rendered as though it had shipped.
+
+**The failure was in the checking, not the merging.** The incoming code was
+verified by grepping for a list of known-bad strings: `UMAP`, `OTel`,
+`pip install agentpulse`, `LlamaIndex`. Those were found and removed. A list of
+known-bad strings cannot find a new section that invents different ones, and
+nothing in that method would ever have surfaced "DuckDB".
+
+The diagram now describes the three processes that exist, which is worth showing
+on its own: an SDK that cannot block the agent, an API that queues and evaluates
+nothing, a durable SQLite queue with a 120-second lease, two small CPU models
+with their 512-token window stated, and single-node storage said plainly rather
+than described as a cluster.
+
+The settings panel got the same treatment: it now says dataset curation exists
+and the CI gate does not.
+
+### 21.9 The chalk UI, and how it was taken
+
+The second push from `Soum-Code/frontend` -- a chalk-tactile annotation layer,
+surface picker, pointer-proximity dust motes and the audio behind them.
+
+Applied as the **incoming diff** rather than a wholesale copy, which the first
+merge was. That mattered immediately: `types.ts` arrived with its required
+fields again, and a wholesale copy would have reintroduced the crash from 21.7
+within minutes of fixing it. The crash guards and claim corrections already in
+the repository survived because they were never overwritten.
+
+`git apply --exclude` matches the path *before* `--directory` is applied, which
+is not obvious and silently applied nothing the first two attempts -- the patch
+is atomic, so one excluded-but-still-matched file rejects the whole thing.
+
+### 21.10 Standing facts
 
 New:
 
@@ -1773,7 +1855,18 @@ New:
   project's spans. Nothing writes there yet, so nothing is exposed today.
 - **Two repositories now hold a frontend.** `agentpulse/dashboard` is the
   deployed one; `Soum-Code/frontend` is where AI Studio writes. Nothing keeps
-  them in step, and this merge was manual.
+  them in step, and both merges were manual. Three times now, incoming code has
+  described capabilities that do not exist; expect a fourth.
+- **Take the incoming diff, never a wholesale copy.** A copy silently reverts
+  every correction already made here -- `types.ts` alone would reintroduce a
+  console crash. Note that `git apply --exclude` matches the path before
+  `--directory`, and the patch is atomic, so a mis-specified exclude applies
+  nothing at all.
+- **Grep the bundle *and* load the page.** Grepping for known-bad strings missed
+  an entire fabricated section, and only opening the deployed console in a
+  browser found the crash. Neither check substitutes for the other.
+- **`favicon.ico` returns 404.** Harmless, and newly visible because the SPA
+  catch-all was fixed to stop answering 200 for missing files.
 
 Still true from 20.5, and now partly addressed: `pip install agentpulse` still
 fetches an unrelated package, and dashboard tests still cover `lib/` only --
