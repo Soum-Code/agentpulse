@@ -39,7 +39,16 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
 
   // Aggregate KPIs
   const totalTraces = agents.reduce((acc, a) => acc + a.totalTraces24h, 0);
-  const avgLatency = Math.round(agents.reduce((acc, a) => acc + a.latencyAvgMs, 0) / agents.length);
+  // latencyAvgMs is optional -- adapters.ts leaves it undefined when the backend
+  // reported none. Summing it directly made one such agent turn the whole
+  // average into NaN, which is what the card was displaying. strictNullChecks is
+  // off in this tsconfig, so the compiler had nothing to say about it.
+  const latencies = agents
+    .map((a) => a.latencyAvgMs)
+    .filter((v): v is number => v != null && Number.isFinite(v));
+  const avgLatency = latencies.length
+    ? Math.round(latencies.reduce((acc, v) => acc + v, 0) / latencies.length)
+    : null;
   const criticalIncidents = incidents.filter(i => i.severity === 'critical').length;
   const driftingAgents = agents.filter(a => a.driftStatus !== 'normal').length;
 
@@ -123,12 +132,19 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
             </div>
           </div>
           <div className="text-3xl sm:text-4xl font-mono tabular-nums font-medium text-white tracking-tight leading-none drop-shadow-xs liquid-card-metric">
-            {avgLatency} <span className="text-base text-neutral-400 font-normal">ms</span>
+            {avgLatency ?? '—'} <span className="text-base text-neutral-400 font-normal">ms</span>
           </div>
+          {/* p95 and p99 used to be printed here as 1,840ms and 2,840ms. Neither
+              was measured: /v1/agents reports a mean per agent and no
+              percentiles. The Performance tab has real ones, from /v1/platform. */}
           <div className="text-[11px] font-mono tabular-nums text-neutral-300 mt-3.5 flex items-center space-x-2 pt-2.5 border-t border-white/[0.08]">
-            <span className="text-neutral-400 font-sans liquid-card-label">p95: <span className="text-neutral-200 font-mono tabular-nums font-medium">1,840ms</span></span>
-            <span className="text-neutral-600">·</span>
-            <span className="text-neutral-400 font-sans liquid-card-label">p99: <span className="text-neutral-200 font-mono tabular-nums font-medium">2,840ms</span></span>
+            <span className="text-neutral-400 font-sans liquid-card-label">
+              mean across{' '}
+              <span className="text-neutral-200 font-mono tabular-nums font-medium">
+                {latencies.length}
+              </span>{' '}
+              {latencies.length === 1 ? 'agent' : 'agents'} reporting one
+            </span>
           </div>
         </div>
 
@@ -189,7 +205,14 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
         </div>
       </div>
 
-      {/* APM Performance Metrics Spotlight Bar (Datadog Live Telemetry) */}
+      {/* Link through to the Performance tab.
+          This used to be headed "Datadog APM Golden Signals" over 1,245 rps,
+          p95 1,120ms, Apdex 0.94 and "error rates (1.42%) across 8 critical
+          gateways". Datadog is not used here, and none of those numbers was
+          measured -- the request middleware records a duration and a status
+          code, not a path, so there is no per-endpoint or per-gateway figure in
+          the system at all. The Performance tab shows what /v1/platform really
+          reports, so this just points at it. */}
       <div className="ios-liquid-card border-glow-subtle rounded-2xl p-4 sm:p-5 relative overflow-hidden bg-gradient-to-r from-neutral-900/90 via-neutral-900/60 to-emerald-950/20 anime-tab-card">
         <div className="absolute inset-x-0 top-0 h-[1.5px] apple-liquid-specular pointer-events-none" />
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -200,38 +223,23 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
             <div>
               <div className="flex items-center space-x-2">
                 <h4 className="text-sm font-sans font-semibold text-white">
-                  Datadog APM Golden Signals
+                  Instance performance
                 </h4>
                 <span className="flex h-2 w-2 relative">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
                 </span>
                 <span className="text-[10px] font-mono text-emerald-300 uppercase tracking-wider">
-                  Live Endpoints
+                  /v1/platform
                 </span>
               </div>
               <p className="text-xs font-sans text-neutral-400 mt-0.5">
-                Real-time endpoint response times, error rates (1.42%), and cluster throughput across 8 critical gateways.
+                API latency percentiles, ingestion counters, queue-wait and evaluation timings, and the worker roster — instance-wide, polled every 10 seconds.
               </p>
             </div>
           </div>
 
           <div className="flex items-center space-x-4 self-start md:self-center shrink-0">
-            <div className="hidden lg:flex items-center space-x-4 text-xs font-mono border-r border-white/[0.1] pr-4">
-              <div>
-                <span className="text-[10px] text-neutral-400 block uppercase">Throughput</span>
-                <span className="text-white font-bold">1,245 rps</span>
-              </div>
-              <div>
-                <span className="text-[10px] text-neutral-400 block uppercase">p95 Latency</span>
-                <span className="text-emerald-400 font-bold">1,120ms</span>
-              </div>
-              <div>
-                <span className="text-[10px] text-neutral-400 block uppercase">Apdex</span>
-                <span className="text-cyan-300 font-bold">0.94 / 1.0</span>
-              </div>
-            </div>
-
             <button
               onClick={() => onNavigateTab('performance')}
               className="px-3.5 py-2 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/35 text-emerald-300 hover:text-emerald-200 text-xs font-mono font-medium transition-all flex items-center space-x-2 shadow-xs cursor-pointer group"
