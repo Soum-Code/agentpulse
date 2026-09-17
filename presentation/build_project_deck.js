@@ -299,7 +299,7 @@ function arrow(s, x1, y1, x2, y2, label) {
 
 // ------------------------------------------------- 5b. Worked example
 {
-  const s = slide('One real call, end to end', 'How it works');
+  const s = slide('One span, all the way through', 'How it works');
   code(s,
 `prompt       Where is the Eiffel Tower?
              It stands in Paris, France.
@@ -339,8 +339,8 @@ HIGH_HALLUCINATION_RISK   HIGH`,
     { x: 7.35, y: 4.5, w: 5.26, h: 0.82, fontSize: 11 });
 
   callout(s,
-    'Total elapsed, under a second, and the agent never slowed down. No framework was in that path: the only '
-    + 'integration was instrument_llm() around an OpenAI client. This trace is real, not an illustration.',
+    'The span, the score and both alerts are real, reproducible, and took under a second. The completion is a '
+    + 'fixture: no model generates agent text anywhere in this project. Evaluating text does not require producing it.',
     { y: 5.62, h: 0.95 });
 }
 
@@ -576,7 +576,7 @@ after 14 shifted spans
     ['Python + SDK test suite', '260 passed'],
     ['Dashboard test suite', '32 passed'],
     ['Dashboard build', 'passes'],
-    ['Dashboard typecheck', 'clean'],
+    ['Dashboard typecheck', 'clean, strict off'],
     ['Grounding F1 (v1.0_test)', '0.963'],
     ['Evaluator latency (ablation)', '215.9 ms'],
   ], { colW: [3.6, 2.4], w: 6.0, fontSize: 12.5, rowH: 0.3 });
@@ -610,7 +610,9 @@ after 14 shifted spans
       'SQLite with WAL. Suited to self-hosted single-instance use, not multi-writer deployment.'],
     ['Grounding misreads rounded numbers',
       '"7.61 billion" against "approximately 7.6 billion" scores 0.922 risk. Reproducible, and deliberately unpatched: fixing from one observed case is fitting to one data point.'],
-  ], { colW: [3.5, 8.39], fontSize: 11.5 });
+    ['No model in the loop yet',
+      'Agent text in the simulator and demo pipeline is a fixture, not model output. Everything downstream of it is real; the system has not been measured against live traffic.'],
+  ], { colW: [3.5, 8.39], fontSize: 11 });
 }
 
 // ---------------------------------------------------------------- 17. Next
@@ -619,7 +621,7 @@ after 14 shifted spans
   bullets(s, [
     'Expand the benchmark past 30 cases and re-run the ablation before making any generalisation claim.',
     'Publish the SDK to an installable package; the name agentpulse on PyPI belongs to an unrelated project.',
-    'Extend dashboard tests from the mapping layer to the components. The 32 tests cover adapters.ts and api.ts; none of the 33 components has one.',
+    'Extend dashboard tests from the mapping layer to the components: the 32 tests cover adapters.ts and api.ts, and none of the 33 components has one. Turn on TypeScript strict mode with it - it is off, which is how a prop type mismatch shipped.',
     'Consolidate the console: it lives in two repositories with nothing keeping them in step, which is how unbuilt features have reached the landing page more than once.',
     'Decide the gated cascade on measurement: it would cut latency and change every calibrated figure, so it is an experiment, not an edit.',
   ], { y: 1.75, h: 3.6, fontSize: 15 });
