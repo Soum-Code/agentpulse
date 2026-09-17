@@ -142,7 +142,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         <div className="mt-4 pt-4 border-t border-white/[0.08] space-y-3">
           <div className="flex items-center justify-between">
             <span className="text-xs font-mono font-bold text-neutral-300 uppercase tracking-wider">
-              Enterprise Pipeline Hardening Specification (Datadog &amp; MLflow Grade)
+              Pipeline
             </span>
             <span className="text-[10px] font-mono text-emerald-400 px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/30">
               Target Architecture

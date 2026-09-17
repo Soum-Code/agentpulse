@@ -40,60 +40,6 @@ export type ProductTab =
   | 'telemetry-lab'
   | 'settings';
 
-export interface ApiEndpointMetrics {
-  id: string;
-  path: string;
-  method: 'GET' | 'POST' | 'PUT' | 'DELETE';
-  service: string;
-  description: string;
-  latencyP50Ms: number;
-  latencyP90Ms: number;
-  latencyP95Ms: number;
-  latencyP99Ms: number;
-  avgLatencyMs: number;
-  minLatencyMs: number;
-  maxLatencyMs: number;
-  errorRate: number; // percentage (0 - 100)
-  throughputRps: number; // requests per sec
-  rpm: number; // requests per minute
-  totalRequests24h: number;
-  statusCodes: {
-    code2xx: number;
-    code3xx: number;
-    code4xx: number;
-    code5xx: number;
-  };
-  apdexScore: number; // 0.00 to 1.00
-  status: 'healthy' | 'degraded' | 'critical';
-  latencyBreakdown: {
-    inferenceMs: number;
-    dbMs: number;
-    toolsMs: number;
-    networkMs: number;
-  };
-  sparkline: number[]; // 10-15 recent latency points for micro-visualizer
-  recentTimeseries: {
-    timestamp: string;
-    rps: number;
-    latencyAvg: number;
-    p95: number;
-    p99: number;
-    errorRate: number;
-    status2xx: number;
-    status4xx: number;
-    status5xx: number;
-  }[];
-  topErrors: {
-    status: number;
-    message: string;
-    count: number;
-    lastSeen: string;
-    sampleTraceId?: string;
-  }[];
-  upstreamCallers: string[];
-  downstreamDependencies: string[];
-}
-
 export type AgentStatus = 'idle' | 'running' | 'warning' | 'critical';
 
 export interface LatencyDataPoint {
