@@ -28,6 +28,36 @@ interface AuthModalProps {
   onAuthSuccess?: (user: FirebaseUser) => void;
 }
 
+/** Turns a Firebase auth error into something the reader can act on.
+ *
+ * Falling back to err.message means a project misconfiguration is reported to
+ * whoever is trying to log in as a raw SDK string. The cases below are the ones
+ * that are not the visitor's fault and that retrying will never fix, because
+ * they need a setting changed in the Firebase console.
+ *
+ * auth/unauthorized-domain is the reason to have this at all: Firebase refuses
+ * an OAuth popup from an origin that is not on the project's authorized-domains
+ * list, and it refuses before the window opens, so from the outside the button
+ * simply appears to do nothing.
+ */
+function authErrorMessage(err: any, fallback: string): string {
+  switch (err?.code) {
+    case 'auth/unauthorized-domain':
+      return `Google sign-in is blocked because this site's domain (${window.location.hostname}) is not on the Firebase project's authorized-domains list. Add it under Authentication -> Settings -> Authorized domains. Email and Guest sign-in are not affected, because only OAuth checks that list.`;
+    case 'auth/operation-not-allowed':
+      return 'That sign-in method is turned off for this Firebase project. Enable it under Authentication -> Sign-in method.';
+    case 'auth/admin-restricted-operation':
+      return 'Anonymous sign-in is turned off for this Firebase project. Enable it under Authentication -> Sign-in method, or sign in with Google or email instead.';
+    case 'auth/popup-blocked':
+    case 'auth/popup-closed-by-user':
+      return 'The sign-in window was closed or blocked. You can also sign in with email or continue as a guest.';
+    case 'auth/network-request-failed':
+      return 'Could not reach Firebase. Check the network connection and try again.';
+    default:
+      return err?.message || fallback;
+  }
+}
+
 export const AuthModal: React.FC<AuthModalProps> = ({
   isOpen,
   onClose,
@@ -52,12 +82,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       onClose();
     } catch (err: any) {
       console.error('Google sign-in error:', err);
-      // If popup was blocked or cookies disabled, offer guest or email
-      setErrorMessage(
-        err.code === 'auth/popup-blocked' || err.code === 'auth/popup-closed-by-user'
-          ? 'Sign-in window was closed or blocked. You can also sign in with email or continue as Guest.'
-          : err.message || 'Failed to authenticate with Google.'
-      );
+      setErrorMessage(authErrorMessage(err, 'Failed to authenticate with Google.'));
     } finally {
       setLoading(false);
     }
@@ -72,7 +97,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       onClose();
     } catch (err: any) {
       console.error('Guest sign-in error:', err);
-      setErrorMessage(err.message || 'Could not start guest session.');
+      setErrorMessage(authErrorMessage(err, 'Could not start guest session.'));
     } finally {
       setLoading(false);
     }
@@ -104,7 +129,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       } else if (err.code === 'auth/weak-password') {
         setErrorMessage('Password must be at least 6 characters.');
       } else {
-        setErrorMessage(err.message || 'Authentication failed.');
+        setErrorMessage(authErrorMessage(err, 'Authentication failed.'));
       }
     } finally {
       setLoading(false);
