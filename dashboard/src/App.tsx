@@ -28,6 +28,7 @@ import { ExperimentsView } from './components/product/ExperimentsView';
 import { DatasetsView } from './components/product/DatasetsView';
 import { ReplayView } from './components/product/ReplayView';
 import { TelemetryLabView } from './components/product/TelemetryLabView';
+import { PerformanceView } from './components/product/PerformanceView';
 import { SettingsView } from './components/product/SettingsView';
 import { ShortcutsHelpModal } from './components/product/ShortcutsHelpModal';
 import { ActiveContextPanel } from './components/product/ActiveContextPanel';
@@ -469,6 +470,10 @@ export default function App() {
 
             {productTab === 'telemetry-lab' && (
               <TelemetryLabView onRunScenario={handleRunScenario} />
+            )}
+
+            {productTab === 'performance' && (
+              <PerformanceView />
             )}
 
             {productTab === 'settings' && (
