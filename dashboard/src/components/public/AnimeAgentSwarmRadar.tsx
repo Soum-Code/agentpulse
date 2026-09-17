@@ -164,7 +164,7 @@ export const AnimeAgentSwarmRadar: React.FC<AnimeAgentSwarmRadarProps> = ({
               <span className={`text-xs font-mono font-bold tracking-tight ${
                 palette === 'butter' ? 'text-neutral-950' : palette === 'chalk' ? 'text-neutral-900' : 'text-neutral-100'
               }`}>
-                stream.agentpulse.internal
+                POST /v1/ingest
               </span>
               <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded font-bold ${
                 palette === 'butter'
@@ -173,13 +173,13 @@ export const AnimeAgentSwarmRadar: React.FC<AnimeAgentSwarmRadarProps> = ({
                   ? 'bg-neutral-100 text-neutral-600 border border-neutral-200/70'
                   : 'bg-white/[0.06] text-neutral-400 border border-white/5'
               }`}>
-                gRPC · v2
+                HTTP · aiohttp
               </span>
             </div>
             <p className={`text-[10px] font-mono mt-0.5 font-medium ${
               palette === 'butter' ? 'text-neutral-800' : palette === 'chalk' ? 'text-neutral-500' : 'text-neutral-400'
             }`}>
-              Zero-Copy Ring Buffer (128MB)
+              Batched in memory · 10,000 spans, drop-oldest
             </p>
           </div>
         </div>
@@ -196,7 +196,10 @@ export const AnimeAgentSwarmRadar: React.FC<AnimeAgentSwarmRadarProps> = ({
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-60" />
               <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
             </span>
-            <span>LIVE INGESTION</span>
+            {/* This card takes no data props. Everything in it is drawn, so it
+                says so: it illustrates the ingest path, it does not report on
+                one. The live console is a click away and shows real figures. */}
+            <span>ILLUSTRATION</span>
           </div>
 
           {/* Clear / Wipe Clean Icon Button */}
@@ -299,7 +302,7 @@ export const AnimeAgentSwarmRadar: React.FC<AnimeAgentSwarmRadarProps> = ({
             <span className={`absolute bottom-0 text-[10px] font-mono tracking-wider font-bold ${
               palette === 'butter' ? 'text-neutral-800' : palette === 'chalk' ? 'text-neutral-600' : 'text-neutral-400'
             }`}>
-              OTEL RING BUFFER
+              SPAN BUFFER
             </span>
           </div>
 
@@ -316,12 +319,15 @@ export const AnimeAgentSwarmRadar: React.FC<AnimeAgentSwarmRadarProps> = ({
                 palette === 'butter' ? 'text-neutral-800' : palette === 'chalk' ? 'text-neutral-600' : 'text-neutral-400'
               }`}>
                 <Server className={`w-3.5 h-3.5 mr-1.5 ${palette === 'butter' ? 'text-neutral-950' : palette === 'chalk' ? 'text-sky-600' : 'text-cyan-300'}`} />
-                Live Ingest Rate:
+                Spans evaluated:
               </span>
               <span className={`font-bold ${
                 palette === 'butter' ? 'text-neutral-950' : palette === 'chalk' ? 'text-emerald-700' : 'text-emerald-300'
               }`}>
-                <AnimeInteractiveCounter targetValue={14280} duration={1600} suffix=" spans/s" />
+                {/* Was 14,280 spans/s, a throughput nothing has measured. Every
+                    span is evaluated and none is sampled, which is true and is
+                    the actual claim. */}
+                <AnimeInteractiveCounter targetValue={100} duration={1600} suffix="% · never sampled" />
               </span>
             </div>
 
@@ -341,7 +347,9 @@ export const AnimeAgentSwarmRadar: React.FC<AnimeAgentSwarmRadarProps> = ({
               <span className={`font-bold ${
                 palette === 'butter' ? 'text-amber-950' : palette === 'chalk' ? 'text-amber-800' : 'text-amber-300'
               }`}>
-                <AnimeInteractiveCounter targetValue={54.2} decimals={1} duration={1200} suffix=" ms" />
+                {/* Was 54.2 ms, which also contradicted the deck. Measured:
+                    27.8 MiniLM + 188.1 DeBERTa, both on every span. */}
+                <AnimeInteractiveCounter targetValue={215.9} decimals={1} duration={1200} suffix=" ms" />
               </span>
             </div>
 
@@ -356,12 +364,15 @@ export const AnimeAgentSwarmRadar: React.FC<AnimeAgentSwarmRadarProps> = ({
                 palette === 'butter' ? 'text-neutral-800' : palette === 'chalk' ? 'text-neutral-600' : 'text-neutral-400'
               }`}>
                 <ShieldCheck className={`w-3.5 h-3.5 mr-1.5 ${palette === 'butter' ? 'text-emerald-800' : palette === 'chalk' ? 'text-emerald-600' : 'text-emerald-400'}`} />
-                Grounding Agreement:
+                Grounding F1:
               </span>
               <span className={`font-bold ${
                 palette === 'butter' ? 'text-emerald-950' : palette === 'chalk' ? 'text-emerald-700' : 'text-emerald-400'
               }`}>
-                <AnimeInteractiveCounter targetValue={99.98} decimals={2} duration={1400} suffix="%" />
+                {/* Was 99.98%, a figure with no measurement behind it. The
+                    measured number is F1 0.963 on the v1.0_test split, 30
+                    held-out cases. */}
+                <AnimeInteractiveCounter targetValue={0.963} decimals={3} duration={1400} suffix=" · v1.0_test" />
               </span>
             </div>
           </div>
@@ -447,11 +458,14 @@ export const AnimeAgentSwarmRadar: React.FC<AnimeAgentSwarmRadarProps> = ({
           <div>
             <span className={`text-[10px] block uppercase font-bold ${
               palette === 'butter' ? 'text-neutral-800' : palette === 'chalk' ? 'text-neutral-500' : 'text-neutral-400'
-            }`}>Autonomous Swarms</span>
+            }`}>Evaluated per span</span>
             <span className={`font-bold ${
               palette === 'butter' ? 'text-neutral-950' : palette === 'chalk' ? 'text-amber-800' : 'text-amber-300'
             }`}>
-              <AnimeInteractiveCounter targetValue={16} duration={900} suffix=" Swarms Active" />
+              {/* Was a counter animating to 16 "Swarms Active" -- a number
+                  nothing measured, on a card with no data source. 215.9 ms is
+                  the measured evaluator latency: 27.8 MiniLM + 188.1 DeBERTa. */}
+              215.9 ms
             </span>
           </div>
           <div>
