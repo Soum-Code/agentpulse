@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { animate, createTimeline, stagger } from 'animejs';
 import { Activity, ShieldCheck, AlertTriangle, Zap, Server, Database, Cpu, Eraser } from 'lucide-react';
 import { AnimeInteractiveCounter } from './AnimeInteractiveCounter';
+import { ChalkTactileAnnotation, PresetAnnotation } from './ChalkTactileAnnotation';
 
 interface AnimeAgentSwarmRadarProps {
   palette: 'butter' | 'dark' | 'chalk';
@@ -129,7 +130,17 @@ export const AnimeAgentSwarmRadar: React.FC<AnimeAgentSwarmRadarProps> = ({
     >
       {/* Specular Top Bevel */}
       {palette === 'chalk' ? (
-        <div className="absolute inset-x-0 top-0 h-[1.5px] chalk-specular pointer-events-none rounded-t-[1.35rem]" />
+        <>
+          <div className="absolute inset-x-0 top-0 h-[1.5px] chalk-specular pointer-events-none rounded-t-[1.35rem]" />
+          <ChalkTactileAnnotation
+            cardId="radar-swarm"
+            presets={[
+              { id: 'radar-hl', type: 'highlight', x: 3, y: 3, width: 32, color: '#facc15' },
+              { id: 'radar-circle', type: 'circle', x: 26, y: 46, width: 38, height: 32, color: '#38bdf8', rotation: -2 },
+              { id: 'radar-note', type: 'note', text: '★ Live Swarm Topology', x: 14, y: 84, rotation: -2.5, color: '#0284c7' },
+            ]}
+          />
+        </>
       ) : (
         <div className="absolute inset-x-0 top-0 h-[1.5px] apple-liquid-specular pointer-events-none rounded-t-[1.35rem]" />
       )}

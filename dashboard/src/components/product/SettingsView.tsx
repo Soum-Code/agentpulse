@@ -151,23 +151,29 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 font-mono text-[11px]">
             <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.06] space-y-1">
               <span className="text-neutral-400 text-[10px] uppercase block">Ingress &amp; Queue</span>
-              <span className="text-white font-semibold block">FastAPI 202 + DuckDB WAL</span>
+              <span className="text-white font-semibold block">FastAPI 202 + SQLite WAL</span>
               <p className="text-[10px] text-neutral-400 font-sans">
-                Stateless non-blocking HTTP/2 ingress gateway with durable append-only streaming queue, upgrading from single SQLite write lock.
+                The API writes the span, queues an evaluation job and returns; a separate
+                worker leases the job for 120 seconds. SQLite&rsquo;s single writer is the
+                known ceiling here, not something already replaced.
               </p>
             </div>
             <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.06] space-y-1">
               <span className="text-neutral-400 text-[10px] uppercase block">Evaluation Engine</span>
-              <span className="text-white font-semibold block">Chunked Max-Contradiction</span>
+              <span className="text-white font-semibold block">DeBERTa-v3 NLI on CPU</span>
               <p className="text-[10px] text-neutral-400 font-sans">
-                Sliding 256-token premise windows evaluated via INT8 ONNX DeBERTa-v3 to support 32k+ token contexts on CPU in under 120ms.
+                Premise against hypothesis through ONNX Runtime, 215.9&thinsp;ms for the
+                shipped configuration. The model reads at most 512 tokens; a longer
+                premise is reported as truncated rather than scored silently.
               </p>
             </div>
             <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.06] space-y-1">
-              <span className="text-neutral-400 text-[10px] uppercase block">CI/CD Regression Shield</span>
-              <span className="text-white font-semibold block">GitHub Action PR Gate</span>
+              <span className="text-neutral-400 text-[10px] uppercase block">Evaluation Datasets</span>
+              <span className="text-white font-semibold block">Curate from a live trace</span>
               <p className="text-[10px] text-neutral-400 font-sans">
-                Deterministic PR verification step blocking deployments if contradiction score exceeds 0.15 on golden benchmark datasets.
+                A failing span can be saved into a versioned dataset from the incident
+                view. Running those as a gate in CI is not built &mdash; there is no
+                workflow in this repository yet.
               </p>
             </div>
           </div>

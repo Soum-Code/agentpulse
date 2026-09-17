@@ -243,7 +243,7 @@ export const LiveTailStream: React.FC<LiveTailProps> = ({ palette }) => {
           <span className={`w-2 h-2 rounded-full animate-pulse ${palette === 'chalk' ? 'bg-emerald-600' : 'bg-emerald-400'}`} />
           <span>Ingress Gateway: 202 Accepted in &lt; 2.8ms · Memory footprint 84MB</span>
         </div>
-        <span>Evaluation Engine: ONNX CPU workers with Int8 quantization</span>
+        <span>Evaluator: MiniLM and DeBERTa-v3-small on CPU via ONNX Runtime</span>
       </div>
     </div>
   );

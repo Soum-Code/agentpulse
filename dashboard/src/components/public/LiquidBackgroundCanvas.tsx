@@ -1,13 +1,18 @@
 import React, { useEffect, useRef } from 'react';
 import * as THREE from 'three';
+import { ChalkSurfacePreset } from '../../types';
 
 interface LiquidBackgroundCanvasProps {
   palette: 'butter' | 'dark' | 'chalk';
+  chalkSurface?: ChalkSurfacePreset;
+  chalkCustomColor?: string;
   className?: string;
 }
 
 export const LiquidBackgroundCanvas: React.FC<LiquidBackgroundCanvasProps> = ({
   palette,
+  chalkSurface = 'classic-white',
+  chalkCustomColor = '#ffffff',
   className = '',
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -40,6 +45,46 @@ export const LiquidBackgroundCanvas: React.FC<LiquidBackgroundCanvasProps> = ({
           darkMix: 0.08,
         };
       } else if (pal === 'chalk') {
+        if (chalkSurface === 'sepia-slate') {
+          return {
+            baseColor: new THREE.Color(0xf5efe6), // Warm antique parchment
+            liquidColor1: new THREE.Color(0xebe2d3), // Gentle sepia linen wave
+            liquidColor2: new THREE.Color(0xdfd4c3), // Warm library stone shadow
+            highlightColor: new THREE.Color(0xfffdfa), // Luminous ivory highlight
+            causticColor: new THREE.Color(0xf6ede0), // Warm amber-sand refraction
+            contrast: 1.06,
+            darkMix: 0.18,
+          };
+        } else if (chalkSurface === 'emerald-graphite') {
+          return {
+            baseColor: new THREE.Color(0xeaf2ec), // Soft calming sage-emerald slate
+            liquidColor1: new THREE.Color(0xdcebe0), // Translucent seafoam silk wave
+            liquidColor2: new THREE.Color(0xc9dec7), // Gentle graphite-sage contour
+            highlightColor: new THREE.Color(0xfbfffb), // Clean chalk-white specular gleam
+            causticColor: new THREE.Color(0xd3e8dc), // Crystalline sage refraction
+            contrast: 1.05,
+            darkMix: 0.19,
+          };
+        } else if (chalkSurface === 'custom' && chalkCustomColor) {
+          try {
+            const base = new THREE.Color(chalkCustomColor);
+            const c1 = base.clone().offsetHSL(0.01, -0.05, -0.04);
+            const c2 = base.clone().offsetHSL(-0.02, -0.08, -0.08);
+            return {
+              baseColor: base,
+              liquidColor1: c1,
+              liquidColor2: c2,
+              highlightColor: new THREE.Color(0xffffff),
+              causticColor: base.clone().offsetHSL(0, 0, 0.05),
+              contrast: 1.06,
+              darkMix: 0.20,
+            };
+          } catch {
+            // fallback to alabaster
+          }
+        }
+
+        // Classic White default
         return {
           baseColor: new THREE.Color(0xfcfdfd), // Pure alabaster light studio base
           liquidColor1: new THREE.Color(0xeef2f6), // Soft pearlescent silk wave
@@ -415,7 +460,7 @@ export const LiquidBackgroundCanvas: React.FC<LiquidBackgroundCanvasProps> = ({
       material.dispose();
       plane.geometry.dispose();
     };
-  }, [palette]);
+  }, [palette, chalkSurface, chalkCustomColor]);
 
   return (
     <div
