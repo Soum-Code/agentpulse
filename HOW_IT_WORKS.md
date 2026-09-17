@@ -363,6 +363,8 @@ Ten pages, grouped by what you are trying to do.
 | **Agents** | `AgentsView.tsx` | Per-agent roster, risk, ASI |
 | **Experiments / Datasets** | `ExperimentsView.tsx`, `DatasetsView.tsx` | Curated cases and eval runs |
 | **Telemetry Lab** | `TelemetryLabView.tsx` | Fire a scenario and watch it land |
+| **Performance** | `PerformanceView.tsx` | What is this instance doing, operationally? Reads `/v1/platform`. Instance-wide only: the request middleware records a duration and a status code, not the path, so there is no per-endpoint breakdown to show. |
+| **Settings** | `SettingsView.tsx` | Connection, API keys |
 
 ### Reading the Overview
 
@@ -375,6 +377,8 @@ Ten pages, grouped by what you are trying to do.
 ### The one thing to demonstrate
 
 Telemetry Lab → run `tool_mismatch`. Watch a `TOOL_CLAIM_MISMATCH` appear in Incidents, open the span in Replay, and show the claimed count next to the actual tool result. That is the whole system in one loop: real ingest, real model inference, real alert — nothing seeded directly into the database.
+
+The agent text in that scenario is a fixture, written as string literals in `backend/app/routers/ingest.py`. No model generates agent text anywhere in this project. Everything downstream of the text is real, which is what the loop demonstrates: evaluating text does not require producing it.
 
 For drift, remember Section 4.4: you need 32 evaluated spans for that agent before `window_centroid_distance` exists.
 

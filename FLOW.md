@@ -65,9 +65,22 @@ That is it. No prompts, no API keys, no bills, no waiting three seconds per chec
 
 The split matters. Judging takes about 200 milliseconds and needs a gigabyte of memory. If that happened inside your agent's request, your agent would be 200 ms slower on every step. Instead the API says "got it" in a few milliseconds and the worker catches up in the background.
 
-## 4. Follow one real call all the way through
+## 4. Follow one span all the way through
 
-This actually ran. The numbers below are from a real trace, not an illustration.
+This actually ran, and the numbers below are from that run rather than made up
+for the example.
+
+One thing to be exact about, because it is easy to misread: **the answer below
+is a fixture, not something a model produced.** No model generates agent text
+anywhere in this project — not here, not in the simulator, not in the demo
+pipeline. A real model would not tell you the Eiffel Tower is in Berlin, which
+is the point: the wrong answer is chosen so the check has something definite to
+catch.
+
+Everything after that answer is real. The span was really recorded, really
+queued, really scored by DeBERTa, and really raised two alerts. What is being
+demonstrated is the evaluation, and evaluating text does not require producing
+it.
 
 ### Step 1 — your code
 
@@ -85,11 +98,11 @@ Your agent asks a question. The prompt includes a fact:
 
 > *Where is the Eiffel Tower? It stands in **Paris, France**.*
 
-The model answers:
+The answer that comes back:
 
 > *The Eiffel Tower is located in **Berlin, Germany**.*
 
-Your agent does not notice. Why would it — it got a fluent, confident, well-formed answer.
+Your agent does not notice. Why would it — it got a fluent, confident, well-formed answer, with a 200 status, on time. This is the whole problem in one line: nothing about the shape of that response is wrong.
 
 ### Step 3 — the SDK reports it
 
