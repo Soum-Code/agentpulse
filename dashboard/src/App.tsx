@@ -31,6 +31,8 @@ import { TelemetryLabView } from './components/product/TelemetryLabView';
 import { SettingsView } from './components/product/SettingsView';
 import { ShortcutsHelpModal } from './components/product/ShortcutsHelpModal';
 import { ActiveContextPanel } from './components/product/ActiveContextPanel';
+import { initLiquidCardSpringListener } from './utils/liquidHoverAnime';
+import { initChalkMoteProximityListener } from './utils/chalkMoteProximity';
 import { AuthModal } from './components/product/AuthModal';
 import { ProjectSelectorModal } from './components/product/ProjectSelectorModal';
 import { auth, onAuthStateChanged, subscribeToUserProjects } from './lib/firebase';
@@ -80,6 +82,18 @@ export default function App() {
   const [activeProject, setActiveProject] = useState<TelemetryProject | null>(null);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isProjectSelectorOpen, setIsProjectSelectorOpen] = useState(false);
+
+  // Pointer-driven card spring and chalk-dust dispersion. Both attach one
+  // document-level listener and return their own teardown; the components they
+  // drive arrived with the frontend merge.
+  useEffect(() => {
+    const cleanupLiquid = initLiquidCardSpringListener();
+    const cleanupChalkMotes = initChalkMoteProximityListener();
+    return () => {
+      cleanupLiquid();
+      cleanupChalkMotes();
+    };
+  }, []);
 
   useEffect(() => onAuthStateChanged(auth, setCurrentUser), []);
 
