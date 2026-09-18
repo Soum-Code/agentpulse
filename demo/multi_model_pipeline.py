@@ -150,7 +150,7 @@ AGENT_MODELS: dict[str, str] = {
 NVIDIA_AGENT_MODELS: dict[str, str] = {
     "researcher": "microsoft/phi-3.5-moe-instruct",
     "retriever": "deepseek-ai/deepseek-v4-flash-0731",
-    "verifier": "mistralai/mistral-7b-instruct-v0.3",
+    "verifier": "mistralai/mistral-large-2-instruct",
     "analyst": "z-ai/glm-5.3",
     "writer": "moonshotai/kimi-k2.6",
 }
