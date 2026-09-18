@@ -94,10 +94,11 @@ PROVIDERS = {
 # distinct families here is the main thing protecting this experiment from
 # measuring one model's manners.
 #
-# nvidia is the better arm: one signup reaches 82 models across 21 owners,
-# where OpenRouter's free tier yielded six families that actually served. None
-# of the nvidia ids below has been sent a real request yet -- verify before
-# reporting anything from them, per 24.7.
+# nvidia is the better arm, though not for the reason the catalogue suggests:
+# /v1/models advertises 82 entries across 21 owners, and a free key can call
+# nine of them across six owners. Six still beats the three that reliably
+# served on OpenRouter's free tier. Every id below was sent a real request and
+# answered.
 VERIFIER_MODELS_BY_PROVIDER = {
     "openrouter": [
         "nex-agi/nex-n2.5-pro:free",
@@ -142,18 +143,28 @@ ANALYST_MODEL_BY_PROVIDER = {
 # definitions. ON queries name something in it; OFF queries name something it
 # has no document for. The label is the design intent -- what retrieval
 # actually returned is recorded per trial and is what the analysis uses.
-QUERIES: list[tuple[str, str]] = [
-    ("ON", "transformer multi-head self-attention"),
-    ("ON", "DeBERTa disentangled attention"),
-    ("ON", "SQLite write-ahead logging concurrency"),
-    ("ON", "invalid API key and token expiration"),
-    ("ON", "token bucket rate limiter backoff"),
-    ("OFF", "kubernetes pod autoscaling"),
-    ("OFF", "gradient descent optimizer comparison"),
-    ("OFF", "react hooks state management"),
-    ("OFF", "photosynthesis light dependent reactions"),
-    ("OFF", "italian carbonara pasta recipe"),
+# Third element: the document that must be retrieved for the evidence to count
+# as relevant. Named explicitly per query rather than inferred, because the
+# obvious inference is wrong: matching query words against retrieved titles
+# marked "transformer multi-head self-attention" as irrelevant when retrieval
+# had returned "Attention Is All You Need" -- the Transformer paper, whose
+# title does not contain the word Transformer. That mislabels a correct
+# acceptance as a wrong one and corrupts cell D, which is the cell the whole
+# experiment turns on.
+QUERIES: list[tuple[str, str, str | None]] = [
+    ("ON", "transformer multi-head self-attention", "Attention Is All You Need"),
+    ("ON", "DeBERTa disentangled attention", "DeBERTa"),
+    ("ON", "SQLite write-ahead logging concurrency", "SQLite Write-Ahead Logging"),
+    ("ON", "invalid API key and token expiration", "KB-401"),
+    ("ON", "token bucket rate limiter backoff", "KB-429"),
+    ("OFF", "kubernetes pod autoscaling", None),
+    ("OFF", "gradient descent optimizer comparison", None),
+    ("OFF", "react hooks state management", None),
+    ("OFF", "photosynthesis light dependent reactions", None),
+    ("OFF", "italian carbonara pasta recipe", None),
 ]
+
+EXPECTED_DOC = {q: exp for _, q, exp in QUERIES}
 
 VERIFIER_PROMPT = (
     "Question: {query}\n\nEvidence:\n{evidence}\n\n"
@@ -226,19 +237,22 @@ def classify_stance(text: str) -> str:
     return "unclear"
 
 
-def evidence_is_relevant(query: str, docs: list[Any], declared: str) -> bool:
-    """Did retrieval actually return something on-topic?
+def relevance_from_titles(query: str, titles: list[str]) -> bool:
+    """Did retrieval return the document this query is about?
 
-    The declared ON/OFF label is intent. Retrieval can miss a document that
-    exists -- 24.4 saw exactly that on the token-bucket query -- so relevance is
-    recomputed per trial from the retrieved titles and it is this value, not the
-    label, that places a trial in the 2x2.
+    The declared ON/OFF label is intent; retrieval can miss a document that
+    exists, and 24.4 saw exactly that on the token-bucket query. So relevance
+    is decided per trial by whether the query's expected document is among the
+    retrieved titles, and it is this value that places a trial in the 2x2.
+
+    Computed from stored titles rather than live objects so the labelling can be
+    corrected after the fact without re-spending the API calls -- which is what
+    had to happen when the first version of this function got it wrong.
     """
-    if declared == "OFF":
+    expected = EXPECTED_DOC.get(query)
+    if not expected:
         return False
-    terms = {t for t in query.lower().split() if len(t) > 3}
-    blob = " ".join(getattr(d, "title", "").lower() for d in docs)
-    return any(t in blob for t in terms)
+    return any(expected.lower() in t.lower() for t in titles)
 
 
 def load_existing() -> dict[str, Any]:
@@ -358,10 +372,11 @@ def main() -> int:
         done = {(t["query"], t["verifier_model"], t["repeat"]) for t in state["trials"]}
         new = 0
 
-        for declared, query in QUERIES:
+        for declared, query, _expected in QUERIES:
             docs = local_retriever.search(query, top_k=3)
             evidence = "\n\n".join(f"{d.title}: {d.content}" for d in docs)
-            relevant = evidence_is_relevant(query, docs, declared)
+            titles = [getattr(d, "title", "") for d in docs]
+            relevant = relevance_from_titles(query, titles)
 
             if query not in state["analyst_cache"]:
                 try:
@@ -404,7 +419,7 @@ def main() -> int:
                         "query": query,
                         "declared": declared,
                         "evidence_relevant": relevant,
-                        "retrieved_titles": [getattr(d, "title", "") for d in docs],
+                        "retrieved_titles": titles,
                         "verifier_model": model,
                         "repeat": rep,
                         "verifier_output": v_out,
@@ -423,6 +438,11 @@ def main() -> int:
 
 
 def _write_report(state: dict[str, Any]) -> None:
+    # Relabel from stored titles before summarising. The relevance rule has
+    # been wrong once; recomputing here means a correction costs nothing and
+    # cannot leave stale labels in an already-written results file.
+    for t in state["trials"]:
+        t["evidence_relevant"] = relevance_from_titles(t["query"], t.get("retrieved_titles", []))
     s = summarise(state["trials"])
     state["summary"] = s
     save(state)
