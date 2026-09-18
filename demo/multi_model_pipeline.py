@@ -101,6 +101,23 @@ OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 PROVIDERS: dict[str, str] = {
     "openrouter": OPENROUTER_BASE_URL,
     "pollinations": "https://text.pollinations.ai/openai",
+    # NVIDIA's NIM catalogue. One signup at build.nvidia.com for an nvapi- key,
+    # and its /v1/models lists 82 models across 21 owners -- meta, mistralai,
+    # google, microsoft, deepseek-ai, z-ai and others. That breadth is the
+    # reason to bother: OpenRouter's free tier yielded six families that
+    # actually served, and the verifier-diversity question needs more than one.
+    #
+    # Expect rate limits rather than a token budget. OmniRoute's own catalogue
+    # excludes nvidia from its free-tier token table as "rate-limit-only, no
+    # published token cap", which is a fair description. As always, listed is
+    # not served: send one real request before planning around any of them.
+    "nvidia": "https://integrate.api.nvidia.com/v1",
+}
+
+# Which environment variable carries each provider's key.
+PROVIDER_KEY_ENV: dict[str, str] = {
+    "openrouter": "OPENROUTER_API_KEY",
+    "nvidia": "NVIDIA_API_KEY",
 }
 
 # Providers that serve without any credential. The openai client still requires
@@ -124,6 +141,18 @@ AGENT_MODELS: dict[str, str] = {
     "verifier": "nex-agi/nex-n2.5-pro:free",
     "analyst": "poolside/laguna-s-2.1:free",
     "writer": "inclusionai/ling-3.0-flash-vl:free",
+}
+
+# Defaults for --provider nvidia. Five owners, chosen from its /v1/models for
+# family spread rather than size. NOT yet sent a real request -- listed is not
+# served, and 23.6 and 24.7 are both about exactly that gap. Verify before
+# quoting any run that uses these, and use --models to swap any that fail.
+NVIDIA_AGENT_MODELS: dict[str, str] = {
+    "researcher": "microsoft/phi-3.5-moe-instruct",
+    "retriever": "deepseek-ai/deepseek-v4-flash-0731",
+    "verifier": "mistralai/mistral-7b-instruct-v0.3",
+    "analyst": "z-ai/glm-5.3",
+    "writer": "moonshotai/kimi-k2.6",
 }
 
 AGENT_ROLES: dict[str, str] = {
@@ -312,13 +341,18 @@ async def main() -> int:
     if args.provider in KEYLESS_PROVIDERS:
         api_key = "keyless"
     else:
-        api_key = os.getenv("OPENROUTER_API_KEY")
+        env_var = PROVIDER_KEY_ENV[args.provider]
+        api_key = os.getenv(env_var)
         if not api_key:
+            where = {
+                "openrouter": "https://openrouter.ai/keys",
+                "nvidia": "https://build.nvidia.com (account menu -> API keys)",
+            }[args.provider]
             print(
-                "OPENROUTER_API_KEY is not set.\n"
-                "Create a key at https://openrouter.ai/keys and put it in the "
-                "environment, or in a .env this script is run with. Do not paste it "
-                "into a chat window or commit it.\n"
+                f"{env_var} is not set.\n"
+                f"Create a key at {where} and put it in the environment, or in a "
+                ".env this script is run with. Do not paste it into a chat window "
+                "or commit it.\n"
                 "\n"
                 "To run without any account, use --provider pollinations. That "
                 "serves one model, so it proves the pipeline but cannot produce a "
@@ -327,7 +361,7 @@ async def main() -> int:
             )
             return 2
 
-    models = dict(AGENT_MODELS)
+    models = dict(NVIDIA_AGENT_MODELS if args.provider == "nvidia" else AGENT_MODELS)
     if args.provider == "pollinations":
         # One model is all the anonymous tier offers, so every agent gets it.
         models = {agent: POLLINATIONS_MODEL for agent in models}
