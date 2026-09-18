@@ -37,6 +37,10 @@ Usage:
     export AGENTPULSE_API_KEY=...
     python demo/multi_model_pipeline.py --query "retrieval augmented generation"
 
+With no account at all, --provider pollinations needs no key. Its anonymous
+tier serves one model, so every agent runs it: enough to prove the pipeline
+end to end against real generated text, not enough for a disagreement number.
+
 Nothing here is free of cost in wall-clock terms: five sequential calls to a
 free tier take a while, and free models are rate limited. --models lets you cut
 it down while testing.
@@ -49,16 +53,49 @@ import asyncio
 import os
 import sys
 import time
+import traceback
 from typing import Any
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "sdk", "src"))
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+
+# Real model prose is not ASCII. This one emits U+2011 (non-breaking hyphen) in
+# ordinary words like "Retrieval-augmented", and a Windows console is cp1252, so
+# echoing a completion raises UnicodeEncodeError and kills the run. Only the
+# console preview is affected -- spans go out as JSON over HTTP and carry the
+# original text -- so replacing unmappable characters here loses nothing that
+# matters. A stub client never surfaces this, because fixtures are ASCII.
+for _stream in (sys.stdout, sys.stderr):
+    if hasattr(_stream, "reconfigure"):
+        _stream.reconfigure(errors="replace")
 
 from agentpulse import AgentPulse
 from agentpulse.schemas.enums import SpanKind, SpanStatus
 from demo.workflows.retrieval import local_retriever
 
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
+
+# Any OpenAI-compatible gateway works, because that is all the SDK needs: the
+# provider detection behind instrument_llm keys on the client's module root,
+# not on the host it points at. Named here so --provider can select one without
+# the caller having to remember a URL.
+#
+# pollinations is keyless and needs no account, which makes it the honest smoke
+# test when there is no key yet -- but its anonymous tier serves exactly ONE
+# model. Every agent then runs the same model, and the disagreement signal
+# becomes meaningless by construction (see the module docstring on why
+# different families matter). Use it to prove the pipeline, not to report a
+# disagreement number.
+PROVIDERS: dict[str, str] = {
+    "openrouter": OPENROUTER_BASE_URL,
+    "pollinations": "https://text.pollinations.ai/openai",
+}
+
+# Providers that serve without any credential. The openai client still requires
+# a non-empty api_key string, so one is supplied; it is never checked.
+KEYLESS_PROVIDERS = {"pollinations"}
+
+POLLINATIONS_MODEL = "openai-fast"
 
 # One family each. Checked against openrouter.ai/api/v1/models -- every one of
 # these reported zero for both prompt and completion pricing. Free models get
@@ -80,10 +117,10 @@ AGENT_ROLES: dict[str, str] = {
 }
 
 
-def build_client(api_key: str) -> Any:
+def build_client(api_key: str, base_url: str = OPENROUTER_BASE_URL) -> Any:
     from openai import OpenAI
 
-    return OpenAI(base_url=OPENROUTER_BASE_URL, api_key=api_key)
+    return OpenAI(base_url=base_url, api_key=api_key)
 
 
 def ask(client: Any, model: str, prompt: str, *, max_tokens: int = 320) -> tuple[str, int, int]:
@@ -204,20 +241,38 @@ async def main() -> int:
         "--models",
         help="override as agent=model,agent=model; unnamed agents keep their default",
     )
+    parser.add_argument(
+        "--provider",
+        choices=sorted(PROVIDERS),
+        default="openrouter",
+        help="which OpenAI-compatible gateway to call (default: openrouter)",
+    )
     args = parser.parse_args()
 
-    api_key = os.getenv("OPENROUTER_API_KEY")
-    if not api_key:
-        print(
-            "OPENROUTER_API_KEY is not set.\n"
-            "Create a key at https://openrouter.ai/keys and put it in the "
-            "environment, or in a .env this script is run with. Do not paste it "
-            "into a chat window or commit it.",
-            file=sys.stderr,
-        )
-        return 2
+    base_url = PROVIDERS[args.provider]
+
+    if args.provider in KEYLESS_PROVIDERS:
+        api_key = "keyless"
+    else:
+        api_key = os.getenv("OPENROUTER_API_KEY")
+        if not api_key:
+            print(
+                "OPENROUTER_API_KEY is not set.\n"
+                "Create a key at https://openrouter.ai/keys and put it in the "
+                "environment, or in a .env this script is run with. Do not paste it "
+                "into a chat window or commit it.\n"
+                "\n"
+                "To run without any account, use --provider pollinations. That "
+                "serves one model, so it proves the pipeline but cannot produce a "
+                "meaningful disagreement score.",
+                file=sys.stderr,
+            )
+            return 2
 
     models = dict(AGENT_MODELS)
+    if args.provider == "pollinations":
+        # One model is all the anonymous tier offers, so every agent gets it.
+        models = {agent: POLLINATIONS_MODEL for agent in models}
     if args.models:
         for pair in args.models.split(","):
             agent, _, model = pair.partition("=")
@@ -226,6 +281,14 @@ async def main() -> int:
                 return 2
             models[agent.strip()] = model.strip()
 
+    if len(set(models.values())) == 1:
+        print(
+            f"NOTE: all five agents are running {next(iter(set(models.values())))}. "
+            "Grounding and tool-claim stay valid; the disagreement signal does "
+            "not, because it compares two agents that share a model.",
+            file=sys.stderr,
+        )
+
     pulse = AgentPulse(
         endpoint=os.getenv("AGENTPULSE_ENDPOINT", "http://localhost:8000"),
         api_key=os.getenv("AGENTPULSE_API_KEY"),
@@ -233,9 +296,10 @@ async def main() -> int:
         capture_inputs=True,
         capture_outputs=True,
     )
-    client = build_client(api_key)
+    client = build_client(api_key, base_url)
 
     print(f"endpoint  {pulse.config.endpoint}")
+    print(f"provider  {args.provider} ({base_url})")
     print("models    " + ", ".join(f"{a}={m}" for a, m in models.items()))
 
     # start() is not optional here. The SDK auto-starts its transport only when
@@ -252,7 +316,13 @@ async def main() -> int:
                 print(f"\n=== run {i + 1} of {args.runs} ===")
             try:
                 traces.append(await run_once(pulse, client, args.query, models))
-            except Exception:
+            except Exception as exc:
+                # Swallowing this printed exit code 1 and nothing else, which
+                # sent a real UnicodeEncodeError back as an unexplained failure.
+                # A demo that cannot say why it stopped is worse than one that
+                # crashes.
+                traceback.print_exc()
+                print(f"\nrun failed: {type(exc).__name__}: {exc}", file=sys.stderr)
                 return 1
     finally:
         # shutdown drains the buffer. Without it the process can exit with spans
