@@ -1,6 +1,6 @@
 # Session Handoff — AgentPulse Work Log
 
-**Written:** 2026-08-23. **Rewritten clean:** 2026-08-26. **Updated:** 2026-08-27 (Sections 7–9 disagreement/benchmark/positioning; 10 drift diagnosis and fix; 11 tool-claim external test; 12 blocked redesign; 13 competitor audits). **Updated:** 2026-08-28 (Section 14 — external disagreement validation, the last of the three signals to be checked and the third to fail; Section 15 — the productization arc, seven phases from migrations through health/readiness). **Updated:** 2026-08-30 (Section 16 — dashboard unfrozen, the landing-page claim audit, and the half-finished drift restore). **Updated:** 2026-08-31 (Section 17 — Final Review deliverables, the literature survey, and repository access). **Updated:** 2026-09-12 (Section 18 — frontend replaced and wired to the live API, the tool-claim signal made to fire for the first time, and the Compose stack fixed so it actually evaluates; MIT licence added, closing a claim the README had been making against a missing file).
+**Written:** 2026-08-23. **Rewritten clean:** 2026-08-26. **Updated:** 2026-08-27 (Sections 7–9 disagreement/benchmark/positioning; 10 drift diagnosis and fix; 11 tool-claim external test; 12 blocked redesign; 13 competitor audits). **Updated:** 2026-08-28 (Section 14 — external disagreement validation, the last of the three signals to be checked and the third to fail; Section 15 — the productization arc, seven phases from migrations through health/readiness). **Updated:** 2026-08-30 (Section 16 — dashboard unfrozen, the landing-page claim audit, and the half-finished drift restore). **Updated:** 2026-08-31 (Section 17 — Final Review deliverables, the literature survey, and repository access). **Updated:** 2026-09-12 (Section 18 — frontend replaced and wired to the live API, the tool-claim signal made to fire for the first time, and the Compose stack fixed so it actually evaluates; MIT licence added, closing a claim the README had been making against a missing file). **Updated:** 2026-09-19 (Section 24 — the 23.4 pipeline run for the first time and five faults found in it, four of which meant it delivered nothing; the disagreement signal firing at 0.966–0.996 against the one agent in each trace that was correct, which is the evidence-partition problem of Section 14 with a reproduction on five model families; the ablation re-run and found never to have been stale; OmniRoute's free-token headline settled from its own source).
 
 **Project:** AgentPulse — self-hostable observability SDK for grounding-risk and drift monitoring in multi-agent LLM systems. M.Tech project. Working directory: `C:\MLOPs\3rd sem project\Agentpluse` (renamed from `project one agent`; the venv's editable installs still point at the old path).
 
@@ -37,6 +37,10 @@
 - **`main` has a second writer and no branch protection** - the Free plan does not offer it on private repos. Section 17.5.
 - **Design direction is frozen in `bedhi_frontend.md`** — reference by reference, what to take and what to refuse, with Liquid Glass rules. Section 16.7.
 - **Repo pushed through commit `3cd1080`; working tree clean, `origin/main` in sync.** The dashboard work that used to sit uncommitted was reviewed and checkpointed (`8a93558`) with three known gaps recorded — see Section 15.
+- **The 23.4 multi-model pipeline had never worked, and now does.** Five faults in one file; four of them meant it delivered zero spans while printing a successful run. Section 24.
+- **Disagreement reliably flags the agent that was right — this is the most important open finding.** Across ten classifiable traces on five model families, six correct refusals scored disagreement **0.966–1.000** and four acceptances scored **0.000–0.020**, with no overlap. The signal works as designed and points at the one agent in each trace that was not wrong. Section 24.4. Grounding, by contrast, is *erratic* on refusals (contradiction 0.011–0.850, overlapping the accept group), which corrects an earlier claim that it consistently penalised them — see 24.4.1. **Ten traces and one verifier model: a strong lead, not a publishable result.**
+- **The ablation was never stale**, and the reason matters more than the re-run: it supplies its own inputs and so measures a ceiling, not a capability. Config D has shown parity with the best configuration for months while the live signal scored zero. Section 24.5.
+- **OmniRoute's "~1.62B free tokens" and its "zero credentials" describe disjoint sets of providers** — settled from its own source, not inferred. Section 24.6.
 - Docker, GitHub, and dev-server setup are all previously verified working — see Section 4 for exact commands, not re-derived here.
 
 ---
@@ -2396,5 +2400,320 @@ New:
   OmniRoute's own banner said it was listening on `0.0.0.0` with no API key and
   billing to your providers. Config written after the process starts does not
   apply to it.
+
+---
+
+## 24. The pipeline from 23.4 was run, and it had never worked (2026-09-18/19)
+
+23.4 ended with "Not yet run end to end." Running it found five faults in one
+file. Four of them made it deliver nothing; the fifth was a sentence in its own
+docstring describing behaviour the code did not have.
+
+The order matters, because each fault was only reachable after the one before
+it was fixed, and the last two were unreachable without a real model.
+
+### 24.1 It delivered nothing, and said it had
+
+A stub client -- five canned strings, no network -- was enough to find this.
+Zero POSTs reached the backend, zero traces, zero spans, while the script
+printed five successful agent lines and `sent 1 trace(s)`.
+
+Two faults, either one sufficient:
+
+- **`pulse.start()` is never called.** `client._ensure_transport` auto-starts
+  the transport only when an event loop is already running, and catches
+  `RuntimeError` when there is none. The script was fully synchronous, so it
+  took the quiet branch every time. `end_span` still enqueued; no flush task
+  ever existed.
+- **`pulse.shutdown()` is a coroutine, called without `await`.** It surfaced
+  only as a `RuntimeWarning`. It would have been a no-op regardless, because
+  `_started` was `False`.
+
+The file's own comment says a missing drain "looks like the run silently did
+nothing." It did exactly that, and the comment was written by someone who
+understood the failure and still shipped it.
+
+Fixed by adopting the lifecycle `demo/research_assistant.py` already used:
+async `main`/`run_once`/`call`, `await pulse.start()`, `await pulse.shutdown()`
+in a `finally`, and `asyncio.to_thread` around the blocking openai call so the
+flush task runs between agents instead of holding every span until the end.
+
+Verified with the stub: 1 trace, 5 spans, 5 jobs succeeded, and
+`TOOL_CLAIM_MISMATCH` (HIGH) on the retriever, which claimed 5 documents where
+`local_retriever` returned 3. **That is 18.4's signal firing on the ingest
+path**, from a real tool result rather than a benchmark fixture.
+
+### 24.2 Two faults only a real model could reach
+
+The stub proved delivery and could not prove anything else, because fixtures
+are ASCII and always well-formed.
+
+- **`UnicodeEncodeError` on the first completion.** The model writes ordinary
+  words like "Retrieval-augmented" with U+2011, and a Windows console is
+  cp1252. The run died on the first agent. Only the console preview was ever
+  affected -- spans go out as JSON over HTTP and always carried the original
+  text -- so `errors="replace"` on stdout/stderr costs nothing that matters.
+- **`except Exception: return 1` in `main`** reported that crash as a bare exit
+  code: no message, no traceback, no failing agent named. The first real run
+  looked like the script had simply stopped.
+
+### 24.3 The `.env` the docstring promised
+
+The usage note has always said the key can live "in a .env this script is run
+with". Nothing in the import chain loaded one. The sentence was true only for a
+caller who had already exported the variable, which is the case where the .env
+is irrelevant.
+
+Fifth fault, same shape as the first four and the same shape as 16.4, 21.8,
+22.5 and 23.3: **the documentation described a capability the code did not
+have.**
+
+### 24.4 Disagreement reliably flags the agent that was right
+
+**This section was rewritten on 2026-09-19 after the five-family run. The first
+version claimed "a correct refusal scores as a hallucination" from one model
+and two traces. Four traces on five model families do not support that as a
+rule, and the corrected finding is narrower and more useful.** The original
+claim is kept below as 24.4.1 because how it broke is the instructive part.
+
+Four runs, five different model families, one variable: whether the retrieved
+evidence actually answers the query. `verifier` is `nex-agi/nex-n2.5-pro` in
+all four.
+
+| run | query | verifier said | contradiction | grounding | disagreement | risk |
+| :--- | :--- | :--- | ---: | ---: | ---: | ---: |
+| R1 | kubernetes pod autoscaling | **No** | 0.850 | 0.852 | 0.966 | 0.890 `high` |
+| R2 | SQLite WAL concurrency | **Yes** | 0.004 | 0.011 | 0.001 | 0.008 `low` |
+| R3 | gradient descent optimizers | **No** | 0.011 | 0.011 | 0.983 | 0.335 `low` |
+| R4 | token bucket backoff | **No** | 0.116 | 0.117 | 0.996 | 0.410 `medium` |
+
+The verifier was **correct in all four**. R4 was designed as an on-corpus query
+-- KB-429 covers token buckets -- and retrieval returned Transformers, SQLite
+and telemetry instead, so the verifier was right to refuse there too. Only R2
+had successful retrieval.
+
+A further eight queries were then run to widen this. Across every completed
+verifier span in the database, classified only by whether the agent opened by
+accepting or refusing the evidence:
+
+| group | n | disagreement | contradiction |
+| :--- | ---: | :--- | :--- |
+| refused ("No ...") | 6 | **0.966 – 1.000** | 0.011 – 0.850 |
+| accepted ("Yes ...") | 4 | **0.000 – 0.020** | 0.001 – 0.062 |
+
+**What is consistent: disagreement.** The two groups do not overlap at all, and
+the gap between them is two orders of magnitude. Every time the verifier
+correctly identified that retrieval had failed, the signal fired at near 1.0
+against it -- because it compares the verifier's "no" with four other agents
+confidently discussing the retrieved documents. The signal works exactly as
+designed and points at the one agent in the trace that was not wrong.
+
+**What is not consistent: grounding.** The same two groups overlap on
+contradiction: a refusal at 0.011 sits *below* an acceptance at 0.062. R1 and R3
+are near-identical sentences -- "No, the evidence does not answer the question
+about X. It discusses A, B and C, but ..." -- and the NLI model rated one a 0.850
+contradiction and the other a 0.988 *entailment*. A 77x spread on a
+surface-identical construction, varying only with the topic named.
+
+So grounding does not reliably penalise refusal. It is **erratic** on refusal,
+which is a different and less quotable problem than the one first claimed.
+
+Three further verifier spans were excluded as unclassifiable: one opened
+"The evidence partially answers the question", and two are older fixture rows
+about teleportation that predate this work.
+
+**What this still is not.** Ten classifiable traces, one verifier model
+(`nex-agi/nex-n2.5-pro`), and one corpus of six documents. Four more off-corpus
+queries were attempted and lost to the account's daily free-model limit, so the
+refusal arm is thinner than planned and the accept arm thinner still at n=4.
+The separation is clean enough to be worth pursuing and nowhere near enough to
+publish.
+
+R3 and R4 raised no alerts despite disagreement near 1.0. That is the 900s
+`AGENTPULSE_ALERT_COOLDOWN_SECONDS` deduplicating against R1's alert, which is
+correct behaviour and not a defect -- but it means **alert counts understate
+how often these signals fire**. Read the scores, not the alert log.
+
+The analyst is worth recording separately. In R1 it wrote that "Kubernetes pod
+autoscaling must be designed to maintain telemetry performance metrics such as
+sub-0.05ms" -- a fabricated connection between the retrieved telemetry KPIs and
+a subject the evidence never mentions. It scored grounding **0.009** and passed
+as `low_risk`. Reusing the evidence's own vocabulary while attaching it to an
+invented subject is not something entailment scoring is positioned to catch.
+
+#### 24.4.1 The claim this replaces, and why it broke
+
+The first version of this section said, from one model and two traces:
+
+> A refusal is a statement *about* evidence and is never entailed *by* it, so
+> entailment scoring cannot separate "made something up" from "correctly
+> reported that the evidence supports nothing."
+
+The mechanism sounded right and the two traces fitted it. R3 falsifies it
+directly: a refusal scored 0.988 entailed. The sentence was reasoning from how
+NLI *ought* to treat meta-statements rather than from measurement, and two
+traces were not enough to notice.
+
+It was labelled a lead rather than a result, which is the only reason this is a
+correction and not a retraction. **Two traces can support any mechanism you
+can think of.** The rule that keeps working in this project is the one from
+22.11: the check that finds things is running the thing, more times than feels
+necessary.
+
+### 24.5 The ablation was never stale
+
+Next-steps item 8 assumed `ablation_results.json` had gone stale. Re-ran the
+whole study: **every classification is bit-identical** to 2026-08-23. Same
+tp/fp/fn/tn, same precision, recall, F1, FPR, FNR across all seven
+configurations, same selected operating point.
+
+It could not have been otherwise. The ablation consumes *raw* per-case signals
+and supplies its own inputs from the dataset, so every fix cited as making it
+stale landed either in an aggregation layer above those signals or in the
+ingest path that feeds them. The tool-claim fix is the clearest case: purely
+additive, `extract_result_count` for the ingest path, nothing changed in
+`evaluate_tool_claims`, which is what the study calls.
+
+**So Config D has shown parity with the best configuration for months while the
+production signal it stands for scored zero across 1,328 live evaluations.**
+Recorded in the limitations, in the template in `ablation.py` rather than the
+generated file, per the regeneration trap in item 6.
+
+Latency did move, 188.1ms to 132-135ms on Config B across three runs, so it is
+not noise. It is also **not the ONNX fix**: the study calls
+`load_models(use_onnx=False)` and has always measured the PyTorch path. The
+cause is unattributed. Recorded as a measurement, not an improvement.
+
+### 24.6 OmniRoute's headline, settled from its own source
+
+23.5 left this as a judgement call. The installed package settles it.
+
+`open-sse/config/freeTierCatalog.ts` holds `FREE_TIER_BUDGETS`: 19 providers
+carrying roughly 1.36B tokens/month, of which `mistral` alone is 1B. Every one
+of the 19 -- mistral, gemini, groq, cerebras, cohere, huggingface, openrouter --
+is an account-based API requiring the user's own credential.
+
+`src/shared/constants/providers/noauth.ts` holds the truly keyless set, and it
+is 13 entries: `aihorde`, `auggie`, `chipotle`, `cloudflare-playground`,
+`codex-app-server`, `devin-cli-agentic`, `duckduckgo-web`, `felo-web`,
+`opencode`, `theoldllm`, `uncloseai`, `veoaifree-web`, `zcode`.
+
+**The intersection of those two lists is empty.** The README's "~1.62B Free
+Tokens / Month" and its "Fresh install, zero credentials" describe disjoint
+sets of providers. Neither sentence is false; together they imply something
+that is.
+
+Three of the 13 are marked `"avoid"` in OmniRoute's own `FREE_TIER_TOS` --
+`opencode`, `duckduckgo-web`, `felo-web` -- because those terms prohibit
+routing through a self-hosted proxy. Four of the names are web scrapers and two
+drive other people's agent CLIs.
+
+The engineering is not the problem and the catalog is honest with itself: its
+comments exclude nvidia, tencent and others as "theoretical, not granted." The
+framing is the problem, and it is worth carrying as a reading skill rather than
+a grudge.
+
+### 24.7 Three of the five default models no longer produce text
+
+23.4 picked five free OpenRouter models, one family each, and recorded that all
+five reported zero pricing. On 2026-09-18 all five still existed in the
+catalogue at zero pricing. **Three of them do not answer.**
+
+| model | result |
+| :--- | :--- |
+| `deepseek/deepseek-v4-flash-0731:free` | serves |
+| `nvidia/nemotron-3.5-lightning:free` | serves, with a visible reasoning preamble |
+| `qwen/qwen3.8-27b:free` | `Provider returned error` |
+| `z-ai/glm-5.2:free` | `Provider returned error` |
+| `liquid/lfm-2.5-2.6b:free` | 200 OK with **empty content** |
+
+The third row is the one to remember. `liquid` returns a well-formed response
+with `content: ""` -- not an error, not a refusal, just nothing. A pipeline that
+checks status codes would record it as a successful call and hand an empty
+string to the evaluator.
+
+Six of the 22 `:free` models were then probed for replacements, and the same
+pattern held: `google/gemma-4-31b-it` and `google/gemma-4-26b-a4b-it` both
+error, `thinkingmachines/inkling` is not available on this tier, and
+`dots-studio/dots-3-note-preview` and `inclusionai/ling-3.0-flash-fin` both
+return empty content. **Roughly half of a catalogue of free models does not
+produce text.**
+
+Working set at the time of writing, five families:
+
+```
+researcher  nvidia/nemotron-3.5-lightning:free
+retriever   deepseek/deepseek-v4-flash-0731:free
+verifier    nex-agi/nex-n2.5-pro:free
+analyst     poolside/laguna-s-2.1:free
+writer      inclusionai/ling-3.0-flash-vl:free
+```
+
+Expect this list to rot. 23.6's standing fact -- send one real request before
+building on a catalogue -- now has a second confirmation and a new corollary:
+**check for empty content, not just for errors.**
+
+### 24.8 Standing facts
+
+New:
+
+- **A detector that benchmarks well can be unreachable, and the benchmark will
+  never say so.** 24.5 is the general form of 18.4. When an experiment supplies
+  its own inputs, it measures a ceiling, not a capability. Ask what the study
+  bypasses before quoting its number.
+- **Disagreement fires on the agent that was right.** Six correct refusals score
+  0.966–1.000; four acceptances score 0.000–0.020. No overlap, two orders of
+  magnitude apart. The signal is working; its target is the problem. This is the
+  sharpest open question the project has, and unlike 14 it now has a
+  reproduction on five model families.
+- **A 200 with empty content is not an error and will be scored.** deepseek
+  served all session and then returned `content: ""` mid-batch. Status is 200,
+  no exception, no error field, and the evaluator receives an empty string.
+  Check for empty text explicitly; `EmptyCompletion` in the demo exists for this.
+- **Grounding is erratic on refusals, not consistently punitive.** Two
+  near-identical refusal sentences scored contradiction 0.850 and 0.011, the
+  second rated 0.988 *entailed*. An earlier version of 24.4 claimed a consistent
+  penalty from two traces and was wrong; see 24.4.1.
+- **Alert counts understate how often a signal fires.** A 900s cooldown
+  deduplicated two of three disagreement alerts. Read the scores, not the alert
+  log.
+- **Reusing the evidence's vocabulary while attaching it to an invented subject
+  scores as well grounded.** The analyst wrote that Kubernetes autoscaling must
+  hold sub-0.05ms telemetry thresholds, from documents that never mention
+  Kubernetes, and scored grounding 0.009.
+- **A stub proves delivery and nothing else.** Fixtures are ASCII, well-formed,
+  and never refuse. Two of the five faults in 24 were unreachable until a real
+  model produced real prose.
+- **`except Exception: return 1` is how a project loses a week.** The
+  UnicodeEncodeError was one line of traceback away from obvious and was
+  reported as an exit code.
+- **Check whether the headline number and the "no setup needed" claim describe
+  the same thing.** 24.6 is the general form. Two true sentences placed next to
+  each other can assert something neither one says.
+- **`.venv/Scripts/uvicorn.exe` is stale and fails with exit code 1 and no
+  output**; use `python -m uvicorn`. The shim has the pre-rename path baked in,
+  which is the same staleness as the editable installs in Section 4.
+- **Run the API and the worker from the same cwd.** `AGENTPULSE_DATABASE_URL` is
+  relative, so a worker started inside `backend/` opens an empty
+  `backend/data/agentpulse.db` and dies on `no such table: evaluation_jobs`.
+  Section 4 warned about the two files; this is how they bite in practice.
+- **`experiments/ablation.py` ignores `AGENTPULSE_MODEL_CACHE_DIR`.** It calls
+  `load_models()` without `cache_dir`, so it falls back to `./models` relative
+  to cwd and will re-download 1.2 GB in a fresh worktree.
+- **The five OpenRouter model ids from 23.4 are all still live** at zero prompt
+  and completion pricing, re-checked against the catalogue on 2026-09-18.
+- **Pollinations serves keyless and is OpenAI-compatible**, so it is the honest
+  smoke test when there is no key. Its anonymous tier is one model
+  (`openai-fast`), so it cannot produce a meaningful disagreement number.
+
+Open, and the reason this section stops where it does:
+
+- **24.4 now has five model families and four traces, and that was enough to
+  break half of it.** It needs more queries still: three refusals is a thin
+  basis for "disagreement always flags the refusing agent", however clean
+  0.966–0.996 looks. The 3 of 5 default models that no longer produce text
+  (24.7) should be re-checked at the same time.
+- **The SDK still discards spans silently from any synchronous caller.** 24.1
+  fixed the demo, not the footgun underneath it.
 
 ---
