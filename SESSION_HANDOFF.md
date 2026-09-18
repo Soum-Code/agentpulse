@@ -1,6 +1,6 @@
 # Session Handoff — AgentPulse Work Log
 
-**Written:** 2026-08-23. **Rewritten clean:** 2026-08-26. **Updated:** 2026-08-27 (Sections 7–9 disagreement/benchmark/positioning; 10 drift diagnosis and fix; 11 tool-claim external test; 12 blocked redesign; 13 competitor audits). **Updated:** 2026-08-28 (Section 14 — external disagreement validation, the last of the three signals to be checked and the third to fail; Section 15 — the productization arc, seven phases from migrations through health/readiness). **Updated:** 2026-08-30 (Section 16 — dashboard unfrozen, the landing-page claim audit, and the half-finished drift restore). **Updated:** 2026-08-31 (Section 17 — Final Review deliverables, the literature survey, and repository access). **Updated:** 2026-09-12 (Section 18 — frontend replaced and wired to the live API, the tool-claim signal made to fire for the first time, and the Compose stack fixed so it actually evaluates; MIT licence added, closing a claim the README had been making against a missing file).
+**Written:** 2026-08-23. **Rewritten clean:** 2026-08-26. **Updated:** 2026-08-27 (Sections 7–9 disagreement/benchmark/positioning; 10 drift diagnosis and fix; 11 tool-claim external test; 12 blocked redesign; 13 competitor audits). **Updated:** 2026-08-28 (Section 14 — external disagreement validation, the last of the three signals to be checked and the third to fail; Section 15 — the productization arc, seven phases from migrations through health/readiness). **Updated:** 2026-08-30 (Section 16 — dashboard unfrozen, the landing-page claim audit, and the half-finished drift restore). **Updated:** 2026-08-31 (Section 17 — Final Review deliverables, the literature survey, and repository access). **Updated:** 2026-09-12 (Section 18 — frontend replaced and wired to the live API, the tool-claim signal made to fire for the first time, and the Compose stack fixed so it actually evaluates; MIT licence added, closing a claim the README had been making against a missing file). **Updated:** 2026-09-19 (Section 24 — the 23.4 pipeline run for the first time and five faults found in it, four of which meant it delivered nothing; a correct refusal scoring as a hallucination, which is the evidence-partition problem of Section 14 with a reproduction; the ablation re-run and found never to have been stale; OmniRoute's free-token headline settled from its own source).
 
 **Project:** AgentPulse — self-hostable observability SDK for grounding-risk and drift monitoring in multi-agent LLM systems. M.Tech project. Working directory: `C:\MLOPs\3rd sem project\Agentpluse` (renamed from `project one agent`; the venv's editable installs still point at the old path).
 
@@ -37,6 +37,10 @@
 - **`main` has a second writer and no branch protection** - the Free plan does not offer it on private repos. Section 17.5.
 - **Design direction is frozen in `bedhi_frontend.md`** — reference by reference, what to take and what to refuse, with Liquid Glass rules. Section 16.7.
 - **Repo pushed through commit `3cd1080`; working tree clean, `origin/main` in sync.** The dashboard work that used to sit uncommitted was reviewed and checkpointed (`8a93558`) with three known gaps recorded — see Section 15.
+- **The 23.4 multi-model pipeline had never worked, and now does.** Five faults in one file; four of them meant it delivered zero spans while printing a successful run. Section 24.
+- **A correct refusal scores as a hallucination — this is the most important open finding.** An agent that correctly reports "this evidence does not answer the question" is flagged `HIGH_HALLUCINATION_RISK`, while an agent that confidently restates irrelevant documents passes as `low_risk`. Section 24.4. **It is one model and two traces: a lead with a mechanism, not a result.**
+- **The ablation was never stale**, and the reason matters more than the re-run: it supplies its own inputs and so measures a ceiling, not a capability. Config D has shown parity with the best configuration for months while the live signal scored zero. Section 24.5.
+- **OmniRoute's "~1.62B free tokens" and its "zero credentials" describe disjoint sets of providers** — settled from its own source, not inferred. Section 24.6.
 - Docker, GitHub, and dev-server setup are all previously verified working — see Section 4 for exact commands, not re-derived here.
 
 ---
@@ -2396,5 +2400,205 @@ New:
   OmniRoute's own banner said it was listening on `0.0.0.0` with no API key and
   billing to your providers. Config written after the process starts does not
   apply to it.
+
+---
+
+## 24. The pipeline from 23.4 was run, and it had never worked (2026-09-18/19)
+
+23.4 ended with "Not yet run end to end." Running it found five faults in one
+file. Four of them made it deliver nothing; the fifth was a sentence in its own
+docstring describing behaviour the code did not have.
+
+The order matters, because each fault was only reachable after the one before
+it was fixed, and the last two were unreachable without a real model.
+
+### 24.1 It delivered nothing, and said it had
+
+A stub client -- five canned strings, no network -- was enough to find this.
+Zero POSTs reached the backend, zero traces, zero spans, while the script
+printed five successful agent lines and `sent 1 trace(s)`.
+
+Two faults, either one sufficient:
+
+- **`pulse.start()` is never called.** `client._ensure_transport` auto-starts
+  the transport only when an event loop is already running, and catches
+  `RuntimeError` when there is none. The script was fully synchronous, so it
+  took the quiet branch every time. `end_span` still enqueued; no flush task
+  ever existed.
+- **`pulse.shutdown()` is a coroutine, called without `await`.** It surfaced
+  only as a `RuntimeWarning`. It would have been a no-op regardless, because
+  `_started` was `False`.
+
+The file's own comment says a missing drain "looks like the run silently did
+nothing." It did exactly that, and the comment was written by someone who
+understood the failure and still shipped it.
+
+Fixed by adopting the lifecycle `demo/research_assistant.py` already used:
+async `main`/`run_once`/`call`, `await pulse.start()`, `await pulse.shutdown()`
+in a `finally`, and `asyncio.to_thread` around the blocking openai call so the
+flush task runs between agents instead of holding every span until the end.
+
+Verified with the stub: 1 trace, 5 spans, 5 jobs succeeded, and
+`TOOL_CLAIM_MISMATCH` (HIGH) on the retriever, which claimed 5 documents where
+`local_retriever` returned 3. **That is 18.4's signal firing on the ingest
+path**, from a real tool result rather than a benchmark fixture.
+
+### 24.2 Two faults only a real model could reach
+
+The stub proved delivery and could not prove anything else, because fixtures
+are ASCII and always well-formed.
+
+- **`UnicodeEncodeError` on the first completion.** The model writes ordinary
+  words like "Retrieval-augmented" with U+2011, and a Windows console is
+  cp1252. The run died on the first agent. Only the console preview was ever
+  affected -- spans go out as JSON over HTTP and always carried the original
+  text -- so `errors="replace"` on stdout/stderr costs nothing that matters.
+- **`except Exception: return 1` in `main`** reported that crash as a bare exit
+  code: no message, no traceback, no failing agent named. The first real run
+  looked like the script had simply stopped.
+
+### 24.3 The `.env` the docstring promised
+
+The usage note has always said the key can live "in a .env this script is run
+with". Nothing in the import chain loaded one. The sentence was true only for a
+caller who had already exported the variable, which is the case where the .env
+is irrelevant.
+
+Fifth fault, same shape as the first four and the same shape as 16.4, 21.8,
+22.5 and 23.3: **the documentation described a capability the code did not
+have.**
+
+### 24.4 A correct refusal scores as a hallucination
+
+Two runs against `openai-fast` (GPT-OSS 20B via Pollinations), identical
+prompts, differing only in whether the query matches the corpus.
+
+| run | verifier said | grounding | disagreement | risk | result |
+| :--- | :--- | ---: | ---: | ---: | :--- |
+| off-corpus | "**No**, these passages do not discuss RAG" | 0.551 | 1.000 | 0.701 | `HIGH_HALLUCINATION_RISK` + `AGENT_DISAGREEMENT` |
+| on-corpus | "**Yes**, the first excerpt describes it" | 0.012 | 0.008 | 0.011 | no alert |
+
+The verifier was **correct in both runs**. In the first it was the only agent
+that noticed the retrieval was irrelevant, and it was the only agent flagged.
+The analyst, which confidently restated three documents about Transformers,
+SQLite WAL and telemetry KPIs for a question about retrieval-augmented
+generation, came out `low_risk` 0.334.
+
+What moved between those two rows is not correctness. It is whether the agent
+said yes or no. **A refusal is a statement *about* evidence and is never
+entailed *by* it**, so entailment scoring cannot separate "made something up"
+from "correctly reported that the evidence supports nothing."
+
+The control run's own alert is the same failure from the other side: the
+analyst summarised all three retrieved documents, the verifier judged only the
+first relevant, and the pair was flagged as disagreeing at 0.810. Neither is
+wrong. **That is the evidence-partition problem from 14, reproduced from a real
+model instead of argued from fixtures.**
+
+`tool_claim` behaved correctly in both runs -- silent here, where the retriever
+said "three documents" and the tool returned 3, after firing on the stub that
+claimed 5. A true positive and a true negative, both on the live path.
+
+**Do not promote this to a result yet.** It is one model and two traces, and
+all five agents shared that model because the keyless tier serves only one. It
+is a lead with a clear mechanism, not a finding.
+
+### 24.5 The ablation was never stale
+
+Next-steps item 8 assumed `ablation_results.json` had gone stale. Re-ran the
+whole study: **every classification is bit-identical** to 2026-08-23. Same
+tp/fp/fn/tn, same precision, recall, F1, FPR, FNR across all seven
+configurations, same selected operating point.
+
+It could not have been otherwise. The ablation consumes *raw* per-case signals
+and supplies its own inputs from the dataset, so every fix cited as making it
+stale landed either in an aggregation layer above those signals or in the
+ingest path that feeds them. The tool-claim fix is the clearest case: purely
+additive, `extract_result_count` for the ingest path, nothing changed in
+`evaluate_tool_claims`, which is what the study calls.
+
+**So Config D has shown parity with the best configuration for months while the
+production signal it stands for scored zero across 1,328 live evaluations.**
+Recorded in the limitations, in the template in `ablation.py` rather than the
+generated file, per the regeneration trap in item 6.
+
+Latency did move, 188.1ms to 132-135ms on Config B across three runs, so it is
+not noise. It is also **not the ONNX fix**: the study calls
+`load_models(use_onnx=False)` and has always measured the PyTorch path. The
+cause is unattributed. Recorded as a measurement, not an improvement.
+
+### 24.6 OmniRoute's headline, settled from its own source
+
+23.5 left this as a judgement call. The installed package settles it.
+
+`open-sse/config/freeTierCatalog.ts` holds `FREE_TIER_BUDGETS`: 19 providers
+carrying roughly 1.36B tokens/month, of which `mistral` alone is 1B. Every one
+of the 19 -- mistral, gemini, groq, cerebras, cohere, huggingface, openrouter --
+is an account-based API requiring the user's own credential.
+
+`src/shared/constants/providers/noauth.ts` holds the truly keyless set, and it
+is 13 entries: `aihorde`, `auggie`, `chipotle`, `cloudflare-playground`,
+`codex-app-server`, `devin-cli-agentic`, `duckduckgo-web`, `felo-web`,
+`opencode`, `theoldllm`, `uncloseai`, `veoaifree-web`, `zcode`.
+
+**The intersection of those two lists is empty.** The README's "~1.62B Free
+Tokens / Month" and its "Fresh install, zero credentials" describe disjoint
+sets of providers. Neither sentence is false; together they imply something
+that is.
+
+Three of the 13 are marked `"avoid"` in OmniRoute's own `FREE_TIER_TOS` --
+`opencode`, `duckduckgo-web`, `felo-web` -- because those terms prohibit
+routing through a self-hosted proxy. Four of the names are web scrapers and two
+drive other people's agent CLIs.
+
+The engineering is not the problem and the catalog is honest with itself: its
+comments exclude nvidia, tencent and others as "theoretical, not granted." The
+framing is the problem, and it is worth carrying as a reading skill rather than
+a grudge.
+
+### 24.7 Standing facts
+
+New:
+
+- **A detector that benchmarks well can be unreachable, and the benchmark will
+  never say so.** 24.5 is the general form of 18.4. When an experiment supplies
+  its own inputs, it measures a ceiling, not a capability. Ask what the study
+  bypasses before quoting its number.
+- **The grounding signal penalises refusal.** An agent that correctly says "this
+  evidence does not support an answer" is scored as ungrounded, because its
+  output is a claim about the evidence rather than from it. This is the sharpest
+  open problem the project has, and unlike 14 it now has a reproduction.
+- **A stub proves delivery and nothing else.** Fixtures are ASCII, well-formed,
+  and never refuse. Two of the five faults in 24 were unreachable until a real
+  model produced real prose.
+- **`except Exception: return 1` is how a project loses a week.** The
+  UnicodeEncodeError was one line of traceback away from obvious and was
+  reported as an exit code.
+- **Check whether the headline number and the "no setup needed" claim describe
+  the same thing.** 24.6 is the general form. Two true sentences placed next to
+  each other can assert something neither one says.
+- **`.venv/Scripts/uvicorn.exe` is stale and fails with exit code 1 and no
+  output**; use `python -m uvicorn`. The shim has the pre-rename path baked in,
+  which is the same staleness as the editable installs in Section 4.
+- **Run the API and the worker from the same cwd.** `AGENTPULSE_DATABASE_URL` is
+  relative, so a worker started inside `backend/` opens an empty
+  `backend/data/agentpulse.db` and dies on `no such table: evaluation_jobs`.
+  Section 4 warned about the two files; this is how they bite in practice.
+- **`experiments/ablation.py` ignores `AGENTPULSE_MODEL_CACHE_DIR`.** It calls
+  `load_models()` without `cache_dir`, so it falls back to `./models` relative
+  to cwd and will re-download 1.2 GB in a fresh worktree.
+- **The five OpenRouter model ids from 23.4 are all still live** at zero prompt
+  and completion pricing, re-checked against the catalogue on 2026-09-18.
+- **Pollinations serves keyless and is OpenAI-compatible**, so it is the honest
+  smoke test when there is no key. Its anonymous tier is one model
+  (`openai-fast`), so it cannot produce a meaningful disagreement number.
+
+Open, and the reason this section stops where it does:
+
+- **The 24.4 lead needs five model families and more queries.** That is one
+  OpenRouter signup away. Until then it is one model, two traces, and should be
+  described that way.
+- **The SDK still discards spans silently from any synchronous caller.** 24.1
+  fixed the demo, not the footgun underneath it.
 
 ---
