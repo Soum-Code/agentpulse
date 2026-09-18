@@ -45,6 +45,7 @@ it down while testing.
 from __future__ import annotations
 
 import argparse
+import asyncio
 import os
 import sys
 import time
@@ -107,11 +108,11 @@ def ask(client: Any, model: str, prompt: str, *, max_tokens: int = 320) -> tuple
     )
 
 
-def run_once(pulse: AgentPulse, client: Any, query: str, models: dict[str, str]) -> str:
+async def run_once(pulse: AgentPulse, client: Any, query: str, models: dict[str, str]) -> str:
     trace = pulse.create_trace(pipeline_id="multi_model_research")
     print(f"\ntrace {trace.trace_id}\n" + "-" * 68)
 
-    def call(agent: str, prompt: str, *, source: str | None = None, **span_kwargs: Any) -> str:
+    async def call(agent: str, prompt: str, *, source: str | None = None, **span_kwargs: Any) -> str:
         model = models[agent]
         span = pulse.start_span(
             agent_id=agent,
@@ -128,7 +129,12 @@ def run_once(pulse: AgentPulse, client: Any, query: str, models: dict[str, str])
         )
         started = time.perf_counter()
         try:
-            text, tin, tout = ask(client, model, prompt)
+            # to_thread rather than a bare call: the openai client is blocking,
+            # and holding the event loop for the whole completion would stop
+            # the transport's flush task running between agents. Spans would
+            # then all sit in memory until shutdown instead of going out as
+            # they are produced.
+            text, tin, tout = await asyncio.to_thread(ask, client, model, prompt)
         except Exception as exc:
             span.output_summary = None
             span.error_message = f"{type(exc).__name__}: {exc}"
@@ -143,7 +149,7 @@ def run_once(pulse: AgentPulse, client: Any, query: str, models: dict[str, str])
         print(f"      {text[:150]}{'...' if len(text) > 150 else ''}")
         return text
 
-    plan = call(
+    plan = await call(
         "researcher",
         f"You are planning a literature review on: {query}\n"
         "List three specific sub-questions worth answering. Be brief.",
@@ -156,7 +162,7 @@ def run_once(pulse: AgentPulse, client: Any, query: str, models: dict[str, str])
     tool_result = f"Found {len(docs)} documents: " + "; ".join(d.title for d in docs)
     print(f"  {'[tool]':<11} local_retriever                            -> {len(docs)} docs")
 
-    call(
+    await call(
         "retriever",
         f"A search for '{query}' returned these documents:\n\n{evidence}\n\n"
         "Write one sentence describing what you retrieved. State how many "
@@ -167,21 +173,21 @@ def run_once(pulse: AgentPulse, client: Any, query: str, models: dict[str, str])
         tool_result_summary=tool_result,
     )
 
-    call(
+    await call(
         "verifier",
         f"Question: {query}\n\nEvidence:\n{evidence}\n\n"
         "Does the evidence answer the question? Answer in two sentences.",
         source=evidence,
     )
 
-    synthesis = call(
+    synthesis = await call(
         "analyst",
         f"Question: {query}\n\nEvidence:\n{evidence}\n\n"
         "Synthesise what the evidence supports. Three sentences, no speculation.",
         source=evidence,
     )
 
-    call(
+    await call(
         "writer",
         f"Turn this synthesis into a short report paragraph:\n\n{synthesis}",
         source=evidence,
@@ -190,7 +196,7 @@ def run_once(pulse: AgentPulse, client: Any, query: str, models: dict[str, str])
     return trace.trace_id
 
 
-def main() -> int:
+async def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--query", default="retrieval augmented generation")
     parser.add_argument("--runs", type=int, default=1, help="repeat, for the drift signal")
@@ -232,19 +238,29 @@ def main() -> int:
     print(f"endpoint  {pulse.config.endpoint}")
     print("models    " + ", ".join(f"{a}={m}" for a, m in models.items()))
 
-    traces = []
-    for i in range(args.runs):
-        if args.runs > 1:
-            print(f"\n=== run {i + 1} of {args.runs} ===")
-        try:
-            traces.append(run_once(pulse, client, args.query, models))
-        except Exception:
-            return 1
+    # start() is not optional here. The SDK auto-starts its transport only when
+    # there is already a running event loop (client._ensure_transport), so a
+    # synchronous script never starts it at all: end_span still enqueues, the
+    # flush task never exists, and every span dies in memory at exit. The run
+    # prints five happy agent lines and delivers nothing.
+    await pulse.start()
 
-    # shutdown drains the buffer. Without it the process can exit with spans
-    # still batched in memory, which is the transport working as designed --
-    # it never blocks the caller -- and looks like the run silently did nothing.
-    pulse.shutdown()
+    traces = []
+    try:
+        for i in range(args.runs):
+            if args.runs > 1:
+                print(f"\n=== run {i + 1} of {args.runs} ===")
+            try:
+                traces.append(await run_once(pulse, client, args.query, models))
+            except Exception:
+                return 1
+    finally:
+        # shutdown drains the buffer. Without it the process can exit with spans
+        # still batched in memory, which is the transport working as designed --
+        # it never blocks the caller -- and looks like the run silently did
+        # nothing. It is a coroutine: calling it without await is the same as
+        # not calling it.
+        await pulse.shutdown()
     print(f"\nsent {len(traces)} trace(s). Evaluation runs in the worker; "
           "give it a moment, then look at Incidents.")
     for t in traces:
@@ -253,4 +269,4 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    raise SystemExit(asyncio.run(main()))
