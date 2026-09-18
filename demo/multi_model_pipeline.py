@@ -141,26 +141,66 @@ def build_client(api_key: str, base_url: str = OPENROUTER_BASE_URL) -> Any:
     return OpenAI(base_url=base_url, api_key=api_key)
 
 
-def ask(client: Any, model: str, prompt: str, *, max_tokens: int = 320) -> tuple[str, int, int]:
+class EmptyCompletion(RuntimeError):
+    """A 200 that carried no text.
+
+    Worth its own type because it is not an error anywhere in the stack: the
+    provider returns a well-formed response with content "", and a caller that
+    checks status codes records a success and hands an empty string to the
+    evaluator. Three of the free models behave this way; see AGENT_MODELS.
+    """
+
+
+def ask(
+    client: Any,
+    model: str,
+    prompt: str,
+    *,
+    max_tokens: int = 320,
+    retries: int = 4,
+) -> tuple[str, int, int]:
     """One completion, returned with its token counts.
 
     Deliberately not wrapped in instrument_llm. That records the call but not
     the tool result the retriever's span has to carry, and mixing the two would
     emit a second span for every call. Here each agent gets exactly one span,
     built explicitly below.
+
+    Retries on 429. The free pools are shared across every OpenRouter user, so
+    a rate limit here says nothing about this pipeline and everything about who
+    else is calling the same model. Without this a batch of runs loses roughly
+    one agent per run to a transient upstream limit, which is not a result.
     """
-    response = client.chat.completions.create(
-        model=model,
-        messages=[{"role": "user", "content": prompt}],
-        max_tokens=max_tokens,
-    )
-    text = (response.choices[0].message.content or "").strip()
-    usage = getattr(response, "usage", None)
-    return (
-        text,
-        getattr(usage, "prompt_tokens", None) or 0,
-        getattr(usage, "completion_tokens", None) or 0,
-    )
+    delay = 5.0
+    for attempt in range(retries + 1):
+        try:
+            response = client.chat.completions.create(
+                model=model,
+                messages=[{"role": "user", "content": prompt}],
+                max_tokens=max_tokens,
+            )
+        except Exception as exc:
+            transient = "429" in str(exc) or "rate" in str(exc).lower()
+            if not transient or attempt == retries:
+                raise
+            print(f"      (429 on {model}, retry {attempt + 1}/{retries} in {delay:.0f}s)")
+            time.sleep(delay)
+            delay *= 2
+            continue
+
+        text = (response.choices[0].message.content or "").strip()
+        if not text:
+            raise EmptyCompletion(
+                f"{model} returned HTTP 200 with empty content -- the model is "
+                "listed and reachable but produces no text"
+            )
+        usage = getattr(response, "usage", None)
+        return (
+            text,
+            getattr(usage, "prompt_tokens", None) or 0,
+            getattr(usage, "completion_tokens", None) or 0,
+        )
+    raise RuntimeError("unreachable")
 
 
 async def run_once(pulse: AgentPulse, client: Any, query: str, models: dict[str, str]) -> str:
