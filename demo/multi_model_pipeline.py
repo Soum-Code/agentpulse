@@ -109,15 +109,21 @@ KEYLESS_PROVIDERS = {"pollinations"}
 
 POLLINATIONS_MODEL = "openai-fast"
 
-# One family each. Checked against openrouter.ai/api/v1/models -- every one of
-# these reported zero for both prompt and completion pricing. Free models get
-# deprecated without much warning, so --models exists for when one disappears.
+# One family each, and every one of these was sent a real request rather than
+# just read out of the catalogue. That distinction is the whole point: the
+# previous set was picked by checking that all five existed at zero pricing,
+# and by the time it was first run three of the five no longer produced text --
+# qwen and z-ai returned provider errors, and liquid returned HTTP 200 with
+# empty content, which a status-code check would have recorded as a success.
+#
+# Expect this to rot again. --models overrides any of them, and the check that
+# matters is whether content comes back non-empty, not whether the call 200s.
 AGENT_MODELS: dict[str, str] = {
-    "researcher": "qwen/qwen3.8-27b:free",
+    "researcher": "nvidia/nemotron-3.5-lightning:free",
     "retriever": "deepseek/deepseek-v4-flash-0731:free",
-    "verifier": "z-ai/glm-5.2:free",
-    "analyst": "nvidia/nemotron-3.5-lightning:free",
-    "writer": "liquid/lfm-2.5-2.6b:free",
+    "verifier": "nex-agi/nex-n2.5-pro:free",
+    "analyst": "poolside/laguna-s-2.1:free",
+    "writer": "inclusionai/ling-3.0-flash-vl:free",
 }
 
 AGENT_ROLES: dict[str, str] = {
