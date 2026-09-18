@@ -38,7 +38,7 @@
 - **Design direction is frozen in `bedhi_frontend.md`** — reference by reference, what to take and what to refuse, with Liquid Glass rules. Section 16.7.
 - **Repo pushed through commit `3cd1080`; working tree clean, `origin/main` in sync.** The dashboard work that used to sit uncommitted was reviewed and checkpointed (`8a93558`) with three known gaps recorded — see Section 15.
 - **The 23.4 multi-model pipeline had never worked, and now does.** Five faults in one file; four of them meant it delivered zero spans while printing a successful run. Section 24.
-- **Disagreement reliably flags the agent that was right — this is the most important open finding.** Across four traces on five model families, every time the verifier correctly reported that retrieval had failed, disagreement fired at 0.966–0.996 against it. The signal works as designed and points at the one agent that was not wrong. Section 24.4. Grounding, by contrast, is *erratic* on refusals (0.011–0.852 on near-identical sentences), which corrects an earlier claim that it consistently penalised them — see 24.4.1.
+- **Disagreement reliably flags the agent that was right — this is the most important open finding.** Across ten classifiable traces on five model families, six correct refusals scored disagreement **0.966–1.000** and four acceptances scored **0.000–0.020**, with no overlap. The signal works as designed and points at the one agent in each trace that was not wrong. Section 24.4. Grounding, by contrast, is *erratic* on refusals (contradiction 0.011–0.850, overlapping the accept group), which corrects an earlier claim that it consistently penalised them — see 24.4.1. **Ten traces and one verifier model: a strong lead, not a publishable result.**
 - **The ablation was never stale**, and the reason matters more than the re-run: it supplies its own inputs and so measures a ceiling, not a capability. Config D has shown parity with the best configuration for months while the live signal scored zero. Section 24.5.
 - **OmniRoute's "~1.62B free tokens" and its "zero credentials" describe disjoint sets of providers** — settled from its own source, not inferred. Section 24.6.
 - Docker, GitHub, and dev-server setup are all previously verified working — see Section 4 for exact commands, not re-derived here.
@@ -2492,22 +2492,42 @@ The verifier was **correct in all four**. R4 was designed as an on-corpus query
 and telemetry instead, so the verifier was right to refuse there too. Only R2
 had successful retrieval.
 
-**What is consistent: disagreement.** Three refusals, three scores of 0.966,
-0.983 and 0.996. Every time the verifier correctly identified that retrieval
-had failed, the disagreement signal fired at near 1.0 against it -- because it
-compares the verifier's "no" with four other agents confidently discussing the
-retrieved documents. The signal works exactly as designed and points at the one
-agent in the trace that was not wrong.
+A further eight queries were then run to widen this. Across every completed
+verifier span in the database, classified only by whether the agent opened by
+accepting or refusing the evidence:
 
-**What is not consistent: grounding.** Those same three refusals scored
-contradiction 0.850, 0.011 and 0.116. R1 and R3 are near-identical sentences --
-"No, the evidence does not answer the question about X. It discusses A, B and
-C, but ..." -- and the NLI model rated one a 0.850 contradiction and the other a
-0.988 *entailment*. A 77x spread on a surface-identical construction, varying
-only with the topic named.
+| group | n | disagreement | contradiction |
+| :--- | ---: | :--- | :--- |
+| refused ("No ...") | 6 | **0.966 – 1.000** | 0.011 – 0.850 |
+| accepted ("Yes ...") | 4 | **0.000 – 0.020** | 0.001 – 0.062 |
+
+**What is consistent: disagreement.** The two groups do not overlap at all, and
+the gap between them is two orders of magnitude. Every time the verifier
+correctly identified that retrieval had failed, the signal fired at near 1.0
+against it -- because it compares the verifier's "no" with four other agents
+confidently discussing the retrieved documents. The signal works exactly as
+designed and points at the one agent in the trace that was not wrong.
+
+**What is not consistent: grounding.** The same two groups overlap on
+contradiction: a refusal at 0.011 sits *below* an acceptance at 0.062. R1 and R3
+are near-identical sentences -- "No, the evidence does not answer the question
+about X. It discusses A, B and C, but ..." -- and the NLI model rated one a 0.850
+contradiction and the other a 0.988 *entailment*. A 77x spread on a
+surface-identical construction, varying only with the topic named.
 
 So grounding does not reliably penalise refusal. It is **erratic** on refusal,
 which is a different and less quotable problem than the one first claimed.
+
+Three further verifier spans were excluded as unclassifiable: one opened
+"The evidence partially answers the question", and two are older fixture rows
+about teleportation that predate this work.
+
+**What this still is not.** Ten classifiable traces, one verifier model
+(`nex-agi/nex-n2.5-pro`), and one corpus of six documents. Four more off-corpus
+queries were attempted and lost to the account's daily free-model limit, so the
+refusal arm is thinner than planned and the accept arm thinner still at n=4.
+The separation is clean enough to be worth pursuing and nowhere near enough to
+publish.
 
 R3 and R4 raised no alerts despite disagreement near 1.0. That is the 900s
 `AGENTPULSE_ALERT_COOLDOWN_SECONDS` deduplicating against R1's alert, which is
@@ -2641,10 +2661,15 @@ New:
   never say so.** 24.5 is the general form of 18.4. When an experiment supplies
   its own inputs, it measures a ceiling, not a capability. Ask what the study
   bypasses before quoting its number.
-- **Disagreement fires on the agent that was right.** Three correct refusals,
-  three scores of 0.966–0.996. The signal is working; its target is the problem.
-  This is the sharpest open question the project has, and unlike 14 it now has a
+- **Disagreement fires on the agent that was right.** Six correct refusals score
+  0.966–1.000; four acceptances score 0.000–0.020. No overlap, two orders of
+  magnitude apart. The signal is working; its target is the problem. This is the
+  sharpest open question the project has, and unlike 14 it now has a
   reproduction on five model families.
+- **A 200 with empty content is not an error and will be scored.** deepseek
+  served all session and then returned `content: ""` mid-batch. Status is 200,
+  no exception, no error field, and the evaluator receives an empty string.
+  Check for empty text explicitly; `EmptyCompletion` in the demo exists for this.
 - **Grounding is erratic on refusals, not consistently punitive.** Two
   near-identical refusal sentences scored contradiction 0.850 and 0.011, the
   second rated 0.988 *entailed*. An earlier version of 24.4 claimed a consistent
