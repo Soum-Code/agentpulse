@@ -104,13 +104,18 @@ VERIFIER_MODELS_BY_PROVIDER = {
         "deepseek/deepseek-v4-flash-0731:free",
         "cohere/north-mini-code:free",
     ],
+    # Six distinct owners, filtered from the catalogue's 51 text models: no
+    # vision, embedding, reranking, safety-guard, parsing or code-specialised
+    # entries, since none of those will answer a yes/no question about prose.
+    # Reserves if any of these fail the first real request: moonshotai/kimi-k2.6,
+    # 01-ai/yi-large, databricks/dbrx-instruct, openai/gpt-oss-20b.
     "nvidia": [
-        "mistralai/mistral-7b-instruct-v0.3",
-        "meta/llama-3.2-11b-vision-instruct",
+        "mistralai/mistral-large-2-instruct",
+        "google/gemma-3-12b-it",
         "microsoft/phi-3.5-moe-instruct",
         "deepseek-ai/deepseek-v4-flash-0731",
         "z-ai/glm-5.3",
-        "moonshotai/kimi-k2.6",
+        "ibm/granite-3.0-8b-instruct",
     ],
 }
 
@@ -120,7 +125,11 @@ VERIFIER_MODELS_BY_PROVIDER = {
 # exact flattery 23.4 built the multi-family pipeline to avoid.
 ANALYST_MODEL_BY_PROVIDER = {
     "openrouter": "poolside/laguna-s-2.1:free",
-    "nvidia": "writer/palmyra-creative-122b",
+    # A general instruction model from a seventh owner. Not palmyra-creative,
+    # which is tuned for creative writing: the analyst's job is to state what
+    # the evidence supports without embellishing, and a model rewarded for
+    # embellishment would confound the grounding numbers with its own style.
+    "nvidia": "nvidia/llama-3.1-nemotron-70b-instruct",
 }
 
 # The corpus holds six documents: the Transformer paper, DeBERTa, SQLite WAL,
