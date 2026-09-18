@@ -2182,6 +2182,9 @@ New:
 - **The dashboard has 33 components and 32 tests, all on `adapters.ts` and
   `api.ts`.** No component has one. Corrects "19 new components" in 21.10, which
   was a remembered figure; counting the files gave 33.
+- **The product fabricates too, not just the landing page.** 23 records two more
+  rounds found inside the console. Do not treat "the marketing page" as the only
+  place to look.
 - **"Typecheck clean" means less than it sounds.** `dashboard/tsconfig.json`
   sets no `strict` flag, so `strictNullChecks`, `noImplicitAny` and
   `strictFunctionTypes` are all off. That last one is why the Lab's
@@ -2194,5 +2197,169 @@ Left deliberately unfixed, both in `dashboard/src/index.css`, both confirmed
 with the user: the `max-height` transition at the line-clamp expansion (the real
 fix is structural, not CSS) and `.chalk-canvas-grid`, which is the Chalk theme's
 graph-paper surface. Ignores are persisted in `.impeccable/config.json`.
+
+---
+
+## 23. Two more rounds, inside the product this time, and the first real models (2026-09-17/18)
+
+22 closed on "expect a sixth, and assume it is serving right now." Starting the
+stack to show a demo produced the sixth and seventh within minutes, and both
+were in the console rather than on the landing page.
+
+### 23.1 The overview was printing NaN
+
+Not a claim this time, a defect, visible on the first screen anyone opens.
+
+```ts
+agents.reduce((acc, a) => acc + a.latencyAvgMs, 0) / agents.length
+```
+
+`latencyAvgMs` is optional -- `adapters.ts` leaves it undefined when the backend
+reported none, which is that file's stated rule. One such agent makes the whole
+average `NaN`.
+
+This is 22.11's "strict is off" entry arriving in practice: `acc + (number |
+undefined)` compiles silently without `strictNullChecks`. It now averages the
+agents that reported a latency and shows an em-dash when none did.
+
+The `p95 1,840ms` and `p99 2,840ms` printed under it were not measured either.
+`/v1/agents` returns a mean per agent and no percentiles at all.
+
+### 23.2 "Datadog APM Golden Signals"
+
+A spotlight bar on the overview, over `1,245 rps`, `p95 1,120ms`, `Apdex 0.94`
+and "error rates (1.42%) across 8 critical gateways".
+
+Datadog is not used here, and none of those was measured -- the same root cause
+as 22.5, that `RequestMetricsMiddleware` records a duration and a status code
+and **not a path**, so no per-endpoint or per-gateway number exists anywhere.
+
+`SystemStatusBanner.tsx` went with it. Its only consumer was the `PerformanceView`
+deleted in #34, so it had been orphaned since, still carrying its own "critical
+gateways" line. `ApiEndpointMetrics` went too: 53 lines of per-endpoint latency,
+apdex, status-code and sparkline fields that nothing can populate. **Deleting the
+type is the part that matters** -- while it exists, the next view gets written
+against it.
+
+### 23.3 Grepping the deployed bundle afterwards found three more
+
+Worth recording as method. After #43 merged and deployed, grepping the live
+bundle still returned `Datadog` twice and `MLflow Grade` once:
+
+| where | what |
+| :--- | :--- |
+| `EnterpriseArchDiagram` | badge "Datadog & MLflow Grade" beside the title "Enterprise Pipeline Specification" |
+| `ExperimentsView` | "MLflow Matrix + CI/CD Gate" |
+| `CommandPalette` | "Datadog-style API response times, error rates & throughput" |
+
+Two are repeat offenders. **"Enterprise Pipeline Specification" is the name of
+the fabricated section from 21.8** -- its contents were corrected then and the
+heading around them was not. "CI/CD Gate" is the GitHub Action removed in #30,
+in a repository with no `.github` directory.
+
+MLflow does exist in the repo, at `experiments/mlflow_capability_audit.py`. That
+is a competitor audit, per 13, not a dependency.
+
+### 23.4 A pipeline where every agent runs a different model
+
+The limits slide says "No model in the loop yet". `demo/multi_model_pipeline.py`
+is the answer to it: five agents, five different model families, one trace.
+
+Most of it already existed and had simply never been given a model.
+`demo/workflows/research_assistant.py` is a real LangGraph pipeline wired to
+`LangGraphAdapter`; `llm_adapters/` holds Qwen, Llama, Mistral and Gemma
+adapters; `reasoning/` holds Direct, CoT and AoT. `transformers`, `llama_cpp`,
+`torch` and `langgraph` are all installed. What was missing was weights --
+`models/` holds only the two evaluator models, and the Qwen GGUF was deleted
+earlier.
+
+**`instrument_llm` already covers any OpenAI-compatible gateway**, which is the
+useful discovery. `detect_provider` reads `type(client).__module__.split(".")[0]`
+rather than using `isinstance`, so an `openai.OpenAI` pointed at any `base_url`
+is detected as `openai` and wrapped. No adapter needed for OpenRouter, OmniRoute,
+Groq or anything else that speaks the same shape.
+
+Design notes that matter for the signals:
+
+- the retriever's span carries the **real** `local_retriever` result next to the
+  model's prose about it, so a tool-claim mismatch is the model miscounting
+  rather than a planted number
+- `input_summary` for the reasoning agents is the retrieved evidence, not the
+  prompt template, because that is the pair `evaluate_grounding` compares
+- verifier and analyst answer the same question on **different families**. Two
+  prompts against one model agree with themselves, which flatters the
+  disagreement signal
+- the corpus is generic, so retrieval for a specific query returns loosely
+  related documents and the analyst has to reach. That is the point: a real
+  model overreaching on weak evidence is a real grounding failure
+
+Not yet run end to end -- see 23.5.
+
+### 23.5 OmniRoute does not give you 1.5 billion tokens
+
+Asked to look at it as the model source. The headline is real in the sense that
+its own `FREE_TIERS.md` documents ~1.51B free tokens/month across 42 pools. What
+the headline does not say is that **you supply every credential**. From its own
+setup guide:
+
+> "For a `NOAUTH` provider, no credential is required. OAuth and API-key
+> providers must be connected through their documented account flow."
+
+So the 1.51B is the sum of free tiers you would get by signing up at ~42
+providers yourself. Over two thirds of it is Mistral alone (~1B), throttled to
+2 requests per minute -- which for a five-call pipeline is about 2.5 minutes of
+rate limiting per run.
+
+It does list ~25 **keyless** providers needing no signup at all (`nvidia`,
+`liquid`, `pollinations`, `nous-research`, `reka`, `qwen-web` and others), but
+its own table marks every one of them `—` for tokens/month, "not
+token-quantifiable". Whether they actually serve is still unverified.
+
+**Three defaults were changed before running it**, on its own warning that it
+"is reachable by ANY device that can route to this host, and requests are billed
+to your configured providers":
+
+```
+OMNIROUTE_SERVER_HOST=127.0.0.1     was 0.0.0.0
+REQUIRE_API_KEY=true                was off
+INITIAL_PASSWORD=<32-char random>   was the literal CHANGEME
+```
+
+Confirmed after restart: bound to `127.0.0.1` only, `/v1/models` returns 401
+without a key.
+
+`REQUIRE_API_KEY=true` creates a bootstrap problem worth knowing about: minting
+an inference key through `omniroute api api-keys post-api-keys` needs an
+inference key. `omniroute tokens create` makes a **CLI** token, which is a
+different thing and 401s on `/v1`. The dashboard is the only bootstrap path, and
+it needs the password from `~/.omniroute/.env`.
+
+Blocked there at the time of writing. The open question is the one that decides
+whether this was the right choice at all: **do the keyless providers serve?** If
+yes, zero signups beats OpenRouter outright. If no, providers need signups
+anyway and OpenRouter's single signup for 25 free models across 13 families was
+the shorter path. Switching is a `base_url` change either way.
+
+### 23.6 Standing facts
+
+New:
+
+- **Fabrication is not confined to the landing page.** 23.1 through 23.3 were
+  all inside the product console. Rounds six and seven.
+- **Grep the deployed bundle after every removal, not just before.** #44 exists
+  only because the bundle was grepped again after #43 shipped, and three more
+  strings were still in it.
+- **A deleted mock leaves a type behind, and the type is the hazard.**
+  `ApiEndpointMetrics` outlived the module that populated it and kept an
+  orphaned component compiling against it.
+- **`instrument_llm` works with any OpenAI-compatible base_url.** Provider
+  detection is by module root, not `isinstance`. Gateways are a `base_url`
+  change, not an integration.
+- **A free-token headline is usually an aggregate of your own signups.** Check
+  who supplies the credential before counting the tokens.
+- **Change a third-party service's defaults before its first real start.**
+  OmniRoute's own banner said it was listening on `0.0.0.0` with no API key and
+  billing to your providers. Config written after the process starts does not
+  apply to it.
 
 ---
