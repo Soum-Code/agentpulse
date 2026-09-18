@@ -2311,9 +2311,9 @@ providers yourself. Over two thirds of it is Mistral alone (~1B), throttled to
 rate limiting per run.
 
 It does list ~25 **keyless** providers needing no signup at all (`nvidia`,
-`liquid`, `pollinations`, `nous-research`, `reka`, `qwen-web` and others), but
+`liquid`, `pollinations`, `nous-research`, `reka`, `qwen-web` and others), and
 its own table marks every one of them `—` for tokens/month, "not
-token-quantifiable". Whether they actually serve is still unverified.
+token-quantifiable". That dash turns out to be the tell -- see below.
 
 **Three defaults were changed before running it**, on its own warning that it
 "is reachable by ANY device that can route to this host, and requests are billed
@@ -2334,11 +2334,39 @@ inference key. `omniroute tokens create` makes a **CLI** token, which is a
 different thing and 401s on `/v1`. The dashboard is the only bootstrap path, and
 it needs the password from `~/.omniroute/.env`.
 
-Blocked there at the time of writing. The open question is the one that decides
-whether this was the right choice at all: **do the keyless providers serve?** If
-yes, zero signups beats OpenRouter outright. If no, providers need signups
-anyway and OpenRouter's single signup for 25 free models across 13 families was
-the shorter path. Switching is a `base_url` change either way.
+A key was minted from the dashboard, which unblocked it. `/v1/models` then
+returned **480 models across 16 provider prefixes**, with no credentialed
+provider connected -- so all of them keyless.
+
+**None of them serve.** Nine were tried, one per provider, with a one-word
+prompt:
+
+| model | result |
+| :--- | :--- |
+| `cfp/zai-org/glm-5.2` | 502 Cloudflare Playground browser session failed |
+| `ddgw/gpt-5.4-mini` | 418 DuckDuckGo AI Chat anti-abuse challenge failed |
+| `zc/glm-5.3` | 502 `spawn zcode ENOENT` -- wants a local binary |
+| `oc/big-pickle` | 403 "OpenCode's free tier can only be used fr…" |
+| `auto/best-coding` | 402 "This model requires an opencode API key" |
+| `felo/felo-chat` | 400 thread creation failed |
+| `pepper/pepper-1` | 502 Amelia init failed |
+| `unc/Hermes-3-…` | 404 model not available |
+| `aihorde/2DN` | image model; the 165 aihorde entries are mostly image |
+
+Read the first two again. **These are not APIs, they are scrapers** -- driving
+browser sessions against Cloudflare's playground and DuckDuckGo's chat UI, and
+both were stopped by anti-abuse measures those services put there deliberately.
+That is a reason to avoid the keyless tier beyond its not working: results in a
+thesis have to survive the question of where the data came from.
+
+So the answer is the second branch. Providers need signups either way, and
+OpenRouter's single signup for 25 free models across 13 families is the shorter
+path. Switching is a `base_url` change.
+
+OmniRoute itself is not the problem and is worth keeping in mind: as a router
+over provider accounts you own, it is well built. Point it at Mistral, Gemini
+and Groq with your own keys and it does what it says. The free-token headline
+just describes a tier that does not function.
 
 ### 23.6 Standing facts
 
@@ -2357,6 +2385,13 @@ New:
   change, not an integration.
 - **A free-token headline is usually an aggregate of your own signups.** Check
   who supplies the credential before counting the tokens.
+- **A model in a catalogue is not a model that answers.** OmniRoute listed 480
+  keyless models; nine were tried, one per provider, and nine failed. Send one
+  real request before building on a catalogue, and before quoting its size.
+- **"Keyless" can mean scraped.** Two of those nine drive browser sessions
+  against web chat UIs and were stopped by anti-abuse challenges. Free access
+  that routes around a service's own protections is not usable for work that has
+  to say where its data came from.
 - **Change a third-party service's defaults before its first real start.**
   OmniRoute's own banner said it was listening on `0.0.0.0` with no API key and
   billing to your providers. Config written after the process starts does not
