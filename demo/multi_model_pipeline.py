@@ -101,16 +101,17 @@ OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 PROVIDERS: dict[str, str] = {
     "openrouter": OPENROUTER_BASE_URL,
     "pollinations": "https://text.pollinations.ai/openai",
-    # NVIDIA's NIM catalogue. One signup at build.nvidia.com for an nvapi- key,
-    # and its /v1/models lists 82 models across 21 owners -- meta, mistralai,
-    # google, microsoft, deepseek-ai, z-ai and others. That breadth is the
-    # reason to bother: OpenRouter's free tier yielded six families that
-    # actually served, and the verifier-diversity question needs more than one.
+    # NVIDIA's NIM catalogue. One signup at build.nvidia.com for an nvapi- key.
     #
-    # Expect rate limits rather than a token budget. OmniRoute's own catalogue
-    # excludes nvidia from its free-tier token table as "rate-limit-only, no
-    # published token cap", which is a fair description. As always, listed is
-    # not served: send one real request before planning around any of them.
+    # Its /v1/models lists 82 entries across 21 owners, and that number is
+    # close to meaningless: the catalogue is GLOBAL, access is per-account, and
+    # calling all 54 text models on a fresh free key returned 404 "Not found
+    # for account" for 40 of them. Nine were callable, across six owners. The
+    # honest figure for a free key is nine, not eighty-two.
+    #
+    # Still worth using -- six owners beats the three that reliably served on
+    # OpenRouter's free tier, and that is the constraint on the verifier
+    # diversity 24.4 needs. Expect rate limits rather than a token budget.
     "nvidia": "https://integrate.api.nvidia.com/v1",
 }
 
@@ -143,16 +144,23 @@ AGENT_MODELS: dict[str, str] = {
     "writer": "inclusionai/ling-3.0-flash-vl:free",
 }
 
-# Defaults for --provider nvidia. Five owners, chosen from its /v1/models for
-# family spread rather than size. NOT yet sent a real request -- listed is not
-# served, and 23.6 and 24.7 are both about exactly that gap. Verify before
-# quoting any run that uses these, and use --models to swap any that fail.
+# Defaults for --provider nvidia. Every one of these was sent a real request
+# and answered; the set this replaced was picked by reading /v1/models and not
+# one of its five could be called.
+#
+# That catalogue is GLOBAL and access is per-account: 40 of its 54 text models
+# answer 404 "Not found for account" on this key, leaving nine across six
+# owners. Rescan rather than reading the catalogue if these stop working.
+#
+# Four of the six are reasoning models that spend tokens on a hidden
+# reasoning_content field before answering, so max_tokens has to be generous
+# or content comes back empty with finish_reason "length".
 NVIDIA_AGENT_MODELS: dict[str, str] = {
-    "researcher": "microsoft/phi-3.5-moe-instruct",
-    "retriever": "deepseek-ai/deepseek-v4-flash-0731",
-    "verifier": "mistralai/mistral-large-2-instruct",
-    "analyst": "z-ai/glm-5.3",
-    "writer": "moonshotai/kimi-k2.6",
+    "researcher": "nvidia/nemotron-3-super-120b-a12b",
+    "retriever": "mistralai/mistral-nemotron",
+    "verifier": "google/gemma-4-31b-it",
+    "analyst": "deepseek-ai/deepseek-v4-flash-0731",
+    "writer": "z-ai/glm-5.3-flash",
 }
 
 AGENT_ROLES: dict[str, str] = {
@@ -185,7 +193,7 @@ def ask(
     model: str,
     prompt: str,
     *,
-    max_tokens: int = 320,
+    max_tokens: int = 1200,
     retries: int = 4,
 ) -> tuple[str, int, int]:
     """One completion, returned with its token counts.

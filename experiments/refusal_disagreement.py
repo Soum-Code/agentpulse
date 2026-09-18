@@ -104,18 +104,22 @@ VERIFIER_MODELS_BY_PROVIDER = {
         "deepseek/deepseek-v4-flash-0731:free",
         "cohere/north-mini-code:free",
     ],
-    # Six distinct owners, filtered from the catalogue's 51 text models: no
-    # vision, embedding, reranking, safety-guard, parsing or code-specialised
-    # entries, since none of those will answer a yes/no question about prose.
-    # Reserves if any of these fail the first real request: moonshotai/kimi-k2.6,
-    # 01-ai/yi-large, databricks/dbrx-instruct, openai/gpt-oss-20b.
+    # Five owners, and these were chosen by calling all 54 text models in the
+    # catalogue rather than by reading it.
+    #
+    # /v1/models is a GLOBAL catalogue and access is per-account: 40 of the 54
+    # answered 404 "Not found for account", including every model this list
+    # originally named. Nine were callable, spanning six owners. Do not pick
+    # from the catalogue again -- rerun the scan.
+    #
+    # The analyst takes the sixth owner, so no verifier shares a family with
+    # the counterpart it is compared against.
     "nvidia": [
-        "mistralai/mistral-large-2-instruct",
-        "google/gemma-3-12b-it",
-        "microsoft/phi-3.5-moe-instruct",
         "deepseek-ai/deepseek-v4-flash-0731",
-        "z-ai/glm-5.3",
-        "ibm/granite-3.0-8b-instruct",
+        "google/gemma-4-31b-it",
+        "meta/muse-glimmer-30b",
+        "mistralai/mistral-nemotron",
+        "z-ai/glm-5.3-flash",
     ],
 }
 
@@ -125,11 +129,12 @@ VERIFIER_MODELS_BY_PROVIDER = {
 # exact flattery 23.4 built the multi-family pipeline to avoid.
 ANALYST_MODEL_BY_PROVIDER = {
     "openrouter": "poolside/laguna-s-2.1:free",
-    # A general instruction model from a seventh owner. Not palmyra-creative,
-    # which is tuned for creative writing: the analyst's job is to state what
-    # the evidence supports without embellishing, and a model rewarded for
-    # embellishment would confound the grounding numbers with its own style.
-    "nvidia": "nvidia/llama-3.1-nemotron-70b-instruct",
+    # The sixth callable owner, so the analyst never shares a family with a
+    # verifier. palmyra-creative was the earlier choice and was wrong twice
+    # over: the account cannot call it, and it is tuned for creative writing
+    # where the analyst's job is to state what the evidence supports without
+    # embellishing.
+    "nvidia": "nvidia/nemotron-3-super-120b-a12b",
 }
 
 # The corpus holds six documents: the Transformer paper, DeBERTa, SQLite WAL,
@@ -166,7 +171,16 @@ class EmptyCompletion(RuntimeError):
     """A 200 carrying no text. See demo/multi_model_pipeline.py."""
 
 
-def ask(client: Any, model: str, prompt: str, *, max_tokens: int = 300, retries: int = 4) -> str:
+# Four of the six callable models are reasoning models: they spend completion
+# tokens on a hidden reasoning_content field before emitting any answer, and
+# deepseek burned 2,569 characters of it on "what is a database index?". At the
+# 300 this file first used, content came back empty with finish_reason
+# "length" -- which is a truncated model, not a broken one, and would have been
+# recorded as an empty completion and thrown away.
+DEFAULT_MAX_TOKENS = 1200
+
+
+def ask(client: Any, model: str, prompt: str, *, max_tokens: int = DEFAULT_MAX_TOKENS, retries: int = 4) -> str:
     delay = 5.0
     for attempt in range(retries + 1):
         try:
@@ -182,9 +196,17 @@ def ask(client: Any, model: str, prompt: str, *, max_tokens: int = 300, retries:
             time.sleep(delay)
             delay *= 2
             continue
-        text = (r.choices[0].message.content or "").strip()
+        choice = r.choices[0]
+        text = (choice.message.content or "").strip()
         if not text:
-            raise EmptyCompletion(f"{model} returned 200 with empty content")
+            reasoning = len(getattr(choice.message, "reasoning_content", None) or "")
+            why = (
+                f"spent the budget on {reasoning} chars of hidden reasoning "
+                f"(finish_reason={choice.finish_reason}); raise max_tokens"
+                if reasoning else
+                "no reasoning field either, so the model genuinely produced nothing"
+            )
+            raise EmptyCompletion(f"{model} returned 200 with empty content -- {why}")
         return text
     raise RuntimeError("unreachable")
 
