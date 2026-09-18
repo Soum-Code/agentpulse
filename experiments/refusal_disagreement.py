@@ -47,12 +47,20 @@ measures the evaluator's ceiling and not its reachability, exactly the caveat
 
 Usage
 -----
-    export OPENROUTER_API_KEY=...
+    export NVIDIA_API_KEY=...        # build.nvidia.com, one key for the catalogue
     python experiments/refusal_disagreement.py --repeats 2
 
+    # or the thinner arm, if that key is what you have
+    export OPENROUTER_API_KEY=...
+    python experiments/refusal_disagreement.py --provider openrouter
+
+nvidia is the default because model diversity is the binding constraint here:
+24.4 rests on a single verifier model, and one NVIDIA key reaches six families
+where OpenRouter's free tier yielded three that reliably served.
+
 Resumable: every completed trial is written to the results JSON immediately and
-skipped on the next run. The free tier's daily limit means this is expected to
-span more than one day, and a partial run is not a wasted one.
+skipped on the next run. A daily rate limit means this is expected to span more
+than one day, and a partial run is not a wasted one.
 """
 
 from __future__ import annotations
@@ -76,17 +84,44 @@ from demo.workflows.retrieval import local_retriever
 RESULTS = Path(__file__).parent / "results" / "refusal_disagreement.json"
 REPORT = Path(__file__).parent.parent / "REFUSAL_DISAGREEMENT_REPORT.md"
 
-OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
+PROVIDERS = {
+    "openrouter": ("https://openrouter.ai/api/v1", "OPENROUTER_API_KEY"),
+    "nvidia": ("https://integrate.api.nvidia.com/v1", "NVIDIA_API_KEY"),
+}
 
-# Verifier models. Three families, because one model's habit of opening with
-# "No" is a property of that model and not of the signal under test.
-VERIFIER_MODELS = [
-    "nex-agi/nex-n2.5-pro:free",
-    "deepseek/deepseek-v4-flash-0731:free",
-    "cohere/north-mini-code:free",
-]
+# Verifier models, by provider. A model's habit of opening with "No" is a
+# property of that model, not of the signal under test, so the number of
+# distinct families here is the main thing protecting this experiment from
+# measuring one model's manners.
+#
+# nvidia is the better arm: one signup reaches 82 models across 21 owners,
+# where OpenRouter's free tier yielded six families that actually served. None
+# of the nvidia ids below has been sent a real request yet -- verify before
+# reporting anything from them, per 24.7.
+VERIFIER_MODELS_BY_PROVIDER = {
+    "openrouter": [
+        "nex-agi/nex-n2.5-pro:free",
+        "deepseek/deepseek-v4-flash-0731:free",
+        "cohere/north-mini-code:free",
+    ],
+    "nvidia": [
+        "mistralai/mistral-7b-instruct-v0.3",
+        "meta/llama-3.2-11b-vision-instruct",
+        "microsoft/phi-3.5-moe-instruct",
+        "deepseek-ai/deepseek-v4-flash-0731",
+        "z-ai/glm-5.3",
+        "moonshotai/kimi-k2.6",
+    ],
+}
 
-ANALYST_MODEL = "poolside/laguna-s-2.1:free"
+# The counterpart agent, held constant so the verifier's stance is the only
+# thing that varies. Deliberately not drawn from VERIFIER_MODELS: if the
+# analyst and a verifier share a model they agree with themselves, which is the
+# exact flattery 23.4 built the multi-family pipeline to avoid.
+ANALYST_MODEL_BY_PROVIDER = {
+    "openrouter": "poolside/laguna-s-2.1:free",
+    "nvidia": "writer/palmyra-creative-122b",
+}
 
 # The corpus holds six documents: the Transformer paper, DeBERTa, SQLite WAL,
 # KB-401 on API key expiry, KB-429 on token-bucket backoff, and telemetry KPI
@@ -251,18 +286,34 @@ def main() -> int:
     ap.add_argument("--repeats", type=int, default=2, help="verifier samples per model per query")
     ap.add_argument("--max-trials", type=int, default=0, help="stop after N new trials (0 = no cap)")
     ap.add_argument("--report-only", action="store_true", help="rebuild the report from saved results")
+    ap.add_argument("--provider", choices=sorted(PROVIDERS), default="nvidia",
+                    help="which OpenAI-compatible gateway to call (default: nvidia)")
     args = ap.parse_args()
+
+    base_url, key_env = PROVIDERS[args.provider]
+    verifier_models = VERIFIER_MODELS_BY_PROVIDER[args.provider]
+    analyst_model = ANALYST_MODEL_BY_PROVIDER[args.provider]
 
     state = load_existing()
 
     if not args.report_only:
-        key = os.getenv("OPENROUTER_API_KEY")
+        key = os.getenv(key_env)
         if not key:
-            print("OPENROUTER_API_KEY is not set.", file=sys.stderr)
+            where = {
+                "openrouter": "https://openrouter.ai/keys",
+                "nvidia": "https://build.nvidia.com (account menu -> API keys)",
+            }[args.provider]
+            print(f"{key_env} is not set. Create one at {where} and put it in "
+                  ".env or the environment.", file=sys.stderr)
             return 2
         from openai import OpenAI
 
-        client = OpenAI(base_url=OPENROUTER_BASE_URL, api_key=key)
+        client = OpenAI(base_url=base_url, api_key=key)
+        state["config"] = {
+            "provider": args.provider,
+            "verifier_models": verifier_models,
+            "analyst_model": analyst_model,
+        }
         # load_models defaults cache_dir to "./models", relative to the working
         # directory and ignoring config. experiments/ablation.py does not pass
         # it and re-downloads 1.2 GB in any fresh checkout; pass it here so the
@@ -284,7 +335,7 @@ def main() -> int:
             if query not in state["analyst_cache"]:
                 try:
                     state["analyst_cache"][query] = ask(
-                        client, ANALYST_MODEL, ANALYST_PROMPT.format(query=query, evidence=evidence)
+                        client, analyst_model, ANALYST_PROMPT.format(query=query, evidence=evidence)
                     )
                     save(state)
                 except Exception as exc:
@@ -292,7 +343,7 @@ def main() -> int:
                     continue
             analyst_out = state["analyst_cache"][query]
 
-            for model in VERIFIER_MODELS:
+            for model in verifier_models:
                 for rep in range(args.repeats):
                     if (query, model, rep) in done:
                         continue
@@ -351,6 +402,9 @@ def _write_report(state: dict[str, Any]) -> None:
         fmt = lambda x: "n=0" if not x else f"n={x['n']}, mean {x['mean']}, range {x['min']}–{x['max']}"
         return f"| {k} | {c['label']} | {fmt(d)} | {fmt(ct)} |"
 
+    cfg = state.get("config", {})
+    verifiers_str = ", ".join(cfg.get("verifier_models", [])) or "(not recorded)"
+    analyst_str = cfg.get("analyst_model", "(not recorded)")
     auc_d = s["auc_refusal_vs_acceptance"]["disagreement"]
     auc_c = s["auc_refusal_vs_acceptance"]["contradiction"]
     cd = s["cells"]["C"]["disagreement"], s["cells"]["D"]["disagreement"]
@@ -399,7 +453,7 @@ cannot distinguish:
 
 Per query the evidence is fixed by the real retriever and one analyst output is
 generated and reused as the counterpart agent, so the verifier's stance is the
-only thing that varies. Verifiers: {', '.join(VERIFIER_MODELS)}. Every verifier
+only thing that varies. Verifiers: {verifiers_str}. Every verifier
 receives the same neutral prompt; cells C and D fill because models genuinely
 disagree with each other, not because any prompt pushed them to.
 
@@ -443,7 +497,7 @@ honest summary of the 24.4 observation, not because it settles anything.
   interpreted.
 - **One analyst model and one corpus of six documents.** The counterpart agent
   is held constant to isolate the verifier, which also means any quirk of
-  {ANALYST_MODEL} is present in every trial.
+  {analyst_str} is present in every trial.
 - **Cells C and D are not balanced by construction** and cannot be, since they
   depend on models spontaneously disagreeing. Read their n before their mean.
 
