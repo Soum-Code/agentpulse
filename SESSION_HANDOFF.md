@@ -1,6 +1,6 @@
 # Session Handoff — AgentPulse Work Log
 
-**Written:** 2026-08-23. **Rewritten clean:** 2026-08-26. **Updated:** 2026-08-27 (Sections 7–9 disagreement/benchmark/positioning; 10 drift diagnosis and fix; 11 tool-claim external test; 12 blocked redesign; 13 competitor audits). **Updated:** 2026-08-28 (Section 14 — external disagreement validation, the last of the three signals to be checked and the third to fail; Section 15 — the productization arc, seven phases from migrations through health/readiness). **Updated:** 2026-08-30 (Section 16 — dashboard unfrozen, the landing-page claim audit, and the half-finished drift restore). **Updated:** 2026-08-31 (Section 17 — Final Review deliverables, the literature survey, and repository access). **Updated:** 2026-09-12 (Section 18 — frontend replaced and wired to the live API, the tool-claim signal made to fire for the first time, and the Compose stack fixed so it actually evaluates; MIT licence added, closing a claim the README had been making against a missing file). **Updated:** 2026-09-19 (Section 24 — the 23.4 pipeline run for the first time and five faults found in it, four of which meant it delivered nothing; a correct refusal scoring as a hallucination, which is the evidence-partition problem of Section 14 with a reproduction; the ablation re-run and found never to have been stale; OmniRoute's free-token headline settled from its own source).
+**Written:** 2026-08-23. **Rewritten clean:** 2026-08-26. **Updated:** 2026-08-27 (Sections 7–9 disagreement/benchmark/positioning; 10 drift diagnosis and fix; 11 tool-claim external test; 12 blocked redesign; 13 competitor audits). **Updated:** 2026-08-28 (Section 14 — external disagreement validation, the last of the three signals to be checked and the third to fail; Section 15 — the productization arc, seven phases from migrations through health/readiness). **Updated:** 2026-08-30 (Section 16 — dashboard unfrozen, the landing-page claim audit, and the half-finished drift restore). **Updated:** 2026-08-31 (Section 17 — Final Review deliverables, the literature survey, and repository access). **Updated:** 2026-09-12 (Section 18 — frontend replaced and wired to the live API, the tool-claim signal made to fire for the first time, and the Compose stack fixed so it actually evaluates; MIT licence added, closing a claim the README had been making against a missing file). **Updated:** 2026-09-19 (Section 24 — the 23.4 pipeline run for the first time and five faults found in it, four of which meant it delivered nothing; the disagreement signal firing at 0.966–0.996 against the one agent in each trace that was correct, which is the evidence-partition problem of Section 14 with a reproduction on five model families; the ablation re-run and found never to have been stale; OmniRoute's free-token headline settled from its own source).
 
 **Project:** AgentPulse — self-hostable observability SDK for grounding-risk and drift monitoring in multi-agent LLM systems. M.Tech project. Working directory: `C:\MLOPs\3rd sem project\Agentpluse` (renamed from `project one agent`; the venv's editable installs still point at the old path).
 
@@ -38,7 +38,7 @@
 - **Design direction is frozen in `bedhi_frontend.md`** — reference by reference, what to take and what to refuse, with Liquid Glass rules. Section 16.7.
 - **Repo pushed through commit `3cd1080`; working tree clean, `origin/main` in sync.** The dashboard work that used to sit uncommitted was reviewed and checkpointed (`8a93558`) with three known gaps recorded — see Section 15.
 - **The 23.4 multi-model pipeline had never worked, and now does.** Five faults in one file; four of them meant it delivered zero spans while printing a successful run. Section 24.
-- **A correct refusal scores as a hallucination — this is the most important open finding.** An agent that correctly reports "this evidence does not answer the question" is flagged `HIGH_HALLUCINATION_RISK`, while an agent that confidently restates irrelevant documents passes as `low_risk`. Section 24.4. **It is one model and two traces: a lead with a mechanism, not a result.**
+- **Disagreement reliably flags the agent that was right — this is the most important open finding.** Across four traces on five model families, every time the verifier correctly reported that retrieval had failed, disagreement fired at 0.966–0.996 against it. The signal works as designed and points at the one agent that was not wrong. Section 24.4. Grounding, by contrast, is *erratic* on refusals (0.011–0.852 on near-identical sentences), which corrects an earlier claim that it consistently penalised them — see 24.4.1.
 - **The ablation was never stale**, and the reason matters more than the re-run: it supplies its own inputs and so measures a ceiling, not a capability. Config D has shown parity with the best configuration for months while the live signal scored zero. Section 24.5.
 - **OmniRoute's "~1.62B free tokens" and its "zero credentials" describe disjoint sets of providers** — settled from its own source, not inferred. Section 24.6.
 - Docker, GitHub, and dev-server setup are all previously verified working — see Section 4 for exact commands, not re-derived here.
@@ -2468,40 +2468,77 @@ Fifth fault, same shape as the first four and the same shape as 16.4, 21.8,
 22.5 and 23.3: **the documentation described a capability the code did not
 have.**
 
-### 24.4 A correct refusal scores as a hallucination
+### 24.4 Disagreement reliably flags the agent that was right
 
-Two runs against `openai-fast` (GPT-OSS 20B via Pollinations), identical
-prompts, differing only in whether the query matches the corpus.
+**This section was rewritten on 2026-09-19 after the five-family run. The first
+version claimed "a correct refusal scores as a hallucination" from one model
+and two traces. Four traces on five model families do not support that as a
+rule, and the corrected finding is narrower and more useful.** The original
+claim is kept below as 24.4.1 because how it broke is the instructive part.
 
-| run | verifier said | grounding | disagreement | risk | result |
-| :--- | :--- | ---: | ---: | ---: | :--- |
-| off-corpus | "**No**, these passages do not discuss RAG" | 0.551 | 1.000 | 0.701 | `HIGH_HALLUCINATION_RISK` + `AGENT_DISAGREEMENT` |
-| on-corpus | "**Yes**, the first excerpt describes it" | 0.012 | 0.008 | 0.011 | no alert |
+Four runs, five different model families, one variable: whether the retrieved
+evidence actually answers the query. `verifier` is `nex-agi/nex-n2.5-pro` in
+all four.
 
-The verifier was **correct in both runs**. In the first it was the only agent
-that noticed the retrieval was irrelevant, and it was the only agent flagged.
-The analyst, which confidently restated three documents about Transformers,
-SQLite WAL and telemetry KPIs for a question about retrieval-augmented
-generation, came out `low_risk` 0.334.
+| run | query | verifier said | contradiction | grounding | disagreement | risk |
+| :--- | :--- | :--- | ---: | ---: | ---: | ---: |
+| R1 | kubernetes pod autoscaling | **No** | 0.850 | 0.852 | 0.966 | 0.890 `high` |
+| R2 | SQLite WAL concurrency | **Yes** | 0.004 | 0.011 | 0.001 | 0.008 `low` |
+| R3 | gradient descent optimizers | **No** | 0.011 | 0.011 | 0.983 | 0.335 `low` |
+| R4 | token bucket backoff | **No** | 0.116 | 0.117 | 0.996 | 0.410 `medium` |
 
-What moved between those two rows is not correctness. It is whether the agent
-said yes or no. **A refusal is a statement *about* evidence and is never
-entailed *by* it**, so entailment scoring cannot separate "made something up"
-from "correctly reported that the evidence supports nothing."
+The verifier was **correct in all four**. R4 was designed as an on-corpus query
+-- KB-429 covers token buckets -- and retrieval returned Transformers, SQLite
+and telemetry instead, so the verifier was right to refuse there too. Only R2
+had successful retrieval.
 
-The control run's own alert is the same failure from the other side: the
-analyst summarised all three retrieved documents, the verifier judged only the
-first relevant, and the pair was flagged as disagreeing at 0.810. Neither is
-wrong. **That is the evidence-partition problem from 14, reproduced from a real
-model instead of argued from fixtures.**
+**What is consistent: disagreement.** Three refusals, three scores of 0.966,
+0.983 and 0.996. Every time the verifier correctly identified that retrieval
+had failed, the disagreement signal fired at near 1.0 against it -- because it
+compares the verifier's "no" with four other agents confidently discussing the
+retrieved documents. The signal works exactly as designed and points at the one
+agent in the trace that was not wrong.
 
-`tool_claim` behaved correctly in both runs -- silent here, where the retriever
-said "three documents" and the tool returned 3, after firing on the stub that
-claimed 5. A true positive and a true negative, both on the live path.
+**What is not consistent: grounding.** Those same three refusals scored
+contradiction 0.850, 0.011 and 0.116. R1 and R3 are near-identical sentences --
+"No, the evidence does not answer the question about X. It discusses A, B and
+C, but ..." -- and the NLI model rated one a 0.850 contradiction and the other a
+0.988 *entailment*. A 77x spread on a surface-identical construction, varying
+only with the topic named.
 
-**Do not promote this to a result yet.** It is one model and two traces, and
-all five agents shared that model because the keyless tier serves only one. It
-is a lead with a clear mechanism, not a finding.
+So grounding does not reliably penalise refusal. It is **erratic** on refusal,
+which is a different and less quotable problem than the one first claimed.
+
+R3 and R4 raised no alerts despite disagreement near 1.0. That is the 900s
+`AGENTPULSE_ALERT_COOLDOWN_SECONDS` deduplicating against R1's alert, which is
+correct behaviour and not a defect -- but it means **alert counts understate
+how often these signals fire**. Read the scores, not the alert log.
+
+The analyst is worth recording separately. In R1 it wrote that "Kubernetes pod
+autoscaling must be designed to maintain telemetry performance metrics such as
+sub-0.05ms" -- a fabricated connection between the retrieved telemetry KPIs and
+a subject the evidence never mentions. It scored grounding **0.009** and passed
+as `low_risk`. Reusing the evidence's own vocabulary while attaching it to an
+invented subject is not something entailment scoring is positioned to catch.
+
+#### 24.4.1 The claim this replaces, and why it broke
+
+The first version of this section said, from one model and two traces:
+
+> A refusal is a statement *about* evidence and is never entailed *by* it, so
+> entailment scoring cannot separate "made something up" from "correctly
+> reported that the evidence supports nothing."
+
+The mechanism sounded right and the two traces fitted it. R3 falsifies it
+directly: a refusal scored 0.988 entailed. The sentence was reasoning from how
+NLI *ought* to treat meta-statements rather than from measurement, and two
+traces were not enough to notice.
+
+It was labelled a lead rather than a result, which is the only reason this is a
+correction and not a retraction. **Two traces can support any mechanism you
+can think of.** The rule that keeps working in this project is the one from
+22.11: the check that finds things is running the thing, more times than feels
+necessary.
 
 ### 24.5 The ablation was never stale
 
@@ -2556,7 +2593,47 @@ comments exclude nvidia, tencent and others as "theoretical, not granted." The
 framing is the problem, and it is worth carrying as a reading skill rather than
 a grudge.
 
-### 24.7 Standing facts
+### 24.7 Three of the five default models no longer produce text
+
+23.4 picked five free OpenRouter models, one family each, and recorded that all
+five reported zero pricing. On 2026-09-18 all five still existed in the
+catalogue at zero pricing. **Three of them do not answer.**
+
+| model | result |
+| :--- | :--- |
+| `deepseek/deepseek-v4-flash-0731:free` | serves |
+| `nvidia/nemotron-3.5-lightning:free` | serves, with a visible reasoning preamble |
+| `qwen/qwen3.8-27b:free` | `Provider returned error` |
+| `z-ai/glm-5.2:free` | `Provider returned error` |
+| `liquid/lfm-2.5-2.6b:free` | 200 OK with **empty content** |
+
+The third row is the one to remember. `liquid` returns a well-formed response
+with `content: ""` -- not an error, not a refusal, just nothing. A pipeline that
+checks status codes would record it as a successful call and hand an empty
+string to the evaluator.
+
+Six of the 22 `:free` models were then probed for replacements, and the same
+pattern held: `google/gemma-4-31b-it` and `google/gemma-4-26b-a4b-it` both
+error, `thinkingmachines/inkling` is not available on this tier, and
+`dots-studio/dots-3-note-preview` and `inclusionai/ling-3.0-flash-fin` both
+return empty content. **Roughly half of a catalogue of free models does not
+produce text.**
+
+Working set at the time of writing, five families:
+
+```
+researcher  nvidia/nemotron-3.5-lightning:free
+retriever   deepseek/deepseek-v4-flash-0731:free
+verifier    nex-agi/nex-n2.5-pro:free
+analyst     poolside/laguna-s-2.1:free
+writer      inclusionai/ling-3.0-flash-vl:free
+```
+
+Expect this list to rot. 23.6's standing fact -- send one real request before
+building on a catalogue -- now has a second confirmation and a new corollary:
+**check for empty content, not just for errors.**
+
+### 24.8 Standing facts
 
 New:
 
@@ -2564,10 +2641,21 @@ New:
   never say so.** 24.5 is the general form of 18.4. When an experiment supplies
   its own inputs, it measures a ceiling, not a capability. Ask what the study
   bypasses before quoting its number.
-- **The grounding signal penalises refusal.** An agent that correctly says "this
-  evidence does not support an answer" is scored as ungrounded, because its
-  output is a claim about the evidence rather than from it. This is the sharpest
-  open problem the project has, and unlike 14 it now has a reproduction.
+- **Disagreement fires on the agent that was right.** Three correct refusals,
+  three scores of 0.966–0.996. The signal is working; its target is the problem.
+  This is the sharpest open question the project has, and unlike 14 it now has a
+  reproduction on five model families.
+- **Grounding is erratic on refusals, not consistently punitive.** Two
+  near-identical refusal sentences scored contradiction 0.850 and 0.011, the
+  second rated 0.988 *entailed*. An earlier version of 24.4 claimed a consistent
+  penalty from two traces and was wrong; see 24.4.1.
+- **Alert counts understate how often a signal fires.** A 900s cooldown
+  deduplicated two of three disagreement alerts. Read the scores, not the alert
+  log.
+- **Reusing the evidence's vocabulary while attaching it to an invented subject
+  scores as well grounded.** The analyst wrote that Kubernetes autoscaling must
+  hold sub-0.05ms telemetry thresholds, from documents that never mention
+  Kubernetes, and scored grounding 0.009.
 - **A stub proves delivery and nothing else.** Fixtures are ASCII, well-formed,
   and never refuse. Two of the five faults in 24 were unreachable until a real
   model produced real prose.
@@ -2595,9 +2683,11 @@ New:
 
 Open, and the reason this section stops where it does:
 
-- **The 24.4 lead needs five model families and more queries.** That is one
-  OpenRouter signup away. Until then it is one model, two traces, and should be
-  described that way.
+- **24.4 now has five model families and four traces, and that was enough to
+  break half of it.** It needs more queries still: three refusals is a thin
+  basis for "disagreement always flags the refusing agent", however clean
+  0.966–0.996 looks. The 3 of 5 default models that no longer produce text
+  (24.7) should be re-checked at the same time.
 - **The SDK still discards spans silently from any synchronous caller.** 24.1
   fixed the demo, not the footgun underneath it.
 
