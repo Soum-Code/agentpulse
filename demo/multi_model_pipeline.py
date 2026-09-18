@@ -73,6 +73,18 @@ from agentpulse import AgentPulse
 from agentpulse.schemas.enums import SpanKind, SpanStatus
 from demo.workflows.retrieval import local_retriever
 
+# The usage note above has always said the key can live "in a .env this script
+# is run with". Nothing in the import chain loaded one, so that was only true
+# if the caller had already exported it. Load the project .env here and make
+# the sentence true. Real environment variables still win, which is what you
+# want when overriding a committed default for one run.
+try:
+    from dotenv import load_dotenv
+
+    load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"), override=False)
+except ImportError:  # python-dotenv is not an SDK dependency; export instead
+    pass
+
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 
 # Any OpenAI-compatible gateway works, because that is all the SDK needs: the
