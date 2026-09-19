@@ -78,7 +78,10 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "sdk" / "src"))
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from app.services.grounding import compute_nli_grounding, load_models
-from app.services.disagreement import evaluate_inter_agent_disagreement
+from app.services.disagreement import (
+    evaluate_against_prior_agents,
+    evaluate_inter_agent_disagreement,
+)
 from demo.workflows.retrieval import local_retriever
 
 RESULTS = Path(__file__).parent / "results" / "refusal_disagreement.json"
@@ -177,6 +180,31 @@ ANALYST_PROMPT = (
     "Synthesise what the evidence supports. Three sentences, no speculation."
 )
 
+# The two agents that precede the verifier in demo/multi_model_pipeline.py, with
+# that file's prompts. They exist here because of what the live evaluator
+# actually does, which is not what this experiment first assumed:
+#
+# evaluator.py calls evaluate_against_prior_agents for each span, comparing an
+# agent against every agent EARLIER in the trace and keeping the worst pair.
+# The verifier is third, so its live score is max(researcher, retriever) vs
+# verifier. The analyst comes fourth and is never part of the verifier's own
+# score.
+#
+# So the pairwise analyst-verifier number this experiment started with is not
+# the quantity 24.4 reported, and comparing them would have been meaningless.
+# Both are now recorded per trial: disagreement_live for the comparison, and
+# disagreement_analyst_pair for what was measured before.
+RESEARCHER_PROMPT = (
+    "You are planning a literature review on: {query}\n"
+    "List three specific sub-questions worth answering. Be brief."
+)
+
+RETRIEVER_PROMPT = (
+    "A search for '{query}' returned these documents:\n\n{evidence}\n\n"
+    "Write one sentence describing what you retrieved. State how many "
+    "documents you are using, in the form 'Retrieved N documents'."
+)
+
 
 class EmptyCompletion(RuntimeError):
     """A 200 carrying no text. See demo/multi_model_pipeline.py."""
@@ -235,6 +263,31 @@ def classify_stance(text: str) -> str:
     if head.startswith("no"):
         return "refuse"
     return "unclear"
+
+
+def score_disagreement(verifier_out: str, analyst_out: str, ctx: dict[str, str]) -> dict[str, float]:
+    """Both disagreement numbers for one verifier output.
+
+    disagreement_live mirrors what evaluator.py records for a verifier span:
+    evaluate_against_prior_agents over the agents that precede it, keeping the
+    worst pair. This is the number comparable to 24.4.
+
+    disagreement_analyst_pair is the single analyst-verifier comparison this
+    experiment originally measured. Kept so the difference between the two is
+    visible in the data rather than argued about.
+    """
+    priors = [("researcher", ctx.get("researcher", "")), ("retriever", ctx.get("retriever", ""))]
+    live = evaluate_against_prior_agents(
+        current_agent_id="verifier", current_output=verifier_out, prior_outputs=priors
+    )
+    pair = evaluate_inter_agent_disagreement(
+        source_agent_id="analyst", source_output=analyst_out,
+        target_agent_id="verifier", target_output=verifier_out,
+    )
+    return {
+        "disagreement_live": round(live.max_disagreement_score, 4) if live else 0.0,
+        "disagreement_analyst_pair": pair.disagreement_score if pair else 0.0,
+    }
 
 
 def relevance_from_titles(query: str, titles: list[str]) -> bool:
@@ -314,13 +367,15 @@ def summarise(trials: list[dict[str, Any]]) -> dict[str, Any]:
                     "C": "evidence relevant, verifier refuses (WRONG REFUSAL)",
                     "D": "evidence irrelevant, verifier accepts (WRONG ACCEPT)",
                 }[k],
-                "disagreement": stats(v, "disagreement_score"),
+                "disagreement_live": stats(v, "disagreement_live"),
+                "disagreement_analyst_pair": stats(v, "disagreement_analyst_pair"),
                 "contradiction": stats(v, "contradiction_prob"),
             }
             for k, v in cells.items()
         },
         "auc_refusal_vs_acceptance": {
-            "disagreement": auc("disagreement_score"),
+            "disagreement_live": auc("disagreement_live"),
+            "disagreement_analyst_pair": auc("disagreement_analyst_pair"),
             "contradiction": auc("contradiction_prob"),
         },
     }
@@ -340,6 +395,18 @@ def main() -> int:
     analyst_model = ANALYST_MODEL_BY_PROVIDER[args.provider]
 
     state = load_existing()
+
+    # Backfilling a trial recomputes NLI, so --report-only needs the models too.
+    # Without this the backfill silently scored every trial 0.0: compute_nli_
+    # grounding returns None when nothing is loaded, score_disagreement turns
+    # that into 0.0, and the report showed a uniform near-zero disagreement
+    # across all cells that looked exactly like a finding.
+    if any("disagreement_live" not in t for t in state["trials"]):
+        load_models(
+            use_onnx=False,
+            sync=True,
+            cache_dir=os.getenv("AGENTPULSE_MODEL_CACHE_DIR", "./models"),
+        )
 
     if not args.report_only:
         key = os.getenv(key_env)
@@ -389,6 +456,27 @@ def main() -> int:
                     continue
             analyst_out = state["analyst_cache"][query]
 
+            # The verifier's priors, generated once per query and reused across
+            # every verifier model, on the same model as the analyst so that the
+            # only thing varying across trials is still the verifier.
+            ctx = state.setdefault("context_cache", {}).get(query)
+            if ctx is None:
+                try:
+                    ctx = {
+                        "researcher": ask(
+                            client, analyst_model, RESEARCHER_PROMPT.format(query=query)
+                        ),
+                        "retriever": ask(
+                            client, analyst_model,
+                            RETRIEVER_PROMPT.format(query=query, evidence=evidence),
+                        ),
+                    }
+                    state["context_cache"][query] = ctx
+                    save(state)
+                except Exception as exc:
+                    print(f"  context failed on {query!r}: {type(exc).__name__}: {exc}")
+                    continue
+
             for model in verifier_models:
                 for rep in range(args.repeats):
                     if (query, model, rep) in done:
@@ -407,14 +495,7 @@ def main() -> int:
                         continue
 
                     stance = classify_stance(v_out)
-                    dis = evaluate_inter_agent_disagreement(
-                        source_agent_id="analyst",
-                        source_output=analyst_out,
-                        target_agent_id="verifier",
-                        target_output=v_out,
-                    )
                     nli = compute_nli_grounding(evidence, v_out)
-
                     state["trials"].append({
                         "query": query,
                         "declared": declared,
@@ -424,14 +505,14 @@ def main() -> int:
                         "repeat": rep,
                         "verifier_output": v_out,
                         "stance": stance,
-                        "disagreement_score": dis.disagreement_score if dis else 0.0,
                         "contradiction_prob": nli.contradiction_prob if nli else 0.0,
                         "entailment_prob": nli.entailment_prob if nli else 0.0,
+                        **score_disagreement(v_out, analyst_out, ctx),
                     })
                     new += 1
                     save(state)
                     print(f"  {query[:34]:<34} {model.split('/')[0]:<10} r{rep} "
-                          f"{stance:<8} dis={state['trials'][-1]['disagreement_score']:.3f}")
+                          f"{stance:<8} dis={state['trials'][-1]['disagreement_live']:.3f}")
 
     _write_report(state)
     return 0
@@ -443,22 +524,48 @@ def _write_report(state: dict[str, Any]) -> None:
     # cannot leave stale labels in an already-written results file.
     for t in state["trials"]:
         t["evidence_relevant"] = relevance_from_titles(t["query"], t.get("retrieved_titles", []))
-    s = summarise(state["trials"])
+
+    # Backfill trials recorded before disagreement_live existed. Their verifier
+    # output is stored, so this needs no API call -- only the query's context,
+    # which the run generates once. Trials whose query has no context yet keep
+    # 0.0 and are reported as such rather than silently scoring zero.
+    ctx_all = state.get("context_cache", {})
+    analysts = state.get("analyst_cache", {})
+    missing_ctx = set()
+    for t in state["trials"]:
+        if "disagreement_live" in t:
+            continue
+        ctx = ctx_all.get(t["query"])
+        if not ctx:
+            missing_ctx.add(t["query"])
+            t["disagreement_live"] = None
+            t["disagreement_analyst_pair"] = t.get("disagreement_score", 0.0)
+            continue
+        t.update(score_disagreement(t["verifier_output"], analysts.get(t["query"], ""), ctx))
+    if missing_ctx:
+        print(f"  {len(missing_ctx)} quer(ies) have no context yet; "
+              f"their trials are excluded from the live-rule numbers")
+    # Filter for the summary only. Never drop them from state -- these rows
+    # cost real API calls and a later run can still backfill them once their
+    # query has context.
+    scorable = [t for t in state["trials"] if t.get("disagreement_live") is not None]
+    s = summarise(scorable)
     state["summary"] = s
     save(state)
 
     def row(k: str) -> str:
         c = s["cells"][k]
-        d, ct = c["disagreement"], c["contradiction"]
+        d, ct = c["disagreement_live"], c["contradiction"]
         fmt = lambda x: "n=0" if not x else f"n={x['n']}, mean {x['mean']}, range {x['min']}–{x['max']}"
         return f"| {k} | {c['label']} | {fmt(d)} | {fmt(ct)} |"
 
     cfg = state.get("config", {})
     verifiers_str = ", ".join(cfg.get("verifier_models", [])) or "(not recorded)"
     analyst_str = cfg.get("analyst_model", "(not recorded)")
-    auc_d = s["auc_refusal_vs_acceptance"]["disagreement"]
+    auc_d = s["auc_refusal_vs_acceptance"]["disagreement_live"]
+    auc_pair = s["auc_refusal_vs_acceptance"]["disagreement_analyst_pair"]
     auc_c = s["auc_refusal_vs_acceptance"]["contradiction"]
-    cd = s["cells"]["C"]["disagreement"], s["cells"]["D"]["disagreement"]
+    cd = s["cells"]["C"]["disagreement_live"], s["cells"]["D"]["disagreement_live"]
 
     if not cd[0] or not cd[1]:
         verdict = (
@@ -522,8 +629,14 @@ document, not the query's declared label.
 
 Separation of refusal from acceptance, as AUC (0.5 = none, 1.0 = perfect):
 
-- disagreement: **{auc_d}**
-- contradiction: **{auc_c}**
+- disagreement, live rule (verifier vs its prior agents): **{auc_d}**
+- disagreement, analyst-verifier pair only: **{auc_pair}**
+- contradiction (evidence vs verifier): **{auc_c}**
+
+The first is the quantity 24.4 reported. The second is what this
+experiment measured before that was checked, and is a different pair:
+evaluator.py scores each span against the agents BEFORE it, and the
+analyst comes after the verifier.
 
 **AUC does not answer the question this report asks.** Checked against
 simulated data: an H2 world, where the signal tracks error and fires on wrong
@@ -560,7 +673,7 @@ honest summary of the 24.4 observation, not because it settles anything.
     print(f"trials {s['n_trials']} usable {s['n_usable']} | "
           f"AUC disagreement {auc_d} contradiction {auc_c}")
     for k in "ABCD":
-        d = s["cells"][k]["disagreement"]
+        d = s["cells"][k]["disagreement_live"]
         print(f"  cell {k}: {'n=0' if not d else f'n={d['n']} mean {d['mean']}'}")
 
 

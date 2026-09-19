@@ -1,0 +1,1991 @@
+{
+  "trials": [
+    {
+      "query": "transformer multi-head self-attention",
+      "declared": "ON",
+      "evidence_relevant": true,
+      "retrieved_titles": [
+        "Attention Is All You Need",
+        "DeBERTa: Decoding-enhanced BERT with Disentangled Attention",
+        "Telemetry Performance Baseline KPI Definitions"
+      ],
+      "verifier_model": "deepseek-ai/deepseek-v4-flash-0731",
+      "repeat": 0,
+      "verifier_output": "Yes, the evidence directly describes the Transformer's multi-head self-attention mechanism as allowing joint attention to different representation subspaces.",
+      "stance": "accept",
+      "disagreement_score": 0.3017,
+      "contradiction_prob": 0.0188,
+      "entailment_prob": 0.6927,
+      "disagreement_live": 0.9681,
+      "disagreement_analyst_pair": 0.3017
+    },
+    {
+      "query": "transformer multi-head self-attention",
+      "declared": "ON",
+      "evidence_relevant": true,
+      "retrieved_titles": [
+        "Attention Is All You Need",
+        "DeBERTa: Decoding-enhanced BERT with Disentangled Attention",
+        "Telemetry Performance Baseline KPI Definitions"
+      ],
+      "verifier_model": "deepseek-ai/deepseek-v4-flash-0731",
+      "repeat": 1,
+      "verifier_output": "Yes, the evidence directly explains that multi-head attention allows the model to jointly attend to information from different representation subspaces at different positions, which answers the question.",
+      "stance": "accept",
+      "disagreement_score": 0.4674,
+      "contradiction_prob": 0.0037,
+      "entailment_prob": 0.9943,
+      "disagreement_live": 0.6828,
+      "disagreement_analyst_pair": 0.4674
+    },
+    {
+      "query": "transformer multi-head self-attention",
+      "declared": "ON",
+      "evidence_relevant": true,
+      "retrieved_titles": [
+        "Attention Is All You Need",
+        "DeBERTa: Decoding-enhanced BERT with Disentangled Attention",
+        "Telemetry Performance Baseline KPI Definitions"
+      ],
+      "verifier_model": "google/gemma-4-31b-it",
+      "repeat": 0,
+      "verifier_output": "Yes, the evidence explains that multi-head attention allows the Transformer model to jointly attend to information from different representation subspaces at different positions.",
+      "stance": "accept",
+      "disagreement_score": 0.9474,
+      "contradiction_prob": 0.0051,
+      "entailment_prob": 0.9866,
+      "disagreement_live": 0.0799,
+      "disagreement_analyst_pair": 0.9474
+    },
+    {
+      "query": "transformer multi-head self-attention",
+      "declared": "ON",
+      "evidence_relevant": true,
+      "retrieved_titles": [
+        "Attention Is All You Need",
+        "DeBERTa: Decoding-enhanced BERT with Disentangled Attention",
+        "Telemetry Performance Baseline KPI Definitions"
+      ],
+      "verifier_model": "google/gemma-4-31b-it",
+      "repeat": 1,
+      "verifier_output": "Yes, the evidence explains that the Transformer architecture uses self-attention to compute representations and that multi-head attention enables the model to jointly attend to information from different representation subspaces at different positions.",
+      "stance": "accept",
+      "disagreement_score": 0.017,
+      "contradiction_prob": 0.0134,
+      "entailment_prob": 0.8899,
+      "disagreement_live": 0.3603,
+      "disagreement_analyst_pair": 0.017
+    },
+    {
+      "query": "transformer multi-head self-attention",
+      "declared": "ON",
+      "evidence_relevant": true,
+      "retrieved_titles": [
+        "Attention Is All You Need",
+        "DeBERTa: Decoding-enhanced BERT with Disentangled Attention",
+        "Telemetry Performance Baseline KPI Definitions"
+      ],
+      "verifier_model": "meta/muse-glimmer-30b",
+      "repeat": 0,
+      "verifier_output": "Yes, the evidence includes a description of multi-head attention in Transformers as allowing the model to jointly attend to information from different representation subspaces at different positions.",
+      "stance": "accept",
+      "disagreement_score": 0.0114,
+      "contradiction_prob": 0.0066,
+      "entailment_prob": 0.0151,
+      "disagreement_live": 0.0075,
+      "disagreement_analyst_pair": 0.0114
+    },
+    {
+      "query": "transformer multi-head self-attention",
+      "declared": "ON",
+      "evidence_relevant": true,
+      "retrieved_titles": [
+        "Attention Is All You Need",
+        "DeBERTa: Decoding-enhanced BERT with Disentangled Attention",
+        "Telemetry Performance Baseline KPI Definitions"
+      ],
+      "verifier_model": "meta/muse-glimmer-30b",
+      "repeat": 1,
+      "verifier_output": "Yes, the evidence contains a description of multi-head self-attention in the Transformer architecture and related attention mechanisms in DeBERTa.",
+      "stance": "accept",
+      "disagreement_score": 0.0006,
+      "contradiction_prob": 0.006,
+      "entailment_prob": 0.0185,
+      "disagreement_live": 0.0108,
+      "disagreement_analyst_pair": 0.0006
+    },
+    {
+      "query": "transformer multi-head self-attention",
+      "declared": "ON",
+      "evidence_relevant": true,
+      "retrieved_titles": [
+        "Attention Is All You Need",
+        "DeBERTa: Decoding-enhanced BERT with Disentangled Attention",
+        "Telemetry Performance Baseline KPI Definitions"
+      ],
+      "verifier_model": "mistralai/mistral-nemotron",
+      "repeat": 0,
+      "verifier_output": "No, the evidence provides background on the Transformer's self-attention mechanism and other enhancements but does not directly address the specifics of how multi-head self-attention works in practice.",
+      "stance": "refuse",
+      "disagreement_score": 0.4469,
+      "contradiction_prob": 0.8239,
+      "entailment_prob": 0.1713,
+      "disagreement_live": 0.9963,
+      "disagreement_analyst_pair": 0.4469
+    },
+    {
+      "query": "transformer multi-head self-attention",
+      "declared": "ON",
+      "evidence_relevant": true,
+      "retrieved_titles": [
+        "Attention Is All You Need",
+        "DeBERTa: Decoding-enhanced BERT with Disentangled Attention",
+        "Telemetry Performance Baseline KPI Definitions"
+      ],
+      "verifier_model": "mistralai/mistral-nemotron",
+      "repeat": 1,
+      "verifier_output": "Yes. The evidence explains multi-head self-attention in the Transformer model and introduces DeBERTa's modifications, which are relevant to self-attention mechanisms.",
+      "stance": "accept",
+      "disagreement_score": 0.001,
+      "contradiction_prob": 0.0426,
+      "entailment_prob": 0.2932,
+      "disagreement_live": 0.0048,
+      "disagreement_analyst_pair": 0.001
+    },
+    {
+      "query": "transformer multi-head self-attention",
+      "declared": "ON",
+      "evidence_relevant": true,
+      "retrieved_titles": [
+        "Attention Is All You Need",
+        "DeBERTa: Decoding-enhanced BERT with Disentangled Attention",
+        "Telemetry Performance Baseline KPI Definitions"
+      ],
+      "verifier_model": "z-ai/glm-5.3-flash",
+      "repeat": 1,
+      "verifier_output": "Yes \u2014 the \"Attention Is All You Need\" excerpt directly explains that Transformers rely entirely on self-attention and that multi-head attention enables the model to jointly attend to information from different representation subspaces at different positions, whereas the DeBERTa passage is only tangentially related and the telemetry KPI passage is irrelevant.",
+      "stance": "accept",
+      "disagreement_score": 0.4806,
+      "contradiction_prob": 0.1388,
+      "entailment_prob": 0.8339,
+      "disagreement_live": 0.9914,
+      "disagreement_analyst_pair": 0.4806
+    },
+    {
+      "query": "DeBERTa disentangled attention",
+      "declared": "ON",
+      "evidence_relevant": true,
+      "retrieved_titles": [
+        "DeBERTa: Decoding-enhanced BERT with Disentangled Attention",
+        "Attention Is All You Need",
+        "Telemetry Performance Baseline KPI Definitions"
+      ],
+      "verifier_model": "deepseek-ai/deepseek-v4-flash-0731",
+      "repeat": 0,
+      "verifier_output": "Yes, the evidence directly explains DeBERTa's disentangled attention mechanism, which represents each word using separate content and relative position vectors.",
+      "stance": "accept",
+      "disagreement_score": 0.0128,
+      "contradiction_prob": 0.3993,
+      "entailment_prob": 0.5834,
+      "disagreement_live": 0.0888,
+      "disagreement_analyst_pair": 0.0128
+    },
+    {
+      "query": "DeBERTa disentangled attention",
+      "declared": "ON",
+      "evidence_relevant": true,
+      "retrieved_titles": [
+        "DeBERTa: Decoding-enhanced BERT with Disentangled Attention",
+        "Attention Is All You Need",
+        "Telemetry Performance Baseline KPI Definitions"
+      ],
+      "verifier_model": "deepseek-ai/deepseek-v4-flash-0731",
+      "repeat": 1,
+      "verifier_output": "Yes, the evidence directly explains DeBERTa's disentangled attention mechanism, which represents each word using separate content and relative position vectors instead of summing them as in BERT.",
+      "stance": "accept",
+      "disagreement_score": 0.0015,
+      "contradiction_prob": 0.5388,
+      "entailment_prob": 0.4249,
+      "disagreement_live": 0.1941,
+      "disagreement_analyst_pair": 0.0015
+    },
+    {
+      "query": "DeBERTa disentangled attention",
+      "declared": "ON",
+      "evidence_relevant": true,
+      "retrieved_titles": [
+        "DeBERTa: Decoding-enhanced BERT with Disentangled Attention",
+        "Attention Is All You Need",
+        "Telemetry Performance Baseline KPI Definitions"
+      ],
+      "verifier_model": "google/gemma-4-31b-it",
+      "repeat": 0,
+      "verifier_output": "Yes, the evidence explains that DeBERTa's disentangled attention mechanism represents each word using two separate vectors for its content and relative position, rather than a single summed vector.",
+      "stance": "accept",
+      "disagreement_score": 0.0003,
+      "contradiction_prob": 0.1244,
+      "entailment_prob": 0.8019,
+      "disagreement_live": 0.0018,
+      "disagreement_analyst_pair": 0.0003
+    },
+    {
+      "query": "DeBERTa disentangled attention",
+      "declared": "ON",
+      "evidence_relevant": true,
+      "retrieved_titles": [
+        "DeBERTa: Decoding-enhanced BERT with Disentangled Attention",
+        "Attention Is All You Need",
+        "Telemetry Performance Baseline KPI Definitions"
+      ],
+      "verifier_model": "google/gemma-4-31b-it",
+      "repeat": 1,
+      "verifier_output": "Yes, the evidence explains that DeBERTa's disentangled attention represents each word using two separate vectors for its content and relative position, rather than a single summed vector.",
+      "stance": "accept",
+      "disagreement_score": 0.0004,
+      "contradiction_prob": 0.1504,
+      "entailment_prob": 0.7674,
+      "disagreement_live": 0.0018,
+      "disagreement_analyst_pair": 0.0004
+    },
+    {
+      "query": "DeBERTa disentangled attention",
+      "declared": "ON",
+      "evidence_relevant": true,
+      "retrieved_titles": [
+        "DeBERTa: Decoding-enhanced BERT with Disentangled Attention",
+        "Attention Is All You Need",
+        "Telemetry Performance Baseline KPI Definitions"
+      ],
+      "verifier_model": "meta/muse-glimmer-30b",
+      "repeat": 0,
+      "verifier_output": "Yes, the evidence describes DeBERTa's disentangled attention mechanism as representing each word with separate content and relative position vectors rather than the summed content+position embedding used in BERT.",
+      "stance": "accept",
+      "disagreement_score": 0.0049,
+      "contradiction_prob": 0.2759,
+      "entailment_prob": 0.3726,
+      "disagreement_live": 0.0544,
+      "disagreement_analyst_pair": 0.0049
+    },
+    {
+      "query": "DeBERTa disentangled attention",
+      "declared": "ON",
+      "evidence_relevant": true,
+      "retrieved_titles": [
+        "DeBERTa: Decoding-enhanced BERT with Disentangled Attention",
+        "Attention Is All You Need",
+        "Telemetry Performance Baseline KPI Definitions"
+      ],
+      "verifier_model": "meta/muse-glimmer-30b",
+      "repeat": 1,
+      "verifier_output": "Yes, the evidence describes DeBERTa's disentangled attention as representing each word with separate content and relative position vectors instead of summing content and position embeddings like BERT.",
+      "stance": "accept",
+      "disagreement_score": 0.0035,
+      "contradiction_prob": 0.4306,
+      "entailment_prob": 0.368,
+      "disagreement_live": 0.1259,
+      "disagreement_analyst_pair": 0.0035
+    },
+    {
+      "query": "DeBERTa disentangled attention",
+      "declared": "ON",
+      "evidence_relevant": true,
+      "retrieved_titles": [
+        "DeBERTa: Decoding-enhanced BERT with Disentangled Attention",
+        "Attention Is All You Need",
+        "Telemetry Performance Baseline KPI Definitions"
+      ],
+      "verifier_model": "mistralai/mistral-nemotron",
+      "repeat": 0,
+      "verifier_output": "Yes, because the first piece of evidence directly explains how DeBERTa uses disentangled attention (via separate content and position embeddings) and references its attention mechanism.",
+      "stance": "accept",
+      "disagreement_score": 0.0328,
+      "contradiction_prob": 0.9312,
+      "entailment_prob": 0.0642,
+      "disagreement_live": 0.0078,
+      "disagreement_analyst_pair": 0.0328
+    },
+    {
+      "query": "DeBERTa disentangled attention",
+      "declared": "ON",
+      "evidence_relevant": true,
+      "retrieved_titles": [
+        "DeBERTa: Decoding-enhanced BERT with Disentangled Attention",
+        "Attention Is All You Need",
+        "Telemetry Performance Baseline KPI Definitions"
+      ],
+      "verifier_model": "mistralai/mistral-nemotron",
+      "repeat": 1,
+      "verifier_output": "Yes, the evidence provides relevant context on DeBERTa's disentangled attention mechanism by explaining how it differs from BERT and improves model performance.",
+      "stance": "accept",
+      "disagreement_score": 0.0011,
+      "contradiction_prob": 0.1655,
+      "entailment_prob": 0.8041,
+      "disagreement_live": 0.0032,
+      "disagreement_analyst_pair": 0.0011
+    },
+    {
+      "query": "DeBERTa disentangled attention",
+      "declared": "ON",
+      "evidence_relevant": true,
+      "retrieved_titles": [
+        "DeBERTa: Decoding-enhanced BERT with Disentangled Attention",
+        "Attention Is All You Need",
+        "Telemetry Performance Baseline KPI Definitions"
+      ],
+      "verifier_model": "z-ai/glm-5.3-flash",
+      "repeat": 1,
+      "verifier_output": "**Yes.** The first evidence passage directly addresses the question by explaining that DeBERTa's disentangled attention mechanism represents each word using two separate vectors\u2014one for content and one for relative position\u2014rather than the single combined embedding vector used in BERT.",
+      "stance": "accept",
+      "disagreement_score": 0.0045,
+      "contradiction_prob": 0.9604,
+      "entailment_prob": 0.0331,
+      "disagreement_live": 0.0009,
+      "disagreement_analyst_pair": 0.0045
+    },
+    {
+      "query": "SQLite write-ahead logging concurrency",
+      "declared": "ON",
+      "evidence_relevant": true,
+      "retrieved_titles": [
+        "SQLite Write-Ahead Logging (WAL) Architecture",
+        "KB-429: Rate Limiter Token-Bucket Backoff Strategy",
+        "Telemetry Performance Baseline KPI Definitions"
+      ],
+      "verifier_model": "deepseek-ai/deepseek-v4-flash-0731",
+      "repeat": 0,
+      "verifier_output": "No, the evidence does not address SQLite write-ahead logging concurrency, as it instead covers unrelated topics like rate limiting and telemetry performance metrics.",
+      "stance": "refuse",
+      "disagreement_score": 0.9998,
+      "contradiction_prob": 0.9941,
+      "entailment_prob": 0.0058,
+      "disagreement_live": 0.9998,
+      "disagreement_analyst_pair": 0.9998
+    },
+    {
+      "query": "SQLite write-ahead logging concurrency",
+      "declared": "ON",
+      "evidence_relevant": true,
+      "retrieved_titles": [
+        "SQLite Write-Ahead Logging (WAL) Architecture",
+        "KB-429: Rate Limiter Token-Bucket Backoff Strategy",
+        "Telemetry Performance Baseline KPI Definitions"
+      ],
+      "verifier_model": "deepseek-ai/deepseek-v4-flash-0731",
+      "repeat": 1,
+      "verifier_output": "No, the evidence does not address SQLite WAL concurrency, as it discusses rate limiting, telemetry KPIs, and agent stability rather than database logging mechanics.",
+      "stance": "refuse",
+      "disagreement_score": 0.9996,
+      "contradiction_prob": 0.9965,
+      "entailment_prob": 0.0034,
+      "disagreement_live": 0.9999,
+      "disagreement_analyst_pair": 0.9996
+    },
+    {
+      "query": "SQLite write-ahead logging concurrency",
+      "declared": "ON",
+      "evidence_relevant": true,
+      "retrieved_titles": [
+        "SQLite Write-Ahead Logging (WAL) Architecture",
+        "KB-429: Rate Limiter Token-Bucket Backoff Strategy",
+        "Telemetry Performance Baseline KPI Definitions"
+      ],
+      "verifier_model": "google/gemma-4-31b-it",
+      "repeat": 0,
+      "verifier_output": "Yes, the evidence explains that SQLite WAL mode increases concurrency by writing changes to a separate log file, allowing readers to access the database while a write process is active.",
+      "stance": "accept",
+      "disagreement_score": 0.0073,
+      "contradiction_prob": 0.0024,
+      "entailment_prob": 0.9932,
+      "disagreement_live": 0.0069,
+      "disagreement_analyst_pair": 0.0073
+    },
+    {
+      "query": "SQLite write-ahead logging concurrency",
+      "declared": "ON",
+      "evidence_relevant": true,
+      "retrieved_titles": [
+        "SQLite Write-Ahead Logging (WAL) Architecture",
+        "KB-429: Rate Limiter Token-Bucket Backoff Strategy",
+        "Telemetry Performance Baseline KPI Definitions"
+      ],
+      "verifier_model": "google/gemma-4-31b-it",
+      "repeat": 1,
+      "verifier_output": "Yes, the evidence explains that WAL mode increases concurrency by allowing readers to read from the database while another process writes into a separate write-ahead log file.",
+      "stance": "accept",
+      "disagreement_score": 0.6777,
+      "contradiction_prob": 0.0019,
+      "entailment_prob": 0.9962,
+      "disagreement_live": 0.0073,
+      "disagreement_analyst_pair": 0.6777
+    },
+    {
+      "query": "SQLite write-ahead logging concurrency",
+      "declared": "ON",
+      "evidence_relevant": true,
+      "retrieved_titles": [
+        "SQLite Write-Ahead Logging (WAL) Architecture",
+        "KB-429: Rate Limiter Token-Bucket Backoff Strategy",
+        "Telemetry Performance Baseline KPI Definitions"
+      ],
+      "verifier_model": "meta/muse-glimmer-30b",
+      "repeat": 0,
+      "verifier_output": "Yes, the evidence describes WAL allowing readers to continue reading from the database while another process writes to the log and provides significantly higher concurrency than rollback journal mode.",
+      "stance": "accept",
+      "disagreement_score": 0.4991,
+      "contradiction_prob": 0.0076,
+      "entailment_prob": 0.9836,
+      "disagreement_live": 0.0198,
+      "disagreement_analyst_pair": 0.4991
+    },
+    {
+      "query": "SQLite write-ahead logging concurrency",
+      "declared": "ON",
+      "evidence_relevant": true,
+      "retrieved_titles": [
+        "SQLite Write-Ahead Logging (WAL) Architecture",
+        "KB-429: Rate Limiter Token-Bucket Backoff Strategy",
+        "Telemetry Performance Baseline KPI Definitions"
+      ],
+      "verifier_model": "meta/muse-glimmer-30b",
+      "repeat": 1,
+      "verifier_output": "Yes, the evidence states WAL allows readers to continue reading from the database while another process writes to the log and provides significantly higher concurrency than rollback journal mode.",
+      "stance": "accept",
+      "disagreement_score": 0.2073,
+      "contradiction_prob": 0.0124,
+      "entailment_prob": 0.9714,
+      "disagreement_live": 0.0121,
+      "disagreement_analyst_pair": 0.2073
+    },
+    {
+      "query": "SQLite write-ahead logging concurrency",
+      "declared": "ON",
+      "evidence_relevant": true,
+      "retrieved_titles": [
+        "SQLite Write-Ahead Logging (WAL) Architecture",
+        "KB-429: Rate Limiter Token-Bucket Backoff Strategy",
+        "Telemetry Performance Baseline KPI Definitions"
+      ],
+      "verifier_model": "mistralai/mistral-nemotron",
+      "repeat": 0,
+      "verifier_output": "Yes, the evidence provides relevant details about SQLite WAL mode, including its concurrency benefits by allowing readers to continue reading while another process writes into the log, which directly answers the question about its concurrency capabilities.",
+      "stance": "accept",
+      "disagreement_score": 0.0959,
+      "contradiction_prob": 0.0016,
+      "entailment_prob": 0.9976,
+      "disagreement_live": 0.0054,
+      "disagreement_analyst_pair": 0.0959
+    },
+    {
+      "query": "SQLite write-ahead logging concurrency",
+      "declared": "ON",
+      "evidence_relevant": true,
+      "retrieved_titles": [
+        "SQLite Write-Ahead Logging (WAL) Architecture",
+        "KB-429: Rate Limiter Token-Bucket Backoff Strategy",
+        "Telemetry Performance Baseline KPI Definitions"
+      ],
+      "verifier_model": "z-ai/glm-5.3-flash",
+      "repeat": 0,
+      "verifier_output": "Yes \u2014 the first evidence item directly explains SQLite WAL concurrency by describing how writes go to a separate log file so readers can continue accessing the database simultaneously, yielding higher concurrency than rollback journal mode (though the rate-limiter and telemetry KPI evidence are unrelated to the question).",
+      "stance": "accept",
+      "disagreement_score": 0.9936,
+      "contradiction_prob": 0.9771,
+      "entailment_prob": 0.022,
+      "disagreement_live": 0.848,
+      "disagreement_analyst_pair": 0.9936
+    },
+    {
+      "query": "SQLite write-ahead logging concurrency",
+      "declared": "ON",
+      "evidence_relevant": true,
+      "retrieved_titles": [
+        "SQLite Write-Ahead Logging (WAL) Architecture",
+        "KB-429: Rate Limiter Token-Bucket Backoff Strategy",
+        "Telemetry Performance Baseline KPI Definitions"
+      ],
+      "verifier_model": "z-ai/glm-5.3-flash",
+      "repeat": 1,
+      "verifier_output": "Yes \u2014 the first evidence item directly answers the question by explaining that WAL mode writes changes to a separate write-ahead log file, allowing readers to access the database concurrently with a writer and thereby providing significantly higher concurrency than rollback journal mode (the rate-limiter and telemetry KPI items are unrelated to the question).",
+      "stance": "accept",
+      "disagreement_score": 0.9923,
+      "contradiction_prob": 0.6561,
+      "entailment_prob": 0.3301,
+      "disagreement_live": 0.8885,
+      "disagreement_analyst_pair": 0.9923
+    },
+    {
+      "query": "invalid API key and token expiration",
+      "declared": "ON",
+      "evidence_relevant": true,
+      "retrieved_titles": [
+        "KB-401: Resolving Invalid API Key and Token Expiration Errors",
+        "KB-429: Rate Limiter Token-Bucket Backoff Strategy",
+        "Telemetry Performance Baseline KPI Definitions"
+      ],
+      "verifier_model": "deepseek-ai/deepseek-v4-flash-0731",
+      "repeat": 0,
+      "verifier_output": "Yes, because KB-401 directly addresses the causes (missing, malformed, or expired token) and the solution (re-generating the key and verifying the header) for invalid API key and token expiration errors.",
+      "stance": "accept",
+      "disagreement_score": 0.0093,
+      "contradiction_prob": 0.2116,
+      "entailment_prob": 0.7667,
+      "disagreement_live": 0.5383,
+      "disagreement_analyst_pair": 0.0093
+    },
+    {
+      "query": "invalid API key and token expiration",
+      "declared": "ON",
+      "evidence_relevant": true,
+      "retrieved_titles": [
+        "KB-401: Resolving Invalid API Key and Token Expiration Errors",
+        "KB-429: Rate Limiter Token-Bucket Backoff Strategy",
+        "Telemetry Performance Baseline KPI Definitions"
+      ],
+      "verifier_model": "deepseek-ai/deepseek-v4-flash-0731",
+      "repeat": 1,
+      "verifier_output": "Yes, KB-401 directly addresses the issue by explaining the cause and solution for invalid API keys and token expiration, while the other entries are unrelated.",
+      "stance": "accept",
+      "disagreement_score": 0.0034,
+      "contradiction_prob": 0.0183,
+      "entailment_prob": 0.9782,
+      "disagreement_live": 0.0506,
+      "disagreement_analyst_pair": 0.0034
+    },
+    {
+      "query": "invalid API key and token expiration",
+      "declared": "ON",
+      "evidence_relevant": true,
+      "retrieved_titles": [
+        "KB-401: Resolving Invalid API Key and Token Expiration Errors",
+        "KB-429: Rate Limiter Token-Bucket Backoff Strategy",
+        "Telemetry Performance Baseline KPI Definitions"
+      ],
+      "verifier_model": "google/gemma-4-31b-it",
+      "repeat": 0,
+      "verifier_output": "Yes, KB-401 provides the cause of HTTP 401 Unauthorized errors and the steps to resolve them by re-generating the API key and verifying the environment variable.",
+      "stance": "accept",
+      "disagreement_score": 0.0023,
+      "contradiction_prob": 0.0282,
+      "entailment_prob": 0.9629,
+      "disagreement_live": 0.0439,
+      "disagreement_analyst_pair": 0.0023
+    },
+    {
+      "query": "invalid API key and token expiration",
+      "declared": "ON",
+      "evidence_relevant": true,
+      "retrieved_titles": [
+        "KB-401: Resolving Invalid API Key and Token Expiration Errors",
+        "KB-429: Rate Limiter Token-Bucket Backoff Strategy",
+        "Telemetry Performance Baseline KPI Definitions"
+      ],
+      "verifier_model": "google/gemma-4-31b-it",
+      "repeat": 1,
+      "verifier_output": "Yes, KB-401 provides the cause (missing, malformed, or expired X-API-Key header) and the solution (re-generating the key and verifying the AGENTPULSE_API_KEY environment variable).",
+      "stance": "accept",
+      "disagreement_score": 0.0026,
+      "contradiction_prob": 0.0445,
+      "entailment_prob": 0.945,
+      "disagreement_live": 0.0,
+      "disagreement_analyst_pair": 0.0026
+    },
+    {
+      "query": "invalid API key and token expiration",
+      "declared": "ON",
+      "evidence_relevant": true,
+      "retrieved_titles": [
+        "KB-401: Resolving Invalid API Key and Token Expiration Errors",
+        "KB-429: Rate Limiter Token-Bucket Backoff Strategy",
+        "Telemetry Performance Baseline KPI Definitions"
+      ],
+      "verifier_model": "meta/muse-glimmer-30b",
+      "repeat": 0,
+      "verifier_output": "Yes, KB-401 directly describes that HTTP 401 Unauthorized errors occur when the X-API-Key header is missing, malformed, or references an expired token and provides the regeneration and verification steps.",
+      "stance": "accept",
+      "disagreement_score": 0.0035,
+      "contradiction_prob": 0.0367,
+      "entailment_prob": 0.9544,
+      "disagreement_live": 0.6085,
+      "disagreement_analyst_pair": 0.0035
+    },
+    {
+      "query": "invalid API key and token expiration",
+      "declared": "ON",
+      "evidence_relevant": true,
+      "retrieved_titles": [
+        "KB-401: Resolving Invalid API Key and Token Expiration Errors",
+        "KB-429: Rate Limiter Token-Bucket Backoff Strategy",
+        "Telemetry Performance Baseline KPI Definitions"
+      ],
+      "verifier_model": "meta/muse-glimmer-30b",
+      "repeat": 1,
+      "verifier_output": "Yes, KB-401 directly addresses HTTP 401 Unauthorized errors from invalid or expired API keys, stating they occur when the X-API-Key header is missing, malformed, or expired and providing the regeneration and verification steps to resolve them.",
+      "stance": "accept",
+      "disagreement_score": 0.0044,
+      "contradiction_prob": 0.0916,
+      "entailment_prob": 0.8909,
+      "disagreement_live": 0.3741,
+      "disagreement_analyst_pair": 0.0044
+    },
+    {
+      "query": "invalid API key and token expiration",
+      "declared": "ON",
+      "evidence_relevant": true,
+      "retrieved_titles": [
+        "KB-401: Resolving Invalid API Key and Token Expiration Errors",
+        "KB-429: Rate Limiter Token-Bucket Backoff Strategy",
+        "Telemetry Performance Baseline KPI Definitions"
+      ],
+      "verifier_model": "z-ai/glm-5.3-flash",
+      "repeat": 0,
+      "verifier_output": "Yes. KB-401 directly addresses the question by explaining that HTTP 401 Unauthorized errors stem from a missing, malformed, or expired X-API-Key header and provides the resolution steps (re-generating the key in Developer Settings, verifying the AGENTPULSE_API_KEY environment variable, and ensuring the header is sent with each request), while the other two evidence items (rate limiting and performance KPIs) are unrelated.",
+      "stance": "accept",
+      "disagreement_score": 0.0009,
+      "contradiction_prob": 0.4214,
+      "entailment_prob": 0.5652,
+      "disagreement_live": 0.2908,
+      "disagreement_analyst_pair": 0.0009
+    },
+    {
+      "query": "invalid API key and token expiration",
+      "declared": "ON",
+      "evidence_relevant": true,
+      "retrieved_titles": [
+        "KB-401: Resolving Invalid API Key and Token Expiration Errors",
+        "KB-429: Rate Limiter Token-Bucket Backoff Strategy",
+        "Telemetry Performance Baseline KPI Definitions"
+      ],
+      "verifier_model": "z-ai/glm-5.3-flash",
+      "repeat": 1,
+      "verifier_output": "Yes, the evidence answers the question because KB-401 directly addresses invalid API key and token expiration errors, explaining that they cause HTTP 401 Unauthorized responses and providing the solution of regenerating the key in Developer Settings, verifying the AGENTPULSE_API_KEY environment variable, and ensuring the X-API-Key header is sent with each request.",
+      "stance": "accept",
+      "disagreement_score": 0.0016,
+      "contradiction_prob": 0.1164,
+      "entailment_prob": 0.8638,
+      "disagreement_live": 0.0201,
+      "disagreement_analyst_pair": 0.0016
+    },
+    {
+      "query": "token bucket rate limiter backoff",
+      "declared": "ON",
+      "evidence_relevant": true,
+      "retrieved_titles": [
+        "KB-429: Rate Limiter Token-Bucket Backoff Strategy",
+        "Telemetry Performance Baseline KPI Definitions",
+        "KB-401: Resolving Invalid API Key and Token Expiration Errors"
+      ],
+      "verifier_model": "deepseek-ai/deepseek-v4-flash-0731",
+      "repeat": 0,
+      "verifier_output": "Yes, KB-429 directly answers the question by specifying the HTTP 429 response and the recommended exponential backoff with jitter strategy for the token-bucket rate limiter.",
+      "stance": "accept",
+      "disagreement_score": 0.0037,
+      "contradiction_prob": 0.0449,
+      "entailment_prob": 0.9323,
+      "disagreement_live": null,
+      "disagreement_analyst_pair": 0.0037
+    },
+    {
+      "query": "token bucket rate limiter backoff",
+      "declared": "ON",
+      "evidence_relevant": true,
+      "retrieved_titles": [
+        "KB-429: Rate Limiter Token-Bucket Backoff Strategy",
+        "Telemetry Performance Baseline KPI Definitions",
+        "KB-401: Resolving Invalid API Key and Token Expiration Errors"
+      ],
+      "verifier_model": "deepseek-ai/deepseek-v4-flash-0731",
+      "repeat": 1,
+      "verifier_output": "Yes. KB-429 explicitly states that when the token-bucket rate limiter returns HTTP 429, applications should implement exponential backoff with jitter.",
+      "stance": "accept",
+      "disagreement_score": 0.0006,
+      "contradiction_prob": 0.0059,
+      "entailment_prob": 0.9901,
+      "disagreement_live": null,
+      "disagreement_analyst_pair": 0.0006
+    },
+    {
+      "query": "token bucket rate limiter backoff",
+      "declared": "ON",
+      "evidence_relevant": true,
+      "retrieved_titles": [
+        "KB-429: Rate Limiter Token-Bucket Backoff Strategy",
+        "Telemetry Performance Baseline KPI Definitions",
+        "KB-401: Resolving Invalid API Key and Token Expiration Errors"
+      ],
+      "verifier_model": "google/gemma-4-31b-it",
+      "repeat": 0,
+      "verifier_output": "Yes, KB-429 specifies that when the token-bucket rate limiter returns an HTTP 429 error, applications should implement exponential backoff with jitter and use the in-memory SDK queue for local buffering.",
+      "stance": "accept",
+      "disagreement_score": 0.0019,
+      "contradiction_prob": 0.0141,
+      "entailment_prob": 0.0344,
+      "disagreement_live": null,
+      "disagreement_analyst_pair": 0.0019
+    },
+    {
+      "query": "token bucket rate limiter backoff",
+      "declared": "ON",
+      "evidence_relevant": true,
+      "retrieved_titles": [
+        "KB-429: Rate Limiter Token-Bucket Backoff Strategy",
+        "Telemetry Performance Baseline KPI Definitions",
+        "KB-401: Resolving Invalid API Key and Token Expiration Errors"
+      ],
+      "verifier_model": "google/gemma-4-31b-it",
+      "repeat": 1,
+      "verifier_output": "Yes, KB-429 specifies that when the token-bucket rate limiter triggers an HTTP 429 error, applications should implement exponential backoff with jitter and use the in-memory SDK queue for local buffering.",
+      "stance": "accept",
+      "disagreement_score": 0.0028,
+      "contradiction_prob": 0.0136,
+      "entailment_prob": 0.0322,
+      "disagreement_live": null,
+      "disagreement_analyst_pair": 0.0028
+    },
+    {
+      "query": "token bucket rate limiter backoff",
+      "declared": "ON",
+      "evidence_relevant": true,
+      "retrieved_titles": [
+        "KB-429: Rate Limiter Token-Bucket Backoff Strategy",
+        "Telemetry Performance Baseline KPI Definitions",
+        "KB-401: Resolving Invalid API Key and Token Expiration Errors"
+      ],
+      "verifier_model": "meta/muse-glimmer-30b",
+      "repeat": 0,
+      "verifier_output": "Yes, KB-429 states that exceeding 1,000 requests/minute triggers HTTP 429 and applications should implement exponential backoff with jitter and utilize the in-memory SDK queue for non-blocking local buffering.",
+      "stance": "accept",
+      "disagreement_score": 0.0012,
+      "contradiction_prob": 0.0996,
+      "entailment_prob": 0.4177,
+      "disagreement_live": null,
+      "disagreement_analyst_pair": 0.0012
+    },
+    {
+      "query": "token bucket rate limiter backoff",
+      "declared": "ON",
+      "evidence_relevant": true,
+      "retrieved_titles": [
+        "KB-429: Rate Limiter Token-Bucket Backoff Strategy",
+        "Telemetry Performance Baseline KPI Definitions",
+        "KB-401: Resolving Invalid API Key and Token Expiration Errors"
+      ],
+      "verifier_model": "meta/muse-glimmer-30b",
+      "repeat": 1,
+      "verifier_output": "Yes, KB-429 states that when request frequency exceeds 1,000 requests/minute the token-bucket limiter returns HTTP 429 and applications should implement exponential backoff with jitter and utilize the in-memory SDK queue for non-blocking local buffering.",
+      "stance": "accept",
+      "disagreement_score": 0.0004,
+      "contradiction_prob": 0.0403,
+      "entailment_prob": 0.843,
+      "disagreement_live": null,
+      "disagreement_analyst_pair": 0.0004
+    },
+    {
+      "query": "token bucket rate limiter backoff",
+      "declared": "ON",
+      "evidence_relevant": true,
+      "retrieved_titles": [
+        "KB-429: Rate Limiter Token-Bucket Backoff Strategy",
+        "Telemetry Performance Baseline KPI Definitions",
+        "KB-401: Resolving Invalid API Key and Token Expiration Errors"
+      ],
+      "verifier_model": "mistralai/mistral-nemotron",
+      "repeat": 0,
+      "verifier_output": "Yes, the evidence partially addresses the question by explaining the token bucket rate limiter backoff strategy and its HTTP 429 response, but it does not detail the specific jitter or exponential backoff implementation.",
+      "stance": "accept",
+      "disagreement_score": 0.0424,
+      "contradiction_prob": 0.8924,
+      "entailment_prob": 0.1056,
+      "disagreement_live": null,
+      "disagreement_analyst_pair": 0.0424
+    },
+    {
+      "query": "token bucket rate limiter backoff",
+      "declared": "ON",
+      "evidence_relevant": true,
+      "retrieved_titles": [
+        "KB-429: Rate Limiter Token-Bucket Backoff Strategy",
+        "Telemetry Performance Baseline KPI Definitions",
+        "KB-401: Resolving Invalid API Key and Token Expiration Errors"
+      ],
+      "verifier_model": "mistralai/mistral-nemotron",
+      "repeat": 1,
+      "verifier_output": "Yes, the evidence provides details about the token-bucket rate limiter's backoff strategy, including when it triggers (429 responses at 1,000 requests/minute) and the recommended client-side handling (exponential backoff with jitter and in-memory SDK queue).",
+      "stance": "accept",
+      "disagreement_score": 0.0041,
+      "contradiction_prob": 0.019,
+      "entailment_prob": 0.972,
+      "disagreement_live": null,
+      "disagreement_analyst_pair": 0.0041
+    },
+    {
+      "query": "token bucket rate limiter backoff",
+      "declared": "ON",
+      "evidence_relevant": true,
+      "retrieved_titles": [
+        "KB-429: Rate Limiter Token-Bucket Backoff Strategy",
+        "Telemetry Performance Baseline KPI Definitions",
+        "KB-401: Resolving Invalid API Key and Token Expiration Errors"
+      ],
+      "verifier_model": "z-ai/glm-5.3-flash",
+      "repeat": 0,
+      "verifier_output": "Yes. KB-429 directly addresses the question by explaining that the token-bucket rate limiter returns HTTP 429 when request frequency exceeds 1,000 requests/minute and recommends exponential backoff with jitter plus the in-memory SDK queue for non-blocking buffering.",
+      "stance": "accept",
+      "disagreement_score": 0.0007,
+      "contradiction_prob": 0.0037,
+      "entailment_prob": 0.9884,
+      "disagreement_live": null,
+      "disagreement_analyst_pair": 0.0007
+    },
+    {
+      "query": "token bucket rate limiter backoff",
+      "declared": "ON",
+      "evidence_relevant": true,
+      "retrieved_titles": [
+        "KB-429: Rate Limiter Token-Bucket Backoff Strategy",
+        "Telemetry Performance Baseline KPI Definitions",
+        "KB-401: Resolving Invalid API Key and Token Expiration Errors"
+      ],
+      "verifier_model": "z-ai/glm-5.3-flash",
+      "repeat": 1,
+      "verifier_output": "Yes, the evidence answers the question. KB-429 directly addresses the token-bucket rate limiter backoff strategy, specifying that exceeding 1,000 requests/minute triggers HTTP 429 responses and recommending exponential backoff with jitter combined with the in-memory SDK queue for non-blocking local buffering.",
+      "stance": "accept",
+      "disagreement_score": 0.001,
+      "contradiction_prob": 0.0043,
+      "entailment_prob": 0.9923,
+      "disagreement_live": null,
+      "disagreement_analyst_pair": 0.001
+    },
+    {
+      "query": "kubernetes pod autoscaling",
+      "declared": "OFF",
+      "evidence_relevant": false,
+      "retrieved_titles": [
+        "KB-429: Rate Limiter Token-Bucket Backoff Strategy",
+        "Telemetry Performance Baseline KPI Definitions",
+        "Attention Is All You Need"
+      ],
+      "verifier_model": "deepseek-ai/deepseek-v4-flash-0731",
+      "repeat": 0,
+      "verifier_output": "No, the evidence does not address Kubernetes pod autoscaling, as it discusses rate limiting, telemetry KPIs, and transformer architecture instead.",
+      "stance": "refuse",
+      "disagreement_score": 0.0007,
+      "contradiction_prob": 0.997,
+      "entailment_prob": 0.003,
+      "disagreement_live": 0.9997,
+      "disagreement_analyst_pair": 0.0007
+    },
+    {
+      "query": "kubernetes pod autoscaling",
+      "declared": "OFF",
+      "evidence_relevant": false,
+      "retrieved_titles": [
+        "KB-429: Rate Limiter Token-Bucket Backoff Strategy",
+        "Telemetry Performance Baseline KPI Definitions",
+        "Attention Is All You Need"
+      ],
+      "verifier_model": "deepseek-ai/deepseek-v4-flash-0731",
+      "repeat": 1,
+      "verifier_output": "No, the evidence does not mention Kubernetes pod autoscaling, as it focuses on rate limiting, telemetry performance KPIs, and transformer architecture instead.",
+      "stance": "refuse",
+      "disagreement_score": 0.0028,
+      "contradiction_prob": 0.9915,
+      "entailment_prob": 0.0084,
+      "disagreement_live": 0.9999,
+      "disagreement_analyst_pair": 0.0028
+    },
+    {
+      "query": "kubernetes pod autoscaling",
+      "declared": "OFF",
+      "evidence_relevant": false,
+      "retrieved_titles": [
+        "KB-429: Rate Limiter Token-Bucket Backoff Strategy",
+        "Telemetry Performance Baseline KPI Definitions",
+        "Attention Is All You Need"
+      ],
+      "verifier_model": "google/gemma-4-31b-it",
+      "repeat": 0,
+      "verifier_output": "No, the provided evidence discusses rate limiting strategies, telemetry performance KPIs, and the Transformer architecture, but it contains no information regarding Kubernetes pod autoscaling.",
+      "stance": "refuse",
+      "disagreement_score": 0.0031,
+      "contradiction_prob": 0.9913,
+      "entailment_prob": 0.0086,
+      "disagreement_live": 0.9997,
+      "disagreement_analyst_pair": 0.0031
+    },
+    {
+      "query": "kubernetes pod autoscaling",
+      "declared": "OFF",
+      "evidence_relevant": false,
+      "retrieved_titles": [
+        "KB-429: Rate Limiter Token-Bucket Backoff Strategy",
+        "Telemetry Performance Baseline KPI Definitions",
+        "Attention Is All You Need"
+      ],
+      "verifier_model": "google/gemma-4-31b-it",
+      "repeat": 1,
+      "verifier_output": "No, the provided evidence discusses rate limiter strategies, telemetry KPIs, and Transformer architecture, none of which pertain to Kubernetes pod autoscaling.",
+      "stance": "refuse",
+      "disagreement_score": 0.0025,
+      "contradiction_prob": 0.9981,
+      "entailment_prob": 0.0017,
+      "disagreement_live": 0.9996,
+      "disagreement_analyst_pair": 0.0025
+    },
+    {
+      "query": "kubernetes pod autoscaling",
+      "declared": "OFF",
+      "evidence_relevant": false,
+      "retrieved_titles": [
+        "KB-429: Rate Limiter Token-Bucket Backoff Strategy",
+        "Telemetry Performance Baseline KPI Definitions",
+        "Attention Is All You Need"
+      ],
+      "verifier_model": "meta/muse-glimmer-30b",
+      "repeat": 0,
+      "verifier_output": "No, the provided evidence discusses rate limiting backoff, telemetry KPIs, and Transformer self-attention but contains no information about Kubernetes pod autoscaling.",
+      "stance": "refuse",
+      "disagreement_score": 0.0008,
+      "contradiction_prob": 0.8763,
+      "entailment_prob": 0.1235,
+      "disagreement_live": 0.9998,
+      "disagreement_analyst_pair": 0.0008
+    },
+    {
+      "query": "kubernetes pod autoscaling",
+      "declared": "OFF",
+      "evidence_relevant": false,
+      "retrieved_titles": [
+        "KB-429: Rate Limiter Token-Bucket Backoff Strategy",
+        "Telemetry Performance Baseline KPI Definitions",
+        "Attention Is All You Need"
+      ],
+      "verifier_model": "meta/muse-glimmer-30b",
+      "repeat": 1,
+      "verifier_output": "No, the evidence discusses rate limiter backoff, telemetry performance KPIs, and Transformer architecture and contains no information about Kubernetes pod autoscaling.",
+      "stance": "refuse",
+      "disagreement_score": 0.0016,
+      "contradiction_prob": 0.9926,
+      "entailment_prob": 0.0073,
+      "disagreement_live": 0.9999,
+      "disagreement_analyst_pair": 0.0016
+    },
+    {
+      "query": "kubernetes pod autoscaling",
+      "declared": "OFF",
+      "evidence_relevant": false,
+      "retrieved_titles": [
+        "KB-429: Rate Limiter Token-Bucket Backoff Strategy",
+        "Telemetry Performance Baseline KPI Definitions",
+        "Attention Is All You Need"
+      ],
+      "verifier_model": "mistralai/mistral-nemotron",
+      "repeat": 0,
+      "verifier_output": "No; the provided evidence discusses rate limiting strategies, telemetry performance metrics, and transformer architecture, none of which directly address Kubernetes pod autoscaling.",
+      "stance": "refuse",
+      "disagreement_score": 0.0013,
+      "contradiction_prob": 0.9981,
+      "entailment_prob": 0.0017,
+      "disagreement_live": 0.9996,
+      "disagreement_analyst_pair": 0.0013
+    },
+    {
+      "query": "kubernetes pod autoscaling",
+      "declared": "OFF",
+      "evidence_relevant": false,
+      "retrieved_titles": [
+        "KB-429: Rate Limiter Token-Bucket Backoff Strategy",
+        "Telemetry Performance Baseline KPI Definitions",
+        "Attention Is All You Need"
+      ],
+      "verifier_model": "mistralai/mistral-nemotron",
+      "repeat": 1,
+      "verifier_output": "No, the evidence provided does not directly address Kubernetes pod autoscaling; it focuses on rate limiting, performance metrics, and Transformer architecture.",
+      "stance": "refuse",
+      "disagreement_score": 0.0004,
+      "contradiction_prob": 0.9964,
+      "entailment_prob": 0.0034,
+      "disagreement_live": 0.9997,
+      "disagreement_analyst_pair": 0.0004
+    },
+    {
+      "query": "kubernetes pod autoscaling",
+      "declared": "OFF",
+      "evidence_relevant": false,
+      "retrieved_titles": [
+        "KB-429: Rate Limiter Token-Bucket Backoff Strategy",
+        "Telemetry Performance Baseline KPI Definitions",
+        "Attention Is All You Need"
+      ],
+      "verifier_model": "z-ai/glm-5.3-flash",
+      "repeat": 0,
+      "verifier_output": "No, the evidence does not answer the question, as none of the provided documents address Kubernetes pod autoscaling\u2014the evidence instead covers rate limiter backoff strategies, telemetry performance baselines/KPI definitions, and the Transformer self-attention architecture.",
+      "stance": "refuse",
+      "disagreement_score": 0.9177,
+      "contradiction_prob": 0.9785,
+      "entailment_prob": 0.0173,
+      "disagreement_live": 0.9998,
+      "disagreement_analyst_pair": 0.9177
+    },
+    {
+      "query": "kubernetes pod autoscaling",
+      "declared": "OFF",
+      "evidence_relevant": false,
+      "retrieved_titles": [
+        "KB-429: Rate Limiter Token-Bucket Backoff Strategy",
+        "Telemetry Performance Baseline KPI Definitions",
+        "Attention Is All You Need"
+      ],
+      "verifier_model": "z-ai/glm-5.3-flash",
+      "repeat": 1,
+      "verifier_output": "No. The evidence covers rate limiting/backoff strategies, telemetry performance KPIs, and the Transformer attention architecture, but contains no information about Kubernetes pod autoscaling (e.g., HPA, scaling policies, or resource thresholds).",
+      "stance": "refuse",
+      "disagreement_score": 0.0287,
+      "contradiction_prob": 0.9839,
+      "entailment_prob": 0.0159,
+      "disagreement_live": 0.9994,
+      "disagreement_analyst_pair": 0.0287
+    },
+    {
+      "query": "gradient descent optimizer comparison",
+      "declared": "OFF",
+      "evidence_relevant": false,
+      "retrieved_titles": [
+        "Telemetry Performance Baseline KPI Definitions",
+        "DeBERTa: Decoding-enhanced BERT with Disentangled Attention",
+        "Attention Is All You Need"
+      ],
+      "verifier_model": "deepseek-ai/deepseek-v4-flash-0731",
+      "repeat": 0,
+      "verifier_output": "No, the evidence discusses performance metrics, DeBERTa, and Transformer architectures, but does not address gradient descent optimizer comparisons.",
+      "stance": "refuse",
+      "disagreement_score": 0.0017,
+      "contradiction_prob": 0.9913,
+      "entailment_prob": 0.0083,
+      "disagreement_live": 0.9994,
+      "disagreement_analyst_pair": 0.0017
+    },
+    {
+      "query": "gradient descent optimizer comparison",
+      "declared": "OFF",
+      "evidence_relevant": false,
+      "retrieved_titles": [
+        "Telemetry Performance Baseline KPI Definitions",
+        "DeBERTa: Decoding-enhanced BERT with Disentangled Attention",
+        "Attention Is All You Need"
+      ],
+      "verifier_model": "deepseek-ai/deepseek-v4-flash-0731",
+      "repeat": 1,
+      "verifier_output": "No, the evidence discusses model architectures and performance metrics but does not compare gradient descent optimizers.",
+      "stance": "refuse",
+      "disagreement_score": 0.0019,
+      "contradiction_prob": 0.9839,
+      "entailment_prob": 0.0158,
+      "disagreement_live": 0.9994,
+      "disagreement_analyst_pair": 0.0019
+    },
+    {
+      "query": "gradient descent optimizer comparison",
+      "declared": "OFF",
+      "evidence_relevant": false,
+      "retrieved_titles": [
+        "Telemetry Performance Baseline KPI Definitions",
+        "DeBERTa: Decoding-enhanced BERT with Disentangled Attention",
+        "Attention Is All You Need"
+      ],
+      "verifier_model": "google/gemma-4-31b-it",
+      "repeat": 0,
+      "verifier_output": "No, the provided evidence discusses telemetry KPIs, the DeBERTa model, and the Transformer architecture, but it contains no information comparing gradient descent optimizers.",
+      "stance": "refuse",
+      "disagreement_score": 0.1616,
+      "contradiction_prob": 0.9857,
+      "entailment_prob": 0.0138,
+      "disagreement_live": 0.9991,
+      "disagreement_analyst_pair": 0.1616
+    },
+    {
+      "query": "gradient descent optimizer comparison",
+      "declared": "OFF",
+      "evidence_relevant": false,
+      "retrieved_titles": [
+        "Telemetry Performance Baseline KPI Definitions",
+        "DeBERTa: Decoding-enhanced BERT with Disentangled Attention",
+        "Attention Is All You Need"
+      ],
+      "verifier_model": "google/gemma-4-31b-it",
+      "repeat": 1,
+      "verifier_output": "No, the provided text discusses telemetry performance KPIs, the DeBERTa model, and the Transformer architecture, but it contains no information comparing gradient descent optimizers.",
+      "stance": "refuse",
+      "disagreement_score": 0.0041,
+      "contradiction_prob": 0.9779,
+      "entailment_prob": 0.0216,
+      "disagreement_live": 0.9987,
+      "disagreement_analyst_pair": 0.0041
+    },
+    {
+      "query": "gradient descent optimizer comparison",
+      "declared": "OFF",
+      "evidence_relevant": false,
+      "retrieved_titles": [
+        "Telemetry Performance Baseline KPI Definitions",
+        "DeBERTa: Decoding-enhanced BERT with Disentangled Attention",
+        "Attention Is All You Need"
+      ],
+      "verifier_model": "meta/muse-glimmer-30b",
+      "repeat": 0,
+      "verifier_output": "No, the provided evidence discusses telemetry KPI thresholds, DeBERTa architecture, and Transformer self-attention but contains no information about gradient descent optimizers or their comparison.",
+      "stance": "refuse",
+      "disagreement_score": 0.327,
+      "contradiction_prob": 0.7375,
+      "entailment_prob": 0.2606,
+      "disagreement_live": 0.9996,
+      "disagreement_analyst_pair": 0.327
+    },
+    {
+      "query": "gradient descent optimizer comparison",
+      "declared": "OFF",
+      "evidence_relevant": false,
+      "retrieved_titles": [
+        "Telemetry Performance Baseline KPI Definitions",
+        "DeBERTa: Decoding-enhanced BERT with Disentangled Attention",
+        "Attention Is All You Need"
+      ],
+      "verifier_model": "meta/muse-glimmer-30b",
+      "repeat": 1,
+      "verifier_output": "No, the evidence discusses telemetry KPI thresholds, DeBERTa's disentangled attention and enhanced mask decoder, and Transformer's self-attention, but contains no information about gradient descent optimizers or their comparison.",
+      "stance": "refuse",
+      "disagreement_score": 0.9948,
+      "contradiction_prob": 0.7189,
+      "entailment_prob": 0.2796,
+      "disagreement_live": 0.9996,
+      "disagreement_analyst_pair": 0.9948
+    },
+    {
+      "query": "gradient descent optimizer comparison",
+      "declared": "OFF",
+      "evidence_relevant": false,
+      "retrieved_titles": [
+        "Telemetry Performance Baseline KPI Definitions",
+        "DeBERTa: Decoding-enhanced BERT with Disentangled Attention",
+        "Attention Is All You Need"
+      ],
+      "verifier_model": "mistralai/mistral-nemotron",
+      "repeat": 0,
+      "verifier_output": "No, as the evidence focuses on comparing transformer-based models (DeBERTa and the Transformer architecture) rather than gradient descent optimizers.",
+      "stance": "refuse",
+      "disagreement_score": 0.6991,
+      "contradiction_prob": 0.9919,
+      "entailment_prob": 0.0071,
+      "disagreement_live": 0.9964,
+      "disagreement_analyst_pair": 0.6991
+    },
+    {
+      "query": "gradient descent optimizer comparison",
+      "declared": "OFF",
+      "evidence_relevant": false,
+      "retrieved_titles": [
+        "Telemetry Performance Baseline KPI Definitions",
+        "DeBERTa: Decoding-enhanced BERT with Disentangled Attention",
+        "Attention Is All You Need"
+      ],
+      "verifier_model": "mistralai/mistral-nemotron",
+      "repeat": 1,
+      "verifier_output": "No; the evidence discusses model architectures (DeBERTa, BERT, Transformer) and telemetry KPIs but does not compare gradient descent optimizers.",
+      "stance": "refuse",
+      "disagreement_score": 0.0112,
+      "contradiction_prob": 0.8717,
+      "entailment_prob": 0.1266,
+      "disagreement_live": 0.9962,
+      "disagreement_analyst_pair": 0.0112
+    },
+    {
+      "query": "gradient descent optimizer comparison",
+      "declared": "OFF",
+      "evidence_relevant": false,
+      "retrieved_titles": [
+        "Telemetry Performance Baseline KPI Definitions",
+        "DeBERTa: Decoding-enhanced BERT with Disentangled Attention",
+        "Attention Is All You Need"
+      ],
+      "verifier_model": "z-ai/glm-5.3-flash",
+      "repeat": 0,
+      "verifier_output": "No. The evidence covers telemetry KPI thresholds, the DeBERTa architecture, and the Transformer's self-attention mechanism, none of which discuss gradient descent optimizers or provide any comparison between them.",
+      "stance": "refuse",
+      "disagreement_score": 0.885,
+      "contradiction_prob": 0.9935,
+      "entailment_prob": 0.0058,
+      "disagreement_live": 0.9993,
+      "disagreement_analyst_pair": 0.885
+    },
+    {
+      "query": "gradient descent optimizer comparison",
+      "declared": "OFF",
+      "evidence_relevant": false,
+      "retrieved_titles": [
+        "Telemetry Performance Baseline KPI Definitions",
+        "DeBERTa: Decoding-enhanced BERT with Disentangled Attention",
+        "Attention Is All You Need"
+      ],
+      "verifier_model": "z-ai/glm-5.3-flash",
+      "repeat": 1,
+      "verifier_output": "No. The evidence covers telemetry latency KPIs, DeBERTa's architecture, and the Transformer's self-attention mechanism, but none of it discusses gradient descent optimizers (such as SGD, Adam, or RMSprop) or any comparison between them.",
+      "stance": "refuse",
+      "disagreement_score": 0.9897,
+      "contradiction_prob": 0.9804,
+      "entailment_prob": 0.019,
+      "disagreement_live": 0.9973,
+      "disagreement_analyst_pair": 0.9897
+    },
+    {
+      "query": "react hooks state management",
+      "declared": "OFF",
+      "evidence_relevant": false,
+      "retrieved_titles": [
+        "SQLite Write-Ahead Logging (WAL) Architecture",
+        "Telemetry Performance Baseline KPI Definitions",
+        "Attention Is All You Need"
+      ],
+      "verifier_model": "deepseek-ai/deepseek-v4-flash-0731",
+      "repeat": 0,
+      "verifier_output": "No, the evidence discusses SQLite WAL, telemetry KPIs, and Transformer architecture, none of which pertain to React hooks or state management.",
+      "stance": "refuse",
+      "disagreement_score": 0.9997,
+      "contradiction_prob": 0.9954,
+      "entailment_prob": 0.0045,
+      "disagreement_live": 0.9998,
+      "disagreement_analyst_pair": 0.9997
+    },
+    {
+      "query": "react hooks state management",
+      "declared": "OFF",
+      "evidence_relevant": false,
+      "retrieved_titles": [
+        "SQLite Write-Ahead Logging (WAL) Architecture",
+        "Telemetry Performance Baseline KPI Definitions",
+        "Attention Is All You Need"
+      ],
+      "verifier_model": "deepseek-ai/deepseek-v4-flash-0731",
+      "repeat": 1,
+      "verifier_output": "No, the evidence discusses SQLite database concurrency, telemetry performance metrics, and Transformer architecture, none of which relate to React hooks or state management.",
+      "stance": "refuse",
+      "disagreement_score": 0.9997,
+      "contradiction_prob": 0.9929,
+      "entailment_prob": 0.0069,
+      "disagreement_live": 0.9998,
+      "disagreement_analyst_pair": 0.9997
+    },
+    {
+      "query": "react hooks state management",
+      "declared": "OFF",
+      "evidence_relevant": false,
+      "retrieved_titles": [
+        "SQLite Write-Ahead Logging (WAL) Architecture",
+        "Telemetry Performance Baseline KPI Definitions",
+        "Attention Is All You Need"
+      ],
+      "verifier_model": "google/gemma-4-31b-it",
+      "repeat": 0,
+      "verifier_output": "No, the provided evidence discusses SQLite architecture, telemetry performance KPIs, and Transformer models, none of which relate to React hooks or state management.",
+      "stance": "refuse",
+      "disagreement_score": 0.9997,
+      "contradiction_prob": 0.9846,
+      "entailment_prob": 0.0152,
+      "disagreement_live": 0.9998,
+      "disagreement_analyst_pair": 0.9997
+    },
+    {
+      "query": "react hooks state management",
+      "declared": "OFF",
+      "evidence_relevant": false,
+      "retrieved_titles": [
+        "SQLite Write-Ahead Logging (WAL) Architecture",
+        "Telemetry Performance Baseline KPI Definitions",
+        "Attention Is All You Need"
+      ],
+      "verifier_model": "google/gemma-4-31b-it",
+      "repeat": 1,
+      "verifier_output": "No, the provided evidence discusses SQLite architecture, telemetry KPIs, and Transformer models, none of which relate to React hooks or state management.",
+      "stance": "refuse",
+      "disagreement_score": 0.9997,
+      "contradiction_prob": 0.9863,
+      "entailment_prob": 0.0135,
+      "disagreement_live": 0.9998,
+      "disagreement_analyst_pair": 0.9997
+    },
+    {
+      "query": "react hooks state management",
+      "declared": "OFF",
+      "evidence_relevant": false,
+      "retrieved_titles": [
+        "SQLite Write-Ahead Logging (WAL) Architecture",
+        "Telemetry Performance Baseline KPI Definitions",
+        "Attention Is All You Need"
+      ],
+      "verifier_model": "meta/muse-glimmer-30b",
+      "repeat": 0,
+      "verifier_output": "No, the evidence discusses SQLite WAL architecture, telemetry KPI thresholds, and Transformer self-attention mechanisms and contains no information about React hooks state management.",
+      "stance": "refuse",
+      "disagreement_score": 0.9952,
+      "contradiction_prob": 0.3318,
+      "entailment_prob": 0.6675,
+      "disagreement_live": 0.9999,
+      "disagreement_analyst_pair": 0.9952
+    },
+    {
+      "query": "react hooks state management",
+      "declared": "OFF",
+      "evidence_relevant": false,
+      "retrieved_titles": [
+        "SQLite Write-Ahead Logging (WAL) Architecture",
+        "Telemetry Performance Baseline KPI Definitions",
+        "Attention Is All You Need"
+      ],
+      "verifier_model": "meta/muse-glimmer-30b",
+      "repeat": 1,
+      "verifier_output": "No, the evidence contains no information about React hooks state management, instead discussing SQLite WAL architecture, telemetry performance KPIs, and the Transformer self-attention architecture.",
+      "stance": "refuse",
+      "disagreement_score": 0.9982,
+      "contradiction_prob": 0.8246,
+      "entailment_prob": 0.1748,
+      "disagreement_live": 0.9999,
+      "disagreement_analyst_pair": 0.9982
+    },
+    {
+      "query": "react hooks state management",
+      "declared": "OFF",
+      "evidence_relevant": false,
+      "retrieved_titles": [
+        "SQLite Write-Ahead Logging (WAL) Architecture",
+        "Telemetry Performance Baseline KPI Definitions",
+        "Attention Is All You Need"
+      ],
+      "verifier_model": "mistralai/mistral-nemotron",
+      "repeat": 0,
+      "verifier_output": "No, the provided evidence does not address React hooks state management, as it focuses on unrelated topics such as SQLite WAL architecture, telemetry KPIs, and the Transformer model in machine learning.",
+      "stance": "refuse",
+      "disagreement_score": 0.9988,
+      "contradiction_prob": 0.9117,
+      "entailment_prob": 0.088,
+      "disagreement_live": 0.9998,
+      "disagreement_analyst_pair": 0.9988
+    },
+    {
+      "query": "react hooks state management",
+      "declared": "OFF",
+      "evidence_relevant": false,
+      "retrieved_titles": [
+        "SQLite Write-Ahead Logging (WAL) Architecture",
+        "Telemetry Performance Baseline KPI Definitions",
+        "Attention Is All You Need"
+      ],
+      "verifier_model": "z-ai/glm-5.3-flash",
+      "repeat": 0,
+      "verifier_output": "No, the evidence does not answer the question. The provided evidence covers SQLite WAL architecture, telemetry performance KPIs, and the Transformer's self-attention mechanism\u2014none of which relate to React hooks or state management in React applications.",
+      "stance": "refuse",
+      "disagreement_score": 0.9968,
+      "contradiction_prob": 0.9736,
+      "entailment_prob": 0.0261,
+      "disagreement_live": 0.9796,
+      "disagreement_analyst_pair": 0.9968
+    },
+    {
+      "query": "react hooks state management",
+      "declared": "OFF",
+      "evidence_relevant": false,
+      "retrieved_titles": [
+        "SQLite Write-Ahead Logging (WAL) Architecture",
+        "Telemetry Performance Baseline KPI Definitions",
+        "Attention Is All You Need"
+      ],
+      "verifier_model": "z-ai/glm-5.3-flash",
+      "repeat": 1,
+      "verifier_output": "No, the evidence does not answer the question, as it covers unrelated topics\u2014SQLite WAL concurrency mechanisms, telemetry latency KPIs, and the Transformer's self-attention architecture\u2014none of which address React hooks or state management.",
+      "stance": "refuse",
+      "disagreement_score": 0.9997,
+      "contradiction_prob": 0.9862,
+      "entailment_prob": 0.0137,
+      "disagreement_live": 0.9999,
+      "disagreement_analyst_pair": 0.9997
+    },
+    {
+      "query": "photosynthesis light dependent reactions",
+      "declared": "OFF",
+      "evidence_relevant": false,
+      "retrieved_titles": [
+        "DeBERTa: Decoding-enhanced BERT with Disentangled Attention",
+        "Attention Is All You Need",
+        "SQLite Write-Ahead Logging (WAL) Architecture"
+      ],
+      "verifier_model": "deepseek-ai/deepseek-v4-flash-0731",
+      "repeat": 0,
+      "verifier_output": "No, the evidence discusses DeBERTa, Transformer, and SQLite WAL, none of which relate to photosynthesis light-dependent reactions.",
+      "stance": "refuse",
+      "disagreement_score": 0.0002,
+      "contradiction_prob": 0.8918,
+      "entailment_prob": 0.1076,
+      "disagreement_live": 0.9998,
+      "disagreement_analyst_pair": 0.0002
+    },
+    {
+      "query": "photosynthesis light dependent reactions",
+      "declared": "OFF",
+      "evidence_relevant": false,
+      "retrieved_titles": [
+        "DeBERTa: Decoding-enhanced BERT with Disentangled Attention",
+        "Attention Is All You Need",
+        "SQLite Write-Ahead Logging (WAL) Architecture"
+      ],
+      "verifier_model": "deepseek-ai/deepseek-v4-flash-0731",
+      "repeat": 1,
+      "verifier_output": "No, the evidence discusses machine learning models and database architecture, not photosynthesis light-dependent reactions.",
+      "stance": "refuse",
+      "disagreement_score": 0.0038,
+      "contradiction_prob": 0.9721,
+      "entailment_prob": 0.0277,
+      "disagreement_live": 0.9998,
+      "disagreement_analyst_pair": 0.0038
+    },
+    {
+      "query": "photosynthesis light dependent reactions",
+      "declared": "OFF",
+      "evidence_relevant": false,
+      "retrieved_titles": [
+        "DeBERTa: Decoding-enhanced BERT with Disentangled Attention",
+        "Attention Is All You Need",
+        "SQLite Write-Ahead Logging (WAL) Architecture"
+      ],
+      "verifier_model": "google/gemma-4-31b-it",
+      "repeat": 0,
+      "verifier_output": "No, the provided evidence discusses machine learning models and database architecture, which are unrelated to the biological process of photosynthesis.",
+      "stance": "refuse",
+      "disagreement_score": 0.002,
+      "contradiction_prob": 0.983,
+      "entailment_prob": 0.0168,
+      "disagreement_live": 0.9999,
+      "disagreement_analyst_pair": 0.002
+    },
+    {
+      "query": "photosynthesis light dependent reactions",
+      "declared": "OFF",
+      "evidence_relevant": false,
+      "retrieved_titles": [
+        "DeBERTa: Decoding-enhanced BERT with Disentangled Attention",
+        "Attention Is All You Need",
+        "SQLite Write-Ahead Logging (WAL) Architecture"
+      ],
+      "verifier_model": "google/gemma-4-31b-it",
+      "repeat": 1,
+      "verifier_output": "No, the provided evidence discusses machine learning architectures and database logging systems, which are unrelated to the biological process of photosynthesis.",
+      "stance": "refuse",
+      "disagreement_score": 0.0014,
+      "contradiction_prob": 0.9868,
+      "entailment_prob": 0.013,
+      "disagreement_live": 0.9999,
+      "disagreement_analyst_pair": 0.0014
+    },
+    {
+      "query": "photosynthesis light dependent reactions",
+      "declared": "OFF",
+      "evidence_relevant": false,
+      "retrieved_titles": [
+        "DeBERTa: Decoding-enhanced BERT with Disentangled Attention",
+        "Attention Is All You Need",
+        "SQLite Write-Ahead Logging (WAL) Architecture"
+      ],
+      "verifier_model": "meta/muse-glimmer-30b",
+      "repeat": 0,
+      "verifier_output": "No, the provided evidence discusses DeBERTa, Transformer attention mechanisms, and SQLite WAL architecture and contains no information about photosynthesis or light-dependent reactions.",
+      "stance": "refuse",
+      "disagreement_score": 0.0002,
+      "contradiction_prob": 0.7642,
+      "entailment_prob": 0.2352,
+      "disagreement_live": 0.9999,
+      "disagreement_analyst_pair": 0.0002
+    },
+    {
+      "query": "photosynthesis light dependent reactions",
+      "declared": "OFF",
+      "evidence_relevant": false,
+      "retrieved_titles": [
+        "DeBERTa: Decoding-enhanced BERT with Disentangled Attention",
+        "Attention Is All You Need",
+        "SQLite Write-Ahead Logging (WAL) Architecture"
+      ],
+      "verifier_model": "meta/muse-glimmer-30b",
+      "repeat": 1,
+      "verifier_output": "No, the evidence discusses DeBERTa, Transformer attention mechanisms, and SQLite Write-Ahead Logging and contains no information about photosynthesis light-dependent reactions.",
+      "stance": "refuse",
+      "disagreement_score": 0.0003,
+      "contradiction_prob": 0.1093,
+      "entailment_prob": 0.8898,
+      "disagreement_live": 0.9999,
+      "disagreement_analyst_pair": 0.0003
+    },
+    {
+      "query": "photosynthesis light dependent reactions",
+      "declared": "OFF",
+      "evidence_relevant": false,
+      "retrieved_titles": [
+        "DeBERTa: Decoding-enhanced BERT with Disentangled Attention",
+        "Attention Is All You Need",
+        "SQLite Write-Ahead Logging (WAL) Architecture"
+      ],
+      "verifier_model": "mistralai/mistral-nemotron",
+      "repeat": 0,
+      "verifier_output": "No; the provided evidence is about language models, attention mechanisms, and database architecture, which are unrelated to the process of photosynthesis or light-dependent reactions.",
+      "stance": "refuse",
+      "disagreement_score": 0.0067,
+      "contradiction_prob": 0.8443,
+      "entailment_prob": 0.1551,
+      "disagreement_live": 0.9997,
+      "disagreement_analyst_pair": 0.0067
+    },
+    {
+      "query": "photosynthesis light dependent reactions",
+      "declared": "OFF",
+      "evidence_relevant": false,
+      "retrieved_titles": [
+        "DeBERTa: Decoding-enhanced BERT with Disentangled Attention",
+        "Attention Is All You Need",
+        "SQLite Write-Ahead Logging (WAL) Architecture"
+      ],
+      "verifier_model": "mistralai/mistral-nemotron",
+      "repeat": 1,
+      "verifier_output": "No, the provided evidence discusses topics related to machine learning models (DeBERTa and Transformers) and database architecture (SQLite WAL), none of which are relevant to the process of photosynthesis or its light-dependent reactions.",
+      "stance": "refuse",
+      "disagreement_score": 0.0014,
+      "contradiction_prob": 0.5553,
+      "entailment_prob": 0.4431,
+      "disagreement_live": 0.9996,
+      "disagreement_analyst_pair": 0.0014
+    },
+    {
+      "query": "photosynthesis light dependent reactions",
+      "declared": "OFF",
+      "evidence_relevant": false,
+      "retrieved_titles": [
+        "DeBERTa: Decoding-enhanced BERT with Disentangled Attention",
+        "Attention Is All You Need",
+        "SQLite Write-Ahead Logging (WAL) Architecture"
+      ],
+      "verifier_model": "z-ai/glm-5.3-flash",
+      "repeat": 0,
+      "verifier_output": "No. The evidence consists of passages about the DeBERTa language model, the Transformer architecture, and SQLite's write-ahead logging\u2014none of which mention photosynthesis or its light-dependent reactions.",
+      "stance": "refuse",
+      "disagreement_score": 0.003,
+      "contradiction_prob": 0.1701,
+      "entailment_prob": 0.8281,
+      "disagreement_live": 0.9997,
+      "disagreement_analyst_pair": 0.003
+    },
+    {
+      "query": "photosynthesis light dependent reactions",
+      "declared": "OFF",
+      "evidence_relevant": false,
+      "retrieved_titles": [
+        "DeBERTa: Decoding-enhanced BERT with Disentangled Attention",
+        "Attention Is All You Need",
+        "SQLite Write-Ahead Logging (WAL) Architecture"
+      ],
+      "verifier_model": "z-ai/glm-5.3-flash",
+      "repeat": 1,
+      "verifier_output": "No, the evidence does not answer the question. The provided evidence discusses machine learning architectures (DeBERTa and Transformers) and database concurrency mechanisms (SQLite WAL), none of which contain any information about photosynthesis or its light-dependent reactions.",
+      "stance": "refuse",
+      "disagreement_score": 0.0069,
+      "contradiction_prob": 0.9819,
+      "entailment_prob": 0.0179,
+      "disagreement_live": 0.9997,
+      "disagreement_analyst_pair": 0.0069
+    },
+    {
+      "query": "italian carbonara pasta recipe",
+      "declared": "OFF",
+      "evidence_relevant": false,
+      "retrieved_titles": [
+        "DeBERTa: Decoding-enhanced BERT with Disentangled Attention",
+        "Attention Is All You Need",
+        "Telemetry Performance Baseline KPI Definitions"
+      ],
+      "verifier_model": "deepseek-ai/deepseek-v4-flash-0731",
+      "repeat": 0,
+      "verifier_output": "No, the evidence discusses machine learning models and telemetry performance metrics, none of which contain any information about an Italian carbonara pasta recipe.",
+      "stance": "refuse",
+      "disagreement_score": 0.9994,
+      "contradiction_prob": 0.9955,
+      "entailment_prob": 0.0042,
+      "disagreement_live": 0.9998,
+      "disagreement_analyst_pair": 0.9994
+    },
+    {
+      "query": "italian carbonara pasta recipe",
+      "declared": "OFF",
+      "evidence_relevant": false,
+      "retrieved_titles": [
+        "DeBERTa: Decoding-enhanced BERT with Disentangled Attention",
+        "Attention Is All You Need",
+        "Telemetry Performance Baseline KPI Definitions"
+      ],
+      "verifier_model": "deepseek-ai/deepseek-v4-flash-0731",
+      "repeat": 1,
+      "verifier_output": "No, the evidence discusses machine learning models and telemetry performance metrics, not a carbonara pasta recipe.",
+      "stance": "refuse",
+      "disagreement_score": 0.9994,
+      "contradiction_prob": 0.9964,
+      "entailment_prob": 0.0033,
+      "disagreement_live": 0.9988,
+      "disagreement_analyst_pair": 0.9994
+    },
+    {
+      "query": "italian carbonara pasta recipe",
+      "declared": "OFF",
+      "evidence_relevant": false,
+      "retrieved_titles": [
+        "DeBERTa: Decoding-enhanced BERT with Disentangled Attention",
+        "Attention Is All You Need",
+        "Telemetry Performance Baseline KPI Definitions"
+      ],
+      "verifier_model": "google/gemma-4-31b-it",
+      "repeat": 0,
+      "verifier_output": "No, the provided evidence discusses machine learning models and system performance KPIs, and contains no information about pasta recipes.",
+      "stance": "refuse",
+      "disagreement_score": 0.999,
+      "contradiction_prob": 0.9844,
+      "entailment_prob": 0.015,
+      "disagreement_live": 0.0,
+      "disagreement_analyst_pair": 0.999
+    },
+    {
+      "query": "italian carbonara pasta recipe",
+      "declared": "OFF",
+      "evidence_relevant": false,
+      "retrieved_titles": [
+        "DeBERTa: Decoding-enhanced BERT with Disentangled Attention",
+        "Attention Is All You Need",
+        "Telemetry Performance Baseline KPI Definitions"
+      ],
+      "verifier_model": "meta/muse-glimmer-30b",
+      "repeat": 0,
+      "verifier_output": "No, the evidence discusses DeBERTa, Transformer attention mechanisms, and telemetry KPI thresholds rather than an Italian carbonara pasta recipe.",
+      "stance": "refuse",
+      "disagreement_score": 0.9992,
+      "contradiction_prob": 0.9933,
+      "entailment_prob": 0.0063,
+      "disagreement_live": 0.9991,
+      "disagreement_analyst_pair": 0.9992
+    },
+    {
+      "query": "italian carbonara pasta recipe",
+      "declared": "OFF",
+      "evidence_relevant": false,
+      "retrieved_titles": [
+        "DeBERTa: Decoding-enhanced BERT with Disentangled Attention",
+        "Attention Is All You Need",
+        "Telemetry Performance Baseline KPI Definitions"
+      ],
+      "verifier_model": "meta/muse-glimmer-30b",
+      "repeat": 1,
+      "verifier_output": "No, the evidence discusses DeBERTa, Transformer attention mechanisms, and telemetry KPI definitions and contains no information about an Italian carbonara pasta recipe.",
+      "stance": "refuse",
+      "disagreement_score": 0.9993,
+      "contradiction_prob": 0.9921,
+      "entailment_prob": 0.0076,
+      "disagreement_live": 0.9997,
+      "disagreement_analyst_pair": 0.9993
+    },
+    {
+      "query": "italian carbonara pasta recipe",
+      "declared": "OFF",
+      "evidence_relevant": false,
+      "retrieved_titles": [
+        "DeBERTa: Decoding-enhanced BERT with Disentangled Attention",
+        "Attention Is All You Need",
+        "Telemetry Performance Baseline KPI Definitions"
+      ],
+      "verifier_model": "z-ai/glm-5.3-flash",
+      "repeat": 1,
+      "verifier_output": "No, the evidence does not answer the question because it contains information about machine learning architectures (DeBERTa, Transformer) and telemetry performance metrics, none of which relate to cooking or carbonara pasta recipes.",
+      "stance": "refuse",
+      "disagreement_score": 0.9995,
+      "contradiction_prob": 0.9955,
+      "entailment_prob": 0.0042,
+      "disagreement_live": 0.9996,
+      "disagreement_analyst_pair": 0.9995
+    },
+    {
+      "query": "transformer multi-head self-attention",
+      "declared": "ON",
+      "evidence_relevant": true,
+      "retrieved_titles": [
+        "Attention Is All You Need",
+        "DeBERTa: Decoding-enhanced BERT with Disentangled Attention",
+        "Telemetry Performance Baseline KPI Definitions"
+      ],
+      "verifier_model": "z-ai/glm-5.3-flash",
+      "repeat": 0,
+      "verifier_output": "Yes \u2014 the \"Attention Is All You Need\" excerpt directly addresses the question by explaining that the Transformer relies on self-attention and that multi-head attention enables the model to jointly attend to information from different representation subspaces at different positions (while the telemetry KPI excerpt is irrelevant to the topic).",
+      "stance": "accept",
+      "contradiction_prob": 0.0835,
+      "entailment_prob": 0.8433,
+      "disagreement_live": 0.7662,
+      "disagreement_analyst_pair": 0.0121
+    },
+    {
+      "query": "DeBERTa disentangled attention",
+      "declared": "ON",
+      "evidence_relevant": true,
+      "retrieved_titles": [
+        "DeBERTa: Decoding-enhanced BERT with Disentangled Attention",
+        "Attention Is All You Need",
+        "Telemetry Performance Baseline KPI Definitions"
+      ],
+      "verifier_model": "z-ai/glm-5.3-flash",
+      "repeat": 0,
+      "verifier_output": "Yes, the evidence answers the question \u2014 the DeBERTa passage directly explains its disentangled attention mechanism, where each word is represented using two separate vectors encoding content and relative position (rather than a single vector summing both, as in BERT), while the other two passages about the Transformer architecture and telemetry KPIs are irrelevant to the question.",
+      "stance": "accept",
+      "contradiction_prob": 0.8092,
+      "entailment_prob": 0.1659,
+      "disagreement_live": 0.0254,
+      "disagreement_analyst_pair": 0.003
+    },
+    {
+      "query": "SQLite write-ahead logging concurrency",
+      "declared": "ON",
+      "evidence_relevant": true,
+      "retrieved_titles": [
+        "SQLite Write-Ahead Logging (WAL) Architecture",
+        "KB-429: Rate Limiter Token-Bucket Backoff Strategy",
+        "Telemetry Performance Baseline KPI Definitions"
+      ],
+      "verifier_model": "mistralai/mistral-nemotron",
+      "repeat": 1,
+      "verifier_output": "Yes, the first evidence entry about SQLite WAL Architecture directly answers the question by explaining that WAL mode improves concurrency by allowing readers to continue accessing the database while writes are logged separately.",
+      "stance": "accept",
+      "contradiction_prob": 0.0008,
+      "entailment_prob": 0.9981,
+      "disagreement_live": 0.0034,
+      "disagreement_analyst_pair": 0.0037
+    },
+    {
+      "query": "invalid API key and token expiration",
+      "declared": "ON",
+      "evidence_relevant": true,
+      "retrieved_titles": [
+        "KB-401: Resolving Invalid API Key and Token Expiration Errors",
+        "KB-429: Rate Limiter Token-Bucket Backoff Strategy",
+        "Telemetry Performance Baseline KPI Definitions"
+      ],
+      "verifier_model": "mistralai/mistral-nemotron",
+      "repeat": 0,
+      "verifier_output": "Yes, the evidence directly addresses the question about invalid API key and token expiration by providing a solution for handling HTTP 401 errors, including steps like regenerating the API key and verifying its usage.\n\n(Sidenote: The evidence also includes unrelated information about rate limiting and telemetry KPIs, but the core question is answered by KB-401.)",
+      "stance": "accept",
+      "contradiction_prob": 0.008,
+      "entailment_prob": 0.9913,
+      "disagreement_live": 0.0054,
+      "disagreement_analyst_pair": 0.0014
+    },
+    {
+      "query": "invalid API key and token expiration",
+      "declared": "ON",
+      "evidence_relevant": true,
+      "retrieved_titles": [
+        "KB-401: Resolving Invalid API Key and Token Expiration Errors",
+        "KB-429: Rate Limiter Token-Bucket Backoff Strategy",
+        "Telemetry Performance Baseline KPI Definitions"
+      ],
+      "verifier_model": "mistralai/mistral-nemotron",
+      "repeat": 1,
+      "verifier_output": "Yes, the evidence provides solutions for resolving HTTP 401 (invalid API key and token expiration) errors in KB-401, though the primary focus is on API key and token-related issues rather than token expiration alone.",
+      "stance": "accept",
+      "contradiction_prob": 0.0578,
+      "entailment_prob": 0.9408,
+      "disagreement_live": 0.0039,
+      "disagreement_analyst_pair": 0.0039
+    },
+    {
+      "query": "react hooks state management",
+      "declared": "OFF",
+      "evidence_relevant": false,
+      "retrieved_titles": [
+        "SQLite Write-Ahead Logging (WAL) Architecture",
+        "Telemetry Performance Baseline KPI Definitions",
+        "Attention Is All You Need"
+      ],
+      "verifier_model": "mistralai/mistral-nemotron",
+      "repeat": 1,
+      "verifier_output": "No, the provided evidence does not address the question about React hooks state management, as it focuses on unrelated topics such as SQLite WAL architecture, telemetry KPIs, and the Transformer model.",
+      "stance": "refuse",
+      "contradiction_prob": 0.9299,
+      "entailment_prob": 0.0698,
+      "disagreement_live": 0.9997,
+      "disagreement_analyst_pair": 0.999
+    },
+    {
+      "query": "italian carbonara pasta recipe",
+      "declared": "OFF",
+      "evidence_relevant": false,
+      "retrieved_titles": [
+        "DeBERTa: Decoding-enhanced BERT with Disentangled Attention",
+        "Attention Is All You Need",
+        "Telemetry Performance Baseline KPI Definitions"
+      ],
+      "verifier_model": "mistralai/mistral-nemotron",
+      "repeat": 0,
+      "verifier_output": "No, the evidence does not answer the question because it discusses technical details about machine learning models and performance metrics, not a recipe for Italian carbonara pasta.",
+      "stance": "refuse",
+      "contradiction_prob": 0.9957,
+      "entailment_prob": 0.004,
+      "disagreement_live": 0.9993,
+      "disagreement_analyst_pair": 0.9997
+    }
+  ],
+  "analyst_cache": {
+    "transformer multi-head self-attention": "The Transformer architecture uses multi-head self-attention to enable the model to attend simultaneously to different representation subspaces across all positions in the sequence.  \nDeBERTa enhances this mechanism by employing a disentangled attention that separately encodes each token's content and its relative position, rather than summing them into a single vector.  \nThe telemetry performance baseline defines operational thresholds such as in\u2011memory enqueue latency\u202f<\u202f0.05\u202fms P95, background evaluator cascade latency\u202f<\u202f150\u202fms P95, and Agent Stability Index values that trigger a WARNING alert when ASI\u202f<\u202f70 and a CRITICAL drift incident when ASI\u202f<\u202f50.",
+    "DeBERTa disentangled attention": "DeBERTa employs a disentangled attention mechanism that represents each word with separate content and position vectors rather than summing them as in BERT. This approach extends the Transformer\u2019s self\u2011attention framework, in which multi\u2011head attention jointly processes information from different representation subspaces across positions. Operational performance of models like DeBERTa is evaluated using predefined KPIs such as latency thresholds (e.g., in\u2011memory enqueue latency <\u202f0.05\u202fms P95) and Agent Stability Index limits (ASI\u202f<\u202f70 for WARNING, ASI\u202f<\u202f50 for CRITICAL).",
+    "SQLite write-ahead logging concurrency": "SQLite\u2019s write\u2011ahead logging mode lets readers access the main database file while a writer appends changes to a separate log file, providing higher concurrency than rollback\u2011journal mode. When the token\u2011bucket rate limiter detects request rates above\u202f1,000 requests per minute, it returns HTTP\u202f429 and advises using exponential backoff with jitter plus an in\u2011memory SDK queue for non\u2011blocking buffering. The telemetry performance baseline specifies that in\u2011memory enqueue latency should stay under\u202f0.05\u202fms\u202fP95, background evaluator cascade latency should target\u202f150\u202fms\u202fP95, and an Agent Stability Index below\u202f70 triggers a WARNING while below\u202f50 triggers a CRITICAL alert.",
+    "invalid API key and token expiration": "An invalid or missing X\u2011API\u2011Key header, or a token that has expired, results in an HTTP\u202f401\u202fUnauthorized response. The recommended fix is to regenerate the API key in the Developer Settings panel, confirm that the AGENTPULSE_API_KEY environment variable is correctly set, and ensure the client includes the header with every request. Following these steps resolves the authentication error.",
+    "token bucket rate limiter backoff": "When request frequency exceeds\u202f1,000\u202frequests per minute, the token\u2011bucket rate limiter returns an HTTP\u202f429\u202fToo\u202fMany\u202fRequests response. Applications should handle this by implementing exponential backoff with jitter and by using the in\u2011memory SDK queue for non\u2011blocking local buffering. The performance baseline requires in\u2011memory enqueue latency to remain below\u202f0.05\u202fms\u202fP95 and background evaluator cascade latency to stay within\u202f150\u202fms\u202fP95.",
+    "kubernetes pod autoscaling": "The provided evidence does not mention Kubernetes pod autoscaling in any way. It covers rate\u2011limiting token\u2011bucket backoff strategies, telemetry performance baseline KPI definitions, and details of the Transformer architecture. Consequently, no information about pod autoscaling can be inferred from the given sources.",
+    "gradient descent optimizer comparison": "The evidence outlines telemetry performance baselines, describes DeBERTa\u2019s architectural enhancements, and summarizes the Transformer self\u2011attention mechanism. It does not mention any gradient descent optimizers, their hyper\u2011parameters, or comparative performance metrics. Consequently, no support exists within the provided text for a comparison of gradient descent optimizers.",
+    "react hooks state management": "SQLite\u2019s Write-Ahead Logging mode enables readers to access the database while writes occur in a separate log, providing higher concurrency than rollback journal mode. Telemetry performance baselines specify that in\u2011memory enqueue latency should stay under 0.05\u202fms P95, background evaluator cascade latency under 150\u202fms P95, and an Agent Stability Index below 70 or 50 triggers WARNING or CRITICAL alerts, respectively. The Transformer architecture relies exclusively on self\u2011attention mechanisms, using multi\u2011head attention to jointly capture information from different representation subspaces without recurrent or convolutional layers.",
+    "photosynthesis light dependent reactions": "The provided evidence discusses DeBERTa\u2019s disentangled attention, the Transformer self\u2011attention mechanism, and SQLite\u2019s write\u2011ahead logging architecture, none of which mention photosynthesis. Consequently, the evidence does not contain any information about the light\u2011dependent reactions of photosynthesis. Therefore, no conclusions regarding photosynthesis light\u2011dependent reactions can be drawn from this evidence.",
+    "italian carbonara pasta recipe": "DeBERTa improves BERT and RoBERTa by adding a disentangled attention mechanism and an enhanced mask decoder, representing each word with separate content and relative\u2011position vectors. The Transformer architecture computes representations solely through self\u2011attention, employing multi\u2011head attention to jointly attend to different representation subspaces without recurrence or convolution. Telemetry performance baselines require in\u2011memory enqueue latency below\u202f0.05\u202fms\u202fP95, background evaluator cascade latency under\u202f150\u202fms\u202fP95, and trigger a WARNING alert when the Agent Stability Index falls below\u202f70 and a CRITICAL alert when it drops below\u202f50."
+  },
+  "config": {
+    "provider": "nvidia",
+    "verifier_models": [
+      "deepseek-ai/deepseek-v4-flash-0731",
+      "google/gemma-4-31b-it",
+      "meta/muse-glimmer-30b",
+      "mistralai/mistral-nemotron",
+      "z-ai/glm-5.3-flash"
+    ],
+    "analyst_model": "nvidia/nemotron-3-super-120b-a12b"
+  },
+  "summary": {
+    "n_trials": 87,
+    "n_usable": 87,
+    "n_unclear": 0,
+    "cells": {
+      "A": {
+        "label": "evidence relevant, verifier accepts (expected-normal)",
+        "disagreement_live": {
+          "n": 37,
+          "min": 0.0,
+          "max": 0.9914,
+          "mean": 0.219,
+          "median": 0.0254
+        },
+        "disagreement_analyst_pair": {
+          "n": 37,
+          "min": 0.0003,
+          "max": 0.9936,
+          "mean": 0.1571,
+          "median": 0.0045
+        },
+        "contradiction": {
+          "n": 37,
+          "min": 0.0008,
+          "max": 0.9771,
+          "mean": 0.2108,
+          "median": 0.0578
+        }
+      },
+      "B": {
+        "label": "evidence irrelevant, verifier refuses (expected-normal)",
+        "disagreement_live": {
+          "n": 47,
+          "min": 0.0,
+          "max": 0.9999,
+          "mean": 0.9778,
+          "median": 0.9997
+        },
+        "disagreement_analyst_pair": {
+          "n": 47,
+          "min": 0.0002,
+          "max": 0.9997,
+          "mean": 0.469,
+          "median": 0.1616
+        },
+        "contradiction": {
+          "n": 47,
+          "min": 0.1093,
+          "max": 0.9981,
+          "mean": 0.8971,
+          "median": 0.9844
+        }
+      },
+      "C": {
+        "label": "evidence relevant, verifier refuses (WRONG REFUSAL)",
+        "disagreement_live": {
+          "n": 3,
+          "min": 0.9963,
+          "max": 0.9999,
+          "mean": 0.9987,
+          "median": 0.9998
+        },
+        "disagreement_analyst_pair": {
+          "n": 3,
+          "min": 0.4469,
+          "max": 0.9998,
+          "mean": 0.8154,
+          "median": 0.9996
+        },
+        "contradiction": {
+          "n": 3,
+          "min": 0.8239,
+          "max": 0.9965,
+          "mean": 0.9382,
+          "median": 0.9941
+        }
+      },
+      "D": {
+        "label": "evidence irrelevant, verifier accepts (WRONG ACCEPT)",
+        "disagreement_live": null,
+        "disagreement_analyst_pair": null,
+        "contradiction": null
+      }
+    },
+    "auc_refusal_vs_acceptance": {
+      "disagreement_live": 0.9797,
+      "disagreement_analyst_pair": 0.6449,
+      "contradiction": 0.9573
+    }
+  },
+  "context_cache": {
+    "transformer multi-head self-attention": {
+      "researcher": "- How does the number of attention heads affect model capacity and performance across different NLP tasks?  \n- What theoretical properties (e.g., expressivity, rank, computational complexity) distinguish multi\u2011head self\u2011attention from single\u2011head variants?  \n- How have recent architectural modifications (e.g., sparse attention, factorized heads, linearized attention) altered the trade\u2011offs between efficiency and representational power in multi\u2011head self\u2011attention?",
+      "retriever": "The retrieved documents cover the Transformer's multi-head self\u2011attention mechanism, DeBERTa's disentangled attention enhancements, and telemetry performance baseline KPI definitions. Retrieved 3 documents."
+    },
+    "DeBERTa disentangled attention": {
+      "researcher": "- How does DeBERTa\u2019s disentangled (separate) attention mechanism improve token\u2011level and sentence\u2011level representations compared to standard self\u2011attention models?  \n- What are the empirical trade\u2011offs (e.g., accuracy, training time, memory usage) of using disentangled attention in downstream tasks such as question answering, natural language inference, and text classification?  \n- How do recent variants and ablation studies (e.g., varying the disentangling scheme, positional encoding choices, or layer depth) affect the robustness and interpretability of DeBERTa\u2019s attention patterns?",
+      "retriever": "I retrieved three documents covering DeBERTa\u2019s disentangled attention mechanism, the original Transformer self\u2011attention model, and telemetry performance baseline KPI definitions.  \nRetrieved 3 documents."
+    },
+    "SQLite write-ahead logging concurrency": {
+      "researcher": "1. How does SQLite's write-ahead logging (WAL) mode affect read\u2011write contention compared to the traditional rollback journal, and under what workloads does it provide measurable concurrency improvements?  \n2. What are the performance trade\u2011offs of different WAL checkpointing strategies (e.g., automatic, incremental, full) on multi\u2011core systems with varying I/O latency?  \n3. How do SQLite's locking primitives and shared\u2011memory mechanisms in WAL mode interact with operating\u2011system level concurrency controls (e.g., futexes, POSIX locks) to prevent race conditions and ensure transactional isolation?",
+      "retriever": "The retrieved documents explain SQLite\u2019s write\u2011ahead logging concurrency advantages, describe a token\u2011bucket rate limiter that returns HTTP\u202f429 with exponential backoff guidance, and define telemetry performance baseline KPI thresholds.  \nRetrieved 3 documents."
+    },
+    "invalid API key and token expiration": {
+      "researcher": "Here are three specific, focused sub-questions for your literature review:\n\n1.  **What are the most common *technical root causes* leading to premature or incorrect token expiration validation failures (e.g., clock skew, improper time handling, flawed JTI checks) in production systems, as documented in incident reports or empirical studies?**\n2.  **How effective are current API key management practices (rotation, scoping, revocation mechanisms) at preventing the persistence and exploitation of *invalid or compromised keys* beyond their intended lifespan, and what gaps exist between recommended practices and real-world implementation?**\n3.  **What are the documented *detection and response latency challenges* specifically associated with identifying and mitigating attacks exploiting invalid API keys or expired tokens, and how do current monitoring/logging strategies fall short in providing timely alerts?**",
+      "retriever": "Retrieved 3 documents containing guidance on fixing invalid API key and token expiration errors, details about the token\u2011bucket rate limiter backoff strategy, and telemetry performance baseline KPI definitions."
+    },
+    "kubernetes pod autoscaling": {
+      "researcher": "- How do Horizontal Pod Autoscaler (HPA) metrics (CPU, custom, external) compare in accuracy and latency for different workload patterns?  \n- What are the trade\u2011offs between Vertical Pod Autoscaler (VPA) and HPA when scaling stateful versus stateless applications?  \n- How does cluster\u2011level autoscaling (Cluster Autoscaler) interact with pod\u2011level scaling policies to affect overall resource utilization and cost?",
+      "retriever": "Retrieved 3 documents: one detailing a rate limiter token-bucket backoff strategy for handling HTTP 429 errors during high request frequencies, another defining telemetry performance KPIs including latency thresholds (e.g., in-memory enqueue latency <0.05ms P95) and Agent Stability Index alert levels, and a third explaining the Transformer architecture's self-attention mechanisms for sequence representation without RNNs or convolutions."
+    },
+    "gradient descent optimizer comparison": {
+      "researcher": "1. **Convergence Speed & Stability**: How do optimizers (e.g., SGD, Adam, LAMB) compare in terms of iterations/wall-clock time to reach a target loss threshold across standard deep learning benchmarks (e.g., ImageNet, GLUE), and how does this vary with batch size or learning rate schedules?  \n2. **Resource Efficiency Trade-offs**: What are the quantitative differences in memory overhead (e.g., accumulator storage) and computational cost per step (e.g., FLOPs) between first-order (SGD/Momentum) and adaptive (Adam/RMSProp) optimizers, and how do these impact scalability on large models?  \n3. **Robustness to Hyperparameters & Noise**: How sensitive are optimizers' final generalization performance to learning rate initialization and gradient noise (e.g., from small batches or stochasticity), particularly in non-convex settings like transformer training?",
+      "retriever": "I retrieved three documents that cover telemetry performance baseline KPI definitions, the DeBERTa model\u2019s disentangled attention and enhanced mask decoder innovations, and the original Transformer architecture paper introducing self\u2011attention\u2011only models.  \nRetrieved 3 documents."
+    },
+    "react hooks state management": {
+      "researcher": "1.  How do specific React Hooks (e.g., `useState`, `useReducer`, `useContext`) impact application performance (e.g., re-render frequency, memory usage) compared to class-based state management or alternative state libraries (e.g., Redux, Zustand) in complex UI scenarios?  \n2.  What are the predominant barriers and facilitators to successful adoption and migration of React Hooks for state management in established enterprise codebases, particularly regarding team expertise, legacy code integration, and architectural consistency?  \n3.  How do common misconceptions or misuse patterns (e.g., stale closures, over-reliance on `useEffect` for state synchronization, improper dependency arrays) with React Hooks state management manifest in real-world applications, and what are their measurable effects on bug rates and developer productivity?",
+      "retriever": "The retrieved documents cover SQLite's Write\u2011Ahead Logging architecture, telemetry performance baseline KPI definitions, and the Transformer architecture from \u201cAttention Is All You Need.\u201d  \nRetrieved 3 documents."
+    },
+    "photosynthesis light dependent reactions": {
+      "researcher": "Here are three specific, focused sub-questions for a literature review on photosynthesis light-dependent reactions:\n\n1.  **How do specific thylakoid membrane lipid compositions dynamically regulate the efficiency and repair cycle of Photosystem II under fluctuating high-light stress?**  \n    *(Targets membrane biophysics & photoprotection mechanisms)*  \n2.  **What are the relative contributions and physiological significance of plastoquinol plastocyanin vs. ferredoxin-plastoquinone reductase (PGR5/PGRL1) pathways to cyclic electron flow around Photosystem I in C3 plants under varying metabolic demands?**  \n    *(Focuses on alternative electron transport routes & energy balancing)*  \n3.  **How do evolutionary variations in the cytochrome b6f complex's Rieske iron-sulfur protein mobility influence proton pumping efficiency and plastoquinol oxidation rates across oxygenic photosynthetic lineages (e.g., cyanobacteria, algae, land plants)?**  \n    *(Examines structural/functional diversity in a key conserved complex)*",
+      "retriever": "I retrieved three documents describing DeBERTa\u2019s enhancements, the Transformer self\u2011attention mechanism, and SQLite\u2019s Write\u2011Ahead Logging architecture, Retrieved 3 documents."
+    },
+    "italian carbonara pasta recipe": {
+      "researcher": "Here are three specific, research-worthy sub-questions for a literature review on Italian carbonara:\n\n1.  **What historical evidence exists regarding the true Roman origins and early 20th-century evolution of carbonara, particularly debunking common myths (e.g., post-WWII American soldier invention)?**\n2.  **How do authoritative Italian culinary sources (e.g., *Accademia Italiana della Cucina*, regional Roman cookbooks) define the *essential, non-negotiable* ingredients and proportions for authentic carbonara, especially concerning the use of guanciale vs. pancetta and the exclusion of cream?**\n3.  **What specific technical principles (e.g., temperature control, emulsion mechanics, timing of ingredient incorporation) do food science studies and expert chefs identify as critical for achieving the authentic creamy texture without curdling the eggs?**",
+      "retriever": "Retrieved 3 documents, which discuss DeBERTa, the Transformer architecture, and telemetry performance baseline KPI definitions."
+    }
+  }
+}
