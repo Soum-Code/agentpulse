@@ -38,7 +38,8 @@
 - **Design direction is frozen in `bedhi_frontend.md`** — reference by reference, what to take and what to refuse, with Liquid Glass rules. Section 16.7.
 - **Repo pushed through commit `3cd1080`; working tree clean, `origin/main` in sync.** The dashboard work that used to sit uncommitted was reviewed and checkpointed (`8a93558`) with three known gaps recorded — see Section 15.
 - **The 23.4 multi-model pipeline had never worked, and now does.** Five faults in one file; four of them meant it delivered zero spans while printing a successful run. Section 24.
-- **Disagreement tracks stance, not error — this is the most important open finding.** 87 trials across five verifier families: correct refusals score **0.978**, **wrong** refusals score **0.999**, correct acceptances score **0.219** (AUC 0.980). Whether the verifier was right does not move the score. Section 24.9. **Cell D — a wrong acceptance — is still empty after 97 trials, so the 2×2 is not closed and cell C rests on n=3.** Getting there needs evidence designed to look relevant without answering, not more runs.
+- **The signals are aggregate-stable and item-unstable, and only the first has ever been measured here. This is the session's result.** Three instances: the same fabricated claim scoring grounding 0.009 and 0.996; near-identical refusals scoring contradiction 0.011 and 0.850; verifier acceptances at 0.75–0.88 similarity to each other scoring disagreement 0.005 and 0.991. AUC is 0.979 throughout. **AgentPulse alerts per span, so it depends on the property that was never measured.** Section 24.9.2.
+- **Disagreement tracks stance, not error.** 87 trials across five verifier families: correct refusals **0.978**, **wrong** refusals **0.999**, correct acceptances **0.219**. Whether the verifier was right does not move the score. Section 24.9. **Cell D — a wrong acceptance — is still empty after 100 trials, so the 2×2 is not closed and cell C rests on n=3.** Getting there needs evidence designed to look relevant without answering, not more runs.
 - **The ablation was never stale**, and the reason matters more than the re-run: it supplies its own inputs and so measures a ceiling, not a capability. Config D has shown parity with the best configuration for months while the live signal scored zero. Section 24.5.
 - **OmniRoute's "~1.62B free tokens" and its "zero credentials" describe disjoint sets of providers** — settled from its own source, not inferred. Section 24.6.
 - Docker, GitHub, and dev-server setup are all previously verified working — see Section 4 for exact commands, not re-derived here.
@@ -2765,6 +2766,64 @@ stores its raw verifier output and retrieved titles, and relabelling happens at
 report time rather than being frozen when the trial ran. That is worth copying
 into any experiment that costs money per row.
 
+#### 24.9.2 Aggregate-stable, item-unstable: the finding this session actually produced
+
+The AUC of 0.980 hides the thing that matters for a monitoring product.
+
+Cell A is **bimodal**, and reporting its mean concealed that. Mean 0.248,
+**median 0.046**, and **9 of 40 correct acceptances score above 0.6** — one at
+0.991. Those nine are not spread evenly: `google` and `mistralai` produce none
+of them, while `deepseek-ai` and `z-ai` produce eight between them.
+
+Reading the outputs is what settles it. On one query, three verifier
+acceptances scoring 0.968–0.991 and three scoring 0.005–0.011 say the same
+thing:
+
+> *0.991* — "Yes — the 'Attention Is All You Need' excerpt directly explains
+> that Transformers rely entirely on self-attention and that multi-head
+> attention enables the model to jointly attend to information from different
+> representation subspaces…"
+>
+> *0.007* — "Yes, the evidence includes a description of multi-head attention in
+> Transformers as allowing the model to jointly attend to information from
+> different representation subspaces at different positions."
+
+Measured rather than asserted: **the pairwise semantic similarity between the
+high-scoring and low-scoring outputs is 0.746–0.880.** Near-equivalent
+sentences, scored at opposite ends of the range.
+
+**This is the third instance of the same behaviour in one session**, and the
+three together are the actual result:
+
+| signal | comparison | scores |
+| :--- | :--- | :--- |
+| grounding | the same fabricated Kubernetes/telemetry link, two models | 0.009 vs 0.996 |
+| grounding | near-identical refusal sentences (24.4) | contradiction 0.011 vs 0.850 |
+| disagreement | acceptances at 0.75–0.88 similarity to each other | 0.005 vs 0.991 |
+
+So the claim is not that these signals do not work. In aggregate they separate
+well — AUC 0.979 for disagreement, 0.961 for contradiction, and the ablation's
+F1 of 0.963 has been stable across re-runs a month apart. **The claim is that
+aggregate separation and per-item reliability are different properties, and
+this project has only ever measured the first.**
+
+That distinction is not academic here. AgentPulse alerts on a *span*. A
+`HIGH_HALLUCINATION_RISK` fires against one agent on one trace, and a user
+reads that one number. An AUC of 0.979 says nothing about whether that
+particular number is trustworthy, and this section says it frequently is not.
+
+**What this does not say.** It does not say the signals should be removed, and
+it does not quantify how often an item-level score misleads — 9 of 40 in one
+cell of one experiment is an observation, not a rate. Establishing a rate needs
+more repeats and a definition of "misleading" that does not depend on reading
+each output by hand.
+
+**Why the mean was the wrong statistic**, and worth carrying: every cell in
+24.9 was first reported as a mean. Cell A's mean of 0.248 reads as "low, with
+noise". Its median of 0.046 with nine outliers above 0.6 reads as "usually
+near-zero, and sometimes completely wrong", which is a different product. The
+report now carries median and an above-threshold count alongside the mean.
+
 ### 24.10 Standing facts
 
 New:
@@ -2778,6 +2837,15 @@ New:
   0.999**, correct acceptances 0.219. Whether the verifier was right does not
   move the score. This is the sharpest open question the project has, and unlike
   14 it now has a reproduction. 24.9; cell D is still empty, so it is not closed.
+- **Never report a cell as a mean alone.** Cell A's mean of 0.248 reads as "low
+  with noise"; its median is 0.046 with 9 of 40 above the alert threshold, which
+  is "usually near-zero and sometimes completely wrong". The mean hid the
+  session's main finding for several hours. Report median and an
+  above-threshold count.
+- **Aggregate separation is not per-item reliability.** An AUC near 0.98 says
+  how well two groups rank against each other. It says nothing about whether any
+  single score is trustworthy, and a product that alerts on one span depends
+  entirely on the latter. 24.9.2.
 - **A silent `None` coerced to a default produced a fabricated result.** An
   unloaded NLI model made every disagreement score 0.0, and the report read as
   "the signal does not work" with an AUC of 0.455. Those numbers were reported
