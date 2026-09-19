@@ -1835,6 +1835,60 @@
       "entailment_prob": 0.004,
       "disagreement_live": 0.9993,
       "disagreement_analyst_pair": 0.9997
+    },
+    {
+      "query": "transformer multi-head self-attention",
+      "declared": "ON",
+      "evidence_relevant": true,
+      "retrieved_titles": [
+        "Attention Is All You Need",
+        "DeBERTa: Decoding-enhanced BERT with Disentangled Attention",
+        "Telemetry Performance Baseline KPI Definitions"
+      ],
+      "verifier_model": "deepseek-ai/deepseek-v4-flash-0731",
+      "repeat": 2,
+      "verifier_output": "Yes. The evidence directly describes the Transformer architecture's reliance on multi-head self-attention, enabling joint attention across representation subspaces.",
+      "stance": "accept",
+      "contradiction_prob": 0.0171,
+      "entailment_prob": 0.2761,
+      "disagreement_live": 0.8038,
+      "disagreement_analyst_pair": 0.6739
+    },
+    {
+      "query": "transformer multi-head self-attention",
+      "declared": "ON",
+      "evidence_relevant": true,
+      "retrieved_titles": [
+        "Attention Is All You Need",
+        "DeBERTa: Decoding-enhanced BERT with Disentangled Attention",
+        "Telemetry Performance Baseline KPI Definitions"
+      ],
+      "verifier_model": "deepseek-ai/deepseek-v4-flash-0731",
+      "repeat": 3,
+      "verifier_output": "Yes, the evidence directly explains the Transformer architecture and multi-head self-attention mechanism from the \"Attention Is All You Need\" paper.",
+      "stance": "accept",
+      "contradiction_prob": 0.0038,
+      "entailment_prob": 0.9938,
+      "disagreement_live": 0.0463,
+      "disagreement_analyst_pair": 0.0007
+    },
+    {
+      "query": "transformer multi-head self-attention",
+      "declared": "ON",
+      "evidence_relevant": true,
+      "retrieved_titles": [
+        "Attention Is All You Need",
+        "DeBERTa: Decoding-enhanced BERT with Disentangled Attention",
+        "Telemetry Performance Baseline KPI Definitions"
+      ],
+      "verifier_model": "deepseek-ai/deepseek-v4-flash-0731",
+      "repeat": 4,
+      "verifier_output": "Yes, the evidence directly describes the Transformer architecture and its multi-head self-attention mechanism, confirming that it relies entirely on self-attention and allows joint attention across different representation subspaces.",
+      "stance": "accept",
+      "contradiction_prob": 0.0144,
+      "entailment_prob": 0.7653,
+      "disagreement_live": 0.9857,
+      "disagreement_analyst_pair": 0.0025
     }
   ],
   "analyst_cache": {
@@ -1861,32 +1915,35 @@
     "analyst_model": "nvidia/nemotron-3-super-120b-a12b"
   },
   "summary": {
-    "n_trials": 87,
-    "n_usable": 87,
+    "n_trials": 90,
+    "n_usable": 90,
     "n_unclear": 0,
     "cells": {
       "A": {
         "label": "evidence relevant, verifier accepts (expected-normal)",
         "disagreement_live": {
-          "n": 37,
+          "n": 40,
           "min": 0.0,
           "max": 0.9914,
-          "mean": 0.219,
-          "median": 0.0254
+          "mean": 0.2485,
+          "median": 0.0463,
+          "above_0.6": 9
         },
         "disagreement_analyst_pair": {
-          "n": 37,
+          "n": 40,
           "min": 0.0003,
           "max": 0.9936,
-          "mean": 0.1571,
-          "median": 0.0045
+          "mean": 0.1623,
+          "median": 0.0045,
+          "above_0.6": 5
         },
         "contradiction": {
-          "n": 37,
+          "n": 40,
           "min": 0.0008,
           "max": 0.9771,
-          "mean": 0.2108,
-          "median": 0.0578
+          "mean": 0.1958,
+          "median": 0.0445,
+          "above_0.6": 5
         }
       },
       "B": {
@@ -1896,21 +1953,24 @@
           "min": 0.0,
           "max": 0.9999,
           "mean": 0.9778,
-          "median": 0.9997
+          "median": 0.9997,
+          "above_0.6": 46
         },
         "disagreement_analyst_pair": {
           "n": 47,
           "min": 0.0002,
           "max": 0.9997,
           "mean": 0.469,
-          "median": 0.1616
+          "median": 0.1616,
+          "above_0.6": 22
         },
         "contradiction": {
           "n": 47,
           "min": 0.1093,
           "max": 0.9981,
           "mean": 0.8971,
-          "median": 0.9844
+          "median": 0.9844,
+          "above_0.6": 43
         }
       },
       "C": {
@@ -1920,21 +1980,24 @@
           "min": 0.9963,
           "max": 0.9999,
           "mean": 0.9987,
-          "median": 0.9998
+          "median": 0.9998,
+          "above_0.6": 3
         },
         "disagreement_analyst_pair": {
           "n": 3,
           "min": 0.4469,
           "max": 0.9998,
           "mean": 0.8154,
-          "median": 0.9996
+          "median": 0.9996,
+          "above_0.6": 2
         },
         "contradiction": {
           "n": 3,
           "min": 0.8239,
           "max": 0.9965,
           "mean": 0.9382,
-          "median": 0.9941
+          "median": 0.9941,
+          "above_0.6": 3
         }
       },
       "D": {
@@ -1945,9 +2008,9 @@
       }
     },
     "auc_refusal_vs_acceptance": {
-      "disagreement_live": 0.9797,
-      "disagreement_analyst_pair": 0.6449,
-      "contradiction": 0.9573
+      "disagreement_live": 0.9792,
+      "disagreement_analyst_pair": 0.6495,
+      "contradiction": 0.9605
     }
   },
   "context_cache": {

@@ -339,6 +339,10 @@ def summarise(trials: list[dict[str, Any]]) -> dict[str, Any]:
             "max": round(xs[-1], 4),
             "mean": round(sum(xs) / len(xs), 4),
             "median": round(xs[len(xs) // 2], 4),
+            # Cell A is bimodal: mean 0.248 with median 0.046, because nine
+            # of forty correct acceptances score above the alert threshold.
+            # The mean alone reads as "low with noise" and hides that.
+            "above_0.6": sum(1 for x in xs if x > 0.6),
         }
 
     def auc(field: str) -> float | None:
@@ -556,7 +560,10 @@ def _write_report(state: dict[str, Any]) -> None:
     def row(k: str) -> str:
         c = s["cells"][k]
         d, ct = c["disagreement_live"], c["contradiction"]
-        fmt = lambda x: "n=0" if not x else f"n={x['n']}, mean {x['mean']}, range {x['min']}–{x['max']}"
+        fmt = lambda x: "n=0" if not x else (
+            f"n={x['n']}, median {x['median']}, mean {x['mean']}, "
+            f"{x['above_0.6']}/{x['n']} above 0.6"
+        )
         return f"| {k} | {c['label']} | {fmt(d)} | {fmt(ct)} |"
 
     cfg = state.get("config", {})
