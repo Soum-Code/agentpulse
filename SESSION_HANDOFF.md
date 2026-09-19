@@ -1,6 +1,6 @@
 # Session Handoff — AgentPulse Work Log
 
-**Written:** 2026-08-23. **Rewritten clean:** 2026-08-26. **Updated:** 2026-08-27 (Sections 7–9 disagreement/benchmark/positioning; 10 drift diagnosis and fix; 11 tool-claim external test; 12 blocked redesign; 13 competitor audits). **Updated:** 2026-08-28 (Section 14 — external disagreement validation, the last of the three signals to be checked and the third to fail; Section 15 — the productization arc, seven phases from migrations through health/readiness). **Updated:** 2026-08-30 (Section 16 — dashboard unfrozen, the landing-page claim audit, and the half-finished drift restore). **Updated:** 2026-08-31 (Section 17 — Final Review deliverables, the literature survey, and repository access). **Updated:** 2026-09-12 (Section 18 — frontend replaced and wired to the live API, the tool-claim signal made to fire for the first time, and the Compose stack fixed so it actually evaluates; MIT licence added, closing a claim the README had been making against a missing file). **Updated:** 2026-09-19 (Section 24 — the 23.4 pipeline run for the first time and five faults found in it, four of which meant it delivered nothing; the disagreement signal firing at 0.966–0.996 against the one agent in each trace that was correct, which is the evidence-partition problem of Section 14 with a reproduction on five model families; the ablation re-run and found never to have been stale; OmniRoute's free-token headline settled from its own source).
+**Written:** 2026-08-23. **Rewritten clean:** 2026-08-26. **Updated:** 2026-08-27 (Sections 7–9 disagreement/benchmark/positioning; 10 drift diagnosis and fix; 11 tool-claim external test; 12 blocked redesign; 13 competitor audits). **Updated:** 2026-08-28 (Section 14 — external disagreement validation, the last of the three signals to be checked and the third to fail; Section 15 — the productization arc, seven phases from migrations through health/readiness). **Updated:** 2026-08-30 (Section 16 — dashboard unfrozen, the landing-page claim audit, and the half-finished drift restore). **Updated:** 2026-08-31 (Section 17 — Final Review deliverables, the literature survey, and repository access). **Updated:** 2026-09-12 (Section 18 — frontend replaced and wired to the live API, the tool-claim signal made to fire for the first time, and the Compose stack fixed so it actually evaluates; MIT licence added, closing a claim the README had been making against a missing file). **Updated:** 2026-09-19 (Section 24 — the 23.4 pipeline run for the first time and five faults found in it, four of which meant it delivered nothing; the disagreement signal firing at 0.966–0.996 against the one agent in each trace that was correct, which is the evidence-partition problem of Section 14 with a reproduction on five model families; the ablation re-run and found never to have been stale; OmniRoute's free-token headline settled from its own source). **Updated:** 2026-09-20 (Sections 24.8–24.9 — NVIDIA's 82-model catalogue is nine models on a free key; the refusal experiment at 87 trials, which reproduces 24.4 and shows a *wrong* refusal scoring 0.999 against a correct one's 0.978, so the signal tracks stance and is blind to correctness within it; and three analysis faults in that experiment, one of which produced a uniform, confident, entirely fabricated result from an unloaded model).
 
 **Project:** AgentPulse — self-hostable observability SDK for grounding-risk and drift monitoring in multi-agent LLM systems. M.Tech project. Working directory: `C:\MLOPs\3rd sem project\Agentpluse` (renamed from `project one agent`; the venv's editable installs still point at the old path).
 
@@ -38,7 +38,7 @@
 - **Design direction is frozen in `bedhi_frontend.md`** — reference by reference, what to take and what to refuse, with Liquid Glass rules. Section 16.7.
 - **Repo pushed through commit `3cd1080`; working tree clean, `origin/main` in sync.** The dashboard work that used to sit uncommitted was reviewed and checkpointed (`8a93558`) with three known gaps recorded — see Section 15.
 - **The 23.4 multi-model pipeline had never worked, and now does.** Five faults in one file; four of them meant it delivered zero spans while printing a successful run. Section 24.
-- **Disagreement reliably flags the agent that was right — this is the most important open finding.** Across ten classifiable traces on five model families, six correct refusals scored disagreement **0.966–1.000** and four acceptances scored **0.000–0.020**, with no overlap. The signal works as designed and points at the one agent in each trace that was not wrong. Section 24.4. Grounding, by contrast, is *erratic* on refusals (contradiction 0.011–0.850, overlapping the accept group), which corrects an earlier claim that it consistently penalised them — see 24.4.1. **Ten traces and one verifier model: a strong lead, not a publishable result.**
+- **Disagreement tracks stance, not error — this is the most important open finding.** 87 trials across five verifier families: correct refusals score **0.978**, **wrong** refusals score **0.999**, correct acceptances score **0.219** (AUC 0.980). Whether the verifier was right does not move the score. Section 24.9. **Cell D — a wrong acceptance — is still empty after 97 trials, so the 2×2 is not closed and cell C rests on n=3.** Getting there needs evidence designed to look relevant without answering, not more runs.
 - **The ablation was never stale**, and the reason matters more than the re-run: it supplies its own inputs and so measures a ceiling, not a capability. Config D has shown parity with the best configuration for months while the live signal scored zero. Section 24.5.
 - **OmniRoute's "~1.62B free tokens" and its "zero credentials" describe disjoint sets of providers** — settled from its own source, not inferred. Section 24.6.
 - Docker, GitHub, and dev-server setup are all previously verified working — see Section 4 for exact commands, not re-derived here.
@@ -2470,6 +2470,13 @@ have.**
 
 ### 24.4 Disagreement reliably flags the agent that was right
 
+> **Superseded in part by 24.9.** The separation below held when measured
+> properly on 87 trials across five verifier families, so this section is not
+> wrong. What 24.9 adds is the part this data could not reach: a *wrong* refusal
+> scores 0.999, fractionally above a correct one, so within refusals the signal
+> is blind to whether the verifier was right. Read 24.9 before quoting anything
+> here.
+
 **This section was rewritten on 2026-09-19 after the five-family run. The first
 version claimed "a correct refusal scores as a hallucination" from one model
 and two traces. Four traces on five model families do not support that as a
@@ -2653,7 +2660,112 @@ Expect this list to rot. 23.6's standing fact -- send one real request before
 building on a catalogue -- now has a second confirmation and a new corollary:
 **check for empty content, not just for errors.**
 
-### 24.8 Standing facts
+### 24.8 NVIDIA's catalogue advertises 82 models; a free key can call nine
+
+OpenRouter's daily free-model limit stopped 24.4 halfway, so build.nvidia.com
+was tried as the way to widen the verifier arm. Its `/v1/models` lists 82
+entries across 21 owners, which sounds like it settles the diversity problem.
+
+It does not. **That catalogue is global and access is per-account.** Calling
+all 54 of its text models on a fresh free key:
+
+| result | count |
+| :--- | ---: |
+| answered with text | 9 |
+| `404 Not found for account` | 40 |
+| timeout or resource-exhausted | 5 |
+
+The nine span six owners -- deepseek-ai, google, meta, mistralai, z-ai and
+nvidia itself. Six is still twice what OpenRouter's free tier reliably served,
+so the move was worth making; the number to quote is nine, not eighty-two.
+
+Every model named in this repo for the nvidia provider was picked from that
+scan. The set it replaced had been picked by reading the catalogue, and not one
+of its five could be called.
+
+**Reasoning models do not return empty, they return truncated.** Four of the
+nine spend completion tokens on a hidden `reasoning_content` field before
+emitting an answer. `deepseek-v4-flash` burned 2,569 characters of it on "what
+is a database index?". At `max_tokens=320` the content came back empty with
+`finish_reason: "length"` -- which reads identically to 24.7's genuinely empty
+completions and is a completely different problem. `max_tokens` is now 1200 and
+`EmptyCompletion` reports which of the two it saw.
+
+### 24.9 The refusal experiment, and the two faults that nearly published a result
+
+`experiments/refusal_disagreement.py` exists to answer the confound 24.4 could
+not: in all ten of its traces "the verifier refused" and "the evidence was
+irrelevant" were the same event, so the separation fits two readings.
+
+    H1 stance   disagreement rises when one agent's stance diverges from the
+                others', regardless of who is right
+    H2 error    disagreement rises when something in the trace is wrong
+
+They differ only in the two cells 24.4 has none of: a wrong refusal on relevant
+evidence, and a wrong acceptance of irrelevant evidence.
+
+**Result, 87 trials across five verifier families:**
+
+| cell | condition | n | disagreement | contradiction |
+| :--- | :--- | ---: | ---: | ---: |
+| A | relevant, verifier accepts | 37 | 0.219 | 0.211 |
+| B | irrelevant, verifier refuses | 47 | 0.978 | 0.897 |
+| C | relevant, verifier **wrongly refuses** | 3 | **0.999** | 0.938 |
+| D | irrelevant, verifier **wrongly accepts** | **0** | — | — |
+
+AUC separating refusal from acceptance: **0.980**.
+
+This **reproduces 24.4 rather than overturning it**, and adds what 24.4 could
+not see. A wrong refusal scores 0.999, fractionally *above* a correct one at
+0.978. **Within refusals, whether the verifier was right makes no difference to
+the score.** That is what H1 predicts and H2 does not.
+
+The 2x2 is still open, and the honest statement is narrower than a verdict:
+cell D is empty after 97 trials, so "does it also fire on a wrong acceptance"
+is unanswered, and cell C rests on n=3. What can be said is that the signal
+tracks stance, and within a stance it is blind to correctness.
+
+**Cell D may not be reachable by running more trials.** Ninety-seven produced
+zero wrong acceptances; these five models simply do not accept irrelevant
+evidence. Filling it needs evidence designed to look relevant without answering
+the question. Doing it with an adversarial prompt would prove nothing.
+
+#### 24.9.1 Two faults in the measurement, one of which looked like a finding
+
+**It was scoring the wrong pair.** `evaluator.py` calls
+`evaluate_against_prior_agents` for each span, comparing an agent against every
+agent *earlier* in the trace and keeping the worst. The verifier is third, so
+its live score is max(researcher, retriever) vs verifier. **The analyst is
+fourth and never enters the verifier's own score** -- and the analyst was
+exactly what this experiment was comparing against. The two quantities differ
+by more than the argument would suggest: AUC 0.980 under the live rule against
+0.645 for the analyst pair. Both are now recorded per trial so the difference
+is in the data rather than in a paragraph.
+
+**The second one was worse.** `load_models` ran only outside `--report-only`,
+while the backfill recomputes NLI. `compute_nli_grounding` returns `None` with
+nothing loaded, `score_disagreement` turns `None` into `0.0`, and the report
+came out with a uniform near-zero disagreement in every cell and an AUC of
+0.455. That reads exactly like *the signal does not work*. **It was an unloaded
+model, and those numbers were reported before the cause was found.**
+
+Worth keeping as the pattern: a silent `None` coerced to a plausible default
+produced a confident, publishable-looking, completely fabricated result. The
+tell was that it was *uniform* -- real signals are noisy.
+
+**A third, caught before it did damage.** Relevance was inferred by matching
+query words against retrieved titles, which marked "transformer multi-head
+self-attention" irrelevant when retrieval had returned *Attention Is All You
+Need*. Every correct acceptance on that query would have been filed as a wrong
+one, in cell D, the cell the experiment turns on. Each query now names the
+document that must be retrieved.
+
+All three were recoverable without re-spending API calls because every trial
+stores its raw verifier output and retrieved titles, and relabelling happens at
+report time rather than being frozen when the trial ran. That is worth copying
+into any experiment that costs money per row.
+
+### 24.10 Standing facts
 
 New:
 
@@ -2661,11 +2773,27 @@ New:
   never say so.** 24.5 is the general form of 18.4. When an experiment supplies
   its own inputs, it measures a ceiling, not a capability. Ask what the study
   bypasses before quoting its number.
-- **Disagreement fires on the agent that was right.** Six correct refusals score
-  0.966–1.000; four acceptances score 0.000–0.020. No overlap, two orders of
-  magnitude apart. The signal is working; its target is the problem. This is the
-  sharpest open question the project has, and unlike 14 it now has a
-  reproduction on five model families.
+- **Disagreement tracks stance, and within a stance is blind to correctness.**
+  87 trials, five verifier families: correct refusals 0.978, **wrong refusals
+  0.999**, correct acceptances 0.219. Whether the verifier was right does not
+  move the score. This is the sharpest open question the project has, and unlike
+  14 it now has a reproduction. 24.9; cell D is still empty, so it is not closed.
+- **A silent `None` coerced to a default produced a fabricated result.** An
+  unloaded NLI model made every disagreement score 0.0, and the report read as
+  "the signal does not work" with an AUC of 0.455. Those numbers were reported
+  before the cause was found. **The tell was uniformity** -- real signals are
+  noisy, and a clean flat number across every cell is a bug, not a finding.
+- **Score the pair the production code scores.** `evaluator.py` compares each
+  span against agents *earlier* in the trace, so the verifier is scored against
+  researcher and retriever, never the analyst that follows it. Measuring the
+  analyst pair instead gave AUC 0.645 against the live rule's 0.980 — close
+  enough to argue about, far enough to mislead.
+- **Store raw outputs, and derive labels at report time.** Three separate
+  analysis faults in 24.9 were corrected for free because every trial keeps its
+  verifier text and retrieved titles. An experiment that costs money per row
+  should never freeze a derived label into the row.
+- **A model catalogue is not an entitlement.** NVIDIA lists 82 models; a free
+  key can call nine. 40 of 54 answer `404 Not found for account`. 24.8.
 - **A 200 with empty content is not an error and will be scored.** deepseek
   served all session and then returned `content: ""` mid-batch. Status is 200,
   no exception, no error field, and the evaluator receives an empty string.
@@ -2708,11 +2836,14 @@ New:
 
 Open, and the reason this section stops where it does:
 
-- **24.4 now has five model families and four traces, and that was enough to
-  break half of it.** It needs more queries still: three refusals is a thin
-  basis for "disagreement always flags the refusing agent", however clean
-  0.966–0.996 looks. The 3 of 5 default models that no longer produce text
-  (24.7) should be re-checked at the same time.
+- **Cell D is the whole remaining question, and more trials will not fill it.**
+  97 produced zero wrong acceptances. It needs evidence constructed to look
+  relevant without answering the question — a designed corpus entry, not another
+  run. Cell C also needs more than n=3 before the "wrong refusals score as high
+  as correct ones" line carries weight, and that one *will* fill with volume.
+- **The experiment measures the evaluator, not the ingest path**, the same
+  caveat 24.5 records about the ablation. Nothing here says the signal is
+  reachable in production; 18.4 is the standing reminder of that distinction.
 - **The SDK still discards spans silently from any synchronous caller.** 24.1
   fixed the demo, not the footgun underneath it.
 
