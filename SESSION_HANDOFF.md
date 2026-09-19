@@ -40,7 +40,8 @@
 - **The 23.4 multi-model pipeline had never worked, and now does.** Five faults in one file; four of them meant it delivered zero spans while printing a successful run. Section 24.
 - **The signals are aggregate-stable and item-unstable, and only the first has ever been measured here. This is the session's result.** Now quantified: holding evidence and priors fixed and varying only wording, **disagreement spreads 0.948–0.984 across paraphrases of the same statement**, and **10 of 34 paraphrases crossed the alert threshold their anchor did not**. AUC is 0.979 throughout. **AgentPulse alerts per span, so it depends on the property that was never measured.** Sections 24.9.2 and 24.9.3.
 - **It is disagreement specifically.** Contradiction holds to 0.004–0.057 on acceptances and only breaks on refusals (up to 0.634) — the same region 24.4 found it misbehaving in by a different method. The obvious lexical explanation was tested and rejected (24.9.3).
-- **The disagreement pipeline compares a planner's questions against a verifier's statement, and that is where the swing comes from.** On every acceptance anchor the researcher comparison spans the full range while the retriever comparison moves ≤0.005. A list of questions has no truth value, so asking NLI whether it contradicts a statement is ill-posed — a pipeline fault, not a DeBERTa fault. **Untried fix:** exclude planner-type spans from disagreement, as the relevance floor already excludes another malformed comparison. Does not explain the refusal case. Section 24.9.4.
+- **The disagreement signal's entire measured performance was an artifact, and removing the artifact removes the signal. This is the most consequential thing in Section 24.** The swing comes from comparing the planner's *questions* against the verifier's statement — ill-posed input to an NLI model, a pipeline fault rather than a DeBERTa fault. Excluding planner spans eliminates the paraphrase instability completely (spreads 0.98 → 0.001, alert flips → 0) **and drops AUC from 0.980 to 0.457, which is chance.** Sections 24.9.4 and 24.9.5.
+- **Section 14's "0 of 10" now has a mechanism.** Disagreement failed external validation a month ago and nobody knew why. It was measuring a malformed comparison. **It should not be shipping a `HIGH` severity alert in this state** — disable it, downgrade it to experimental, or redesign it to compare only claim-bearing spans, which is a different feature from the one that exists.
 - **Disagreement tracks stance, not error.** 87 trials across five verifier families: correct refusals **0.978**, **wrong** refusals **0.999**, correct acceptances **0.219**. Whether the verifier was right does not move the score. Section 24.9. **Cell D — a wrong acceptance — is still empty after 100 trials, so the 2×2 is not closed and cell C rests on n=3.** Getting there needs evidence designed to look relevant without answering, not more runs.
 - **The ablation was never stale**, and the reason matters more than the re-run: it supplies its own inputs and so measures a ceiling, not a capability. Config D has shown parity with the best configuration for months while the live signal scored zero. Section 24.5.
 - **OmniRoute's "~1.62B free tokens" and its "zero credentials" describe disjoint sets of providers** — settled from its own source, not inferred. Section 24.6.
@@ -2923,6 +2924,70 @@ The relevance floor already exists as a precedent for gating a comparison that
 should not have been made — this would be the same idea applied to a different
 malformed case. Whether that fixes the refusal instability is a separate
 question, and 24.9.4 gives no reason to think it would.
+
+#### 24.9.5 The fix works, and it removes the signal
+
+24.9.4 identified the malformed comparison — a planner's questions put to an NLI
+model as a contradiction candidate — and proposed excluding planner spans. That
+was tested on the existing data at no API cost.
+
+**On acceptances the fix does exactly what it should:**
+
+| anchor | spread before | spread after | alert flips |
+| :--- | ---: | ---: | :--- |
+| accept, deepseek | 0.980 | **0.001** | 1/3 → **0/3** |
+| accept, google | 0.984 | **0.001** | 3/8 → **0/8** |
+| accept, meta | 0.948 | **0.005** | 2/7 → **0/7** |
+
+The paraphrase instability on acceptances is entirely eliminated. The mechanism
+in 24.9.4 is confirmed.
+
+**Then the same fix was applied to the 87-trial set, and the signal disappeared:**
+
+| | n | median | mean | above 0.6 |
+| :--- | ---: | ---: | ---: | :--- |
+| accept | 40 | 0.002 | 0.093 | 3/40 |
+| refuse | 50 | 0.000 | 0.413 | 21/50 |
+
+**AUC refusal-vs-acceptance: 0.457, against 0.980 before.** That is no
+separation at all.
+
+So the whole of the disagreement signal's measured performance came from the
+comparison that should never have been made. **Remove the ill-posed input and
+the signal has no discriminative power.** The 0.980 was an artifact, and 24.9's
+"disagreement tracks stance" was describing the behaviour of a planner
+comparison rather than a property of inter-agent disagreement.
+
+**Why the refusal case looked like a regression, and was not.** With the
+researcher removed, most refusal paraphrases score ~0.00 against the retriever,
+and that is correct. The retriever says the documents cover A, B and C; the
+verifier says they cover A, B and C but do not answer the question. Those
+outputs agree. There is no contradiction to find, and the signal correctly
+reports none. It was the researcher comparison that had been manufacturing one.
+
+The exception is instructive: the one refusal paraphrase that leads with its
+negation ("The given evidence **does not include** any information about
+Kubernetes; instead it focuses on…") scores 0.993, while five that state the
+topics first and negate at the end score 0.001–0.012. Same claim, same stance,
+scored by clause order.
+
+**What this means for the product, not the thesis.** Section 14 already recorded
+that disagreement detected 0 of 10 independently labelled contradictions on real
+multi-agent traces — three-for-three with drift and tool-claim. This supplies
+the mechanism for that failure: on this pipeline, the signal's apparent
+separation was produced by a malformed NLI comparison, and its correct-input
+behaviour is close to chance.
+
+It should not be shipping a `HIGH` severity alert in that state. The options are
+to disable it, downgrade it to experimental and stop alerting on it, or redesign
+the comparison so it runs only between agents that make assertions about the
+same proposition — which is a different and harder feature than what exists.
+
+**What this does not establish.** It does not show that inter-agent disagreement
+is unworkable in general, only that this implementation's measured performance
+does not survive removing an input that should never have been in it. A
+comparison designed around claim-bearing spans has not been tested, and 14's
+evidence-partition problem would still apply to it.
 
 ### 24.10 Standing facts
 
