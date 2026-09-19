@@ -1,6 +1,6 @@
 # Does disagreement track error, or refusal?
 
-**Trials:** 87 (87 usable, 0 excluded as unclassifiable)
+**Trials:** 90 (90 usable, 0 excluded as unclassifiable)
 
 ## Question
 
@@ -28,16 +28,16 @@ document, not the query's declared label.
 
 | cell | condition | disagreement | contradiction |
 | :--- | :--- | :--- | :--- |
-| A | evidence relevant, verifier accepts (expected-normal) | n=37, mean 0.219, range 0.0–0.9914 | n=37, mean 0.2108, range 0.0008–0.9771 |
-| B | evidence irrelevant, verifier refuses (expected-normal) | n=47, mean 0.9778, range 0.0–0.9999 | n=47, mean 0.8971, range 0.1093–0.9981 |
-| C | evidence relevant, verifier refuses (WRONG REFUSAL) | n=3, mean 0.9987, range 0.9963–0.9999 | n=3, mean 0.9382, range 0.8239–0.9965 |
+| A | evidence relevant, verifier accepts (expected-normal) | n=40, median 0.0463, mean 0.2485, 9/40 above 0.6 | n=40, median 0.0445, mean 0.1958, 5/40 above 0.6 |
+| B | evidence irrelevant, verifier refuses (expected-normal) | n=47, median 0.9997, mean 0.9778, 46/47 above 0.6 | n=47, median 0.9844, mean 0.8971, 43/47 above 0.6 |
+| C | evidence relevant, verifier refuses (WRONG REFUSAL) | n=3, median 0.9998, mean 0.9987, 3/3 above 0.6 | n=3, median 0.9941, mean 0.9382, 3/3 above 0.6 |
 | D | evidence irrelevant, verifier accepts (WRONG ACCEPT) | n=0 | n=0 |
 
 Separation of refusal from acceptance, as AUC (0.5 = none, 1.0 = perfect):
 
-- disagreement, live rule (verifier vs its prior agents): **0.9797**
-- disagreement, analyst-verifier pair only: **0.6449**
-- contradiction (evidence vs verifier): **0.9573**
+- disagreement, live rule (verifier vs its prior agents): **0.9792**
+- disagreement, analyst-verifier pair only: **0.6495**
+- contradiction (evidence vs verifier): **0.9605**
 
 The first is the quantity 24.4 reported. The second is what this
 experiment measured before that was checked, and is a different pair:
