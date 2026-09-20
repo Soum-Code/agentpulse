@@ -42,6 +42,7 @@
 - **It is disagreement specifically.** Contradiction holds to 0.004–0.057 on acceptances and only breaks on refusals (up to 0.634) — the same region 24.4 found it misbehaving in by a different method. The obvious lexical explanation was tested and rejected (24.9.3).
 - **The disagreement signal's entire measured performance was an artifact, and removing the artifact removes the signal. This is the most consequential thing in Section 24.** The swing comes from comparing the planner's *questions* against the verifier's statement — ill-posed input to an NLI model, a pipeline fault rather than a DeBERTa fault. Excluding planner spans eliminates the paraphrase instability completely (spreads 0.98 → 0.001, alert flips → 0) **and drops AUC from 0.980 to 0.457, which is chance.** Sections 24.9.4 and 24.9.5.
 - **Section 14's "0 of 10" now has a mechanism.** Disagreement failed external validation a month ago and nobody knew why. It was measuring a malformed comparison. The `HIGH` alert has been withdrawn; the score is still computed and stored.
+- **A green signal that means "I did not look" is worse than no signal.** Two were found: `tool_claim_score` is 0.0 both when claims verified and when none were found, and a grounding score said nothing about whether its premise had been truncated. Both values were computed and then dropped before the row. Now persisted as `tool_claims_found`, `grounding_input_truncated` and `grounding_input_tokens`. Sections 25.5 and 25.6.
 - **Two of the four signals get their apparent performance from the harness, not the signal.** Tool-claim extracts a count from 9 of 9 real retriever outputs, and **0 of 9** once the sentence the demo's own prompt dictated is removed — which is the mechanism behind Section 11's zero claims across 8,353 prose spans. Disagreement is 24.9.5. **Drift is the robust one**: paraphrase spread 0.066 against disagreement's 0.948–0.984 on identical texts. Section 25.
 - **Disagreement tracks stance, not error.** 87 trials across five verifier families: correct refusals **0.978**, **wrong** refusals **0.999**, correct acceptances **0.219**. Whether the verifier was right does not move the score. Section 24.9. **Cell D — a wrong acceptance — is still empty after 100 trials, so the 2×2 is not closed and cell C rests on n=3.** Getting there needs evidence designed to look relevant without answering, not more runs.
 - **The ablation was never stale**, and the reason matters more than the re-run: it supplies its own inputs and so measures a ceiling, not a capability. Config D has shown parity with the best configuration for months while the live signal scored zero. Section 24.5.
@@ -3187,3 +3188,80 @@ been shown not to fail in the specific way disagreement failed. Section 14's
 rather than overturning any of them.
 
 ---
+
+### 25.5 The tool-claim decision, and why it differs from disagreement
+
+Both signals failed external validation. They needed opposite responses, and the
+reason is worth stating because "two signals failed, remove both" would have
+been the wrong call.
+
+| | disagreement | tool-claim |
+| :--- | :--- | :--- |
+| when it fires | **wrong** — the score measures noise | **right** — verified both directions |
+| the fault | the signal itself | its applicability |
+| decision | alert **withdrawn** (24.9.5) | alert **kept** |
+
+Tool-claim was checked in both directions before deciding. A stub claiming five
+documents against a tool that returned three raises `TOOL_CLAIM_MISMATCH`; a
+retriever that counts honestly stays silent. True positive and true negative,
+both observed. A precise detector with narrow reach is worth keeping — the harm
+was never a false alarm.
+
+**What was actually broken was its silence.** `tool_claim_score` is 0.0 both
+when every claim checked out and when there was nothing to check, and per
+Section 11 the second is almost always the case in production. `total_claims`
+was computed and then dropped on the way to the database, so nothing recorded
+which of the two a 0.0 meant.
+
+It is now persisted as `tool_claims_found` — `None` when the validator did not
+run, `0` when it ran and found nothing, `N` when it checked N claims. Verified
+live: three spans sharing one tool result produce `(0.0, 1)`, `(0.0, 0)` and
+`(1.0, 1)`.
+
+**Broadening `COUNT_PATTERNS` was considered and rejected on evidence.** The
+obvious fix is word-numbers, since the models in 25.3 wrote "I retrieved three
+documents" unprompted and the regex is digit-only. But Section 11's corpus shows
+agents do not narrate counts in *any* form — the prose is "First, I need to log
+into the file system application" — so "three" versus "3" is not the binding
+constraint. `tests/test_tool_claim_coverage.py` pins that limit as a documented
+property rather than asserting it is correct.
+
+**The general rule this produced:** a green signal that means "I did not look"
+is worse than no signal, because it is read as assurance. Wherever a score can
+be produced by absence as well as by success, the two have to be distinguishable
+on the row. 25.6 is the same fault in grounding.
+
+**Still owed:** the coverage claim. Tool-claim is presented in positioning and
+on the dashboard as a general capability, and its reach on real traces is
+roughly 2% of tool calls and 0 of 8,353 prose spans. Persisting the count makes
+the gap visible in the data; it does not correct what the product says about it.
+
+### 25.6 The same fault in grounding, fixed the same way
+
+`compute_nli_grounding` measures whether the premise exceeded DeBERTa's
+512-token window and stores the answer on its result object. The runner surfaced
+it as a `logger.warning` fired **once per worker process** and then dropped it
+before writing the row. After the first occurrence, nothing recorded that a
+score described only the part of the evidence the model read.
+
+That is 25.5's fault exactly: a value the evaluator knows, discarded on the way
+to the database, leaving a number nobody can audit. Now persisted as
+`grounding_input_truncated` and `grounding_input_tokens`.
+
+Not currently triggered here -- 25.2 measured 100 comparisons at 209-288 tokens
+against a 512 limit -- but a production retriever returning longer documents
+crosses it, and that is precisely when nobody is reading worker logs.
+
+**A test double had drifted, and finding out took a baseline run.** Adding the
+two fields failed four durable-queue tests, with jobs stuck in `queued` and no
+evaluation written. `StubGrounding` in `_queue_harness.py` carried five fields
+while the runner persists seven. The failure was confirmed against `origin/main`
+before being diagnosed, rather than assumed pre-existing -- main passes 12/12,
+so it was this change.
+
+**The runner reads those fields directly rather than through `getattr`
+defaults**, and that is deliberate. A `getattr` default would turn a genuinely
+missing field into a silent `None` in the database, which is the precise
+pattern that produced a fabricated result in 24.9.1. Failing the job loudly is
+correct; the cost is that the stub has to keep up, which is a fair trade.
+
