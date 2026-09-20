@@ -41,7 +41,8 @@
 - **The signals are aggregate-stable and item-unstable, and only the first has ever been measured here. This is the session's result.** Now quantified: holding evidence and priors fixed and varying only wording, **disagreement spreads 0.948–0.984 across paraphrases of the same statement**, and **10 of 34 paraphrases crossed the alert threshold their anchor did not**. AUC is 0.979 throughout. **AgentPulse alerts per span, so it depends on the property that was never measured.** Sections 24.9.2 and 24.9.3.
 - **It is disagreement specifically.** Contradiction holds to 0.004–0.057 on acceptances and only breaks on refusals (up to 0.634) — the same region 24.4 found it misbehaving in by a different method. The obvious lexical explanation was tested and rejected (24.9.3).
 - **The disagreement signal's entire measured performance was an artifact, and removing the artifact removes the signal. This is the most consequential thing in Section 24.** The swing comes from comparing the planner's *questions* against the verifier's statement — ill-posed input to an NLI model, a pipeline fault rather than a DeBERTa fault. Excluding planner spans eliminates the paraphrase instability completely (spreads 0.98 → 0.001, alert flips → 0) **and drops AUC from 0.980 to 0.457, which is chance.** Sections 24.9.4 and 24.9.5.
-- **Section 14's "0 of 10" now has a mechanism.** Disagreement failed external validation a month ago and nobody knew why. It was measuring a malformed comparison. **It should not be shipping a `HIGH` severity alert in this state** — disable it, downgrade it to experimental, or redesign it to compare only claim-bearing spans, which is a different feature from the one that exists.
+- **Section 14's "0 of 10" now has a mechanism.** Disagreement failed external validation a month ago and nobody knew why. It was measuring a malformed comparison. The `HIGH` alert has been withdrawn; the score is still computed and stored.
+- **Two of the four signals get their apparent performance from the harness, not the signal.** Tool-claim extracts a count from 9 of 9 real retriever outputs, and **0 of 9** once the sentence the demo's own prompt dictated is removed — which is the mechanism behind Section 11's zero claims across 8,353 prose spans. Disagreement is 24.9.5. **Drift is the robust one**: paraphrase spread 0.066 against disagreement's 0.948–0.984 on identical texts. Section 25.
 - **Disagreement tracks stance, not error.** 87 trials across five verifier families: correct refusals **0.978**, **wrong** refusals **0.999**, correct acceptances **0.219**. Whether the verifier was right does not move the score. Section 24.9. **Cell D — a wrong acceptance — is still empty after 100 trials, so the 2×2 is not closed and cell C rests on n=3.** Getting there needs evidence designed to look relevant without answering, not more runs.
 - **The ablation was never stale**, and the reason matters more than the re-run: it supplies its own inputs and so measures a ceiling, not a capability. Config D has shown parity with the best configuration for months while the live signal scored zero. Section 24.5.
 - **OmniRoute's "~1.62B free tokens" and its "zero credentials" describe disjoint sets of providers** — settled from its own source, not inferred. Section 24.6.
@@ -3079,5 +3080,110 @@ Open, and the reason this section stops where it does:
   reachable in production; 18.4 is the standing reminder of that distinction.
 - **The SDK still discards spans silently from any synchronous caller.** 24.1
   fixed the demo, not the footgun underneath it.
+
+---
+
+## 25. The same test applied to the other three signals (2026-09-21)
+
+24.9.5 found that disagreement's measured performance came from an input that
+should never have been in the comparison. The obvious follow-up is whether the
+other three signals have the same shape of problem. They were each given the
+test their design invites.
+
+| signal | test | result |
+| :--- | :--- | :--- |
+| drift | paraphrase stability | **robust** |
+| grounding | premise truncation | **clean on this corpus** |
+| grounding | paraphrase stability (24.9.3) | stable on acceptances, weak on refusals |
+| tool-claim | dependence on prompt-dictated phrasing | **fails: 9/9 → 0/9** |
+
+### 25.1 Drift is the robust one
+
+Centroid distance across the same paraphrase set that broke disagreement:
+
+| anchor | spread |
+| :--- | ---: |
+| accept, deepseek | 0.031 |
+| refuse, deepseek | 0.084 |
+| accept, google | 0.059 |
+| refuse, google | 0.084 |
+| accept, meta | 0.074 |
+
+Mean spread **0.066**, against disagreement's 0.948–0.984 on the identical
+texts. Roughly fourteen times tighter, and every value sits far below the 0.30
+drift threshold, so no paraphrase would flip a drift alert.
+
+This is what the design predicts rather than a surprise: sentence embeddings are
+trained to be paraphrase-invariant and NLI is not. It is worth stating anyway,
+because it means the instability in 24.9 is a property of the NLI-based signals
+specifically and not of the evaluation stack as a whole.
+
+### 25.2 Grounding's truncation risk does not fire here
+
+`compute_nli_grounding` tokenises once without truncation to learn the true
+length, then truncates to `MAX_NLI_TOKENS = 512`. Across 100 grounding
+comparisons on the demo corpus: **0 truncated**, token lengths 209–288, median
+235.
+
+So the malformed-input class of fault does not apply to grounding on this
+corpus. That is a statement about a six-document corpus retrieved at top_k=3,
+not about grounding in general — a production retriever returning longer
+documents would cross 512 and the score would then describe only the part the
+model read.
+
+**One gap worth closing regardless.** `input_truncated` is computed per
+evaluation and surfaced only as a `logger.warning` fired **once per worker
+process**. It is not stored on the evaluation row. A user reading a grounding
+score cannot tell whether the model saw all of the evidence, and after the first
+occurrence neither can the logs.
+
+### 25.3 Tool-claim only works because the prompt dictates the phrasing
+
+`demo/multi_model_pipeline.py` instructs the retriever agent:
+
+> "State how many documents you are using, in the form 'Retrieved N documents'."
+
+That is the exact phrasing `COUNT_PATTERNS` matches. Tested against the nine
+real retriever outputs in the experiment data:
+
+| condition | extracted a count |
+| :--- | :--- |
+| text as produced | **9 of 9** |
+| with the dictated sentence removed | **0 of 9** |
+
+The models mostly wrote their own sentence in prose — "I retrieved three
+documents covering DeBERTa's disentangled attention…" — and then appended
+"Retrieved 3 documents." because they were told to. The prose form extracts
+nothing: `COUNT_PATTERNS` is digit-only, so "three documents" does not match
+while "3 documents" does.
+
+**This is the mechanism behind Section 11.** The validator extracted zero claims
+across 8,353 prose spans from five real models, and nobody could say why. Real
+agents write "three documents". The regex reads digits.
+
+So the demo does not demonstrate the tool-claim signal. It demonstrates the
+signal against text the demo asked the model to produce in the validator's own
+format, which is the same shape of fault as 24.5's ablation feeding
+`evaluate_tool_claims` a `result_count` from the dataset.
+
+### 25.4 Where that leaves the four signals
+
+| signal | status |
+| :--- | :--- |
+| drift | robust to paraphrase; the strongest of the four, consistent with Section 13 |
+| grounding | stable on acceptances, erratic on refusals (24.9.3); truncation not triggered here but unrecorded when it is |
+| tool-claim | extracts only when the prompt dictates the format; 0 of 9 otherwise |
+| disagreement | measured performance was an artifact; alerting withdrawn (24.9.5) |
+
+Two of four have performance that comes from the harness rather than the signal,
+and in both cases the earlier external-validation failures — Section 11 for
+tool-claim, Section 14 for disagreement — now have mechanisms rather than just
+results.
+
+**Not claimed:** that grounding and drift are validated. Neither has been tested
+against independently labelled production data in this session; they have only
+been shown not to fail in the specific way disagreement failed. Section 14's
+"three for three" record stands, and this section explains two of the three
+rather than overturning any of them.
 
 ---
