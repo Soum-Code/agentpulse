@@ -12,15 +12,6 @@ import {
   toSpans,
   toTrace,
 } from './adapters';
-import {
-  MOCK_AGENTS,
-  MOCK_DRIFT,
-  MOCK_ALERTS,
-  MOCK_TRACES,
-  MOCK_SPANS_BY_TRACE,
-  MOCK_DATASETS,
-  MOCK_EXPERIMENTS,
-} from './mockData';
 import type { Agent, Dataset, DriftProfile, Experiment, Incident, Trace } from '../types';
 
 const POLL_MS = 10000;
@@ -101,20 +92,30 @@ export function useTelemetry(): TelemetryState {
         );
         if (cancelled || !mounted.current) return;
         setTraces([...hydrated, ...listed.slice(HYDRATE_LIMIT)]);
-      } catch (_err) {
+      } catch (err) {
         if (cancelled || !mounted.current) return;
-        // Fallback to rich telemetry so dashboard is fully functional in standalone mode
-        const driftEntries = MOCK_DRIFT;
-        setAgents(toAgents(MOCK_AGENTS, driftEntries));
-        setDriftProfiles(toDriftProfiles(driftEntries));
-        setIncidents(toIncidents(MOCK_ALERTS));
-        const listed = MOCK_TRACES.map((t) => {
-          const spans = MOCK_SPANS_BY_TRACE[t.trace_id] ?? [];
-          return toTrace(t, toSpans(spans, t.trace_id), MOCK_ALERTS.filter((a) => a.trace_id === t.trace_id));
-        });
-        setTraces(listed);
-        setConnected(true);
-        setError(null);
+        // Report the failure. Do not substitute fixtures for it.
+        //
+        // This branch used to load MOCK_AGENTS, MOCK_ALERTS and MOCK_TRACES and
+        // then set connected = true with error = null, so a dashboard whose
+        // backend was unreachable displayed invented agents, risk scores and
+        // incidents while stating it was connected. A monitoring tool that
+        // fabricates telemetry when it cannot reach its source is worse than
+        // one that shows nothing, because the failure is the thing the operator
+        // most needs to see.
+        //
+        // The views already handle empty state. Leaving them empty is honest;
+        // filling them is not.
+        setAgents([]);
+        setDriftProfiles([]);
+        setIncidents([]);
+        setTraces([]);
+        setConnected(false);
+        setError(
+          err instanceof Error
+            ? `Cannot reach AgentPulse: ${err.message}`
+            : 'Cannot reach AgentPulse.',
+        );
         setLoading(false);
       }
     }
@@ -136,8 +137,11 @@ export function useTelemetry(): TelemetryState {
         setExperiments(toExperiments(ex.file_experiments ?? []));
       } catch {
         if (cancelled || !mounted.current) return;
-        setDatasets(toDatasets(MOCK_DATASETS));
-        setExperiments(toExperiments(MOCK_EXPERIMENTS));
+        // Same rule as the telemetry branch above: an unreachable catalogue
+        // endpoint leaves these empty rather than showing invented datasets and
+        // experiment runs.
+        setDatasets([]);
+        setExperiments([]);
       }
     })();
     return () => {
