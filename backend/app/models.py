@@ -102,19 +102,6 @@ class Evaluation(SQLModel, table=True):
     semantic_score: Optional[float] = None
     disagreement_score: Optional[float] = None
 
-    # How many tool claims the validator actually found in this span's output.
-    #
-    # tool_claim_score alone is ambiguous: 0.0 means both "every claim checked
-    # out" and "there was nothing to check", and on real traces it is almost
-    # always the second. The external corpus in Section 11 carries 8,353 prose
-    # spans and zero extractable claims, because agents state intentions ("I
-    # need to log into the file system") rather than narrating counts. A score
-    # of 0.0 read as "verified, all good" is then wrong nearly every time.
-    #
-    # None = the validator did not run on this span at all (no tool calls, or
-    # no output text). 0 = it ran and found no claim to check.
-    tool_claims_found: Optional[int] = None
-
     # Composite
     overall_risk_score: Optional[float] = None
     label: Optional[str] = None  # "low_risk", "medium_risk", "high_risk"

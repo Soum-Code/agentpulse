@@ -8,7 +8,9 @@ import {
   Incident,
   DriftProfile,
   Dataset,
-  Experiment
+  Experiment,
+  ColorPalette,
+  ChalkSurfacePreset
 } from './types';
 import { useTelemetry } from './lib/useTelemetry';
 import { api } from './lib/api';
@@ -36,13 +38,20 @@ import { initLiquidCardSpringListener } from './utils/liquidHoverAnime';
 import { initChalkMoteProximityListener } from './utils/chalkMoteProximity';
 import { AuthModal } from './components/product/AuthModal';
 import { ProjectSelectorModal } from './components/product/ProjectSelectorModal';
+import { RagChatbotApp } from './components/rag/RagChatbotApp';
 import { auth, onAuthStateChanged, subscribeToUserProjects } from './lib/firebase';
 import type { User as FirebaseUser } from 'firebase/auth';
 import type { TelemetryProject } from './types';
+import { ExternalLink } from 'lucide-react';
 
 export default function App() {
-  // 'public' is the marketing page, 'product' is the console.
-  const [mode, setMode] = useState<DesignMode>('public');
+  // 'product' is the primary AgentPulse console frontend.
+  // 'rag' is the fullscreen dedicated RAG monitor & drift verification split-screen.
+  // 'public' is the marketing landing page.
+  const [mode, setMode] = useState<DesignMode>('product');
+  const [palette, setPalette] = useState<ColorPalette>('dark');
+  const [isCalmMode, setIsCalmMode] = useState<boolean>(false);
+  const [chalkSurface, setChalkSurface] = useState<ChalkSurfacePreset>('classic-white');
 
   const [productTab, setProductTab] = useState<ProductTab>('overview');
 
@@ -269,6 +278,28 @@ export default function App() {
     setSelectedIncident(undefined);
   };
 
+  if (mode === 'rag') {
+    return (
+      <RagChatbotApp
+        onOpenConsole={() => {
+          setMode('product');
+          setProductTab('overview');
+        }}
+        onSelectTab={(tab) => {
+          setMode('product');
+          setProductTab(tab);
+        }}
+        onToggleFullscreen={() => {
+          setMode('product');
+          setProductTab('rag-monitor');
+        }}
+        palette={palette}
+        isCalmMode={isCalmMode}
+        chalkSurface={chalkSurface}
+      />
+    );
+  }
+
   if (mode === 'public') {
     return (
       <PublicExperience
@@ -279,9 +310,17 @@ export default function App() {
       />
     );
   }
+  const appBgClass = isCalmMode
+    ? 'bg-[#0e1219] text-[#E2E8F0]'
+    : palette === 'butter'
+    ? 'bg-[#FAF6EF] text-[#2C2825]'
+    : palette === 'chalk'
+    ? 'bg-[#18191B] text-[#E0E2EC]'
+    : 'bg-[#06070a] text-[#F5F5F7]';
+
   return (
-    <div className="min-h-screen bg-[#06070a] text-[#F5F5F7] selection:bg-neutral-800 selection:text-white flex flex-col relative overflow-x-hidden">
-      <LiquidBackgroundCanvas palette="dark" className="fixed inset-0 pointer-events-none opacity-45 z-0" />
+    <div className={`min-h-screen ${appBgClass} selection:bg-neutral-800 selection:text-white flex flex-col relative overflow-x-hidden transition-colors duration-200`}>
+      <LiquidBackgroundCanvas palette={palette} chalkSurface={chalkSurface} className="fixed inset-0 pointer-events-none opacity-45 z-0" />
 
       <div className="relative z-10 flex flex-col min-h-screen">
         <ProductHeader
@@ -298,11 +337,16 @@ export default function App() {
           onOpenAuth={() => setIsAuthModalOpen(true)}
           onOpenProjectSelector={() => setIsProjectSelectorOpen(true)}
           onSwitchToPublic={() => setMode('public')}
+          onSwitchToRag={() => setMode('rag')}
           isSimulatingLive={isSimulatingLive}
           onToggleLive={() => setIsSimulatingLive(prev => !prev)}
           onOpenShortcutsModal={() => setIsShortcutsHelpOpen(true)}
           isContextPanelOpen={isContextPanelOpen}
           onToggleContextPanel={() => setIsContextPanelOpen(prev => !prev)}
+          palette={palette}
+          onSelectPalette={setPalette}
+          isCalmMode={isCalmMode}
+          onToggleCalmMode={() => setIsCalmMode(prev => !prev)}
         />
 
         <div className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-28 flex flex-col lg:flex-row gap-6 items-start">
@@ -477,29 +521,82 @@ export default function App() {
             )}
 
             {productTab === 'settings' && (
-              <SettingsView />
+              <SettingsView
+                isCalmMode={isCalmMode}
+                onToggleCalmMode={() => setIsCalmMode(prev => !prev)}
+                currentUser={currentUser}
+                activeProject={activeProject}
+                onOpenProjectSelector={() => setIsProjectSelectorOpen(true)}
+                onOpenAuth={() => setIsAuthModalOpen(true)}
+              />
+            )}
+
+            {productTab === 'rag-monitor' && (
+              <div className="w-full space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-1">
+                  <div>
+                    <div className="flex items-center space-x-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 phosphor-cyan animate-pulse" />
+                      <h2 className="text-base font-bold text-white uppercase tracking-tight font-mono">
+                        RAG Live Multi-Agent Monitor & Drift Verification
+                      </h2>
+                      <span className="text-[10px] px-2 py-0.5 rounded bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 font-mono font-semibold">
+                        LIVE STREAM
+                      </span>
+                    </div>
+                    <p className="text-xs text-neutral-400 font-mono mt-0.5">
+                      Sequential multi-agent chat execution, asynchronous NLI grounding entailment, and 32-span sliding window drift.
+                    </p>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={() => setMode('rag')}
+                      className="px-3 py-1.5 rounded-xl bg-cyan-500/15 border border-cyan-500/40 text-cyan-300 hover:bg-cyan-500/25 transition-all text-xs font-mono font-semibold flex items-center space-x-1.5 shadow-sm"
+                      title="Switch to Fullscreen Dedicated Split-Screen Monitor"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5 text-cyan-400" />
+                      <span>Full-Screen View</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-white/10 overflow-hidden shadow-2xl bg-[#06070a] h-[740px] max-h-[82vh]">
+                  <RagChatbotApp
+                    embedded={true}
+                    onOpenConsole={() => setProductTab('overview')}
+                    onSelectTab={(t) => setProductTab(t)}
+                    onToggleFullscreen={() => setMode('rag')}
+                    palette={palette}
+                    isCalmMode={isCalmMode}
+                    chalkSurface={chalkSurface}
+                  />
+                </div>
+              </div>
             )}
             </>
             )}
           </main>
 
-          <ActiveContextPanel
-            currentTab={productTab}
-            onSelectTab={setProductTab}
-            selectedAgent={selectedAgent}
-            selectedTrace={selectedTrace}
-            selectedSpan={selectedSpan}
-            selectedIncident={selectedIncident}
-            onClearSelection={handleClearSelection}
-            onSelectAgent={setSelectedAgent}
-            onSelectTrace={setSelectedTrace}
-            onSelectSpan={setSelectedSpan}
-            onCurateToDataset={handleCurateToDataset}
-            isOpen={isContextPanelOpen}
-            onToggleOpen={() => setIsContextPanelOpen(prev => !prev)}
-            isPinned={isContextPanelPinned}
-            onTogglePin={() => setIsContextPanelPinned(prev => !prev)}
-          />
+          {productTab !== 'rag-monitor' && (
+            <ActiveContextPanel
+              currentTab={productTab}
+              onSelectTab={setProductTab}
+              selectedAgent={selectedAgent}
+              selectedTrace={selectedTrace}
+              selectedSpan={selectedSpan}
+              selectedIncident={selectedIncident}
+              onClearSelection={handleClearSelection}
+              onSelectAgent={setSelectedAgent}
+              onSelectTrace={setSelectedTrace}
+              onSelectSpan={setSelectedSpan}
+              onCurateToDataset={handleCurateToDataset}
+              isOpen={isContextPanelOpen}
+              onToggleOpen={() => setIsContextPanelOpen(prev => !prev)}
+              isPinned={isContextPanelPinned}
+              onTogglePin={() => setIsContextPanelPinned(prev => !prev)}
+            />
+          )}
         </div>
 
       <FloatingDock

@@ -1,6 +1,6 @@
 import React from 'react';
 import { ChevronRight, Radio, Search, ExternalLink, X, Keyboard, PanelRight, Moon, Sun, Layers, User, LogIn, ChevronDown, Sparkles } from 'lucide-react';
-import { ProductTab, Agent, Trace, Span, Incident, TelemetryProject } from '../../types';
+import { ProductTab, Agent, Trace, Span, Incident, TelemetryProject, ColorPalette } from '../../types';
 import { User as FirebaseUser } from 'firebase/auth';
 
 interface ProductHeaderProps {
@@ -13,6 +13,7 @@ interface ProductHeaderProps {
   onClearSelection: () => void;
   onOpenCommandPalette: () => void;
   onSwitchToPublic: () => void;
+  onSwitchToRag?: () => void;
   isSimulatingLive: boolean;
   onToggleLive: () => void;
   onOpenShortcutsModal?: () => void;
@@ -20,6 +21,8 @@ interface ProductHeaderProps {
   onToggleContextPanel?: () => void;
   isCalmMode?: boolean;
   onToggleCalmMode?: () => void;
+  palette?: ColorPalette;
+  onSelectPalette?: (p: ColorPalette) => void;
   currentUser?: FirebaseUser | null;
   activeProject?: TelemetryProject | null;
   onOpenAuth?: () => void;
@@ -36,6 +39,7 @@ export const ProductHeader: React.FC<ProductHeaderProps> = ({
   onClearSelection,
   onOpenCommandPalette,
   onSwitchToPublic,
+  onSwitchToRag,
   isSimulatingLive,
   onToggleLive,
   onOpenShortcutsModal,
@@ -43,6 +47,8 @@ export const ProductHeader: React.FC<ProductHeaderProps> = ({
   onToggleContextPanel,
   isCalmMode = false,
   onToggleCalmMode,
+  palette = 'dark',
+  onSelectPalette,
   currentUser,
   activeProject,
   onOpenAuth,
@@ -192,6 +198,22 @@ export const ProductHeader: React.FC<ProductHeaderProps> = ({
 
       {/* Right Controls */}
       <div className="flex items-center space-x-2.5 shrink-0 z-10">
+        <button
+          onClick={() => {
+            onClearSelection();
+            onSelectTab('rag-monitor');
+          }}
+          className={`flex items-center space-x-1.5 px-2.5 py-1 rounded-lg transition-all text-xs font-mono font-semibold ${
+            currentTab === 'rag-monitor'
+              ? 'bg-cyan-500/25 border border-cyan-400 text-cyan-200 shadow-[0_0_12px_rgba(6,182,212,0.3)]'
+              : 'bg-cyan-500/15 border border-cyan-500/40 text-cyan-300 hover:bg-cyan-500/25'
+          }`}
+          title="Open RAG Live Multi-Agent Monitor"
+        >
+          <span className="w-2 h-2 rounded-full bg-cyan-400 phosphor-cyan" />
+          <span>RAG Live Monitor</span>
+        </button>
+
         {/* Live Simulator Pulsar */}
         <button
           onClick={onToggleLive}
@@ -236,6 +258,48 @@ export const ProductHeader: React.FC<ProductHeaderProps> = ({
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 phosphor-emerald animate-pulse" />
             )}
           </button>
+        )}
+
+        {/* Palette Switcher (Dark / Butter / Chalk) */}
+        {onSelectPalette && (
+          <div className="flex items-center p-0.5 rounded-lg border border-white/10 bg-white/[0.04] text-[11px] font-mono">
+            <button
+              onClick={() => onSelectPalette('dark')}
+              className={`px-2 py-1 rounded-md transition-all flex items-center gap-1 ${
+                palette === 'dark' && !isCalmMode
+                  ? 'bg-white/15 text-white font-semibold shadow-xs'
+                  : 'text-neutral-400 hover:text-white'
+              }`}
+              title="Obsidian Dark Theme"
+            >
+              <Moon className="w-3 h-3 text-cyan-400" />
+              <span className="hidden xl:inline">Dark</span>
+            </button>
+            <button
+              onClick={() => onSelectPalette('butter')}
+              className={`px-2 py-1 rounded-md transition-all flex items-center gap-1 ${
+                palette === 'butter'
+                  ? 'bg-amber-400 text-black font-bold shadow-xs'
+                  : 'text-neutral-400 hover:text-amber-300'
+              }`}
+              title="Buttermax Canary Theme"
+            >
+              <Sparkles className="w-3 h-3 text-amber-400" />
+              <span className="hidden xl:inline">Butter</span>
+            </button>
+            <button
+              onClick={() => onSelectPalette('chalk')}
+              className={`px-2 py-1 rounded-md transition-all flex items-center gap-1 ${
+                palette === 'chalk'
+                  ? 'bg-slate-100 text-slate-900 font-bold shadow-xs'
+                  : 'text-neutral-400 hover:text-white'
+              }`}
+              title="Studio Chalk Light Theme"
+            >
+              <Sun className="w-3 h-3 text-amber-300" />
+              <span className="hidden xl:inline">Chalk</span>
+            </button>
+          </div>
         )}
 
         {/* Calm Mode (Deep Zen Theme) Toggle */}

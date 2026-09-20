@@ -218,9 +218,6 @@ async def persist_results(payload: dict[str, Any], result) -> bool:
             tool_claim_score=(
                 result.tool_claim.tool_claim_score if result.tool_claim else None
             ),
-            tool_claims_found=(
-                result.tool_claim.total_claims if result.tool_claim else None
-            ),
             disagreement_score=(
                 result.disagreement.disagreement_score if result.disagreement else None
             ),

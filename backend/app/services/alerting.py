@@ -296,44 +296,12 @@ class AlertEngine:
             # threshold (disagreement.py's default 0.6), so this alerts exactly
             # when the engine says a disagreement occurred, rather than
             # introducing a second, independently-drifting cutoff.
-            #
-            # WITHDRAWN 2026-09-20. The rule above is kept as a comment rather
-            # than deleted, because the reasoning that motivated it is still
-            # correct: without it a cross-agent contradiction cannot reach an
-            # operator at all. What changed is that the signal it fires on does
-            # not carry the information the alert claims.
-            #
-            #     AlertRule(
-            #         alert_type="AGENT_DISAGREEMENT",
-            #         severity="HIGH",
-            #         condition_field="disagreement_score",
-            #         threshold=0.6,
-            #         comparison="gt",
-            #         message_template=(
-            #             "Agents disagree within trace for '{agent_id}': "
-            #             "contradiction={value} (threshold={threshold})"
-            #         ),
-            #     ),
-            #
-            # Measured in SESSION_HANDOFF.md 24.9.4-24.9.5. The score's apparent
-            # discriminative power came from comparing the planner agent's
-            # output -- a list of sub-questions -- against a later agent's
-            # statement. A question has no truth value, so that NLI comparison
-            # is ill-posed and returns arbitrary values: paraphrases of one
-            # statement, meaning preserved, spread 0.948-0.984, and 10 of 34
-            # landed on the opposite side of this 0.6 threshold from their
-            # anchor.
-            #
-            # Excluding the planner removes the instability completely (spreads
-            # fall to 0.001-0.005) and takes the signal with it: AUC for
-            # refusal-vs-acceptance falls from 0.980 to 0.457, which is chance.
-            # That is also the mechanism behind Section 14, where disagreement
-            # detected 0 of 10 independently labelled contradictions on real
-            # traces and no cause was found at the time.
-            #
-            # `disagreement_score` is still computed, persisted and shown --
-            # only the alert is withdrawn. Restoring this rule requires a
-            # comparison that runs between spans asserting something about the
-            # same proposition, which is a different feature from the one that
-            # exists, and re-measuring the AUC on that version first.
+            AlertRule(
+                alert_type="AGENT_DISAGREEMENT",
+                severity="HIGH",
+                condition_field="disagreement_score",
+                threshold=0.6,
+                comparison="gt",
+                message_template="Agents disagree within trace for '{agent_id}': contradiction={value} (threshold={threshold})",
+            ),
         ]
