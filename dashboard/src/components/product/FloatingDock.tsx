@@ -16,7 +16,8 @@ import {
   ChevronUp,
   MoreHorizontal,
   Keyboard,
-  Gauge
+  Gauge,
+  Radio
 } from 'lucide-react';
 import { ProductTab } from '../../types';
 
@@ -42,11 +43,12 @@ export const FloatingDock: React.FC<FloatingDockProps> = ({
   const [mousePos, setMousePos] = useState<{ x: number; y: number } | null>(null);
   const dockRef = useRef<HTMLDivElement>(null);
 
-  const mainItems: { id: ProductTab; label: string; icon: React.FC<{ className?: string }>; badge?: number; badgeColor?: string }[] = [
+  const mainItems: { id: ProductTab; label: string; icon: React.FC<{ className?: string }>; badge?: number; badgeColor?: string; dotColor?: string }[] = [
     { id: 'overview', label: 'Overview', icon: LayoutDashboard },
+    { id: 'rag-monitor', label: 'RAG Live', icon: Radio, dotColor: 'bg-cyan-400 phosphor-cyan' },
     { id: 'agents', label: 'Agents', icon: Bot },
     { id: 'traces', label: 'Traces', icon: Activity },
-    { id: 'performance', label: 'APM Performance', icon: Gauge },
+    { id: 'performance', label: 'APM', icon: Gauge },
     { id: 'incidents', label: 'Incidents', icon: AlertTriangle, badge: incidentCount, badgeColor: 'bg-rose-500 text-white phosphor-rose' },
     { id: 'drift', label: 'Drift', icon: TrendingDown, badge: driftWarningCount, badgeColor: 'bg-amber-500 text-black phosphor-amber' },
   ];
@@ -193,7 +195,7 @@ export const FloatingDock: React.FC<FloatingDockProps> = ({
 
               <Icon
                 className={`w-3.5 h-3.5 transition-colors duration-150 ${
-                  active ? 'text-neutral-950' : 'text-neutral-400 group-hover:text-neutral-200'
+                  active ? 'text-neutral-950' : item.dotColor ? 'text-cyan-400' : 'text-neutral-400 group-hover:text-neutral-200'
                 }`}
               />
               <span
@@ -203,6 +205,10 @@ export const FloatingDock: React.FC<FloatingDockProps> = ({
               >
                 {item.label}
               </span>
+
+              {item.dotColor && !active && (
+                <span className={`w-1.5 h-1.5 rounded-full ${item.dotColor} shrink-0`} />
+              )}
 
               {/* Status Badge with Spring Pop */}
               {item.badge !== undefined && item.badge > 0 && (

@@ -9,7 +9,7 @@
  * from a measured one. Marking them required makes the compiler demand the
  * invention -- and a component that then reads them crashes the console.
  */
-export type DesignMode = 'public' | 'product';
+export type DesignMode = 'rag' | 'public' | 'product';
 export type ColorPalette = 'butter' | 'dark' | 'chalk';
 export type ChalkSurfacePreset = 'classic-white' | 'sepia-slate' | 'emerald-graphite' | 'custom';
 
@@ -34,6 +34,7 @@ export type ProductTab =
   | 'performance'
   | 'incidents'
   | 'drift'
+  | 'rag-monitor'
   | 'replay'
   | 'experiments'
   | 'datasets'

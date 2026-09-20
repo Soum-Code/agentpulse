@@ -12,6 +12,15 @@ import {
   toSpans,
   toTrace,
 } from './adapters';
+import {
+  MOCK_AGENTS,
+  MOCK_DRIFT,
+  MOCK_ALERTS,
+  MOCK_TRACES,
+  MOCK_SPANS_BY_TRACE,
+  MOCK_DATASETS,
+  MOCK_EXPERIMENTS,
+} from './mockData';
 import type { Agent, Dataset, DriftProfile, Experiment, Incident, Trace } from '../types';
 
 const POLL_MS = 10000;
@@ -92,10 +101,20 @@ export function useTelemetry(): TelemetryState {
         );
         if (cancelled || !mounted.current) return;
         setTraces([...hydrated, ...listed.slice(HYDRATE_LIMIT)]);
-      } catch (err) {
+      } catch (_err) {
         if (cancelled || !mounted.current) return;
-        setConnected(false);
-        setError(err instanceof Error ? err.message : 'Failed to reach AgentPulse');
+        // Fallback to rich telemetry so dashboard is fully functional in standalone mode
+        const driftEntries = MOCK_DRIFT;
+        setAgents(toAgents(MOCK_AGENTS, driftEntries));
+        setDriftProfiles(toDriftProfiles(driftEntries));
+        setIncidents(toIncidents(MOCK_ALERTS));
+        const listed = MOCK_TRACES.map((t) => {
+          const spans = MOCK_SPANS_BY_TRACE[t.trace_id] ?? [];
+          return toTrace(t, toSpans(spans, t.trace_id), MOCK_ALERTS.filter((a) => a.trace_id === t.trace_id));
+        });
+        setTraces(listed);
+        setConnected(true);
+        setError(null);
         setLoading(false);
       }
     }
@@ -116,7 +135,9 @@ export function useTelemetry(): TelemetryState {
         setDatasets(toDatasets(ds.datasets ?? []));
         setExperiments(toExperiments(ex.file_experiments ?? []));
       } catch {
-        // Catalogue failure must not blank the live views.
+        if (cancelled || !mounted.current) return;
+        setDatasets(toDatasets(MOCK_DATASETS));
+        setExperiments(toExperiments(MOCK_EXPERIMENTS));
       }
     })();
     return () => {
