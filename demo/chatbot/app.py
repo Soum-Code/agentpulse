@@ -87,15 +87,22 @@ NVIDIA_BASE_URL = "https://integrate.api.nvidia.com/v1"
 # Verified callable on a free key by the scan in 24.8: the catalogue lists 82
 # models and nine answer. Three owners, so the agents are not one model talking
 # to itself.
+# Chosen for latency and reliability, re-measured rather than assumed. On this
+# free tier the same model's response time moves by an order of magnitude
+# between runs: mistral-nemotron was 56s, then over 75s, then 26.9s within an
+# hour; deepseek was 4.4s, then 7.5s, then 30.8s. google/gemma-4-31b-it answered
+# the 24.8 scan and now hangs indefinitely, and z-ai/glm-5.3-flash has joined
+# it. That volatility matters here because the three calls are sequential, so a
+# turn costs their sum.
+#
+# Two of these share the nvidia family, which would be wrong for the
+# disagreement signal -- two prompts against one family agree with themselves.
+# It is acceptable for drift, which is a per-agent signal over time and never
+# compares one agent against another.
 AGENT_MODELS = {
-    "retriever": "mistralai/mistral-nemotron",
-    # meta rather than google/gemma-4-31b-it. gemma answered the scan in 24.8
-    # and then stopped returning at all -- 90 seconds with no response and no
-    # error, which hung the whole turn because the three calls are sequential.
-    # It is callable on paper and unusable in practice, which is 24.7's lesson
-    # in a third form: catalogued, then served, then neither.
+    "retriever": "nvidia/nemotron-3-super-120b-a12b",
     "verifier": "meta/muse-glimmer-30b",
-    "answerer": "deepseek-ai/deepseek-v4-flash-0731",
+    "answerer": "nvidia/nemotron-3.5-lightning-30b-a3b",
 }
 
 # A hung provider must fail the turn, not stall it. Without this a model that

@@ -1,6 +1,6 @@
 # Session Handoff — AgentPulse Work Log
 
-**Written:** 2026-08-23. **Rewritten clean:** 2026-08-26. **Updated:** 2026-08-27 (Sections 7–9 disagreement/benchmark/positioning; 10 drift diagnosis and fix; 11 tool-claim external test; 12 blocked redesign; 13 competitor audits). **Updated:** 2026-08-28 (Section 14 — external disagreement validation, the last of the three signals to be checked and the third to fail; Section 15 — the productization arc, seven phases from migrations through health/readiness). **Updated:** 2026-08-30 (Section 16 — dashboard unfrozen, the landing-page claim audit, and the half-finished drift restore). **Updated:** 2026-08-31 (Section 17 — Final Review deliverables, the literature survey, and repository access). **Updated:** 2026-09-12 (Section 18 — frontend replaced and wired to the live API, the tool-claim signal made to fire for the first time, and the Compose stack fixed so it actually evaluates; MIT licence added, closing a claim the README had been making against a missing file).
+**Written:** 2026-08-23. **Rewritten clean:** 2026-08-26. **Updated:** 2026-08-27 (Sections 7–9 disagreement/benchmark/positioning; 10 drift diagnosis and fix; 11 tool-claim external test; 12 blocked redesign; 13 competitor audits). **Updated:** 2026-08-28 (Section 14 — external disagreement validation, the last of the three signals to be checked and the third to fail; Section 15 — the productization arc, seven phases from migrations through health/readiness). **Updated:** 2026-08-30 (Section 16 — dashboard unfrozen, the landing-page claim audit, and the half-finished drift restore). **Updated:** 2026-08-31 (Section 17 — Final Review deliverables, the literature survey, and repository access). **Updated:** 2026-09-12 (Section 18 — frontend replaced and wired to the live API, the tool-claim signal made to fire for the first time, and the Compose stack fixed so it actually evaluates; MIT licence added, closing a claim the README had been making against a missing file). **Updated:** 2026-09-19 (Section 24 — the 23.4 pipeline run for the first time and five faults found in it, four of which meant it delivered nothing; the disagreement signal firing at 0.966–0.996 against the one agent in each trace that was correct, which is the evidence-partition problem of Section 14 with a reproduction on five model families; the ablation re-run and found never to have been stale; OmniRoute's free-token headline settled from its own source). **Updated:** 2026-09-21 (Section 26 — a RAG chatbot built so AgentPulse could be watched monitoring a live conversation; the four mechanisms in the shipped frontend that answered that question with fixtures; and the first sustained drift measurement this project has produced, which also showed the signal goes blind for 12 spans per agent after every worker restart). **Updated:** 2026-09-20 (Sections 24.8–24.9 — NVIDIA's 82-model catalogue is nine models on a free key; the refusal experiment at 87 trials, which reproduces 24.4 and shows a *wrong* refusal scoring 0.999 against a correct one's 0.978, so the signal tracks stance and is blind to correctness within it; and three analysis faults in that experiment, one of which produced a uniform, confident, entirely fabricated result from an unloaded model).
 
 **Project:** AgentPulse — self-hostable observability SDK for grounding-risk and drift monitoring in multi-agent LLM systems. M.Tech project. Working directory: `C:\MLOPs\3rd sem project\Agentpluse` (renamed from `project one agent`; the venv's editable installs still point at the old path).
 
@@ -37,6 +37,18 @@
 - **`main` has a second writer and no branch protection** - the Free plan does not offer it on private repos. Section 17.5.
 - **Design direction is frozen in `bedhi_frontend.md`** — reference by reference, what to take and what to refuse, with Liquid Glass rules. Section 16.7.
 - **Repo pushed through commit `3cd1080`; working tree clean, `origin/main` in sync.** The dashboard work that used to sit uncommitted was reviewed and checkpointed (`8a93558`) with three known gaps recorded — see Section 15.
+- **The 23.4 multi-model pipeline had never worked, and now does.** Five faults in one file; four of them meant it delivered zero spans while printing a successful run. Section 24.
+- **The signals are aggregate-stable and item-unstable, and only the first has ever been measured here. This is the session's result.** Now quantified: holding evidence and priors fixed and varying only wording, **disagreement spreads 0.948–0.984 across paraphrases of the same statement**, and **10 of 34 paraphrases crossed the alert threshold their anchor did not**. AUC is 0.979 throughout. **AgentPulse alerts per span, so it depends on the property that was never measured.** Sections 24.9.2 and 24.9.3.
+- **It is disagreement specifically.** Contradiction holds to 0.004–0.057 on acceptances and only breaks on refusals (up to 0.634) — the same region 24.4 found it misbehaving in by a different method. The obvious lexical explanation was tested and rejected (24.9.3).
+- **The disagreement signal's entire measured performance was an artifact, and removing the artifact removes the signal. This is the most consequential thing in Section 24.** The swing comes from comparing the planner's *questions* against the verifier's statement — ill-posed input to an NLI model, a pipeline fault rather than a DeBERTa fault. Excluding planner spans eliminates the paraphrase instability completely (spreads 0.98 → 0.001, alert flips → 0) **and drops AUC from 0.980 to 0.457, which is chance.** Sections 24.9.4 and 24.9.5.
+- **Section 14's "0 of 10" now has a mechanism.** Disagreement failed external validation a month ago and nobody knew why. It was measuring a malformed comparison. The `HIGH` alert has been withdrawn; the score is still computed and stored.
+- **Two of the four signals get their apparent performance from the harness, not the signal.** Tool-claim extracts a count from 9 of 9 real retriever outputs, and **0 of 9** once the sentence the demo's own prompt dictated is removed — which is the mechanism behind Section 11's zero claims across 8,353 prose spans. Disagreement is 24.9.5. **Drift is the robust one**: paraphrase spread 0.066 against disagreement's 0.948–0.984 on identical texts. Section 25.
+- **Disagreement tracks stance, not error.** 87 trials across five verifier families: correct refusals **0.978**, **wrong** refusals **0.999**, correct acceptances **0.219**. Whether the verifier was right does not move the score. Section 24.9. **Cell D — a wrong acceptance — is still empty after 100 trials, so the 2×2 is not closed and cell C rests on n=3.** Getting there needs evidence designed to look relevant without answering, not more runs.
+- **The ablation was never stale**, and the reason matters more than the re-run: it supplies its own inputs and so measures a ceiling, not a capability. Config D has shown parity with the best configuration for months while the live signal scored zero. Section 24.5.
+- **OmniRoute's "~1.62B free tokens" and its "zero credentials" describe disjoint sets of providers** — settled from its own source, not inferred. Section 24.6.
+- **Drift works, and it is blind for 12 spans per agent after every restart.** 34 conversational turns through a real RAG chatbot finally filled its windows — the first time this project has produced a sustained drift value at all. The verifier's mean rose 0.306 → 0.396 across a deliberate topic switch, correctly; the retriever stayed at 0.093, also correctly, because its output barely varies with the question. **Only the verifier has data on both sides of the switch**, so that is the whole claim. Section 26.3.
+- **A monitoring dashboard shipped four separate ways of fabricating telemetry**, including a vite middleware that answered every `/v1/*` and `/chat` request from fixtures before it could reach a backend — no model was ever called and nothing was ever monitored, and it rendered perfectly. Seventh instance in this repo, and the first where the invented thing was telemetry rather than copy. Section 26.1.
+- **A model can be served and then not, within hours.** `google/gemma-4-31b-it` answered the 24.8 scan and now hangs indefinitely with no error; `z-ai/glm-5.3-flash` followed it the same day. 24.7's "listed is not served" needs a third state. Section 26.2.
 - Docker, GitHub, and dev-server setup are all previously verified working — see Section 4 for exact commands, not re-derived here.
 
 ---
@@ -2396,5 +2408,942 @@ New:
   OmniRoute's own banner said it was listening on `0.0.0.0` with no API key and
   billing to your providers. Config written after the process starts does not
   apply to it.
+
+---
+
+## 24. The pipeline from 23.4 was run, and it had never worked (2026-09-18/19)
+
+23.4 ended with "Not yet run end to end." Running it found five faults in one
+file. Four of them made it deliver nothing; the fifth was a sentence in its own
+docstring describing behaviour the code did not have.
+
+The order matters, because each fault was only reachable after the one before
+it was fixed, and the last two were unreachable without a real model.
+
+### 24.1 It delivered nothing, and said it had
+
+A stub client -- five canned strings, no network -- was enough to find this.
+Zero POSTs reached the backend, zero traces, zero spans, while the script
+printed five successful agent lines and `sent 1 trace(s)`.
+
+Two faults, either one sufficient:
+
+- **`pulse.start()` is never called.** `client._ensure_transport` auto-starts
+  the transport only when an event loop is already running, and catches
+  `RuntimeError` when there is none. The script was fully synchronous, so it
+  took the quiet branch every time. `end_span` still enqueued; no flush task
+  ever existed.
+- **`pulse.shutdown()` is a coroutine, called without `await`.** It surfaced
+  only as a `RuntimeWarning`. It would have been a no-op regardless, because
+  `_started` was `False`.
+
+The file's own comment says a missing drain "looks like the run silently did
+nothing." It did exactly that, and the comment was written by someone who
+understood the failure and still shipped it.
+
+Fixed by adopting the lifecycle `demo/research_assistant.py` already used:
+async `main`/`run_once`/`call`, `await pulse.start()`, `await pulse.shutdown()`
+in a `finally`, and `asyncio.to_thread` around the blocking openai call so the
+flush task runs between agents instead of holding every span until the end.
+
+Verified with the stub: 1 trace, 5 spans, 5 jobs succeeded, and
+`TOOL_CLAIM_MISMATCH` (HIGH) on the retriever, which claimed 5 documents where
+`local_retriever` returned 3. **That is 18.4's signal firing on the ingest
+path**, from a real tool result rather than a benchmark fixture.
+
+### 24.2 Two faults only a real model could reach
+
+The stub proved delivery and could not prove anything else, because fixtures
+are ASCII and always well-formed.
+
+- **`UnicodeEncodeError` on the first completion.** The model writes ordinary
+  words like "Retrieval-augmented" with U+2011, and a Windows console is
+  cp1252. The run died on the first agent. Only the console preview was ever
+  affected -- spans go out as JSON over HTTP and always carried the original
+  text -- so `errors="replace"` on stdout/stderr costs nothing that matters.
+- **`except Exception: return 1` in `main`** reported that crash as a bare exit
+  code: no message, no traceback, no failing agent named. The first real run
+  looked like the script had simply stopped.
+
+### 24.3 The `.env` the docstring promised
+
+The usage note has always said the key can live "in a .env this script is run
+with". Nothing in the import chain loaded one. The sentence was true only for a
+caller who had already exported the variable, which is the case where the .env
+is irrelevant.
+
+Fifth fault, same shape as the first four and the same shape as 16.4, 21.8,
+22.5 and 23.3: **the documentation described a capability the code did not
+have.**
+
+### 24.4 Disagreement reliably flags the agent that was right
+
+> **Superseded in part by 24.9.** The separation below held when measured
+> properly on 87 trials across five verifier families, so this section is not
+> wrong. What 24.9 adds is the part this data could not reach: a *wrong* refusal
+> scores 0.999, fractionally above a correct one, so within refusals the signal
+> is blind to whether the verifier was right. Read 24.9 before quoting anything
+> here.
+
+**This section was rewritten on 2026-09-19 after the five-family run. The first
+version claimed "a correct refusal scores as a hallucination" from one model
+and two traces. Four traces on five model families do not support that as a
+rule, and the corrected finding is narrower and more useful.** The original
+claim is kept below as 24.4.1 because how it broke is the instructive part.
+
+Four runs, five different model families, one variable: whether the retrieved
+evidence actually answers the query. `verifier` is `nex-agi/nex-n2.5-pro` in
+all four.
+
+| run | query | verifier said | contradiction | grounding | disagreement | risk |
+| :--- | :--- | :--- | ---: | ---: | ---: | ---: |
+| R1 | kubernetes pod autoscaling | **No** | 0.850 | 0.852 | 0.966 | 0.890 `high` |
+| R2 | SQLite WAL concurrency | **Yes** | 0.004 | 0.011 | 0.001 | 0.008 `low` |
+| R3 | gradient descent optimizers | **No** | 0.011 | 0.011 | 0.983 | 0.335 `low` |
+| R4 | token bucket backoff | **No** | 0.116 | 0.117 | 0.996 | 0.410 `medium` |
+
+The verifier was **correct in all four**. R4 was designed as an on-corpus query
+-- KB-429 covers token buckets -- and retrieval returned Transformers, SQLite
+and telemetry instead, so the verifier was right to refuse there too. Only R2
+had successful retrieval.
+
+A further eight queries were then run to widen this. Across every completed
+verifier span in the database, classified only by whether the agent opened by
+accepting or refusing the evidence:
+
+| group | n | disagreement | contradiction |
+| :--- | ---: | :--- | :--- |
+| refused ("No ...") | 6 | **0.966 – 1.000** | 0.011 – 0.850 |
+| accepted ("Yes ...") | 4 | **0.000 – 0.020** | 0.001 – 0.062 |
+
+**What is consistent: disagreement.** The two groups do not overlap at all, and
+the gap between them is two orders of magnitude. Every time the verifier
+correctly identified that retrieval had failed, the signal fired at near 1.0
+against it -- because it compares the verifier's "no" with four other agents
+confidently discussing the retrieved documents. The signal works exactly as
+designed and points at the one agent in the trace that was not wrong.
+
+**What is not consistent: grounding.** The same two groups overlap on
+contradiction: a refusal at 0.011 sits *below* an acceptance at 0.062. R1 and R3
+are near-identical sentences -- "No, the evidence does not answer the question
+about X. It discusses A, B and C, but ..." -- and the NLI model rated one a 0.850
+contradiction and the other a 0.988 *entailment*. A 77x spread on a
+surface-identical construction, varying only with the topic named.
+
+So grounding does not reliably penalise refusal. It is **erratic** on refusal,
+which is a different and less quotable problem than the one first claimed.
+
+Three further verifier spans were excluded as unclassifiable: one opened
+"The evidence partially answers the question", and two are older fixture rows
+about teleportation that predate this work.
+
+**What this still is not.** Ten classifiable traces, one verifier model
+(`nex-agi/nex-n2.5-pro`), and one corpus of six documents. Four more off-corpus
+queries were attempted and lost to the account's daily free-model limit, so the
+refusal arm is thinner than planned and the accept arm thinner still at n=4.
+The separation is clean enough to be worth pursuing and nowhere near enough to
+publish.
+
+R3 and R4 raised no alerts despite disagreement near 1.0. That is the 900s
+`AGENTPULSE_ALERT_COOLDOWN_SECONDS` deduplicating against R1's alert, which is
+correct behaviour and not a defect -- but it means **alert counts understate
+how often these signals fire**. Read the scores, not the alert log.
+
+The analyst is worth recording separately. In R1 it wrote that "Kubernetes pod
+autoscaling must be designed to maintain telemetry performance metrics such as
+sub-0.05ms" -- a fabricated connection between the retrieved telemetry KPIs and
+a subject the evidence never mentions. It scored grounding **0.009** and passed
+as `low_risk`. Reusing the evidence's own vocabulary while attaching it to an
+invented subject is not something entailment scoring is positioned to catch.
+
+#### 24.4.1 The claim this replaces, and why it broke
+
+The first version of this section said, from one model and two traces:
+
+> A refusal is a statement *about* evidence and is never entailed *by* it, so
+> entailment scoring cannot separate "made something up" from "correctly
+> reported that the evidence supports nothing."
+
+The mechanism sounded right and the two traces fitted it. R3 falsifies it
+directly: a refusal scored 0.988 entailed. The sentence was reasoning from how
+NLI *ought* to treat meta-statements rather than from measurement, and two
+traces were not enough to notice.
+
+It was labelled a lead rather than a result, which is the only reason this is a
+correction and not a retraction. **Two traces can support any mechanism you
+can think of.** The rule that keeps working in this project is the one from
+22.11: the check that finds things is running the thing, more times than feels
+necessary.
+
+### 24.5 The ablation was never stale
+
+Next-steps item 8 assumed `ablation_results.json` had gone stale. Re-ran the
+whole study: **every classification is bit-identical** to 2026-08-23. Same
+tp/fp/fn/tn, same precision, recall, F1, FPR, FNR across all seven
+configurations, same selected operating point.
+
+It could not have been otherwise. The ablation consumes *raw* per-case signals
+and supplies its own inputs from the dataset, so every fix cited as making it
+stale landed either in an aggregation layer above those signals or in the
+ingest path that feeds them. The tool-claim fix is the clearest case: purely
+additive, `extract_result_count` for the ingest path, nothing changed in
+`evaluate_tool_claims`, which is what the study calls.
+
+**So Config D has shown parity with the best configuration for months while the
+production signal it stands for scored zero across 1,328 live evaluations.**
+Recorded in the limitations, in the template in `ablation.py` rather than the
+generated file, per the regeneration trap in item 6.
+
+Latency did move, 188.1ms to 132-135ms on Config B across three runs, so it is
+not noise. It is also **not the ONNX fix**: the study calls
+`load_models(use_onnx=False)` and has always measured the PyTorch path. The
+cause is unattributed. Recorded as a measurement, not an improvement.
+
+### 24.6 OmniRoute's headline, settled from its own source
+
+23.5 left this as a judgement call. The installed package settles it.
+
+`open-sse/config/freeTierCatalog.ts` holds `FREE_TIER_BUDGETS`: 19 providers
+carrying roughly 1.36B tokens/month, of which `mistral` alone is 1B. Every one
+of the 19 -- mistral, gemini, groq, cerebras, cohere, huggingface, openrouter --
+is an account-based API requiring the user's own credential.
+
+`src/shared/constants/providers/noauth.ts` holds the truly keyless set, and it
+is 13 entries: `aihorde`, `auggie`, `chipotle`, `cloudflare-playground`,
+`codex-app-server`, `devin-cli-agentic`, `duckduckgo-web`, `felo-web`,
+`opencode`, `theoldllm`, `uncloseai`, `veoaifree-web`, `zcode`.
+
+**The intersection of those two lists is empty.** The README's "~1.62B Free
+Tokens / Month" and its "Fresh install, zero credentials" describe disjoint
+sets of providers. Neither sentence is false; together they imply something
+that is.
+
+Three of the 13 are marked `"avoid"` in OmniRoute's own `FREE_TIER_TOS` --
+`opencode`, `duckduckgo-web`, `felo-web` -- because those terms prohibit
+routing through a self-hosted proxy. Four of the names are web scrapers and two
+drive other people's agent CLIs.
+
+The engineering is not the problem and the catalog is honest with itself: its
+comments exclude nvidia, tencent and others as "theoretical, not granted." The
+framing is the problem, and it is worth carrying as a reading skill rather than
+a grudge.
+
+### 24.7 Three of the five default models no longer produce text
+
+23.4 picked five free OpenRouter models, one family each, and recorded that all
+five reported zero pricing. On 2026-09-18 all five still existed in the
+catalogue at zero pricing. **Three of them do not answer.**
+
+| model | result |
+| :--- | :--- |
+| `deepseek/deepseek-v4-flash-0731:free` | serves |
+| `nvidia/nemotron-3.5-lightning:free` | serves, with a visible reasoning preamble |
+| `qwen/qwen3.8-27b:free` | `Provider returned error` |
+| `z-ai/glm-5.2:free` | `Provider returned error` |
+| `liquid/lfm-2.5-2.6b:free` | 200 OK with **empty content** |
+
+The third row is the one to remember. `liquid` returns a well-formed response
+with `content: ""` -- not an error, not a refusal, just nothing. A pipeline that
+checks status codes would record it as a successful call and hand an empty
+string to the evaluator.
+
+Six of the 22 `:free` models were then probed for replacements, and the same
+pattern held: `google/gemma-4-31b-it` and `google/gemma-4-26b-a4b-it` both
+error, `thinkingmachines/inkling` is not available on this tier, and
+`dots-studio/dots-3-note-preview` and `inclusionai/ling-3.0-flash-fin` both
+return empty content. **Roughly half of a catalogue of free models does not
+produce text.**
+
+Working set at the time of writing, five families:
+
+```
+researcher  nvidia/nemotron-3.5-lightning:free
+retriever   deepseek/deepseek-v4-flash-0731:free
+verifier    nex-agi/nex-n2.5-pro:free
+analyst     poolside/laguna-s-2.1:free
+writer      inclusionai/ling-3.0-flash-vl:free
+```
+
+Expect this list to rot. 23.6's standing fact -- send one real request before
+building on a catalogue -- now has a second confirmation and a new corollary:
+**check for empty content, not just for errors.**
+
+### 24.8 NVIDIA's catalogue advertises 82 models; a free key can call nine
+
+OpenRouter's daily free-model limit stopped 24.4 halfway, so build.nvidia.com
+was tried as the way to widen the verifier arm. Its `/v1/models` lists 82
+entries across 21 owners, which sounds like it settles the diversity problem.
+
+It does not. **That catalogue is global and access is per-account.** Calling
+all 54 of its text models on a fresh free key:
+
+| result | count |
+| :--- | ---: |
+| answered with text | 9 |
+| `404 Not found for account` | 40 |
+| timeout or resource-exhausted | 5 |
+
+The nine span six owners -- deepseek-ai, google, meta, mistralai, z-ai and
+nvidia itself. Six is still twice what OpenRouter's free tier reliably served,
+so the move was worth making; the number to quote is nine, not eighty-two.
+
+Every model named in this repo for the nvidia provider was picked from that
+scan. The set it replaced had been picked by reading the catalogue, and not one
+of its five could be called.
+
+**Reasoning models do not return empty, they return truncated.** Four of the
+nine spend completion tokens on a hidden `reasoning_content` field before
+emitting an answer. `deepseek-v4-flash` burned 2,569 characters of it on "what
+is a database index?". At `max_tokens=320` the content came back empty with
+`finish_reason: "length"` -- which reads identically to 24.7's genuinely empty
+completions and is a completely different problem. `max_tokens` is now 1200 and
+`EmptyCompletion` reports which of the two it saw.
+
+### 24.9 The refusal experiment, and the two faults that nearly published a result
+
+`experiments/refusal_disagreement.py` exists to answer the confound 24.4 could
+not: in all ten of its traces "the verifier refused" and "the evidence was
+irrelevant" were the same event, so the separation fits two readings.
+
+    H1 stance   disagreement rises when one agent's stance diverges from the
+                others', regardless of who is right
+    H2 error    disagreement rises when something in the trace is wrong
+
+They differ only in the two cells 24.4 has none of: a wrong refusal on relevant
+evidence, and a wrong acceptance of irrelevant evidence.
+
+**Result, 87 trials across five verifier families:**
+
+| cell | condition | n | disagreement | contradiction |
+| :--- | :--- | ---: | ---: | ---: |
+| A | relevant, verifier accepts | 37 | 0.219 | 0.211 |
+| B | irrelevant, verifier refuses | 47 | 0.978 | 0.897 |
+| C | relevant, verifier **wrongly refuses** | 3 | **0.999** | 0.938 |
+| D | irrelevant, verifier **wrongly accepts** | **0** | — | — |
+
+AUC separating refusal from acceptance: **0.980**.
+
+This **reproduces 24.4 rather than overturning it**, and adds what 24.4 could
+not see. A wrong refusal scores 0.999, fractionally *above* a correct one at
+0.978. **Within refusals, whether the verifier was right makes no difference to
+the score.** That is what H1 predicts and H2 does not.
+
+The 2x2 is still open, and the honest statement is narrower than a verdict:
+cell D is empty after 97 trials, so "does it also fire on a wrong acceptance"
+is unanswered, and cell C rests on n=3. What can be said is that the signal
+tracks stance, and within a stance it is blind to correctness.
+
+**Cell D may not be reachable by running more trials.** Ninety-seven produced
+zero wrong acceptances; these five models simply do not accept irrelevant
+evidence. Filling it needs evidence designed to look relevant without answering
+the question. Doing it with an adversarial prompt would prove nothing.
+
+#### 24.9.1 Two faults in the measurement, one of which looked like a finding
+
+**It was scoring the wrong pair.** `evaluator.py` calls
+`evaluate_against_prior_agents` for each span, comparing an agent against every
+agent *earlier* in the trace and keeping the worst. The verifier is third, so
+its live score is max(researcher, retriever) vs verifier. **The analyst is
+fourth and never enters the verifier's own score** -- and the analyst was
+exactly what this experiment was comparing against. The two quantities differ
+by more than the argument would suggest: AUC 0.980 under the live rule against
+0.645 for the analyst pair. Both are now recorded per trial so the difference
+is in the data rather than in a paragraph.
+
+**The second one was worse.** `load_models` ran only outside `--report-only`,
+while the backfill recomputes NLI. `compute_nli_grounding` returns `None` with
+nothing loaded, `score_disagreement` turns `None` into `0.0`, and the report
+came out with a uniform near-zero disagreement in every cell and an AUC of
+0.455. That reads exactly like *the signal does not work*. **It was an unloaded
+model, and those numbers were reported before the cause was found.**
+
+Worth keeping as the pattern: a silent `None` coerced to a plausible default
+produced a confident, publishable-looking, completely fabricated result. The
+tell was that it was *uniform* -- real signals are noisy.
+
+**A third, caught before it did damage.** Relevance was inferred by matching
+query words against retrieved titles, which marked "transformer multi-head
+self-attention" irrelevant when retrieval had returned *Attention Is All You
+Need*. Every correct acceptance on that query would have been filed as a wrong
+one, in cell D, the cell the experiment turns on. Each query now names the
+document that must be retrieved.
+
+All three were recoverable without re-spending API calls because every trial
+stores its raw verifier output and retrieved titles, and relabelling happens at
+report time rather than being frozen when the trial ran. That is worth copying
+into any experiment that costs money per row.
+
+#### 24.9.2 Aggregate-stable, item-unstable: the finding this session actually produced
+
+The AUC of 0.980 hides the thing that matters for a monitoring product.
+
+Cell A is **bimodal**, and reporting its mean concealed that. Mean 0.248,
+**median 0.046**, and **9 of 40 correct acceptances score above 0.6** — one at
+0.991. Those nine are not spread evenly: `google` and `mistralai` produce none
+of them, while `deepseek-ai` and `z-ai` produce eight between them.
+
+Reading the outputs is what settles it. On one query, three verifier
+acceptances scoring 0.968–0.991 and three scoring 0.005–0.011 say the same
+thing:
+
+> *0.991* — "Yes — the 'Attention Is All You Need' excerpt directly explains
+> that Transformers rely entirely on self-attention and that multi-head
+> attention enables the model to jointly attend to information from different
+> representation subspaces…"
+>
+> *0.007* — "Yes, the evidence includes a description of multi-head attention in
+> Transformers as allowing the model to jointly attend to information from
+> different representation subspaces at different positions."
+
+Measured rather than asserted: **the pairwise semantic similarity between the
+high-scoring and low-scoring outputs is 0.746–0.880.** Near-equivalent
+sentences, scored at opposite ends of the range.
+
+**This is the third instance of the same behaviour in one session**, and the
+three together are the actual result:
+
+| signal | comparison | scores |
+| :--- | :--- | :--- |
+| grounding | the same fabricated Kubernetes/telemetry link, two models | 0.009 vs 0.996 |
+| grounding | near-identical refusal sentences (24.4) | contradiction 0.011 vs 0.850 |
+| disagreement | acceptances at 0.75–0.88 similarity to each other | 0.005 vs 0.991 |
+
+So the claim is not that these signals do not work. In aggregate they separate
+well — AUC 0.979 for disagreement, 0.961 for contradiction, and the ablation's
+F1 of 0.963 has been stable across re-runs a month apart. **The claim is that
+aggregate separation and per-item reliability are different properties, and
+this project has only ever measured the first.**
+
+That distinction is not academic here. AgentPulse alerts on a *span*. A
+`HIGH_HALLUCINATION_RISK` fires against one agent on one trace, and a user
+reads that one number. An AUC of 0.979 says nothing about whether that
+particular number is trustworthy, and this section says it frequently is not.
+
+**What this does not say.** It does not say the signals should be removed. It
+also did not, when first written, quantify how often an item-level score
+misleads — 9 of 40 in one cell was an observation, not a rate. **24.9.3 now
+measures it**, and narrows which signal is at fault.
+
+**Why the mean was the wrong statistic**, and worth carrying: every cell in
+24.9 was first reported as a mean. Cell A's mean of 0.248 reads as "low, with
+noise". Its median of 0.046 with nine outliers above 0.6 reads as "usually
+near-zero, and sometimes completely wrong", which is a different product. The
+report now carries median and an above-threshold count alongside the mean.
+
+#### 24.9.3 Paraphrase stability: the instability measured, and one wrong mechanism
+
+`experiments/paraphrase_stability.py` turns 24.9.2 from three anecdotes into a
+measurement by holding everything fixed except wording. Anchors are real
+verifier outputs carrying their own evidence and prior agents; each is rewritten
+with meaning preserved; every rewrite is checked against its anchor with the
+product's own embedding model and discarded below 0.85 cosine similarity.
+Scoring is identical to the anchor's. **Any spread is the signal reacting to
+wording alone.**
+
+Five anchors, 34 paraphrases, 2 discarded:
+
+| stance | model | signal | anchor | spread | flipped |
+| :--- | :--- | :--- | ---: | ---: | ---: |
+| accept | deepseek | disagreement | 0.968 | **0.980** | 1/3 |
+| accept | google | disagreement | 0.080 | **0.984** | 3/8 |
+| refuse | google | disagreement | 1.000 | **0.957** | 1/6 |
+| accept | meta | disagreement | 0.008 | **0.948** | 2/7 |
+| refuse | deepseek | disagreement | 1.000 | 0.001 | 0/8 |
+| accept | (all) | contradiction | ~0.01 | 0.004–0.057 | 0 |
+| refuse | google | contradiction | 0.991 | **0.634** | 3/6 |
+
+**10 of 34 paraphrase-signal pairs landed on the opposite side of the 0.6 alert
+threshold from their anchor, while meaning the same thing.**
+
+This **localises** the problem rather than restating it. **Disagreement is the
+unstable signal** — four of five anchors span essentially the whole range.
+Contradiction is comparatively stable on acceptances and unstable on refusals,
+which is the same region 24.4 independently found it misbehaving in. Two
+different experiments, two different methods, the same boundary.
+
+The one stable disagreement anchor (deepseek, refusal, spread 0.0006) is worth
+keeping in view: the signal is not uniformly noisy, so whatever drives the
+swing is conditional on something not yet identified.
+
+**A hypothesis tested and rejected, recorded so it is not chased again.** Within
+one anchor's variants, all three paraphrases opening "Certainly" scored ~0.99
+while those opening "Indeed" or "The evidence" scored ~0.02 — which looked
+exactly like the NLI model keying on a discourse marker. Across all 34 it does
+not hold: `the` spans 0.00–1.00 over 18 samples, `indeed` spans 0.00–1.00, and
+`certainly` spans 0.04–1.00. It was a coincidence inside one anchor, and
+publishing it from three examples would have been the precise error this whole
+line of work documents.
+
+So: **the instability is measured, and the mechanism is not known.**
+
+#### 24.9.4 Where the swing comes from, and a design error it exposes
+
+The live disagreement score is `max(researcher, retriever)` for a verifier span.
+Decomposing that max across the paraphrase set costs no API calls, because the
+outputs are already stored.
+
+| stance | model | researcher spread | retriever spread | researcher drives max |
+| :--- | :--- | ---: | ---: | ---: |
+| accept | deepseek | **0.980** | 0.001 | 3/3 |
+| accept | google | **0.984** | 0.001 | 8/8 |
+| accept | meta | **0.948** | 0.005 | 7/7 |
+| refuse | deepseek | 0.001 | 0.001 | 2/8 |
+| refuse | google | **0.957** | **0.992** | 6/6 |
+
+**On every acceptance anchor the instability is entirely the researcher
+comparison.** The retriever comparison moves by at most 0.005 across the same
+paraphrases, and the researcher comparison spans essentially the whole range and
+supplies the max every time.
+
+It does not generalise to refusals: one refusal anchor is stable on both, and
+the other is unstable on both. So this localises the acceptance case and leaves
+the refusal case open.
+
+**The design error is visible regardless of the NLI model's behaviour.** The two
+prior agents produce different kinds of text:
+
+    researcher   "- How does the number of attention heads affect model
+                 capacity across different NLP tasks?
+                 - What theoretical properties distinguish multi-head
+                 self-attention from single-head variants?"
+
+    retriever    "The retrieved documents cover the Transformer's multi-head
+                 self-attention mechanism, DeBERTa's disentangled attention
+                 enhancements, and telemetry performance baselines."
+
+The retriever asserts. **The researcher asks.** A list of questions has no truth
+value, so "does this contradict the verifier's statement?" is not a well-posed
+question to put to an NLI model, and an ill-posed input is free to return
+anything — which is what the 0.948–0.984 spreads look like.
+
+That is a fault in the pipeline rather than in DeBERTa. `evaluate_against_prior_agents`
+compares an agent against *every* earlier agent in the trace, and the trace's
+first agent is a planner whose entire output is questions. Nothing in the
+disagreement design distinguishes agents that make claims from agents that do
+not.
+
+**Worth trying, not yet tried:** excluding planner-type spans from disagreement
+comparison, or gating on whether the source output contains an assertion at all.
+The relevance floor already exists as a precedent for gating a comparison that
+should not have been made — this would be the same idea applied to a different
+malformed case. Whether that fixes the refusal instability is a separate
+question, and 24.9.4 gives no reason to think it would.
+
+#### 24.9.5 The fix works, and it removes the signal
+
+24.9.4 identified the malformed comparison — a planner's questions put to an NLI
+model as a contradiction candidate — and proposed excluding planner spans. That
+was tested on the existing data at no API cost.
+
+**On acceptances the fix does exactly what it should:**
+
+| anchor | spread before | spread after | alert flips |
+| :--- | ---: | ---: | :--- |
+| accept, deepseek | 0.980 | **0.001** | 1/3 → **0/3** |
+| accept, google | 0.984 | **0.001** | 3/8 → **0/8** |
+| accept, meta | 0.948 | **0.005** | 2/7 → **0/7** |
+
+The paraphrase instability on acceptances is entirely eliminated. The mechanism
+in 24.9.4 is confirmed.
+
+**Then the same fix was applied to the 87-trial set, and the signal disappeared:**
+
+| | n | median | mean | above 0.6 |
+| :--- | ---: | ---: | ---: | :--- |
+| accept | 40 | 0.002 | 0.093 | 3/40 |
+| refuse | 50 | 0.000 | 0.413 | 21/50 |
+
+**AUC refusal-vs-acceptance: 0.457, against 0.980 before.** That is no
+separation at all.
+
+So the whole of the disagreement signal's measured performance came from the
+comparison that should never have been made. **Remove the ill-posed input and
+the signal has no discriminative power.** The 0.980 was an artifact, and 24.9's
+"disagreement tracks stance" was describing the behaviour of a planner
+comparison rather than a property of inter-agent disagreement.
+
+**Why the refusal case looked like a regression, and was not.** With the
+researcher removed, most refusal paraphrases score ~0.00 against the retriever,
+and that is correct. The retriever says the documents cover A, B and C; the
+verifier says they cover A, B and C but do not answer the question. Those
+outputs agree. There is no contradiction to find, and the signal correctly
+reports none. It was the researcher comparison that had been manufacturing one.
+
+The exception is instructive: the one refusal paraphrase that leads with its
+negation ("The given evidence **does not include** any information about
+Kubernetes; instead it focuses on…") scores 0.993, while five that state the
+topics first and negate at the end score 0.001–0.012. Same claim, same stance,
+scored by clause order.
+
+**What this means for the product, not the thesis.** Section 14 already recorded
+that disagreement detected 0 of 10 independently labelled contradictions on real
+multi-agent traces — three-for-three with drift and tool-claim. This supplies
+the mechanism for that failure: on this pipeline, the signal's apparent
+separation was produced by a malformed NLI comparison, and its correct-input
+behaviour is close to chance.
+
+It should not be shipping a `HIGH` severity alert in that state. The options are
+to disable it, downgrade it to experimental and stop alerting on it, or redesign
+the comparison so it runs only between agents that make assertions about the
+same proposition — which is a different and harder feature than what exists.
+
+**What this does not establish.** It does not show that inter-agent disagreement
+is unworkable in general, only that this implementation's measured performance
+does not survive removing an input that should never have been in it. A
+comparison designed around claim-bearing spans has not been tested, and 14's
+evidence-partition problem would still apply to it.
+
+### 24.10 Standing facts
+
+New:
+
+- **A detector that benchmarks well can be unreachable, and the benchmark will
+  never say so.** 24.5 is the general form of 18.4. When an experiment supplies
+  its own inputs, it measures a ceiling, not a capability. Ask what the study
+  bypasses before quoting its number.
+- **Disagreement tracks stance, and within a stance is blind to correctness.**
+  87 trials, five verifier families: correct refusals 0.978, **wrong refusals
+  0.999**, correct acceptances 0.219. Whether the verifier was right does not
+  move the score. This is the sharpest open question the project has, and unlike
+  14 it now has a reproduction. 24.9; cell D is still empty, so it is not closed.
+- **Never report a cell as a mean alone.** Cell A's mean of 0.248 reads as "low
+  with noise"; its median is 0.046 with 9 of 40 above the alert threshold, which
+  is "usually near-zero and sometimes completely wrong". The mean hid the
+  session's main finding for several hours. Report median and an
+  above-threshold count.
+- **Aggregate separation is not per-item reliability.** An AUC near 0.98 says
+  how well two groups rank against each other. It says nothing about whether any
+  single score is trustworthy, and a product that alerts on one span depends
+  entirely on the latter. 24.9.2.
+- **A silent `None` coerced to a default produced a fabricated result.** An
+  unloaded NLI model made every disagreement score 0.0, and the report read as
+  "the signal does not work" with an AUC of 0.455. Those numbers were reported
+  before the cause was found. **The tell was uniformity** -- real signals are
+  noisy, and a clean flat number across every cell is a bug, not a finding.
+- **Score the pair the production code scores.** `evaluator.py` compares each
+  span against agents *earlier* in the trace, so the verifier is scored against
+  researcher and retriever, never the analyst that follows it. Measuring the
+  analyst pair instead gave AUC 0.645 against the live rule's 0.980 — close
+  enough to argue about, far enough to mislead.
+- **Store raw outputs, and derive labels at report time.** Three separate
+  analysis faults in 24.9 were corrected for free because every trial keeps its
+  verifier text and retrieved titles. An experiment that costs money per row
+  should never freeze a derived label into the row.
+- **A model catalogue is not an entitlement.** NVIDIA lists 82 models; a free
+  key can call nine. 40 of 54 answer `404 Not found for account`. 24.8.
+- **A 200 with empty content is not an error and will be scored.** deepseek
+  served all session and then returned `content: ""` mid-batch. Status is 200,
+  no exception, no error field, and the evaluator receives an empty string.
+  Check for empty text explicitly; `EmptyCompletion` in the demo exists for this.
+- **Grounding is erratic on refusals, not consistently punitive.** Two
+  near-identical refusal sentences scored contradiction 0.850 and 0.011, the
+  second rated 0.988 *entailed*. An earlier version of 24.4 claimed a consistent
+  penalty from two traces and was wrong; see 24.4.1.
+- **Alert counts understate how often a signal fires.** A 900s cooldown
+  deduplicated two of three disagreement alerts. Read the scores, not the alert
+  log.
+- **Reusing the evidence's vocabulary while attaching it to an invented subject
+  scores as well grounded.** The analyst wrote that Kubernetes autoscaling must
+  hold sub-0.05ms telemetry thresholds, from documents that never mention
+  Kubernetes, and scored grounding 0.009.
+- **A stub proves delivery and nothing else.** Fixtures are ASCII, well-formed,
+  and never refuse. Two of the five faults in 24 were unreachable until a real
+  model produced real prose.
+- **`except Exception: return 1` is how a project loses a week.** The
+  UnicodeEncodeError was one line of traceback away from obvious and was
+  reported as an exit code.
+- **Check whether the headline number and the "no setup needed" claim describe
+  the same thing.** 24.6 is the general form. Two true sentences placed next to
+  each other can assert something neither one says.
+- **`.venv/Scripts/uvicorn.exe` is stale and fails with exit code 1 and no
+  output**; use `python -m uvicorn`. The shim has the pre-rename path baked in,
+  which is the same staleness as the editable installs in Section 4.
+- **Run the API and the worker from the same cwd.** `AGENTPULSE_DATABASE_URL` is
+  relative, so a worker started inside `backend/` opens an empty
+  `backend/data/agentpulse.db` and dies on `no such table: evaluation_jobs`.
+  Section 4 warned about the two files; this is how they bite in practice.
+- **`experiments/ablation.py` ignores `AGENTPULSE_MODEL_CACHE_DIR`.** It calls
+  `load_models()` without `cache_dir`, so it falls back to `./models` relative
+  to cwd and will re-download 1.2 GB in a fresh worktree.
+- **The five OpenRouter model ids from 23.4 are all still live** at zero prompt
+  and completion pricing, re-checked against the catalogue on 2026-09-18.
+- **Pollinations serves keyless and is OpenAI-compatible**, so it is the honest
+  smoke test when there is no key. Its anonymous tier is one model
+  (`openai-fast`), so it cannot produce a meaningful disagreement number.
+
+Open, and the reason this section stops where it does:
+
+- **Cell D is the whole remaining question, and more trials will not fill it.**
+  97 produced zero wrong acceptances. It needs evidence constructed to look
+  relevant without answering the question — a designed corpus entry, not another
+  run. Cell C also needs more than n=3 before the "wrong refusals score as high
+  as correct ones" line carries weight, and that one *will* fill with volume.
+- **The experiment measures the evaluator, not the ingest path**, the same
+  caveat 24.5 records about the ablation. Nothing here says the signal is
+  reachable in production; 18.4 is the standing reminder of that distinction.
+- **The SDK still discards spans silently from any synchronous caller.** 24.1
+  fixed the demo, not the footgun underneath it.
+
+---
+
+## 25. The same test applied to the other three signals (2026-09-21)
+
+24.9.5 found that disagreement's measured performance came from an input that
+should never have been in the comparison. The obvious follow-up is whether the
+other three signals have the same shape of problem. They were each given the
+test their design invites.
+
+| signal | test | result |
+| :--- | :--- | :--- |
+| drift | paraphrase stability | **robust** |
+| grounding | premise truncation | **clean on this corpus** |
+| grounding | paraphrase stability (24.9.3) | stable on acceptances, weak on refusals |
+| tool-claim | dependence on prompt-dictated phrasing | **fails: 9/9 → 0/9** |
+
+### 25.1 Drift is the robust one
+
+Centroid distance across the same paraphrase set that broke disagreement:
+
+| anchor | spread |
+| :--- | ---: |
+| accept, deepseek | 0.031 |
+| refuse, deepseek | 0.084 |
+| accept, google | 0.059 |
+| refuse, google | 0.084 |
+| accept, meta | 0.074 |
+
+Mean spread **0.066**, against disagreement's 0.948–0.984 on the identical
+texts. Roughly fourteen times tighter, and every value sits far below the 0.30
+drift threshold, so no paraphrase would flip a drift alert.
+
+This is what the design predicts rather than a surprise: sentence embeddings are
+trained to be paraphrase-invariant and NLI is not. It is worth stating anyway,
+because it means the instability in 24.9 is a property of the NLI-based signals
+specifically and not of the evaluation stack as a whole.
+
+### 25.2 Grounding's truncation risk does not fire here
+
+`compute_nli_grounding` tokenises once without truncation to learn the true
+length, then truncates to `MAX_NLI_TOKENS = 512`. Across 100 grounding
+comparisons on the demo corpus: **0 truncated**, token lengths 209–288, median
+235.
+
+So the malformed-input class of fault does not apply to grounding on this
+corpus. That is a statement about a six-document corpus retrieved at top_k=3,
+not about grounding in general — a production retriever returning longer
+documents would cross 512 and the score would then describe only the part the
+model read.
+
+**One gap worth closing regardless.** `input_truncated` is computed per
+evaluation and surfaced only as a `logger.warning` fired **once per worker
+process**. It is not stored on the evaluation row. A user reading a grounding
+score cannot tell whether the model saw all of the evidence, and after the first
+occurrence neither can the logs.
+
+### 25.3 Tool-claim only works because the prompt dictates the phrasing
+
+`demo/multi_model_pipeline.py` instructs the retriever agent:
+
+> "State how many documents you are using, in the form 'Retrieved N documents'."
+
+That is the exact phrasing `COUNT_PATTERNS` matches. Tested against the nine
+real retriever outputs in the experiment data:
+
+| condition | extracted a count |
+| :--- | :--- |
+| text as produced | **9 of 9** |
+| with the dictated sentence removed | **0 of 9** |
+
+The models mostly wrote their own sentence in prose — "I retrieved three
+documents covering DeBERTa's disentangled attention…" — and then appended
+"Retrieved 3 documents." because they were told to. The prose form extracts
+nothing: `COUNT_PATTERNS` is digit-only, so "three documents" does not match
+while "3 documents" does.
+
+**This is the mechanism behind Section 11.** The validator extracted zero claims
+across 8,353 prose spans from five real models, and nobody could say why. Real
+agents write "three documents". The regex reads digits.
+
+So the demo does not demonstrate the tool-claim signal. It demonstrates the
+signal against text the demo asked the model to produce in the validator's own
+format, which is the same shape of fault as 24.5's ablation feeding
+`evaluate_tool_claims` a `result_count` from the dataset.
+
+### 25.4 Where that leaves the four signals
+
+| signal | status |
+| :--- | :--- |
+| drift | robust to paraphrase; the strongest of the four, consistent with Section 13 |
+| grounding | stable on acceptances, erratic on refusals (24.9.3); truncation not triggered here but unrecorded when it is |
+| tool-claim | extracts only when the prompt dictates the format; 0 of 9 otherwise |
+| disagreement | measured performance was an artifact; alerting withdrawn (24.9.5) |
+
+Two of four have performance that comes from the harness rather than the signal,
+and in both cases the earlier external-validation failures — Section 11 for
+tool-claim, Section 14 for disagreement — now have mechanisms rather than just
+results.
+
+**Not claimed:** that grounding and drift are validated. Neither has been tested
+against independently labelled production data in this session; they have only
+been shown not to fail in the specific way disagreement failed. Section 14's
+"three for three" record stands, and this section explains two of the three
+rather than overturning any of them.
+
+---
+
+## 26. The RAG chatbot, and the first real answer about drift (2026-09-20/21)
+
+Section 25 left drift as the most robust of the four signals and the only one
+with no production data behind it. It needs 32 evaluated spans for one agent
+and every script in this repo had sent five. A chatbot was built to close that,
+and answering the question took four rounds of removing things that made the
+answer look already-answered.
+
+### 26.1 The frontend arrived with four ways of faking the answer
+
+A commit added `dashboard/src/components/rag/` -- six components, `ragApi.ts`,
+`riskTone.ts` and a test -- wired into the product nav as **RAG Live Monitor**.
+It also carried four separate mechanisms that produced a working-looking screen
+with nothing behind it.
+
+**`vite.config.ts` was a mock API server.** A middleware plugin named
+`agentpulse-mock-api` intercepted every `/v1/*`, `/chat` and `/corpus` request
+and answered it from `src/lib/mockData.ts` before it could reach a backend.
+There was no proxy behind it, so under `npm run dev` nothing was ever real:
+agents, traces, alerts, drift and evaluator health all invented, and `/chat`
+returning one hardcoded paragraph about SQLite WAL with a `Math.random()`
+trace_id and a fixed verifier verdict. No model was called and nothing was
+monitored.
+
+**`useTelemetry.ts` fell back to fixtures on error** and then set
+`connected = true, error = null`, so an unreachable backend displayed invented
+agents and incidents while stating it was connected.
+
+**`RagChatbotApp` ran the simulator when `!ragStatus.ok`**, so a missing backend
+produced a fabricated conversation rather than an error.
+
+**`RagChatbotApp` invented a trace_id** when a turn had none -- `'tr_' +
+Math.random()` -- rendering an id a viewer can look up in AgentPulse and will
+not find.
+
+All four removed, `mockData.ts` deleted rather than orphaned per 23.2. Verified
+with the backend deliberately stopped, in the rendered page: `/v1/agents`,
+`/chat` and `/corpus` all return 500 through the new proxies and the UI reads
+"Cannot reach AgentPulse".
+
+**The pattern is worth naming.** These are not sloppy fallbacks; each one was
+written to make the UI work without its backend, which is a reasonable
+engineering instinct everywhere except in a monitoring tool. Here the product
+*is* the claim that what you see is real. This is the seventh instance in the
+repo and the first where the fabricated thing was telemetry rather than copy.
+
+### 26.2 The chatbot
+
+`demo/chatbot/app.py` serves the contract in `dashboard/src/lib/ragTypes.ts`:
+`POST /chat`, `GET /corpus`, three agents on three models, one trace per turn.
+The answerer carries retrieved text as `input_summary` and its reply as
+`output_summary`, the pair `evaluate_grounding` compares. Errors return 200
+with `error` and whichever agents completed, with the real trace_id.
+
+First real turn, end to end:
+
+    retriever  mistralai/mistral-nemotron     56.1s
+    verifier   meta/muse-glimmer-30b           2.2s
+    answerer   deepseek-ai/deepseek-v4-flash   7.5s
+
+    3 spans sent, 3 evaluated, grounding 0.052 / 0.040 / 0.494
+
+**Model volatility is worse than 24.7 recorded.** Over roughly two hours, on the
+same key:
+
+| model | observed |
+| :--- | :--- |
+| `google/gemma-4-31b-it` | answered the 24.8 scan, then hung indefinitely -- 90s, no response, no error |
+| `z-ai/glm-5.3-flash` | same, later the same day |
+| `mistralai/mistral-nemotron` | 56s, then over 75s, then 26.9s |
+| `deepseek-ai/deepseek-v4-flash` | 4.4s, then 7.5s, then 30.8s |
+
+24.7's rule was "listed is not served". This adds a third state: **served, then
+not**, within hours, with no error to distinguish it from slowness. Two
+consequences were engineered for: a 75s request timeout, because the three calls
+are sequential so a hung provider takes the whole turn and shows as a spinner;
+and model choices re-measured rather than carried forward.
+
+`/corpus` also returned `{"documents": []}` because the attribute is `corpus`,
+not `documents`. It answered 200, so the frontend would have rendered "no
+corpus" rather than a fault.
+
+### 26.3 Drift, finally measured against real traffic
+
+34 turns, deliberately split: 17 on-corpus questions the six documents can
+answer, then 17 off-corpus ones they cannot. Sending 34 similar questions would
+have filled the windows and proved only that a counter increments; drift exists
+to detect a change, so there had to be one. 33 turns succeeded, one timed out,
+46 minutes.
+
+**Drift produces values. It had never been given the chance.**
+
+| agent | drift rows | with a window value | max |
+| :--- | ---: | ---: | ---: |
+| verifier | 58 | 28 | 0.4261 |
+| retriever | 57 | 17 | 0.1073 |
+| answerer | 36 | 4 | 0.5142 |
+
+Earlier in the same session the same agents had 33-34 rows and **zero** window
+values, which looked like the signal being broken. It was not. The window needs
+20 baseline samples plus 12 current ones, the baseline pool is persisted
+(16.3's fix) and **the current pool is in-memory by design**:
+
+> "The current window is deliberately left empty: it holds the most recent
+> outputs, and outputs from before a restart are no longer current."
+
+That reasoning is sound. Its consequence had never been stated: **after every
+worker restart, every agent needs 12 fresh spans before
+`window_centroid_distance` returns anything at all.** The worker was restarted
+several times during the session, which is why 33 spans produced nothing. It is
+not a bug and it is a real operational property -- every deploy, crash or
+restart blinds the signal alerting depends on, per agent, until traffic
+re-warms it.
+
+**Did it detect the shift?**
+
+| agent | before the switch | after |
+| :--- | :--- | :--- |
+| verifier | n=11, mean **0.306** | n=17, mean **0.396**, 17/17 above the 0.30 threshold |
+| answerer | n=0 | n=4, mean 0.502 |
+| retriever | n=0 | n=17, mean **0.093**, 0/17 above threshold |
+
+**The verifier detected it, and detected it correctly.** Its mean rose from
+0.306 to 0.396 across the boundary.
+
+**The retriever did not, and that is also correct.** Its output barely changes
+with the question -- "three documents were retrieved, covering X, Y and Z" --
+because the corpus is the same six documents regardless of what is asked. Its
+distribution genuinely did not shift, and drift reporting 0.093 is right.
+
+**Only the verifier's comparison is real.** The retriever and answerer have
+*no* pre-switch window values, because their windows filled after the boundary.
+For those two this run cannot compare before against after at all. One agent
+detected one shift; that is the whole claim.
+
+### 26.4 What this settles, and what it does not
+
+The question was "is AgentPulse actually monitoring a live conversation, or
+does it only look like it is". For grounding and drift the answer is now yes,
+measured rather than displayed: 33 conversational turns, 99 spans, evaluated
+scores, and a drift signal that moved when the subject did.
+
+It does not say the scores are correct. It never could -- that needs labelled
+data, which is what 24.9 and 25 were for. It says the machine runs.
+
+Two things it did surface that no dashboard would have:
+
+- **drift is blind for 12 spans per agent after every restart**, which in a
+  demo is most of the demo, and in production is every deploy
+- **the free tier's latency moves by an order of magnitude within an hour**, so
+  a turn costs between 9 and 247 seconds with no way to predict which
+
+Open: the retriever and answerer still have no before/after comparison, and
+getting one means a second run of this length without a restart in the middle.
 
 ---
