@@ -244,8 +244,13 @@ export const RagChatbotApp: React.FC<RagChatbotAppProps> = ({
     try {
       let response: ChatResponse;
 
-      if (isSimulatorMode || !ragStatus.ok || forceFailure) {
-        // Use sequential multi-agent simulation
+      // Simulation only when it was asked for. `!ragStatus.ok` used to be in
+      // this condition, which meant an unreachable backend silently produced a
+      // fabricated conversation -- invented agent outputs, an invented verdict,
+      // and a trace_id for a trace that does not exist. The one question this
+      // screen exists to answer is whether AgentPulse is really monitoring, and
+      // that fallback answered it with a fixture.
+      if (isSimulatorMode || forceFailure) {
         response = await simulateSequentialTurn(message, sessionId, {
           simulateFailure: forceFailure,
           onProgress: (stage) => setActiveStage(stage),
@@ -266,7 +271,11 @@ export const RagChatbotApp: React.FC<RagChatbotAppProps> = ({
 
       // Turn finished
       const isError = Boolean(response.error);
-      const traceId = response.trace_id || ('tr_' + Math.random().toString(16).substring(2, 10));
+      // No invented trace ids. This used to fall back to a Math.random() value,
+      // which renders as something a viewer can look up in AgentPulse and
+      // cannot, because that trace was never created. Undefined means the turn
+      // produced no trace, which the UI shows as absent.
+      const traceId = response.trace_id;
 
       setTurns((prev) =>
         prev.map((t) =>
