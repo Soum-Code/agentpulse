@@ -115,6 +115,22 @@ class Evaluation(SQLModel, table=True):
     # no output text). 0 = it ran and found no claim to check.
     tool_claims_found: Optional[int] = None
 
+    # Whether the NLI premise exceeded the model's 512-token window, so the
+    # grounding score describes only the part of the evidence the model read.
+    #
+    # Same fault as tool_claims_found above: it was computed per evaluation and
+    # surfaced only as a logger.warning fired ONCE per worker process, then
+    # dropped. A score cannot be audited after the fact if the one record of
+    # its input being cut is a log line that stopped being emitted after the
+    # first occurrence.
+    #
+    # Not currently triggered on the demo corpus -- 100 comparisons ran 209-288
+    # tokens against a 512 limit (Section 25.2) -- but a production retriever
+    # returning longer documents crosses it, and that is exactly when nobody
+    # would be watching the logs.
+    grounding_input_truncated: Optional[bool] = None
+    grounding_input_tokens: Optional[int] = None
+
     # Composite
     overall_risk_score: Optional[float] = None
     label: Optional[str] = None  # "low_risk", "medium_risk", "high_risk"

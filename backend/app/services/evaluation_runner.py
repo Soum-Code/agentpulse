@@ -221,6 +221,12 @@ async def persist_results(payload: dict[str, Any], result) -> bool:
             tool_claims_found=(
                 result.tool_claim.total_claims if result.tool_claim else None
             ),
+            grounding_input_truncated=(
+                result.grounding.input_truncated if result.grounding else None
+            ),
+            grounding_input_tokens=(
+                result.grounding.input_tokens if result.grounding else None
+            ),
             disagreement_score=(
                 result.disagreement.disagreement_score if result.disagreement else None
             ),
