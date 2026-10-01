@@ -25,6 +25,7 @@ Existing LLM observability tools trace tokens, latency, and cost well, but treat
 - [DRIFT_EXPERIMENT_REPORT.md](DRIFT_EXPERIMENT_REPORT.md) — graded drift detection with negative controls
 - [LABEL_AGREEMENT_REPORT.md](LABEL_AGREEMENT_REPORT.md) — labeling protocol and inter-evaluator agreement
 - [walkthrough.md](walkthrough.md) — setup and verification guide
+- [RELEASING.md](RELEASING.md) — how images and the SDK are published, and the one-time setup that cannot be done from the repo
 
 ## What it does
 
