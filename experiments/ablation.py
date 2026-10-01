@@ -503,8 +503,19 @@ Selection rule: highest F1, ties broken by higher recall.
 - **Drift (Config F) has no real time axis here.** Drift is a temporal signal; these cases are
   independent and file-ordered, so the drift figures describe detector behaviour on an
   arbitrary ordering, not production drift.
+- **This study does not exercise the production ingest path, and Config D is the clearest
+  case.** The ablation hands `evaluate_tool_claims` a `result_count` taken straight from the
+  dataset's `tool_records`. Production has to recover that number from the tool's own
+  `result_summary` text, and could not do so at all until `extract_result_count` was added &mdash;
+  the signal recorded zero non-zero scores across 1,328 live evaluations while this table
+  showed Config D at parity with the best configuration. Read these figures as the ceiling a
+  signal reaches when it is fed correct inputs, not as evidence that it is reachable in
+  production.
 - **Latency figures** are per-case means of the components each configuration uses, measured on
-  CPU. They are not end-to-end request latencies.
+  CPU. They are not end-to-end request latencies. This study calls
+  `load_models(use_onnx=False)`, so it always measures the PyTorch path; the ONNX backend the
+  worker selects in production is not exercised here and changes to it cannot move these
+  numbers.
 - Ground truth is the dataset's `is_failure` label. For the original 50 cases this comes from dual LLM-as-judge evaluation, not human review; for the 23 cases added later it's correct by construction. See `LABEL_AGREEMENT_REPORT.md`.
 - Config G's `overall_risk_score` incorporates `grounding_score`, which was recalibrated (neutral-vs-contradiction weighting) after an earlier version of this ablation was run; see `GROUNDING_SCORE_CALIBRATION_REPORT.md`. Configs A-F use `contradiction_prob` directly, not `grounding_score`, and are unaffected by that change.
 
