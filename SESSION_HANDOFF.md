@@ -3187,3 +3187,92 @@ been shown not to fail in the specific way disagreement failed. Section 14's
 rather than overturning any of them.
 
 ---
+
+## 26. e31fb58 overwrote #50-#55, and the chat interface got a real backend (2026-10-01)
+
+### 26.1 What e31fb58 was
+
+Commit `e31fb58` is titled "remove tool claim tracking and alerting" and its
+message describes only that. Its tree is 48 files, +3,609/-12,482, and it
+predates #50 through #55. Among other things it:
+
+- cut the handoff back to Section 23 and rewound its header to 2026-08-27
+- deleted the paraphrase-stability and refusal-disagreement experiments, their
+  reports and result files
+- turned the `AGENT_DISAGREEMENT` alert back on after 975717f withdrew it
+- dropped `tool_claims_found`, its migration, and its tests
+- restored the 2026-08-23 ablation results over the 2026-09-18 ones, and emptied
+  `.env.example`
+- deleted both dashboard lockfiles
+- made `useTelemetry` fall back to `MOCK_*` data and report `connected: true`
+  when the API was unreachable, so a dead backend rendered as a healthy fleet
+- added a Vite dev plugin answering `/v1/*`, `/chat` and `/corpus` with invented
+  data
+- put four removed claims back on the public page: a GitHub Action CI gate, a
+  16MB ring buffer, consensus voting, and the withdrawn alert
+
+It reads as a stale working tree committed over `main`, not as a decision. Soum
+confirmed it was not intended. Restored in `27a5f25` (everything outside
+`dashboard/src`) and `3186f75` (the dashboard regressions above, plus the root
+`package.json` and `metadata.json`, which are AI Studio scaffolding that nothing
+reads and whose npm workspace would shadow `dashboard/package-lock.json`).
+
+**Standing fact:** a commit whose message covers 2 files and whose diff covers 48
+is not what the message says. Check `git show --stat` before building on top of a
+commit that arrives from a different tool's working tree.
+
+### 26.2 The chat interface now has a backend
+
+`e31fb58` also carried a RAG chat view (`dashboard/src/components/rag/`) that
+calls `POST /chat` and `GET /corpus` on `localhost:8100`. Nothing in the repo
+served that port, and when it was unreachable the view fell back to
+`simulateSequentialTurn`, which returns a hardcoded SQLite answer with invented
+cosine scores. `demo/chat_server.py` is the service it was waiting for:
+
+    uvicorn demo.chat_server:app --port 8100
+
+Three agents, three models, one span each, one trace:
+
+| agent | does | span carries |
+| :--- | :--- | :--- |
+| retriever | real `local_retriever` search, then the model describes it | the index's real result as `tool_result_summary` |
+| verifier | does the evidence answer the question | the evidence as `input_summary` |
+| answerer | answers from the evidence only | the evidence as `input_summary` |
+
+Decisions worth knowing:
+
+- **No credential means 503, never an invented reply.** The body names the
+  variable to set. A failing model or an empty completion is 502 with the agents
+  that did run and the trace id, and the failed span is recorded as an error.
+- **The retriever is not told what phrasing to use.** `multi_model_pipeline.py`
+  dictates "Retrieved N documents", which is what the tool-claim extractor
+  matches (25.3). The chat lets the model word it, so the tool-claim signal here
+  scores what the model wrote. Expect it to extract little: `COUNT_PATTERNS` is
+  digit-only.
+- **Models are the pipeline's:** the answerer uses the pipeline's `analyst`
+  model. `CHAT_PROVIDER`, `CHAT_MODEL_<AGENT>` and `CHAT_BASE_URL` override them,
+  and any OpenAI-compatible endpoint works.
+- **Stateless.** `session_id` is echoed and nothing keys on it.
+
+**Verified:** 21 unit tests (`tests/test_chat_server.py`) against a recording
+fake client, and a live run of the real `openai` client through uvicorn against a
+local stub OpenAI-compatible server: three agents in order, real retrieved
+titles, trace id, 503 with no key, 422 on an empty message.
+
+**Not verified:** any run against a real model. No provider key was available in
+this session, so what the three agents actually say, and what the evaluator then
+scores, is unobserved. The retrieval for "What is self-attention?" returned the
+attention paper plus an SQLite-WAL document and a telemetry-KPI document, because
+the corpus mixes domains and top-3 always returns three; the answerer is told to
+say so when evidence does not cover the question, and whether it does is
+untested.
+
+### 26.3 Left alone on purpose
+
+The chat view itself (`RagChatbotApp.tsx`, `ragApi.ts`, `MonitoringPanel.tsx`) is
+unchanged, by instruction. It still contains `simulateSequentialTurn`, a default
+corpus of SQLite titles, and a fallback that stamps `groundingScore: 0.942,
+SUPPORTED` after 30 seconds without an evaluation, and writes fixed drift values
+once 32 spans are counted. Those are fabricated numbers presented as measured.
+Until they are removed, **do not demo that view as live telemetry**, whether or
+not this server is running.
