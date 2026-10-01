@@ -45,10 +45,10 @@ import type { TelemetryProject } from './types';
 import { ExternalLink } from 'lucide-react';
 
 export default function App() {
-  // 'product' is the primary AgentPulse console frontend.
+  // 'public' is the marketing page, 'product' is the console.
   // 'rag' is the fullscreen dedicated RAG monitor & drift verification split-screen.
   // 'public' is the marketing landing page.
-  const [mode, setMode] = useState<DesignMode>('product');
+  const [mode, setMode] = useState<DesignMode>('public');
   const [palette, setPalette] = useState<ColorPalette>('dark');
   const [isCalmMode, setIsCalmMode] = useState<boolean>(false);
   const [chalkSurface, setChalkSurface] = useState<ChalkSurfacePreset>('classic-white');
