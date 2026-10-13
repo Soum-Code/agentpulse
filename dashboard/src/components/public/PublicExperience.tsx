@@ -2188,7 +2188,7 @@ async def researcher_node(state):
             </div>
 
             <div className={`grid grid-cols-12 px-6 py-4 items-center transition-colors ${palette === 'butter' ? 'hover:bg-amber-50' : palette === 'chalk' ? 'hover:bg-neutral-50' : 'hover:bg-white/[0.02]'}`}>
-              <div className={`col-span-4 font-bold ${palette === 'dark' ? 'text-white' : 'text-neutral-950'}`}>Multi-Agent Disagreement Matrix</div>
+              <div className={`col-span-4 font-bold ${palette === 'dark' ? 'text-white' : 'text-neutral-950'}`}>Multi-Agent Disagreement</div>
               <div className="col-span-3">
                 <span className={`px-2.5 py-0.5 rounded font-bold ${
                   palette === 'butter'
@@ -2200,7 +2200,7 @@ async def researcher_node(state):
                   EXPERIMENTAL
                 </span>
               </div>
-              <div className={`col-span-5 ${palette === 'butter' ? 'text-neutral-800 font-medium' : palette === 'chalk' ? 'text-neutral-700' : 'text-neutral-400'}`}>Consensus voting across parallel reasoning lanes</div>
+              <div className={`col-span-5 ${palette === 'butter' ? 'text-neutral-800 font-medium' : palette === 'chalk' ? 'text-neutral-700' : 'text-neutral-400'}`}>Pairwise DeBERTa NLI between agent outputs in a trace &mdash; score recorded, alerting withdrawn</div>
             </div>
 
             <div className={`grid grid-cols-12 px-6 py-4 items-center transition-colors ${palette === 'butter' ? 'hover:bg-amber-50' : palette === 'chalk' ? 'hover:bg-neutral-50' : 'hover:bg-white/[0.02]'}`}>
@@ -2220,22 +2220,6 @@ async def researcher_node(state):
             </div>
 
             <div className={`grid grid-cols-12 px-6 py-4 items-center transition-colors ${palette === 'butter' ? 'hover:bg-amber-50' : palette === 'chalk' ? 'hover:bg-neutral-50' : 'hover:bg-white/[0.02]'}`}>
-              <div className={`col-span-4 font-bold ${palette === 'dark' ? 'text-white' : 'text-neutral-950'}`}>Enterprise CI/CD Breaking Gate</div>
-              <div className="col-span-3">
-                <span className={`px-2.5 py-0.5 rounded font-bold ${
-                  palette === 'butter'
-                    ? 'bg-emerald-300 text-emerald-950 border border-neutral-950'
-                    : palette === 'chalk'
-                    ? 'bg-emerald-100 border border-emerald-300 text-emerald-900'
-                    : 'bg-emerald-500/20 border border-emerald-500/40 text-emerald-300'
-                }`}>
-                  ENTERPRISE
-                </span>
-              </div>
-              <div className={`col-span-5 ${palette === 'butter' ? 'text-neutral-800 font-medium' : palette === 'chalk' ? 'text-neutral-700' : 'text-neutral-400'}`}>GitHub Action with configurable DeBERTa contradiction &amp; ASI thresholds</div>
-            </div>
-
-            <div className={`grid grid-cols-12 px-6 py-4 items-center transition-colors ${palette === 'butter' ? 'hover:bg-amber-50' : palette === 'chalk' ? 'hover:bg-neutral-50' : 'hover:bg-white/[0.02]'}`}>
               <div className={`col-span-4 font-bold ${palette === 'dark' ? 'text-white' : 'text-neutral-950'}`}>Client-Side PII / Secret Masking</div>
               <div className="col-span-3">
                 <span className={`px-2.5 py-0.5 rounded font-bold ${
@@ -2252,7 +2236,7 @@ async def researcher_node(state):
             </div>
 
             <div className={`grid grid-cols-12 px-6 py-4 items-center transition-colors ${palette === 'butter' ? 'hover:bg-amber-50' : palette === 'chalk' ? 'hover:bg-neutral-50' : 'hover:bg-white/[0.02]'}`}>
-              <div className={`col-span-4 font-bold ${palette === 'dark' ? 'text-white' : 'text-neutral-950'}`}>Bounded Memory Ring Buffer</div>
+              <div className={`col-span-4 font-bold ${palette === 'dark' ? 'text-white' : 'text-neutral-950'}`}>Bounded Memory Buffer</div>
               <div className="col-span-3">
                 <span className={`px-2.5 py-0.5 rounded font-bold ${
                   palette === 'butter'
@@ -2264,7 +2248,7 @@ async def researcher_node(state):
                   ENTERPRISE
                 </span>
               </div>
-              <div className={`col-span-5 ${palette === 'butter' ? 'text-neutral-800 font-medium' : palette === 'chalk' ? 'text-neutral-700' : 'text-neutral-400'}`}>Strict 16MB pre-allocated ring buffer with non-blocking drop-oldest policy</div>
+              <div className={`col-span-5 ${palette === 'butter' ? 'text-neutral-800 font-medium' : palette === 'chalk' ? 'text-neutral-700' : 'text-neutral-400'}`}>Span-count bounded buffer (10,000 default) with non-blocking drop-oldest policy</div>
             </div>
           </div>
         </div>

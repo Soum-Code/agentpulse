@@ -22,6 +22,19 @@ server {
         set $backend_host backend;
         proxy_pass http://$backend_host:8000$request_uri;
 
+        # Runtime credential. The browser has no key of its own in a pre-built
+        # image (a VITE_* value is inlined into the shipped JS at build time and
+        # is public to every visitor), so nginx attaches AGENTPULSE_API_KEY on
+        # the way to the backend. When it is unset the header the client sent is
+        # passed through unchanged, which keeps builds that bake the key in
+        # working. Consequence: anyone who can reach this port holds the key's
+        # privileges, so put it behind your own authentication or network.
+        set $upstream_key "${AGENTPULSE_API_KEY}";
+        if ($upstream_key = "") {
+            set $upstream_key $http_x_api_key;
+        }
+        proxy_set_header X-API-Key $upstream_key;
+
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";

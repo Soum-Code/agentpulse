@@ -186,7 +186,7 @@ that returns 200 — otherwise a server that answers 200 for everything would le
 anyone claim ownership of it.
 
 A single-page app fails that test by default: its catch-all hands the
-application shell to every path. `dashboard/nginx.conf` therefore returns a real
+application shell to every path. `dashboard/nginx.conf.template` therefore returns a real
 404 for paths that look like files, and keeps the shell for application routes.
 Confirm both before starting verification:
 
