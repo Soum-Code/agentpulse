@@ -19,17 +19,36 @@ their definitions below:
    a contradiction between non-adjacent agents is never evaluated at all.
 """
 
+# WHAT THIS FILE IS FOR
+# It finds out whether two agents in the same trace contradict each other. For a pair of
+# outputs it asks an NLI model (a model that says if one text follows from, contradicts, or
+# is unrelated to another) how likely a contradiction is. A "relevance gate" then ignores
+# pairs that are about different topics, because NLI often calls those contradictions.
+# Three functions: one for a single pair, one for every pair in a whole trace, and one for
+# the per-span path (the newest agent against each earlier agent).
+#
+# HOW IT FITS IN
+# evaluator.py calls evaluate_against_prior_agents when earlier agents exist. If they do
+# not but one upstream agent is named, it calls evaluate_inter_agent_disagreement.
+# evaluate_trace_disagreements is not called by backend/app; only the experiments and the
+# tests use it. This file gets the NLI model and the text similarity from grounding.py.
+
 from __future__ import annotations
 
+# itertools.combinations lists every pair from a list, each pair once.
 import itertools
 import logging
 from dataclasses import dataclass, field
 from typing import Optional, Sequence
 
+# compute_nli_grounding(premise, hypothesis) gives NLI probabilities, or None if the NLI
+# model is not loaded. compute_semantic_similarity(a, b) gives a similarity from 0 to 1
+# using embeddings, or None if the embedding model is not available.
 from app.services.grounding import compute_nli_grounding, compute_semantic_similarity
 
 logger = logging.getLogger("agentpulse.evaluator.disagreement")
 
+# In short: a pair with similarity below 0.40 counts as off-topic and is never flagged.
 # Minimum topical overlap before a contradiction probability is trusted.
 #
 # Measured problem: DeBERTa NLI returns contradiction_prob >= 0.97 for pairs of
@@ -52,6 +71,10 @@ logger = logging.getLogger("agentpulse.evaluator.disagreement")
 RELEVANCE_FLOOR = 0.40
 
 
+# The result for ONE pair of agents. disagreement_score is the raw NLI contradiction
+# probability (rounded), and it is set even when the pair was gated. To know what it means,
+# read is_disagreement and gated_low_relevance too. semantic_similarity is None when the
+# embedding model was not available.
 @dataclass
 class DisagreementResult:
     """Result of cross-agent disagreement analysis."""
@@ -66,6 +89,10 @@ class DisagreementResult:
     gated_low_relevance: bool = False
 
 
+# The summary over many pairs. max_disagreement_score is the highest score among pairs that
+# were NOT gated. pairs_evaluated counts every pair that gave a result, gated ones included.
+# pairs_gated_low_relevance counts the pairs skipped as off-topic. flagged_pairs lists the
+# pairs judged to contradict.
 @dataclass
 class TraceDisagreementResult:
     """Aggregate disagreement analysis across every agent pair in one trace."""
@@ -78,6 +105,8 @@ class TraceDisagreementResult:
     explanation: str = ""
 
 
+# Compares ONE pair of agent outputs. The source output is the premise and the target
+# output is the hypothesis. Returns None when the pair cannot be checked.
 def evaluate_inter_agent_disagreement(
     source_agent_id: str,
     source_output: str,
@@ -101,9 +130,12 @@ def evaluate_inter_agent_disagreement(
     Returns:
         DisagreementResult or None if evaluation skipped
     """
+    # Step 1: skip (return None) if either text is empty, or if both come from one agent.
     if not source_output or not target_output or source_agent_id == target_agent_id:
         return None
 
+    # Step 2: ask the NLI model how likely it is that the target contradicts the source.
+    # If the model is not loaded there is no answer, so return None.
     # Use DeBERTa NLI: source=premise, target=hypothesis
     nli_res = compute_nli_grounding(source_output, target_output)
     if not nli_res:
@@ -111,20 +143,26 @@ def evaluate_inter_agent_disagreement(
 
     contra_prob = nli_res.contradiction_prob
 
+    # Step 3: check that the two texts are about the same thing, using embedding similarity.
     # Relevance gate. Fail-open on purpose: if the embedding model is
     # unavailable, compute_semantic_similarity returns None and we proceed
     # ungated rather than silently suppressing every disagreement signal --
     # consistent with grounding.py's fail-open policy, and the safer direction
     # for a monitoring system (over-report beats silently reporting nothing).
     similarity = compute_semantic_similarity(source_output, target_output)
+    # gated is True only if the gate is on (floor above 0), a similarity exists, and it is
+    # below the floor. A gated pair is treated as "different topics", not as a conflict.
     gated = (
         relevance_floor > 0.0
         and similarity is not None
         and similarity < relevance_floor
     )
 
+    # Step 4: flag a disagreement only if the contradiction probability reaches the
+    # threshold (>=) and the pair was not gated.
     is_disagreement = contra_prob >= threshold and not gated
 
+    # Step 5: write a one-sentence reason for the reader: gated, flagged, or no conflict.
     if gated:
         explanation = (
             f"Contradiction probability {contra_prob:.3f} between @{source_agent_id} "
@@ -143,6 +181,7 @@ def evaluate_inter_agent_disagreement(
             f"Agents @{source_agent_id} and @{target_agent_id} exhibit semantic alignment."
         )
 
+    # The score is the contradiction probability whether or not the pair was gated.
     return DisagreementResult(
         disagreement_score=round(contra_prob, 4),
         source_agent_id=source_agent_id,
@@ -155,6 +194,8 @@ def evaluate_inter_agent_disagreement(
     )
 
 
+# Compares the agents of a whole trace with each other. Not called by backend/app; only
+# the experiments and the tests use it (the per-span path uses the function below).
 def evaluate_trace_disagreements(
     agent_outputs: Sequence[tuple[str, str]],
     threshold: float = 0.6,
@@ -185,10 +226,14 @@ def evaluate_trace_disagreements(
     Returns:
         TraceDisagreementResult, or None if fewer than two usable outputs.
     """
+    # Step 1: drop agents with an empty output. At least two must remain to compare.
     usable = [(aid, out) for aid, out in agent_outputs if out]
     if len(usable) < 2:
         return None
 
+    # Step 2: choose the pairs. n agents make n*(n-1)/2 pairs. Within the budget, compare
+    # every pair (combinations lists each pair once, the earlier agent first). Over the
+    # budget, compare only neighbours, (0,1), (1,2), ..., and remember that in `degraded`.
     n = len(usable)
     total_pairs = n * (n - 1) // 2
 
@@ -204,11 +249,14 @@ def evaluate_trace_disagreements(
             n, total_pairs, max_pairs,
         )
 
+    # Counters: evaluated = pairs that gave a result; gated_count = pairs skipped as
+    # off-topic; flagged = pairs that contradict; max_score = highest score of a non-gated pair.
     evaluated = 0
     gated_count = 0
     flagged: list[DisagreementResult] = []
     max_score = 0.0
 
+    # Step 3: compare each pair. The earlier agent is the source, the later one the target.
     for i, j in pairs:
         src_id, src_out = usable[i]
         tgt_id, tgt_out = usable[j]
@@ -220,9 +268,12 @@ def evaluate_trace_disagreements(
             threshold=threshold,
             relevance_floor=relevance_floor,
         )
+        # None means the pair could not be checked (same agent id, an empty text, or the
+        # NLI model is not loaded). It is not counted.
         if res is None:
             continue
 
+        # An off-topic pair is counted, but it is kept out of max_score and flagged.
         evaluated += 1
         if res.gated_low_relevance:
             gated_count += 1
@@ -232,6 +283,7 @@ def evaluate_trace_disagreements(
         if res.is_disagreement:
             flagged.append(res)
 
+    # Step 4: write the summary sentence. `worst` is the flagged pair with the highest score.
     if flagged:
         worst = max(flagged, key=lambda r: r.disagreement_score)
         explanation = (
@@ -244,6 +296,7 @@ def evaluate_trace_disagreements(
             f"No contradicting agent pairs across {evaluated} comparison(s)"
             + (f" ({gated_count} skipped as off-topic)." if gated_count else ".")
         )
+    # Add a note when only neighbouring pairs were compared.
     if degraded:
         explanation += " Comparison budget exceeded; adjacent pairs only."
 
@@ -257,6 +310,9 @@ def evaluate_trace_disagreements(
     )
 
 
+# The per-span path: compares the span being evaluated with each earlier agent's output.
+# evaluator.py calls it. The earlier outputs it receives come from
+# evaluation_runner.fetch_prior_agent_outputs: at most 12, same trace, in trace order.
 def evaluate_against_prior_agents(
     current_agent_id: str,
     current_output: str,
@@ -293,22 +349,29 @@ def evaluate_against_prior_agents(
     Returns:
         TraceDisagreementResult, or None if there is nothing to compare.
     """
+    # Step 1: with no output of its own, the current agent has nothing to compare.
     if not current_output:
         return None
 
+    # Step 2: keep earlier outputs that are not empty and come from a DIFFERENT agent
+    # (an agent is not compared with itself).
     usable = [(aid, out) for aid, out in prior_outputs if out and aid != current_agent_id]
     if not usable:
         return None
 
+    # Step 3: respect the budget. If there are too many, keep only the last (newest)
+    # max_comparisons of them.
     truncated = len(usable) > max_comparisons
     if truncated:
         usable = usable[-max_comparisons:]
 
+    # Counters: same meaning as in evaluate_trace_disagreements above.
     evaluated = 0
     gated_count = 0
     flagged: list[DisagreementResult] = []
     max_score = 0.0
 
+    # Step 4: compare each earlier agent (source) with the current agent (target).
     for prior_id, prior_out in usable:
         res = evaluate_inter_agent_disagreement(
             source_agent_id=prior_id,
@@ -330,9 +393,11 @@ def evaluate_against_prior_agents(
         if res.is_disagreement:
             flagged.append(res)
 
+    # No pair could be checked at all (for example the NLI model is not loaded).
     if evaluated == 0:
         return None
 
+    # Step 5: write the summary sentence, then a note if some old agents were skipped.
     if flagged:
         worst = max(flagged, key=lambda r: r.disagreement_score)
         explanation = (
