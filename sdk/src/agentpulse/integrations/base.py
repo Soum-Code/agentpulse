@@ -4,15 +4,30 @@ Defines the required lifecycle hooks for capturing agent execution,
 tool use, LLM calls, handoffs, and errors.
 """
 
+# What this file is for:
+#   Defines BaseIntegration, the list of methods every agent-framework adapter must have.
+#   It is an abstract class (ABC): you cannot create it directly, and a subclass that
+#   skips any @abstractmethod below cannot be created either (Python raises TypeError).
+#   Nothing here records anything; it only fixes the shape of the interface.
+#
+# How it fits in:
+#   LangGraphAdapter (langgraph.py) is the working implementation (its capture_handoff does
+#   nothing). LangChainAdapter and CrewAIAdapter are placeholders whose methods only raise
+#   NotImplementedError.
+
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from typing import Any, Optional
 
 
+# The methods come in pairs: start_agent/end_agent and start_tool/end_tool. Each start_*
+# returns a span id, and the matching end_* needs that id to close the same span.
 class BaseIntegration(ABC):
     """Abstract base class for all agent framework integrations."""
 
+    # Open a span for one agent step. In: the agent's id, an optional role and pipeline name,
+    # the state the agent received, and an optional parent span. Out: the new span id.
     @abstractmethod
     def start_agent(
         self,
@@ -29,6 +44,8 @@ class BaseIntegration(ABC):
         """
         pass
 
+    # Close the span that start_agent() opened. `status` is a short text ("success" by
+    # default); `error` is the exception if the step failed.
     @abstractmethod
     def end_agent(
         self,
@@ -40,6 +57,8 @@ class BaseIntegration(ABC):
         """Called when an agent node completes or fails execution."""
         pass
 
+    # Open a span for one tool call (for example a search or a database lookup). In: the tool
+    # name and its arguments. Out: the new span id.
     @abstractmethod
     def start_tool(
         self,
@@ -55,6 +74,7 @@ class BaseIntegration(ABC):
         """
         pass
 
+    # Close the span that start_tool() opened, with the tool's result or its error.
     @abstractmethod
     def end_tool(
         self,
@@ -66,6 +86,8 @@ class BaseIntegration(ABC):
         """Called when a tool invocation returns a result or fails."""
         pass
 
+    # Record that control passed from one agent to another (from_agent -> to_agent).
+    # LangGraphAdapter accepts the call but does nothing with it.
     @abstractmethod
     def capture_handoff(
         self,
@@ -77,6 +99,7 @@ class BaseIntegration(ABC):
         """Called when execution control transfers between agents."""
         pass
 
+    # Record a failure for a span that is still open.
     @abstractmethod
     def capture_error(
         self,
