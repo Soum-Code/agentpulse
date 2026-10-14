@@ -38,6 +38,22 @@ Outputs:
 - experiments/results/disagreement_truncation_diagnosis.json
 """
 
+# WHAT THIS FILE IS FOR
+# An experiment script, not part of the product. The detector missed all 10 labelled real
+# contradictions in the probe. This script tests one guess for why: the NLI model (a model
+# that says if one text follows from, contradicts, or is unrelated to another) reads at most
+# 512 tokens (a token = a word or a piece of a word), so it may cut off the end of each
+# message, where the debaters state their answer. The script re-runs the real detector on the
+# same 40 labelled pairs with the text whole, cut to its first part, or cut to its last part.
+# For each of the three conditions it counts hits and false alarms, then prints a verdict.
+#
+# HOW IT FITS IN
+# It imports fetch, pick_configs and extract_pairs from disagreement_feasibility_probe.py to
+# rebuild the 40 pairs, and the detector and the NLI tokenizer from the backend.
+# disagreement_formulation_diagnosis.py imports ANSWER_RE, THRESHOLD, final_answer and
+# rebuild_probe_cases from here, and disagreement_extraction_generalization.py imports
+# THRESHOLD.
+
 from __future__ import annotations
 
 import json
@@ -47,9 +63,12 @@ import sys
 import time
 from pathlib import Path
 
+# Add backend/ and the repo root to the import path so `from app.services...` works.
 sys.path.insert(0, str(Path(__file__).parent.parent / "backend"))
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+# `grounding` is used to reach the NLI tokenizer (grounding._nli_tokenizer) that the
+# detector itself uses, so token counts here match what the model sees.
 from app.services import grounding  # noqa: E402
 from app.services.disagreement import (  # noqa: E402
     RELEVANCE_FLOOR,
@@ -70,22 +89,35 @@ OUT_PATH = RESULTS / "disagreement_truncation_diagnosis.json"
 KEY_PATH = RESULTS / "disagreement_probe_key.json"
 LABELS_PATH = RESULTS / "disagreement_probe_labels.json"
 
+# THRESHOLD: the contradiction probability at which the detector raises an alarm. 0.6 is
+# also the default of evaluate_inter_agent_disagreement.
+# MODEL_MAX_TOKENS: the most tokens the NLI model reads from premise + hypothesis together
+# (the same number as MAX_NLI_TOKENS in grounding.py).
 THRESHOLD = 0.6
 MODEL_MAX_TOKENS = 512
 # Half the window per output, minus room for [CLS]/[SEP]/[SEP].
+# That is (512 - 3) // 2 = 254 tokens per output. (The module docstring says 255; the code
+# gives 254.)
 PER_OUTPUT_BUDGET = (MODEL_MAX_TOKENS - 3) // 2
 
 # The final-answer marker these tasks emit. Used only to report WHERE the
 # conclusion sits, never to make a prediction.
+# The pattern matches "A)" or "B)" followed by Yes or No (any letter case, optional spaces
+# in between), as whole words. Example: "A) Yes".
 ANSWER_RE = re.compile(r"\b([AB])\)\s*(Yes|No)\b", re.I)
 
 
+# Loads the NLI and embedding models and checks they work. Stops the script with "ABORT" if
+# a model did not load or the detector cannot score a pair.
 def guard_models() -> None:
+    # Step 1: load the models (sync=True waits until they are ready), then check all loaded.
     load_models(sync=True)
     loaded = models_loaded()
     print(f"  models_loaded(): {loaded}")
     if not all(loaded.values()):
         raise SystemExit(f"ABORT: models not all loaded ({loaded}).")
+    # Step 2: sanity check on an obvious contradiction. A None result means the detector
+    # cannot score pairs at all, so all later numbers would be meaningless.
     probe = evaluate_inter_agent_disagreement(
         "a", "The migration completed successfully with no errors.",
         "b", "The migration failed and was rolled back.", threshold=THRESHOLD)
@@ -101,9 +133,13 @@ def rebuild_probe_cases() -> list[dict]:
     Verified elsewhere to reproduce all 40 cases identically (personas,
     solutions and group all match the key file), so labels align by index.
     """
+    # Step 1: read the seed that the probe saved in its key file and start a random generator
+    # from it, then pick the same configs the probe picked.
     key = json.loads(KEY_PATH.read_text(encoding="utf-8"))
     rng = random.Random(key["seed"])
     configs = pick_configs(rng)
+    # Step 2: download the first 20 rows of each config again and rebuild all pairs. Unlike
+    # the probe, a failed download stops the run here: the replay must match the probe.
     pairs = []
     for config in configs:
         try:
@@ -113,6 +149,9 @@ def rebuild_probe_cases() -> list[dict]:
             raise SystemExit(f"ABORT: could not refetch {config}: {exc}")
         for item in payload.get("rows", []):
             pairs.extend(extract_pairs(item["row"], config, item.get("row_idx", -1)))
+    # Step 3: repeat the probe's draw in the same order: up to 20 mismatch pairs, then up to
+    # 20 other pairs, then the same shuffle. With the random generator in the same state and
+    # the same downloaded rows, the same 40 pairs come out in the same order (Step 4 checks).
     mismatch_pool = [p for p in pairs if p["solution_mismatch"]]
     mismatch_sample = rng.sample(mismatch_pool, min(20, len(mismatch_pool)))
     chosen = {id(p) for p in mismatch_sample}
@@ -122,6 +161,8 @@ def rebuild_probe_cases() -> list[dict]:
               + [{"group": "control", **p} for p in control_sample])
     rng.shuffle(replay)
 
+    # Step 4: check each replayed pair against the key file (both personas and the group must
+    # match, by position).
     # Fail loudly rather than silently scoring misaligned labels.
     for index, pair in enumerate(replay, start=1):
         recorded = key["cases"][index - 1]
@@ -134,18 +175,26 @@ def rebuild_probe_cases() -> list[dict]:
     return replay
 
 
+# In: a text and a mode: "full", "first_512" or "last_512". Out: the text itself, or a
+# shortened copy. (The names say 512, but each output keeps PER_OUTPUT_BUDGET tokens.)
 def truncate(text: str, mode: str) -> str:
     """Cut text to PER_OUTPUT_BUDGET tokens from the front or the back."""
+    # "full" changes nothing.
     if mode == "full":
         return text
+    # Turn the text into token ids with the same tokenizer the detector uses (no special
+    # start/end tokens). If it already fits the budget, return it unchanged.
     tokenizer = grounding._nli_tokenizer  # read-only; no production change
     ids = tokenizer(text, add_special_tokens=False)["input_ids"]
     if len(ids) <= PER_OUTPUT_BUDGET:
         return text
+    # Keep the first or the last PER_OUTPUT_BUDGET ids, and turn them back into text.
     kept = ids[:PER_OUTPUT_BUDGET] if mode == "first_512" else ids[-PER_OUTPUT_BUDGET:]
     return tokenizer.decode(kept, skip_special_tokens=True)
 
 
+# In: an agent's text. Out: its final answer written like "A) Yes" (the LAST marker in the
+# text), or None if the text has no marker.
 def final_answer(text: str) -> str | None:
     matches = ANSWER_RE.findall(text or "")
     if not matches:
@@ -154,15 +203,22 @@ def final_answer(text: str) -> str | None:
     return f"{letter.upper()}) {word.capitalize()}"
 
 
+# Runs the whole test: no input. It reads the probe key and the human labels from
+# experiments/results/, downloads the rows again, scores all 40 pairs under each condition,
+# prints a table and a verdict, and saves a JSON file.
 def main() -> None:
     print("=" * 78)
     print("TRUNCATION DIAGNOSIS — does the 512-token window explain 0/10?")
     print("=" * 78)
     print(f"\nthreshold={THRESHOLD}  relevance_floor={RELEVANCE_FLOOR}  "
           f"per-output budget={PER_OUTPUT_BUDGET} tokens")
+    # Step 1: load and check the models.
     print("\nLoading models...")
     guard_models()
 
+    # Step 2: rebuild the 40 probe pairs and read the human labels (case id -> label such
+    # as CONTRADICTION). Pair number n gets the id P001, P002, ... so labels line up by
+    # position.
     print("\nRebuilding the 40 frozen probe pairs...")
     cases = rebuild_probe_cases()
     labels = json.loads(LABELS_PATH.read_text(encoding="utf-8"))["labels"]
@@ -172,6 +228,8 @@ def main() -> None:
     conditions = ("full", "first_512", "last_512")
     per_case, started = [], time.time()
 
+    # Step 3: for each pair, record its size in tokens and its final answers, then run the
+    # detector once per condition.
     for index, pair in enumerate(cases, start=1):
         case_id = f"P{index:03d}"
         truth = labels[case_id] == "CONTRADICTION"
@@ -194,6 +252,11 @@ def main() -> None:
             "conditions": {},
         }
 
+        # Cut both texts as the condition says, then call the detector. It may return None
+        # (could not check the pair); then the numbers are stored as None, the alarm as False.
+        # contradiction_prob = NLI chance of contradiction; similarity = how close the two
+        # meanings are; gated = True if the pair was treated as off-topic and never flagged;
+        # alarm = the detector flagged the pair.
         for condition in conditions:
             a_cut, b_cut = truncate(a_text, condition), truncate(b_text, condition)
             result = evaluate_inter_agent_disagreement(
@@ -205,6 +268,8 @@ def main() -> None:
                 "gated": bool(result.gated_low_relevance) if result else None,
                 "alarm": bool(result.is_disagreement) if result else False,
                 # Does the retained window still carry each agent's conclusion?
+                # (Compared with the final answer of the full text. If the full text has no
+                # marker, both sides are None and count as "retained".)
                 "a_answer_retained": final_answer(a_cut) == record["a_final_answer"],
                 "b_answer_retained": final_answer(b_cut) == record["b_final_answer"],
             }
@@ -213,6 +278,16 @@ def main() -> None:
             print(f"  {index}/{len(cases)} scored ({time.time()-started:.0f}s)")
 
     # --- aggregate -----------------------------------------------------------
+    # Step 4: score each condition against the labels.
+    #   tp = a real contradiction and an alarm (a hit)
+    #   fn = a real contradiction and no alarm (a miss)
+    #   fp = not a contradiction but an alarm (a false alarm)
+    #   tn = not a contradiction and no alarm
+    #   precision = tp / (tp + fp);  recall = tp / (tp + fn)  (each is 0.0 if its bottom is 0)
+    #   retained = real contradictions where both cut texts give the same final answer as the
+    #              full texts (a text with no marker counts as retained)
+    # The "/ 30" and "/ 10" below are the expected counts of non-contradictions and real
+    # contradictions among the 40 cases; they are written into the code, not counted.
     summary = {}
     for condition in conditions:
         tp = sum(1 for r in per_case if r["is_contradiction"] and r["conditions"][condition]["alarm"])
@@ -249,6 +324,15 @@ def main() -> None:
               f"{s['positives_with_both_conclusions_retained']:>10d}/10")
 
     # --- verdict -------------------------------------------------------------
+    # Step 5: turn the recall numbers (full_r, first_r, last_r) and the false-positive rate of
+    # the last-part run (last_fp, a share of the 30 negatives) into a sentence.
+    # The first branch that is true wins:
+    #   1. last part recovers recall (>= 0.8), first part does not (<= 0.2), few false
+    #      alarms (rate <= 0.2): truncation explains it.
+    #   2. last part still has recall <= 0.2: the hypothesis fails.
+    #   3. last part beats the full text but with many false alarms (rate > 0.3): a
+    #      misleading gain.
+    #   4. anything else: partly explained.
     full_r = summary["full"]["recall_on_10_positives"]
     first_r = summary["first_512"]["recall_on_10_positives"]
     last_r = summary["last_512"]["recall_on_10_positives"]
@@ -272,6 +356,7 @@ def main() -> None:
 
     print(f"\nVERDICT: {verdict}")
 
+    # Step 6: save the settings, the summary, the verdict and every case to a JSON file.
     payload = {
         "timestamp": time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime()),
         "purpose": "diagnose the 0/10 recall found by the alarm-rate pilot",
