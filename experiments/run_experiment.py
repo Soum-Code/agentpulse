@@ -13,11 +13,32 @@ Outputs:
 - REAL_MODEL_BENCHMARK_REPORT.md
 """
 
+# ---- What this file is for ---------------------------------------------------
+# A script that you run by hand. It reads a labelled test set (datasets/v1.0_<split>.json).
+# Each case holds an agent's claim, some evidence, and a true/false label "is_failure".
+# The script asks five "monitors" to say "risk" or "no risk" for every case: four
+# baselines (A to D) and the full AgentPulse pipeline. It then counts how often each
+# monitor was right or wrong and works out precision, recall and F1. It writes one JSON
+# file and two markdown reports.
+#
+# Be careful: no LLM is run here. The agent claims are already in the dataset, and
+# model_name is only a label that is printed and copied into the JSON file and the
+# evaluation report. Also, the tables in the "benchmark" report are typed into this script
+# as fixed text.
+#
+# How it fits in: it uses EvaluationPipeline, DriftDetector, AlertEngine and the grounding
+# functions from backend/app/services. The tool-claim check runs inside the pipeline. No
+# other Python file in the repo imports it.
+# ------------------------------------------------------------------------------
+
 from __future__ import annotations
 
 import json
 import os
+# platform (and os.cpu_count) is used only to write the computer's details into the
+# benchmark report.
 import platform
+# random is used to pick the 25% sample for baseline B.
 import random
 import sys
 import time
@@ -27,18 +48,34 @@ from typing import Any, Dict, List
 import numpy as np
 
 # Ensure modules are importable
+# In short: add the backend, the SDK and the repo root to the import path, so that this
+# file can be run directly from any folder.
 sys.path.insert(0, str(Path(__file__).parent.parent / "backend"))
 sys.path.insert(0, str(Path(__file__).parent.parent / "sdk" / "src"))
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+# Note: numpy (np), List, evaluate_tool_claims, ToolCallRecord and get_llm_adapter are
+# imported but never used in this file.
+# EvaluationPipeline = the full per-span scoring (grounding, tool claims, disagreement,
+# drift, risk, alerts). DriftDetector and AlertEngine are handed to it.
 from app.services.evaluator import EvaluationPipeline
 from app.services.drift import DriftDetector
 from app.services.alerting import AlertEngine
+# compute_semantic_similarity = embedding (MiniLM) similarity of two texts, 0 to 1 (None if
+# not available). compute_nli_grounding = the NLI model. load_models = load both into memory.
 from app.services.grounding import compute_semantic_similarity, compute_nli_grounding, load_models
 from app.services.tool_claim import evaluate_tool_claims, ToolCallRecord
 from llm_adapters import get_llm_adapter
 
 
+# Run the five monitors on one dataset split, then write the JSON file and the two reports.
+# In: dataset_split ("test" reads datasets/v1.0_test.json) and model_name (a label only; no
+# model is loaded for it). Out: the dict that is also saved as baseline_comparison_results.json.
+# The cut-offs used below (0.50, 0.70, 0.60, 0.65) are written directly in the code; no
+# comment says why they were chosen.
+# Counting rule used by every monitor: "positive" = the monitor says risk. tp = said risk and
+# the case is a real failure, fp = said risk but the case is fine, fn = said no risk but it is
+# a failure (missed), tn = said no risk and the case is fine.
 def run_master_experiment(
     dataset_split: str = "test",
     model_name: str = "qwen-7b",
@@ -48,8 +85,14 @@ def run_master_experiment(
     print(f"Model: {model_name} | Dataset: v1.0_{dataset_split}")
     print("=" * 64)
 
+    # Load the NLI and embedding models and wait until they are ready (sync=True).
+    # use_onnx=False means the PyTorch version is used, not the ONNX one.
     load_models(use_onnx=False, sync=True)
 
+    # Read the labelled cases. A case has id, input_query, agent_claim and is_failure (the
+    # true label), plus optional evidence and tool_records (the tool calls that really ran).
+    # Wherever the code writes `evidence or input_query`, a case with no evidence uses its
+    # question as the source text.
     dataset_path = Path(__file__).parent.parent / "datasets" / f"v1.0_{dataset_split}.json"
     with open(dataset_path, "r", encoding="utf-8") as f:
         dataset = json.load(f)
@@ -57,11 +100,16 @@ def run_master_experiment(
     cases = dataset["cases"]
     n_cases = len(cases)
 
+    # The full AgentPulse scorer, used by baseline B and by the full-system run. The drift
+    # detector keeps a history for each agent id. AlertEngine(cooldown_seconds=0) is passed,
+    # but alerting.py says that argument is stored and never read, so it changes nothing.
     drift_detector = DriftDetector(window_size=20, min_samples_for_alert=5)
     alert_engine = AlertEngine(cooldown_seconds=0)
     full_pipeline = EvaluationPipeline(drift_detector, alert_engine)
 
     # ── 1. Evaluate Baseline A: No Semantic Monitoring ─────────────────
+    # Baseline A says "risk" only if some tool call of the case has status "error". It looks
+    # at no text at all. The four counters start at 0; t0_a starts a stopwatch.
     tp_a, fp_a, fn_a, tn_a = 0, 0, 0, 0
     t0_a = time.perf_counter()
     for case in cases:
@@ -74,15 +122,22 @@ def run_master_experiment(
         elif pred_risk and not actual_risk: fp_a += 1
         elif not pred_risk and actual_risk: fn_a += 1
         else: tn_a += 1
+    # Average time per case in milliseconds (seconds x 1000, divided by the case count).
     lat_a = (time.perf_counter() - t0_a) * 1000.0 / n_cases
 
     # ── 2. Evaluate Baseline B: 25% Sampled Evaluation ─────────────────
+    # Baseline B checks only about a quarter of the cases, chosen at random (each case has a
+    # 25% chance). Cases that are not picked are called "no risk". Seed 42 makes the random
+    # choice the same on every run.
     random.seed(42)
     tp_b, fp_b, fn_b, tn_b = 0, 0, 0, 0
     t0_b = time.perf_counter()
     for case in cases:
         is_sampled = random.random() < 0.25
         if is_sampled:
+            # A picked case goes through the full pipeline. Its overall risk score (0 to 1)
+            # must reach 0.50 to count as "risk". Here the pipeline gets the tool records
+            # too, but no earlier agents, so the disagreement check does not run.
             res = full_pipeline.evaluate_span(
                 span_id=f"b_{case['id']}",
                 trace_id="trace_b",
@@ -103,6 +158,9 @@ def run_master_experiment(
     lat_b = (time.perf_counter() - t0_b) * 1000.0 / n_cases
 
     # ── 3. Evaluate Baseline C: Embedding Similarity Only ──────────────
+    # Baseline C uses only the embedding model (MiniLM). It measures how close the claim is to
+    # the evidence (similarity from 0 to 1) and says "risk" when that is below 0.70. If no
+    # similarity can be computed (None), `sim or 0.0` turns it into 0.0, which counts as risk.
     tp_c, fp_c, fn_c, tn_c = 0, 0, 0, 0
     t0_c = time.perf_counter()
     for case in cases:
@@ -119,6 +177,9 @@ def run_master_experiment(
     lat_c = (time.perf_counter() - t0_c) * 1000.0 / n_cases
 
     # ── 4. Evaluate Baseline D: DeBERTa NLI Without Drift Layer ────────
+    # Baseline D uses only the NLI model (DeBERTa). The evidence is the premise and the claim is
+    # the hypothesis. It says "risk" when the probability of "contradiction" is 0.60 or more.
+    # If the model gives no result (None), the value is 0.0 and the case is "no risk".
     tp_d, fp_d, fn_d, tn_d = 0, 0, 0, 0
     t0_d = time.perf_counter()
     for case in cases:
@@ -135,6 +196,12 @@ def run_master_experiment(
     lat_d = (time.perf_counter() - t0_d) * 1000.0 / n_cases
 
     # ── 5. Evaluate AgentPulse (Full System) ───────────────────────────
+    # Every case goes through evaluate_span (same call as baseline B, but for all cases).
+    # What really runs in this script: the grounding check (MiniLM and NLI) and, for cases with
+    # tool_records, the tool-claim check. The disagreement check does NOT run, because no
+    # earlier agents are passed. Drift does run, but the rule below never reads it, and the
+    # overall risk score is built only from grounding, tool-claim and disagreement scores.
+    # All cases use one agent id and one trace id, so drift sees them as one agent.
     tp_ap, fp_ap, fn_ap, tn_ap = 0, 0, 0, 0
     t0_ap = time.perf_counter()
     for case in cases:
@@ -159,6 +226,13 @@ def run_master_experiment(
         else: tn_ap += 1
     lat_ap = (time.perf_counter() - t0_ap) * 1000.0 / n_cases
 
+    # Turn the four counts and the average latency of one monitor into its scores:
+    #   precision = of the cases it flagged, the share that were real failures: tp / (tp + fp)
+    #   recall    = of the real failures, the share it caught: tp / (tp + fn)
+    #   f1        = one number that mixes precision and recall (their harmonic mean)
+    #   false_positive_rate = of the fine cases, the share wrongly flagged: fp / (fp + tn)
+    #   false_negative_rate = of the real failures, the share missed: fn / (fn + tp)
+    # Each division is guarded: if the bottom part is 0, the result is 0.0 instead of an error.
     def calc_metrics(tp, fp, fn, tn, lat):
         prec = tp / (tp + fp) if (tp + fp) > 0 else 0.0
         rec = tp / (tp + fn) if (tp + fn) > 0 else 0.0
@@ -175,6 +249,7 @@ def run_master_experiment(
             "tp": tp, "fp": fp, "fn": fn, "tn": tn,
         }
 
+    # The scores of all five monitors in one dict. The report tables below read from it.
     baselines_summary = {
         "Baseline_A_No_Semantic": calc_metrics(tp_a, fp_a, fn_a, tn_a, lat_a),
         "Baseline_B_Sampled_Eval": calc_metrics(tp_b, fp_b, fn_b, tn_b, lat_b),
@@ -183,6 +258,8 @@ def run_master_experiment(
         "AgentPulse_Full_System": calc_metrics(tp_ap, fp_ap, fn_ap, tn_ap, lat_ap),
     }
 
+    # What is saved to the JSON file: the time of the run (UTC), the dataset name, the number
+    # of cases, the model label, and the scores above.
     out_payload = {
         "timestamp": time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime()),
         "dataset": f"v1.0_{dataset_split}",
@@ -191,6 +268,7 @@ def run_master_experiment(
         "baselines": baselines_summary,
     }
 
+    # Save the JSON to experiments/results/ (the folder is created if it is missing).
     res_dir = Path(__file__).parent / "results"
     res_dir.mkdir(parents=True, exist_ok=True)
     res_json_path = res_dir / "baseline_comparison_results.json"
@@ -198,6 +276,11 @@ def run_master_experiment(
         json.dump(out_payload, f, indent=2)
 
     # Write REAL_MODEL_EVALUATION_REPORT.md
+    # The file goes in the repo root (an old file is overwritten).
+    # It is one f-string (text with {values} filled in). The table gets the numbers computed
+    # above. The three "Key Empirical Insights" at the end are fixed text: they are written
+    # the same way whatever the numbers are (for example "zero false alarms"), so check them
+    # against the table after every run.
     report_path = Path(__file__).parent.parent / "REAL_MODEL_EVALUATION_REPORT.md"
     with open(report_path, "w", encoding="utf-8") as f:
         f.write(f"""# Real-Model Evaluation Report: Baselines vs. AgentPulse
@@ -228,6 +311,11 @@ def run_master_experiment(
 """)
 
     # Write REAL_MODEL_BENCHMARK_REPORT.md
+    # The file goes in the repo root (an old file is overwritten).
+    # Only the date and the computer line (system, release, machine, CPU cores) are read at
+    # run time. Both tables ("13-Layer Latency Profile" and "Multi-Model Reasoning Strategy
+    # Matrix") and the model names are fixed text typed into this script. This run measured
+    # none of those numbers.
     bench_path = Path(__file__).parent.parent / "REAL_MODEL_BENCHMARK_REPORT.md"
     with open(bench_path, "w", encoding="utf-8") as f:
         f.write(f"""# Real-Model Benchmark & Performance Profile
@@ -270,6 +358,7 @@ def run_master_experiment(
 | **Llama 3.1 8B Instruct** | AoT | 0.380 | 0.375 | 430.5 | 450 |
 """)
 
+    # Tell the user where the three files went, and return the dict that was saved as JSON.
     print(f"\nMaster experiment complete.")
     print(f"Results saved to: {res_json_path}")
     print(f"Evaluation report written to: {report_path}")

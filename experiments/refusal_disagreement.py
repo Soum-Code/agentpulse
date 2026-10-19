@@ -63,6 +63,21 @@ skipped on the next run. A daily rate limit means this is expected to span more
 than one day, and a partial run is not a wasted one.
 """
 
+# ---- What this file is for ---------------------------------------------------
+# An experiment that you run by hand. It asks: when the disagreement score is high, is
+# that because something in the trace is WRONG, or only because one agent said "No"?
+# For each of 10 fixed questions it gets evidence from the demo's document search. Then
+# several different LLMs play a "verifier": an agent that must answer Yes or No to "does
+# this evidence answer the question?". Each verifier answer is scored with AgentPulse's
+# disagreement code and sorted into a 2x2 table (evidence relevant or not, verifier
+# accepts or refuses). The output is a JSON file with every trial and a markdown report.
+#
+# How it fits in: it calls the backend services directly (grounding.py and
+# disagreement.py), takes documents from demo/workflows/retrieval.py and talks to LLMs
+# through an OpenAI-style client (NVIDIA or OpenRouter). There is no API, queue or worker.
+# experiments/paraphrase_stability.py reads the JSON file that this script writes.
+# ------------------------------------------------------------------------------
+
 from __future__ import annotations
 
 import argparse
@@ -73,20 +88,30 @@ import time
 from pathlib import Path
 from typing import Any
 
+# Make the backend, the SDK and the repo root importable when this file is run directly.
 sys.path.insert(0, str(Path(__file__).parent.parent / "backend"))
 sys.path.insert(0, str(Path(__file__).parent.parent / "sdk" / "src"))
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+# compute_nli_grounding = run the NLI model on (evidence, text). load_models = load the NLI
+# and embedding models into memory. Until it has run, compute_nli_grounding returns None.
 from app.services.grounding import compute_nli_grounding, load_models
+# The two disagreement functions: one compares a single pair of agents, the other compares
+# one agent with all the agents before it in the trace.
 from app.services.disagreement import (
     evaluate_against_prior_agents,
     evaluate_inter_agent_disagreement,
 )
+# local_retriever = the demo's small in-memory document search (used to get the evidence).
 from demo.workflows.retrieval import local_retriever
 
+# RESULTS = the JSON file holding every trial (rewritten after each trial).
+# REPORT = the markdown report written at the end, in the repo root.
 RESULTS = Path(__file__).parent / "results" / "refusal_disagreement.json"
 REPORT = Path(__file__).parent.parent / "REFUSAL_DISAGREEMENT_REPORT.md"
 
+# Provider name -> (base URL of an OpenAI-compatible API, name of the env variable that
+# holds its key).
 PROVIDERS = {
     "openrouter": ("https://openrouter.ai/api/v1", "OPENROUTER_API_KEY"),
     "nvidia": ("https://integrate.api.nvidia.com/v1", "NVIDIA_API_KEY"),
@@ -141,6 +166,8 @@ ANALYST_MODEL_BY_PROVIDER = {
     "nvidia": "nvidia/nemotron-3-super-120b-a12b",
 }
 
+# In short: QUERIES is the list of 10 test questions. Each item is a tuple of (ON or OFF
+# label, the query text, the title of the document that should be retrieved or None).
 # The corpus holds six documents: the Transformer paper, DeBERTa, SQLite WAL,
 # KB-401 on API key expiry, KB-429 on token-bucket backoff, and telemetry KPI
 # definitions. ON queries name something in it; OFF queries name something it
@@ -167,19 +194,27 @@ QUERIES: list[tuple[str, str, str | None]] = [
     ("OFF", "italian carbonara pasta recipe", None),
 ]
 
+# Lookup table: query text -> expected document title (None for the OFF queries).
 EXPECTED_DOC = {q: exp for _, q, exp in QUERIES}
 
+# The prompt every verifier model gets. It must start its answer with Yes or No, because
+# classify_stance() below reads only the start of the answer.
 VERIFIER_PROMPT = (
     "Question: {query}\n\nEvidence:\n{evidence}\n\n"
     "Does the evidence answer the question? Begin your answer with Yes or No, "
     "then explain in one sentence."
 )
 
+# The prompt for the analyst model. Its one answer per query is reused in every trial, but
+# only for the analyst-pair score. The live score compares the verifier with the researcher
+# and retriever texts instead (see RESEARCHER_PROMPT below).
 ANALYST_PROMPT = (
     "Question: {query}\n\nEvidence:\n{evidence}\n\n"
     "Synthesise what the evidence supports. Three sentences, no speculation."
 )
 
+# In short: two more fixed prompts, for the researcher and retriever agents that come before
+# the verifier in a real trace. Their answers are the verifier's "earlier agents".
 # The two agents that precede the verifier in demo/multi_model_pipeline.py, with
 # that file's prompts. They exist here because of what the live evaluator
 # actually does, which is not what this experiment first assumed:
@@ -206,10 +241,13 @@ RETRIEVER_PROMPT = (
 )
 
 
+# Raised by ask() when the API answers successfully (status 200) but with no text at all.
 class EmptyCompletion(RuntimeError):
     """A 200 carrying no text. See demo/multi_model_pipeline.py."""
 
 
+# In short: the limit on answer length (in tokens). It is high because some models "think"
+# silently first and would otherwise run out before they write an answer.
 # Four of the six callable models are reasoning models: they spend completion
 # tokens on a hidden reasoning_content field before emitting any answer, and
 # deepseek burned 2,569 characters of it on "what is a database index?". At the
@@ -219,8 +257,14 @@ class EmptyCompletion(RuntimeError):
 DEFAULT_MAX_TOKENS = 1200
 
 
+# Send one prompt to one model and return the answer text. If the API says "too many
+# requests" (HTTP 429, a rate limit), wait and try again: 5 s, then 10 s, 20 s ... (the wait
+# doubles each time). Any other error is raised at once. An empty answer raises
+# EmptyCompletion.
 def ask(client: Any, model: str, prompt: str, *, max_tokens: int = DEFAULT_MAX_TOKENS, retries: int = 4) -> str:
     delay = 5.0
+    # The first pass is the normal try. The `retries` extra passes happen only after a
+    # rate-limit error.
     for attempt in range(retries + 1):
         try:
             r = client.chat.completions.create(
@@ -229,15 +273,21 @@ def ask(client: Any, model: str, prompt: str, *, max_tokens: int = DEFAULT_MAX_T
                 max_tokens=max_tokens,
             )
         except Exception as exc:
+            # Re-raise unless the error text looks like a rate limit ("429" or "rate") and
+            # there are still tries left.
             if ("429" not in str(exc) and "rate" not in str(exc).lower()) or attempt == retries:
                 raise
             print(f"      (429 on {model}, retry {attempt + 1}/{retries} in {delay:.0f}s)")
             time.sleep(delay)
             delay *= 2
             continue
+        # Take the first answer. The text can be None, so it is treated as empty.
         choice = r.choices[0]
         text = (choice.message.content or "").strip()
         if not text:
+            # Empty answer. Find out why, for a useful error message: reasoning models keep
+            # hidden "thinking" text in reasoning_content, and may use the whole token
+            # budget there.
             reasoning = len(getattr(choice.message, "reasoning_content", None) or "")
             why = (
                 f"spent the budget on {reasoning} chars of hidden reasoning "
@@ -247,6 +297,8 @@ def ask(client: Any, model: str, prompt: str, *, max_tokens: int = DEFAULT_MAX_T
             )
             raise EmptyCompletion(f"{model} returned 200 with empty content -- {why}")
         return text
+    # Every pass above returns, raises or continues, and the last pass cannot continue.
+    # So this line is never reached; it is only a safety net.
     raise RuntimeError("unreachable")
 
 
@@ -257,7 +309,11 @@ def classify_stance(text: str) -> str:
     audit every classification. Anything that does not open with yes or no is
     'unclear' and excluded from the 2x2 rather than being interpreted.
     """
+    # Clean the start of the answer: lower-case it, drop leading "*", "#" and spaces
+    # (markdown bold or headings), remove any other "**", and keep the first 24 characters.
     head = text.strip().lower().lstrip("*# ").replace("**", "")[:24]
+    # Only the start is checked. So any answer that starts with "no" counts as a refusal,
+    # even a word like "not" or "none".
     if head.startswith("yes"):
         return "accept"
     if head.startswith("no"):
@@ -276,14 +332,23 @@ def score_disagreement(verifier_out: str, analyst_out: str, ctx: dict[str, str])
     experiment originally measured. Kept so the difference between the two is
     visible in the data rather than argued about.
     """
+    # The agents before the verifier in a real trace, as (agent id, output text) pairs. A
+    # missing text becomes "" and the evaluator skips empty texts.
     priors = [("researcher", ctx.get("researcher", "")), ("retriever", ctx.get("retriever", ""))]
+    # "Live" score: compare the verifier with each earlier agent and keep the worst
+    # (highest) contradiction score, as the real evaluator does. A pair whose two texts are
+    # about different things is skipped (it adds nothing to the score).
     live = evaluate_against_prior_agents(
         current_agent_id="verifier", current_output=verifier_out, prior_outputs=priors
     )
+    # "Pair" score: only the analyst (premise) against the verifier (hypothesis). It is the
+    # raw contradiction probability, kept even when the two texts are about different things.
     pair = evaluate_inter_agent_disagreement(
         source_agent_id="analyst", source_output=analyst_out,
         target_agent_id="verifier", target_output=verifier_out,
     )
+    # Both functions return None when nothing could be compared (for example the NLI model
+    # is not loaded). That is stored as 0.0.
     return {
         "disagreement_live": round(live.max_disagreement_score, 4) if live else 0.0,
         "disagreement_analyst_pair": pair.disagreement_score if pair else 0.0,
@@ -302,12 +367,16 @@ def relevance_from_titles(query: str, titles: list[str]) -> bool:
     corrected after the fact without re-spending the API calls -- which is what
     had to happen when the first version of this function got it wrong.
     """
+    # An OFF query has no expected document (None), so its evidence is never "relevant".
     expected = EXPECTED_DOC.get(query)
     if not expected:
         return False
+    # Relevant = the expected title appears inside at least one retrieved title (any case).
     return any(expected.lower() in t.lower() for t in titles)
 
 
+# Read the saved results file if there is one, so a rerun continues where the last run
+# stopped. Otherwise start empty: no trials and no cached analyst answers.
 def load_existing() -> dict[str, Any]:
     if RESULTS.exists():
         with open(RESULTS, "r", encoding="utf-8") as f:
@@ -315,20 +384,31 @@ def load_existing() -> dict[str, Any]:
     return {"trials": [], "analyst_cache": {}}
 
 
+# Write the whole state to the results JSON file (creating its folder if needed). main()
+# calls this after every trial, so a crash loses at most the trial in progress.
 def save(state: dict[str, Any]) -> None:
     RESULTS.parent.mkdir(parents=True, exist_ok=True)
     with open(RESULTS, "w", encoding="utf-8") as f:
         json.dump(state, f, indent=2)
 
 
+# Turn a list of trials into the numbers for the report: how many trials, the stats of
+# each cell of the 2x2 table, and the AUC of each score. Returns a dict that is saved in
+# the results JSON and used to write the report.
 def summarise(trials: list[dict[str, Any]]) -> dict[str, Any]:
+    # Step 1: keep only trials with a clear stance. "unclear" ones are left out.
     usable = [t for t in trials if t["stance"] in ("accept", "refuse")]
+    # Step 2: put each trial in a cell. A = relevant evidence + accept, C = relevant evidence
+    # + refuse, D = irrelevant evidence + accept, B = irrelevant evidence + refuse.
     cells: dict[str, list[dict[str, Any]]] = {"A": [], "B": [], "C": [], "D": []}
     for t in usable:
         rel, st = t["evidence_relevant"], t["stance"]
         key = ("A" if st == "accept" else "C") if rel else ("D" if st == "accept" else "B")
         cells[key].append(t)
 
+    # Summary numbers of one score (`field`) over the trials in one cell. Gives None for an
+    # empty cell. The median is the middle value of the sorted list (for an even count,
+    # the upper one of the two middle values).
     def stats(rows: list[dict[str, Any]], field: str) -> dict[str, Any] | None:
         if not rows:
             return None
@@ -339,6 +419,8 @@ def summarise(trials: list[dict[str, Any]]) -> dict[str, Any]:
             "max": round(xs[-1], 4),
             "mean": round(sum(xs) / len(xs), 4),
             "median": round(xs[len(xs) // 2], 4),
+            # "above_0.6" counts rows scoring more than 0.6. (disagreement.py flags a pair
+            # from 0.6 upward by default.)
             # Cell A is bimodal: mean 0.248 with median 0.046, because nine
             # of forty correct acceptances score above the alert threshold.
             # The mean alone reads as "low with noise" and hides that.
@@ -352,13 +434,18 @@ def summarise(trials: list[dict[str, Any]]) -> dict[str, Any]:
         max because two non-overlapping ranges can be an artefact of small n,
         and this at least counts every pair.
         """
+        # pos = scores of the refusals, neg = scores of the acceptances. AUC needs both.
         pos = [t[field] for t in usable if t["stance"] == "refuse"]
         neg = [t[field] for t in usable if t["stance"] == "accept"]
         if not pos or not neg:
             return None
+        # Look at every (refusal, acceptance) pair: 1 point if the refusal scored higher,
+        # half a point for a tie. Divide by the number of pairs to get a value from 0 to 1.
         wins = sum((p > n) + 0.5 * (p == n) for p in pos for n in neg)
         return round(wins / (len(pos) * len(neg)), 4)
 
+    # Output: the trial counts, then for each cell the stats of three scores (live
+    # disagreement, analyst-pair disagreement, NLI contradiction), then the three AUCs.
     return {
         "n_trials": len(trials),
         "n_usable": len(usable),
@@ -385,7 +472,13 @@ def summarise(trials: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
+# Run the experiment. For each query it gets the evidence, gets the analyst, researcher and
+# retriever texts once, then asks every verifier model --repeats times and stores each
+# trial. Finally it writes the report. Returns 0 when done, or 2 if the API key is missing.
 def main() -> int:
+    # The four command-line options. --repeats = how many times each verifier model answers
+    # each question. --max-trials = stop after this many NEW trials. --report-only = make no
+    # API calls, only rebuild the report. --provider = which gateway to use.
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--repeats", type=int, default=2, help="verifier samples per model per query")
     ap.add_argument("--max-trials", type=int, default=0, help="stop after N new trials (0 = no cap)")
@@ -394,10 +487,12 @@ def main() -> int:
                     help="which OpenAI-compatible gateway to call (default: nvidia)")
     args = ap.parse_args()
 
+    # Step 1: pick the URL, key name and model lists that belong to the chosen provider.
     base_url, key_env = PROVIDERS[args.provider]
     verifier_models = VERIFIER_MODELS_BY_PROVIDER[args.provider]
     analyst_model = ANALYST_MODEL_BY_PROVIDER[args.provider]
 
+    # Step 2: load the results of earlier runs (if any), so finished trials are not repeated.
     state = load_existing()
 
     # Backfilling a trial recomputes NLI, so --report-only needs the models too.
@@ -412,6 +507,8 @@ def main() -> int:
             cache_dir=os.getenv("AGENTPULSE_MODEL_CACHE_DIR", "./models"),
         )
 
+    # Step 3: unless --report-only was given, run new trials. This needs the API key and the
+    # models. With --report-only this whole block is skipped.
     if not args.report_only:
         key = os.getenv(key_env)
         if not key:
@@ -422,9 +519,12 @@ def main() -> int:
             print(f"{key_env} is not set. Create one at {where} and put it in "
                   ".env or the environment.", file=sys.stderr)
             return 2
+        # Imported here, not at the top, so --report-only works without the openai package.
         from openai import OpenAI
 
+        # An OpenAI-style client pointed at the chosen gateway (NVIDIA or OpenRouter).
         client = OpenAI(base_url=base_url, api_key=key)
+        # Remember which models were used, so the report can name them.
         state["config"] = {
             "provider": args.provider,
             "verifier_models": verifier_models,
@@ -440,15 +540,25 @@ def main() -> int:
             cache_dir=os.getenv("AGENTPULSE_MODEL_CACHE_DIR", "./models"),
         )
 
+        # Step 4: `done` = trials that already exist, as (query, model, repeat) keys, so that
+        # a rerun skips them. `new` counts the trials added in this run (for --max-trials).
         done = {(t["query"], t["verifier_model"], t["repeat"]) for t in state["trials"]}
         new = 0
 
+        # Step 5: go through the 10 queries one by one. `_expected` is not used here; the
+        # expected document is looked up inside relevance_from_titles().
         for declared, query, _expected in QUERIES:
+            # Get the 3 best-matching documents. The search always returns 3, even when none
+            # of them is about the query. They are the fixed evidence for this query.
             docs = local_retriever.search(query, top_k=3)
+            # Evidence text = "title: content" for each document, with a blank line between.
             evidence = "\n\n".join(f"{d.title}: {d.content}" for d in docs)
             titles = [getattr(d, "title", "") for d in docs]
+            # Was the expected document among the three? This decides the row of the 2x2.
             relevant = relevance_from_titles(query, titles)
 
+            # One analyst answer per query. It is cached in the results file. If the call
+            # fails, skip this query for now (a rerun will try again).
             if query not in state["analyst_cache"]:
                 try:
                     state["analyst_cache"][query] = ask(
@@ -481,15 +591,22 @@ def main() -> int:
                     print(f"  context failed on {query!r}: {type(exc).__name__}: {exc}")
                     continue
 
+            # Step 6: every verifier model answers the same question `--repeats` times. One
+            # answer = one trial.
             for model in verifier_models:
                 for rep in range(args.repeats):
+                    # Already done in an earlier run: skip it.
                     if (query, model, rep) in done:
                         continue
+                    # Stop early when the cap on new trials is reached. Save and write the
+                    # report first, so the work so far is kept.
                     if args.max_trials and new >= args.max_trials:
                         print(f"\nreached --max-trials {args.max_trials}; rerun to continue")
                         save(state)
                         _write_report(state)
                         return 0
+                    # If the call fails, skip this one trial. It was never saved, so the next
+                    # run will try it again.
                     try:
                         v_out = ask(
                             client, model, VERIFIER_PROMPT.format(query=query, evidence=evidence)
@@ -498,8 +615,14 @@ def main() -> int:
                         print(f"  {model} r{rep} on {query!r}: {type(exc).__name__}: {exc}")
                         continue
 
+                    # Step 7: read the stance (Yes or No) and run the NLI model on the answer
+                    # against the evidence. nli is None if it gave no result (for example
+                    # the models are not loaded).
                     stance = classify_stance(v_out)
                     nli = compute_nli_grounding(evidence, v_out)
+                    # Store everything about this trial, including the raw answer, so it can
+                    # be checked later. score_disagreement() adds the two disagreement
+                    # scores. A missing NLI result is stored as 0.0.
                     state["trials"].append({
                         "query": query,
                         "declared": declared,
@@ -515,13 +638,20 @@ def main() -> int:
                     })
                     new += 1
                     save(state)
+                    # Progress line: the question (first 34 characters), the model's owner
+                    # name, the repeat number, the stance and the live disagreement score.
                     print(f"  {query[:34]:<34} {model.split('/')[0]:<10} r{rep} "
                           f"{stance:<8} dis={state['trials'][-1]['disagreement_live']:.3f}")
 
+    # Step 8: build the summary and write the markdown report. This also runs with
+    # --report-only, using only the saved results.
     _write_report(state)
     return 0
 
 
+# Turn the saved trials into summary numbers, a verdict (H1, H2, mixed or not yet decidable)
+# and the markdown report file, then print a short summary. Input: the whole state dict. It
+# also writes the summary back into the results JSON.
 def _write_report(state: dict[str, Any]) -> None:
     # Relabel from stored titles before summarising. The relevance rule has
     # been wrong once; recomputing here means a correction costs nothing and
@@ -542,6 +672,9 @@ def _write_report(state: dict[str, Any]) -> None:
         ctx = ctx_all.get(t["query"])
         if not ctx:
             missing_ctx.add(t["query"])
+            # The code stores None here (not 0.0, as the comment above says). None marks "not
+            # scored", so the summary leaves this trial out. The pair score is copied from
+            # the key "disagreement_score" if the trial has it, else 0.0.
             t["disagreement_live"] = None
             t["disagreement_analyst_pair"] = t.get("disagreement_score", 0.0)
             continue
@@ -557,23 +690,36 @@ def _write_report(state: dict[str, Any]) -> None:
     state["summary"] = s
     save(state)
 
+    # One markdown table row for cell k: its letter, its label, then the live disagreement
+    # stats and the NLI contradiction stats of that cell.
     def row(k: str) -> str:
         c = s["cells"][k]
         d, ct = c["disagreement_live"], c["contradiction"]
+        # Show a stats dict as one line of text, or "n=0" when the cell has no trials.
         fmt = lambda x: "n=0" if not x else (
             f"n={x['n']}, median {x['median']}, mean {x['mean']}, "
             f"{x['above_0.6']}/{x['n']} above 0.6"
         )
         return f"| {k} | {c['label']} | {fmt(d)} | {fmt(ct)} |"
 
+    # Pull out the names and numbers that the report text below needs. The model names come
+    # from the saved config (it is missing if only --report-only was ever run).
     cfg = state.get("config", {})
     verifiers_str = ", ".join(cfg.get("verifier_models", [])) or "(not recorded)"
     analyst_str = cfg.get("analyst_model", "(not recorded)")
     auc_d = s["auc_refusal_vs_acceptance"]["disagreement_live"]
     auc_pair = s["auc_refusal_vs_acceptance"]["disagreement_analyst_pair"]
     auc_c = s["auc_refusal_vs_acceptance"]["contradiction"]
+    # cd = (stats of cell C, stats of cell D) for the live disagreement score.
     cd = s["cells"]["C"]["disagreement_live"], s["cells"]["D"]["disagreement_live"]
 
+    # Choose the verdict text from the MEAN live score of cells C (wrong refusals) and
+    # D (wrong accepts):
+    #   - C or D has no trials: "not yet decidable".
+    #   - D mean below 0.5 and C mean at least 0.5: H1 (the score follows the stance).
+    #   - both means at least 0.5: H2 (the score follows errors).
+    #   - anything else: "mixed".
+    # The 0.5 cut-off is written directly in the code; nothing says where it comes from.
     if not cd[0] or not cd[1]:
         verdict = (
             "**Not yet decidable.** Cells C and D are the ones that separate the two "
@@ -599,6 +745,9 @@ def _write_report(state: dict[str, Any]) -> None:
             "Report the cell means and do not summarise this as a single claim."
         )
 
+    # The report is one big f-string (text with {values} filled in). Most of the prose is
+    # fixed text. Only the trial counts, the verifier and analyst names, the table rows,
+    # the AUC numbers and the verdict come from this run.
     content = f"""# Does disagreement track error, or refusal?
 
 **Trials:** {s['n_trials']} ({s['n_usable']} usable, {s['n_unclear']} excluded as unclassifiable)
@@ -674,11 +823,13 @@ honest summary of the 24.4 observation, not because it settles anything.
 
 *Data:* `experiments/results/refusal_disagreement.json`
 """
+    # Write the report (the old one is overwritten), then print a short summary to the screen.
     with open(REPORT, "w", encoding="utf-8") as f:
         f.write(content)
     print(f"\nreport -> {REPORT.name}")
     print(f"trials {s['n_trials']} usable {s['n_usable']} | "
           f"AUC disagreement {auc_d} contradiction {auc_c}")
+    # One line per cell: how many trials it holds and their mean live disagreement score.
     for k in "ABCD":
         d = s["cells"][k]["disagreement_live"]
         print(f"  cell {k}: {'n=0' if not d else f'n={d['n']} mean {d['mean']}'}")
