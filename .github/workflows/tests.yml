@@ -1,0 +1,115 @@
+name: tests
+
+# Runs the whole test suite (`pytest tests`): backend, demo chat service, SDK, LLM adapters and
+# reasoning strategies. release.yml only runs two SDK test files, so a failure that shows up
+# only when every test runs in one session (see PR #64) was never caught by CI.
+#
+# The install follows backend/Dockerfile: CPU-only torch first, then the backend with
+# backend/constraints.txt. `langgraph` is not a backend dependency; only the demo workflow
+# tests (test_chat_server.py, test_real_workflows.py) import it.
+#
+# A full run takes about 2 to 3 minutes on a GitHub runner. Several tests load the real models from
+# Hugging Face (all-MiniLM-L6-v2 and a DeBERTa NLI model). The backend saves them under
+# AGENTPULSE_MODEL_CACHE_DIR, not under HF_HOME, so that folder is the one that is cached.
+
+on:
+  pull_request:
+    paths:
+      - "backend/**"
+      - "demo/**"
+      - "tests/**"
+      - "sdk/**"
+      - "llm_adapters/**"
+      - "reasoning/**"
+      - ".github/workflows/tests.yml"
+  push:
+    branches: [main]
+    paths:
+      - "backend/**"
+      - "demo/**"
+      - "tests/**"
+      - "sdk/**"
+      - "llm_adapters/**"
+      - "reasoning/**"
+      - ".github/workflows/tests.yml"
+
+permissions:
+  contents: read
+
+# A new push to a pull request makes the older run pointless. Runs on main always finish.
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    # Not a test timeout: a stuck run would otherwise hold a runner for 6 hours.
+    timeout-minutes: 45
+    env:
+      AGENTPULSE_MODEL_CACHE_DIR: ${{ github.workspace }}/.cache/agentpulse-models
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install CPU-only torch (same pin as backend/Dockerfile)
+        run: |
+          pip install --timeout=180 --retries=5 \
+            --index-url https://download.pytorch.org/whl/cpu torch==2.14.0
+
+      - name: Install backend, SDK and langgraph
+        run: |
+          pip install --timeout=180 --retries=5 -c backend/constraints.txt \
+            "./backend[dev]" ./sdk langgraph
+
+      - name: Restore the model cache
+        id: models
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ env.AGENTPULSE_MODEL_CACHE_DIR }}
+          # The model names are the defaults in backend/app/config.py. If they change, the
+          # restore key still finds the old folder, so only the new model is downloaded.
+          key: models-${{ runner.os }}-${{ hashFiles('backend/app/config.py') }}
+          restore-keys: models-${{ runner.os }}-
+
+      # On a cold cache the first test that needs the models would download them inside its
+      # own time limit. tests/test_durable_queue.py::TestWorkerEntryPoint gives the worker
+      # 180 s to load them, which a slow download can use up. Download once here instead, the
+      # same way app/worker.py does, and save the cache right away so that a failing test run
+      # does not throw the download away. The tests and their limits are not changed.
+      - name: Download the models
+        if: steps.models.outputs.cache-hit != 'true'
+        working-directory: backend
+        run: |
+          python - <<'PY'
+          from app.config import settings
+          from app.services import grounding
+
+          grounding.load_models(
+              nli_model_name=settings.nli_model,
+              embedding_model_name=settings.embedding_model,
+              cache_dir=settings.model_cache_dir,
+              use_onnx=settings.use_onnx,
+              sync=True,
+          )
+          loaded = grounding.models_loaded()
+          print("models_loaded():", loaded)
+          # load_models() logs a failed download and returns, so check the result.
+          raise SystemExit(0 if all(loaded.values()) else f"models not loaded: {loaded}")
+          PY
+
+      - name: Save the model cache
+        if: steps.models.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ env.AGENTPULSE_MODEL_CACHE_DIR }}
+          key: ${{ steps.models.outputs.cache-primary-key }}
+
+      - name: Size of the model cache
+        run: du -sh "$AGENTPULSE_MODEL_CACHE_DIR"
+
+      # Run from the repo root: the tests live there, not under backend/.
+      - run: pytest tests -q --durations=15
