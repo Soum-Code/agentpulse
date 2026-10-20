@@ -1,6 +1,6 @@
 # Session Handoff — AgentPulse Work Log
 
-**Written:** 2026-08-23. **Rewritten clean:** 2026-08-26. **Updated:** 2026-08-27 (Sections 7–9 disagreement/benchmark/positioning; 10 drift diagnosis and fix; 11 tool-claim external test; 12 blocked redesign; 13 competitor audits). **Updated:** 2026-08-28 (Section 14 — external disagreement validation, the last of the three signals to be checked and the third to fail; Section 15 — the productization arc, seven phases from migrations through health/readiness). **Updated:** 2026-08-30 (Section 16 — dashboard unfrozen, the landing-page claim audit, and the half-finished drift restore). **Updated:** 2026-08-31 (Section 17 — Final Review deliverables, the literature survey, and repository access). **Updated:** 2026-09-12 (Section 18 — frontend replaced and wired to the live API, the tool-claim signal made to fire for the first time, and the Compose stack fixed so it actually evaluates; MIT licence added, closing a claim the README had been making against a missing file). **Updated:** 2026-09-19 (Section 24 — the 23.4 pipeline run for the first time and five faults found in it, four of which meant it delivered nothing; the disagreement signal firing at 0.966–0.996 against the one agent in each trace that was correct, which is the evidence-partition problem of Section 14 with a reproduction on five model families; the ablation re-run and found never to have been stale; OmniRoute's free-token headline settled from its own source). **Updated:** 2026-09-20 (Sections 24.8–24.9 — NVIDIA's 82-model catalogue is nine models on a free key; the refusal experiment at 87 trials, which reproduces 24.4 and shows a *wrong* refusal scoring 0.999 against a correct one's 0.978, so the signal tracks stance and is blind to correctness within it; and three analysis faults in that experiment, one of which produced a uniform, confident, entirely fabricated result from an unloaded model).
+**Written:** 2026-08-23. **Rewritten clean:** 2026-08-26. **Updated:** 2026-08-27 (Sections 7–9 disagreement/benchmark/positioning; 10 drift diagnosis and fix; 11 tool-claim external test; 12 blocked redesign; 13 competitor audits). **Updated:** 2026-08-28 (Section 14 — external disagreement validation, the last of the three signals to be checked and the third to fail; Section 15 — the productization arc, seven phases from migrations through health/readiness). **Updated:** 2026-08-30 (Section 16 — dashboard unfrozen, the landing-page claim audit, and the half-finished drift restore). **Updated:** 2026-08-31 (Section 17 — Final Review deliverables, the literature survey, and repository access). **Updated:** 2026-09-12 (Section 18 — frontend replaced and wired to the live API, the tool-claim signal made to fire for the first time, and the Compose stack fixed so it actually evaluates; MIT licence added, closing a claim the README had been making against a missing file). **Updated:** 2026-09-19 (Section 24 — the 23.4 pipeline run for the first time and five faults found in it, four of which meant it delivered nothing; the disagreement signal firing at 0.966–0.996 against the one agent in each trace that was correct, which is the evidence-partition problem of Section 14 with a reproduction on five model families; the ablation re-run and found never to have been stale; OmniRoute's free-token headline settled from its own source). **Updated:** 2026-09-20 (Sections 24.8–24.9 — NVIDIA's 82-model catalogue is nine models on a free key; the refusal experiment at 87 trials, which reproduces 24.4 and shows a *wrong* refusal scoring 0.999 against a correct one's 0.978, so the signal tracks stance and is blind to correctness within it; and three analysis faults in that experiment, one of which produced a uniform, confident, entirely fabricated result from an unloaded model). **Updated:** 2026-10-13 (Section 28 — the handoff checked against the repository, every pull request and branch, and GitHub's settings rather than against itself: `main` is `e31fb58`, a stale-snapshot push with no PR that re-enabled the withdrawn disagreement alert, reverted the pipeline fix and deleted the Section 24–25 experiments; the unmerged Oct-1 branch (PR #60) already undoes that; Sections 25.5/25.6 folded in from PR #57 with their real status; Section 27 is the 34-turn drift probe, corrected — its verifier value was already over the alert threshold; and the RAG chat view has six fabrication paths, two of them still live). **This chain is not in date order and names only some sections — 19–23 and 25 appear in no entry. The section headings carry the dates; trust those.**
 
 **Project:** AgentPulse — self-hostable observability SDK for grounding-risk and drift monitoring in multi-agent LLM systems. M.Tech project. Working directory: `C:\MLOPs\3rd sem project\Agentpluse` (renamed from `project one agent`; the venv's editable installs still point at the old path).
 
@@ -8,15 +8,29 @@
 
 ---
 
+## READ FIRST — the repository is not what the rest of this file describes (checked 2026-10-13)
+
+Everything below this banner was written session by session, against whichever branch that session was on. Sections 0–23 were checked against `origin/main` as it stood in August–September and nothing was re-checked after `e31fb58` landed on 2026-09-21. Section 28 is the reconciliation; the short version:
+
+- **`main` is `e31fb58`: an unsigned direct push with no PR, most likely a Google AI Studio sync of a stale working tree, not a reviewed change.** Its message is *"refactor: remove tool claim tracking and alerting"*; its diff is **48 files, +3,609 / −12,482**. It re-enabled the `AGENT_DISAGREEMENT` HIGH alert that 24.9.5 withdrew, put `demo/multi_model_pipeline.py` back to the version that delivers zero spans (24.1), deleted the 24.9 experiments and the `tool_claims_found` migration and tests, deleted the dashboard lockfiles, blanked `.env.example`, cut this file back to Section 23, and **added** the RAG chat view with its mock middleware. 28.2.
+- **PR #60 (branch `claude/optimistic-knuth-0z7l6z`, five commits from 2026-10-01) already undoes that** and adds a real chat service. It is not merged. Sections 24–26 of this file describe `7f78b3f` plus that branch, not `main` today. 28.1, 28.3.
+- **The code behind 25.5/25.6** was merged in #55, removed by `e31fb58` and is restored on #60; 25.6 is PR #56, never merged. 25.5, 25.6.
+- **The RAG chat view has six fabrication paths, not four, and two of the worst are on every branch:** it stamps `groundingScore 0.942 / SUPPORTED` on any turn whose evaluation never arrives, and it shows invented drift once its own counter reaches 32. 28.4.
+- **The 34-turn drift probe (Section 27) is weaker than first written:** the verifier was already over the alert threshold before the topic switched. 27.2.
+
+Inline corrections below are marked **[2026-10-13]** and left next to the text they correct. Apart from two lines noted where they occur, the original wording is kept.
+
+---
+
 ## 0. TL;DR
 
-- **Backend + evaluation pipeline: real, tested, working.** **209/209 tests passing** (`pytest tests/ -q`; was 130 before the productization arc). Security audit complete. Real model inference, not stub fallbacks.
+- **Backend + evaluation pipeline: real, tested, working.** **209/209 tests passing** (`pytest tests/ -q`; was 130 before the productization arc). Security audit complete. Real model inference, not stub fallbacks. **[2026-10-13] The count is stale: 290 tests pass on PR #60 (`pytest tests/`, 4m45s); 260 collect on current `main`, which `e31fb58` stripped of two suites. 28.3.**
 - **Inter-agent disagreement failed its external check too — that is now three for three.** On real multi-agent traces the shipped configuration detects **0 of 10** independently labelled contradictions. The fix that recovers 6 of 10 does **not generalize**. Section 14; `COMPETITIVE_POSITIONING.md` revised. Every internal benchmark this project has checked against external data has broken or narrowed: drift, tool-claim, and now disagreement.
 - **The evidence-partition problem is the more interesting finding** and is now the real research question for disagreement: agents holding different evidence produce apparent contradictions that are not faults, and an NLI score cannot tell the two apart. Section 14.
 - **Production hardening happened, and is no longer "deliberately not next".** Seven phases: migrations, durable queue, ONNX fix, throughput measurement, retention, self-monitoring, health/readiness. All measured, not asserted. Section 15 and `PRODUCTIZATION_LOG.md`.
 - **Drift was diagnosed and fixed** against an external real-trace corpus — false alarms on unchanged operation went from **91.7% → 1.5%**, detection 92%, AUC 0.991 on a held-out split. The 0.30 threshold was never the problem; the aggregation was. **But coverage is only 24.5%** — see Section 10, and do not quote the accuracy without the coverage.
 - **Both reasoning-strategy benchmarks are DONE, real, and compared** — see Section 1 and `GPU_VS_CPU_BENCHMARK_REPORT.md`.
-- **Inter-agent disagreement engine rebuilt and wired into production this session** — the project's largest claim-vs-reality gap is closed. See Section 7.
+- **Inter-agent disagreement engine rebuilt and wired into production this session** — the project's largest claim-vs-reality gap is closed. See Section 7. **[2026-10-13] Overtaken: Sections 14, 24.9.5 and 25.4 — the rebuilt engine's measured performance was an artifact; its alert is withdrawn at `7f78b3f` and on PR #60, and live on `main` (28.3).**
 - **Two head-to-head benchmarks written, and both contradicted their own hypothesis** — reported that way rather than smoothed. See Sections 7 and 8.
 - **Competitive positioning documented** (`COMPETITIVE_POSITIONING.md`). Verdict: breadth is unwinnable. The defensible niche was originally "three signals none of them ships" — **that is now two, and they are not equally strong**; see Sections 8 and 13.
 - **A real documentation defect was found and corrected**: `DRIFT_EXPERIMENT_REPORT.md`'s prose contradicted its own data table, and the same errors had propagated into `PROJECT_REPORT.md` §7. See Section 9.
@@ -34,19 +48,22 @@
 - **`agentpulse` is public now**, scanned for secrets first, and MIT-licensed. The licence was not a new decision: the README badge, the README link and `sdk/pyproject.toml` had all claimed MIT for months against a LICENSE file that did not exist. Section 18.8.
 - **A literature survey now exists: 17 verified works, 9 from 2023 onward.** The papers are real and their limitations accurate, but they have not been read - the table is a reading list still owed. Section 17.3.
 - **The baseline comparison shows the full system losing to its own ablation** (F1 0.842 against 0.941), because drift is a per-agent signal folded into a per-claim score. Kept in the deck with the mechanism and the nine-day staleness caveat. Section 17.4.
-- **`main` has a second writer and no branch protection** - the Free plan does not offer it on private repos. Section 17.5.
-- **Design direction is frozen in `bedhi_frontend.md`** — reference by reference, what to take and what to refuse, with Liquid Glass rules. Section 16.7.
-- **Repo pushed through commit `3cd1080`; working tree clean, `origin/main` in sync.** The dashboard work that used to sit uncommitted was reviewed and checkpointed (`8a93558`) with three known gaps recorded — see Section 15.
-- **The 23.4 multi-model pipeline had never worked, and now does.** Five faults in one file; four of them meant it delivered zero spans while printing a successful run. Section 24.
-- **The signals are aggregate-stable and item-unstable, and only the first has ever been measured here. This is the session's result.** Now quantified: holding evidence and priors fixed and varying only wording, **disagreement spreads 0.948–0.984 across paraphrases of the same statement**, and **10 of 34 paraphrases crossed the alert threshold their anchor did not**. AUC is 0.979 throughout. **AgentPulse alerts per span, so it depends on the property that was never measured.** Sections 24.9.2 and 24.9.3.
+- **`main` has a second writer and no branch protection** - the Free plan does not offer it on private repos. Section 17.5. **[2026-10-13] The repo is public now, so protection is available and still not applied (the API answers 404 "Branch not protected"), and `SkSahoo98` still has push. `main`'s real second writer was an untracked route: `e31fb58`, unsigned, no PR, most likely an AI Studio sync (28.2).**
+- **Design direction is frozen in `bedhi_frontend.md`** — reference by reference, what to take and what to refuse, with Liquid Glass rules. Section 16.7. **[2026-10-13] That file no longer exists — deleted 2026-09-14 in `c6198e3` ("drop the agent prompts"); the direction survives only as the prose in 16.7.**
+- **Repo pushed through commit `3cd1080`; working tree clean, `origin/main` in sync.** The dashboard work that used to sit uncommitted was reviewed and checkpointed (`8a93558`) with three known gaps recorded — see Section 15. **[2026-10-13] Stale: `origin/main` is `e31fb58` (2026-09-21), about 150 commits later; PRs #56, #57, #58 and #60 are open (#59 was closed as a duplicate of #60).**
+- **The 23.4 multi-model pipeline had never worked, and now does.** Five faults in one file; four of them meant it delivered zero spans while printing a successful run. Section 24. **[2026-10-13] On `main` it is the broken version again: `e31fb58` reverted the fixes (no `await pulse.start()`, `pulse.shutdown()` not awaited, `max_tokens=320`, no `EmptyCompletion`); PR #60 restores them. An offline stub-client run delivered 0 spans from `main`'s file and 5 from the restored one. 28.3.**
+- **The signals are aggregate-stable and item-unstable, and only the first has ever been measured here. This is the session's result.** Now quantified: holding evidence and priors fixed and varying only wording, **disagreement spreads 0.948–0.984 across paraphrases of the same statement**, and **10 of 34 paraphrases crossed the alert threshold their anchor did not**. AUC is 0.979 throughout. **AgentPulse alerts per span, so it depends on the property that was never measured.** Sections 24.9.2 and 24.9.3. **[2026-10-13] Miscounted: 34 paraphrases were generated and 2 discarded, so 32 were scored, each on 2 signals = 64 pairs. 10 pairs flipped (disagreement 7 of 32, contradiction 3 of 32), and 9 distinct paraphrases of 32 flipped on at least one signal. Re-derived from the result JSON. 28.5.**
 - **It is disagreement specifically.** Contradiction holds to 0.004–0.057 on acceptances and only breaks on refusals (up to 0.634) — the same region 24.4 found it misbehaving in by a different method. The obvious lexical explanation was tested and rejected (24.9.3).
 - **The disagreement signal's entire measured performance was an artifact, and removing the artifact removes the signal. This is the most consequential thing in Section 24.** The swing comes from comparing the planner's *questions* against the verifier's statement — ill-posed input to an NLI model, a pipeline fault rather than a DeBERTa fault. Excluding planner spans eliminates the paraphrase instability completely (spreads 0.98 → 0.001, alert flips → 0) **and drops AUC from 0.980 to 0.457, which is chance.** Sections 24.9.4 and 24.9.5.
-- **Section 14's "0 of 10" now has a mechanism.** Disagreement failed external validation a month ago and nobody knew why. It was measuring a malformed comparison. The `HIGH` alert has been withdrawn; the score is still computed and stored.
-- **Two of the four signals get their apparent performance from the harness, not the signal.** Tool-claim extracts a count from 9 of 9 real retriever outputs, and **0 of 9** once the sentence the demo's own prompt dictated is removed — which is the mechanism behind Section 11's zero claims across 8,353 prose spans. Disagreement is 24.9.5. **Drift is the robust one**: paraphrase spread 0.066 against disagreement's 0.948–0.984 on identical texts. Section 25.
-- **Disagreement tracks stance, not error.** 87 trials across five verifier families: correct refusals **0.978**, **wrong** refusals **0.999**, correct acceptances **0.219**. Whether the verifier was right does not move the score. Section 24.9. **Cell D — a wrong acceptance — is still empty after 100 trials, so the 2×2 is not closed and cell C rests on n=3.** Getting there needs evidence designed to look relevant without answering, not more runs.
-- **The ablation was never stale**, and the reason matters more than the re-run: it supplies its own inputs and so measures a ceiling, not a capability. Config D has shown parity with the best configuration for months while the live signal scored zero. Section 24.5.
+- **Section 14's "0 of 10" now has a mechanism.** Disagreement failed external validation a month ago and nobody knew why. It was measuring a malformed comparison. The `HIGH` alert has been withdrawn; the score is still computed and stored. **[2026-10-13] Withdrawn at `7f78b3f` and on PR #60; on `main`, `e31fb58` restored the rule (HIGH, threshold 0.6, `alerting.py:299-306`). The mechanism claim was re-scored by hand and holds — live configuration AUC 0.9792, retriever-only 0.4570. 28.3, 28.5.**
+- **Two of the four signals get their apparent performance from the harness, not the signal.** Tool-claim extracts a count from 9 of 9 real retriever outputs, and **0 of 9** once the sentence the demo's own prompt dictated is removed — which is the mechanism behind Section 11's zero claims across 8,353 prose spans. Disagreement is 24.9.5. **Drift is the robust one**: paraphrase spread 0.066 against disagreement's 0.948–0.984 on identical texts. Section 25. **[2026-10-13] Caveats: the 0 of 9 follows partly by construction (the removal regex deletes the only digit-count phrase in each output), and the 0.948–0.984 range covers four of the five anchors — the fifth has disagreement spread 0.0006. 25.3, 28.5. The 25.1 spreads were not re-checked.**
+- **Disagreement tracks stance, not error.** 87 trials across five verifier families: correct refusals **0.978**, **wrong** refusals **0.999**, correct acceptances **0.219**. Whether the verifier was right does not move the score. Section 24.9. **Cell D — a wrong acceptance — is still empty after 100 trials, so the 2×2 is not closed and cell C rests on n=3.** Getting there needs evidence designed to look relevant without answering, not more runs. **[2026-10-13] These figures are from a superseded snapshot (97 rows, 87 scorable). The committed data has 100 rows, 90 scorable: cell A n=40, mean 0.2485, AUC 0.9792, re-scored by hand. And 24.9.5 retracts the interpretation: it concludes the 0.980 AUC was an artifact and that "tracks stance" described a planner comparison, so this bullet and the "cell D" question are not standing results. 28.5.**
+- **The ablation was never stale**, and the reason matters more than the re-run: it supplies its own inputs and so measures a ceiling, not a capability. Config D has shown parity with the best configuration for months while the live signal scored zero. Section 24.5. **[2026-10-13] The re-run and its artifacts were reverted on `main` by `e31fb58` (`ablation_results.json` is the 2026-08-23 file again); PR #60 restores them.**
 - **OmniRoute's "~1.62B free tokens" and its "zero credentials" describe disjoint sets of providers** — settled from its own source, not inferred. Section 24.6.
-- Docker, GitHub, and dev-server setup are all previously verified working — see Section 4 for exact commands, not re-derived here.
+- Docker, GitHub, and dev-server setup are all previously verified working — see Section 4 for exact commands, not re-derived here. **[2026-10-13] Not true of `main`: the dashboard image cannot be built (lockfile deleted), `.claude/launch.json` runs a dead shim and the wrong port, `.env.example` is blank. PR #60 restores all three, and its CI built both images. 28.3, 28.7.**
+- **`main` was overwritten by `e31fb58`, and an unmerged branch already undoes it.** PR #60 (Section 26) restores the experiments, the alert withdrawal, the pipeline fixes, `tool_claims_found` and the lockfiles, removes the mock data, and adds `demo/chat_server.py` and release packaging. Section 28.
+- **The 34-turn drift probe was weaker than first written.** The verifier's pre-switch value was already over the 0.30 threshold (7 of 11 windows) and `DRIFT_DETECTED` fired seven minutes before the topic changed; the chatbot retrieved with a character hash, not the embedding model. Section 27.
+- **The RAG chat view has six fabrication paths, two of them on every branch:** a `0.942 / SUPPORTED` grounding stamp on any turn whose evaluation never arrives, and invented drift past 32 spans. Do not demo it as live telemetry. 28.4.
 
 ---
 
@@ -168,14 +185,14 @@ The Llama GPU run (Section 1) succeeded on kernel version 12 after **4 failed at
 ## 4. Environment / commands (verified working, not re-derived)
 
 - Python venv: `.venv` in project root. Always invoke as `./.venv/Scripts/python.exe` (git-bash on Windows; plain `python` hits system Python, missing `kaggle` etc.).
-- `gh` CLI authenticated as `Soum-Code`. Repo: `https://github.com/Soum-Code/agentpulse` (private).
+- `gh` CLI authenticated as `Soum-Code`. Repo: `https://github.com/Soum-Code/agentpulse` (**public** and MIT-licensed since no later than 2026-09-12, Section 18.8 — **[2026-10-13]** this line said "private" and was wrong from then on; confirmed with `gh repo view`).
 - `kaggle` CLI authenticated as `somnath26` via `~/.kaggle/kaggle.json`.
-- Dev servers via `.claude/launch.json`: `agentpulse-backend` (uvicorn, port 8000), `agentpulse-dashboard` (vite, port 5173). `dashboard/.env` (gitignored) needs `VITE_API_KEY=change-me-to-a-secure-key` for any local write action to work (curate-case, etc.) — recreate it if missing after a fresh checkout.
+- Dev servers via `.claude/launch.json`: `agentpulse-backend` (uvicorn, port 8000), `agentpulse-dashboard` (vite, port 5173). `dashboard/.env` (gitignored) needs `VITE_API_KEY=change-me-to-a-secure-key` for any local write action to work (curate-case, etc.) — recreate it if missing after a fresh checkout. **[2026-10-13] On current `main` neither launch entry works.** The backend entry runs `.venv/Scripts/uvicorn.exe`, a console-script shim with a stale path that exits 1 and binds nothing on this machine (`python -m uvicorn` works), and the dashboard entry declares port 5173 while `npm run dev` serves **3000** (5173 is the Docker/nginx port). PR #60 restores the working entries.
 - `scripts/e2e_dashboard_demo.py` pushes a real mixed-risk trace through the actual SDK — the standard way to get real data into a fresh dashboard for testing, rather than trusting whatever's already in the DB. **Note:** it stamps every span with the *same* `start_time` (line 38), which is unrealistic — the real SDK stamps each span separately. This masked an ordering bug for a while; see Section 7.
-- Docker (`docker compose up --build`) was verified working end-to-end earlier in the broader session; 4 real bugs were found and fixed then (missing README in build context, CUDA-bloat torch index, SQLite URL slash count, WAL mode needing a named volume on Windows). Not re-verified this session, but nothing since should have broken it.
-- Test suite: `pytest tests/ -q` — **209/209 passing** as of 2026-08-28. **Runtime is now ~2m30s, not 2.3s**: the durability, migration and inference-backend suites spawn real subprocesses and load real models, because the failures they guard against (SIGKILL mid-job, a migration that only breaks on first use, a silently degraded backend) are invisible to in-process tests. Slow on purpose.
+- Docker (`docker compose up --build`) was verified working end-to-end earlier in the broader session; 4 real bugs were found and fixed then (missing README in build context, CUDA-bloat torch index, SQLite URL slash count, WAL mode needing a named volume on Windows). Not re-verified this session, but nothing since should have broken it. **[2026-10-13] Something since did.** `e31fb58` deleted `dashboard/package-lock.json`, while `dashboard/Dockerfile` (`COPY package.json package-lock.json .`) and `deploy/huggingface/Dockerfile` (`COPY dashboard/package.json dashboard/package-lock.json ./`) still copy it: a build from `main` fails at that `COPY`. PR #60 restores it, and its CI built both the backend and dashboard images.
+- Test suite: `pytest tests/ -q` — **209/209 passing** as of 2026-08-28. **Runtime is now ~2m30s, not 2.3s**: the durability, migration and inference-backend suites spawn real subprocesses and load real models, because the failures they guard against (SIGKILL mid-job, a migration that only breaks on first use, a silently degraded backend) are invisible to in-process tests. Slow on purpose. **[2026-10-13] The count is stale.** 290 tests pass on PR #60 (4m45s); 260 collect on `main`. Later sections quote 226 (2026-09-15), 237 (09-16; the "269" in 20.5 is a typo for it) and 260 (09-17); at `7f78b3f`, before `e31fb58` deleted two suites, 269 collected.
 - **Reading the HuggingFace corpus without downloading 231 MB:** `pyarrow` cannot read `https://` directly. Use `huggingface_hub.HfFileSystem` + `pyarrow.parquet.read_table(fh, columns=[...])` — column projection over range requests. Project the cheap run-level columns to locate a target cell, then read the huge `spans` column from only the shards that contain it. The datasets-server `/statistics` endpoint returns a permission error for this dataset; `/rows` works.
-- **Two SQLite DB files exist and they are not the same one.** `./data/agentpulse.db` and `./backend/data/agentpulse.db`. The path in `.env` is relative (`sqlite+aiosqlite:///./data/agentpulse.db`), so which one the backend uses depends on its working directory — as launched, it writes to **`backend/data/agentpulse.db`**. Query that one when verifying, not the root one. This cost real debugging time once.
+- **Two SQLite DB files exist and they are not the same one.** `./data/agentpulse.db` and `./backend/data/agentpulse.db`. The path in `.env` is relative (`sqlite+aiosqlite:///./data/agentpulse.db`), so which one the backend uses depends on its working directory — as launched, it writes to **`backend/data/agentpulse.db`**. Query that one when verifying, not the root one. This cost real debugging time once. **[2026-10-13] Backwards.** The populated database is the root-relative `./data/agentpulse.db` (backend started from the repo root with `--app-dir backend`, which is how `launch.json` starts it, and what 24.10 says). `backend/data/agentpulse.db` is the empty one: it is what a process started *inside* `backend/` opens — typically `python -m app.worker` — and that process then dies with `no such table: evaluation_jobs`. Query the root one, and start the worker from the repo root.
 - **The backend auto-restarts when killed.** Something supervises it (not `--reload`, and not `.claude/launch.json`), so `Stop-Process` on the port-8000 PID results in a fresh process within seconds — which conveniently picks up code changes, but means you cannot simply stop it. Health is at `/v1/health`, **not** `/health`.
 
   **This next part changed on 2026-08-28 — the old advice is now wrong.** It used to say
@@ -188,13 +205,15 @@ The Llama GPU run (Section 1) succeeded on kernel version 12 after **4 failed at
     spans are accepted and durably queued but nothing evaluates them. `/v1/health/evaluator`
     returns 503 and `/v1/platform` reports `state: failing` in that situation.
   - Restore the old behaviour with `AGENTPULSE_API_LOAD_MODELS=true` if ever needed.
-- The ingest API requires `X-API-Key: change-me-to-a-secure-key` (from `.env`); requests without it get a 401 with no other clue.
+- The ingest API requires `X-API-Key: change-me-to-a-secure-key` (from `.env`); requests without it get a 401 with no other clue. **[2026-10-13] The value is right; the stated source is not `.env`.** Nothing under `backend/app` calls `load_dotenv` — the default lives in `config.py` and `.env` is read by `docker compose` (`env_file`). `e31fb58` replaced `.env.example` with a version whose 23 keys all have empty values, so the documented `cp .env.example .env` (README, STARTUP_GUIDE, deploy READMEs) yields empty `AGENTPULSE_PORT`, `AGENTPULSE_DATABASE_URL` and `AGENTPULSE_API_KEY`; what the backend does with those was not run here (a finder reported it fails at import). PR #60 restores the populated file.
 
 ---
 
 ## 5. Open question, never resolved: branch/PR workflow vs. direct-to-main
 
 This repo has only ever had a `main` branch; every commit across every session has gone directly to it. A system-triggered PR-creation flow once asked for a PR from `main`, which isn't possible without a second branch to diff against. The user was asked whether to start using feature branches going forward and has not yet answered either way. Keep committing directly to `main` unless told otherwise; don't assume.
+
+**[2026-10-13] Answered by practice, never recorded as a decision.** Pull requests began with #1 (merged 2026-09-01) and #2–#3 (09-06); ten commits then went straight to `main` between 09-10 and 09-14; from #4 (09-14) every change except `e31fb58` came through a PR. #1–#55 are merged; #56, #57, #58 and #60 are open and #59 was closed as a duplicate. "Keep committing directly to `main`" is no longer the rule. The exception is the writer nobody was tracking: `e31fb58` (28.2). Branch protection is still not enabled.
 
 ---
 
@@ -204,19 +223,21 @@ The recommendation given to the user, and the reasoning, is in Section 9. Short 
 
 1. ~~Diagnose drift~~ — **done, and fixed.** See Section 10.
 2. ~~Test the tool-claim validator on the external corpus~~ — **done, and the result was worse than expected.** See Section 11.
-3. ~~Redesign tool-claim extraction~~ — **attempted and blocked on labelling, not engineering.** See Section 12. Restarting it means first making the labelling question well-posed (§12.4), not rewriting the extractor. Do not ship on firing-rate alone (§12.5).
+3. ~~Redesign tool-claim extraction~~ — **attempted and blocked on labelling, not engineering.** See Section 12. Restarting it means first making the labelling question well-posed (§12.4), not rewriting the extractor. Do not ship on firing-rate alone (§12.5). **[2026-10-13] Overtaken.** 18.4 shipped an ingest-path fix; 25.3 showed `COUNT_PATTERNS` is digit-only and extracts nothing without prompt-dictated phrasing; 25.5 decided to keep the alert and to record coverage as `tool_claims_found`. `e31fb58` removed that column, its migration and its tests from `main`; PR #60 restores them (28.3).
 4. ~~Install Phoenix and audit the competitive claims~~ — **done, for Phoenix *and* MLflow, and two claims were refuted.** See Section 13. What remains unaudited is Datadog, which is not installable; and neither audit measured *quality*, only existence and runnability.
 5. ~~Externally validate inter-agent disagreement~~ — **done, and it failed.** Section 14. Three for three.
 6. ~~Correct `DRIFT_EXPERIMENT_REPORT.md` §3~~ — **investigated, and the premise was wrong.** §3 is correctly scoped and already carried a correction notice; the misremembered error was in the real-text diagnosis and had been fixed there. **The real hazard was the regeneration trap**, which was live: `drift_scenarios.py` rewrote the curated report from a template that still contained all three documented errors. Fixed in `78697c5`.
-7. ~~Decide what to do with the uncommitted dashboard work~~ — **reviewed and checkpointed** (`8a93558`). Three gaps recorded for the dashboard phase; see Section 15.
-8. **Re-run ablation Configs D, E and F.** Still open, and now more stale: `ablation_results.json` is dated 2026-08-23, before the disagreement rewiring, the drift rebuild, and the ONNX fix that halved NLI latency. The dashboard displays these numbers.
-9. Whenever picked up: the branch/PR question (Section 5) and the standing `gradient-text` hook suppression (Section 2) are both one-line user decisions away.
+7. ~~Decide what to do with the uncommitted dashboard work~~ — **reviewed and checkpointed** (`8a93558`). Three gaps recorded for the dashboard phase; see Section 15. **[2026-10-13] Closed in Section 16; the dashboard was then replaced wholesale (18.2).**
+8. **Re-run ablation Configs D, E and F.** Still open, and now more stale: `ablation_results.json` is dated 2026-08-23, before the disagreement rewiring, the drift rebuild, and the ONNX fix that halved NLI latency. The dashboard displays these numbers. **[2026-10-13] Done 2026-09-18 (24.5: every classification bit-identical) — then reverted on `main` by `e31fb58`; PR #60 restores the re-run.**
+9. Whenever picked up: the branch/PR question (Section 5) and the standing `gradient-text` hook suppression (Section 2) are both one-line user decisions away. **[2026-10-13] The branch/PR half is answered (Section 5). The `gradient-text` half is moot: no such class exists in `dashboard/src` since the dashboard was replaced in 18.2.**
 
 ### What is actually next
 
 1. **Capability tiers** — published in Phase 0 (drift Beta, grounding Beta, disagreement Experimental, tool-claim Experimental). Nothing measured since has changed them, so this is a re-confirm or a skip.
 2. **Dashboard, last** — the remaining work. It now has considerably more real data available than when it was frozen: `/v1/platform`, `/v1/health` readiness, worker fleet state and queue depth are all live endpoints that did not exist when that UI was written.
 3. **The disagreement research question**, if the project wants to keep pulling that thread: how to distinguish true contradiction from legitimate disagreement caused by partial evidence (§14). Do **not** improve claim extraction before answering it — that optimises the wrong objective.
+
+**[2026-10-13] This "What is actually next" list is superseded.** The dashboard is no longer "the remaining work" (unfrozen in 16, replaced in 18.2, de-faked in 21–23, found faked again in 28.4), and the capability tiers it says to re-confirm rest on bases that 24.9.5 and 25 removed. What is actually next, and which items are the owner's decision, is in 28.9.
 
 **No longer "deliberately not next".** The previous handoff deferred production hardening as an "if users arrive" problem. That call was reversed deliberately by the user and the work is done (Section 15) — with scope held to a thin vertical rather than the full SaaS substrate, so the research contribution was not displaced.
 
@@ -2417,6 +2438,8 @@ docstring describing behaviour the code did not have.
 The order matters, because each fault was only reachable after the one before
 it was fixed, and the last two were unreachable without a real model.
 
+> **[2026-10-13] Section 24 describes `7f78b3f` and PR #60's tree — not current `main`.** `e31fb58` (28.2) removed or reverted much of what it points at: `experiments/refusal_disagreement.py`, `experiments/paraphrase_stability.py`, their result JSON and reports; the 24.5 ablation re-run and its limitation text; `demo/multi_model_pipeline.py` (back to the form 24.1–24.3 and 24.8 describe as broken); `.claude/launch.json`; `.env.example`. All of these exist byte-for-byte on PR #60; none exists on `main`. Where a number below cites a file path, check it exists on the branch you are on.
+
 ### 24.1 It delivered nothing, and said it had
 
 A stub client -- five canned strings, no network -- was enough to find this.
@@ -2852,6 +2875,8 @@ Five anchors, 34 paraphrases, 2 discarded:
 **10 of 34 paraphrase-signal pairs landed on the opposite side of the 0.6 alert
 threshold from their anchor, while meaning the same thing.**
 
+**[2026-10-13] Denominator corrected.** 34 is the number of paraphrases *generated*; 2 were discarded, so 32 were scored on 2 signals each — 64 pairs — and **10 of 64** flipped: disagreement 7 of 32 (the table's 1+3+1+2+0) and contradiction 3 of 32. Counted by paraphrase, 9 of 32 flipped on at least one signal. Re-derived from `paraphrase_stability.json` at `7f78b3f`. Not stated above: all three acceptance anchors come from the same query ('transformer multi-head self-attention'), so they are less independent than the table's three rows suggest (finder, not re-run).
+
 This **localises** the problem rather than restating it. **Disagreement is the
 unstable signal** — four of five anchors span essentially the whole range.
 Contradiction is comparatively stable on acceptances and unstable on refusals,
@@ -3166,6 +3191,8 @@ signal against text the demo asked the model to produce in the validator's own
 format, which is the same shape of fault as 24.5's ablation feeding
 `evaluate_tool_claims` a `result_count` from the dataset.
 
+**[2026-10-13] Two caveats on 25.3 (read from the stored outputs; not re-run).** First, the 0 of 9 follows partly by construction: removing the dictated sentence also removes the only digit-count phrase in each output. The nine split three ways — three used the word form ('I retrieved three documents…') and then appended the dictated line; three wrote their own sentence with no count at all; three consisted of the dictated sentence plus a trailing clause, so after removal two are empty and the third is a fragment (the regex stops at 'e.g.'). The informative cases are the six outputs with prose left, not nine. Second, the mechanism contradicts Section 11. That section says the zero extractions on the 8,353 external spans come from agents not narrating tool use in text at all — the invocation is a `tool_call` field, so 'expanding the regex cannot fix this'. 25.3 explains them with a digits-versus-words mismatch, on nine outputs from this repo's own demo rather than on the external spans. Both can be partly true; 25.3 does not establish that the digit-only regex is *the* cause of Section 11's zeros, and the raw spans are not in the repo to test it. The nine outputs live in `experiments/results/refusal_disagreement.json`, which `e31fb58` deleted from `main` (PR #60 restores it).
+
 ### 25.4 Where that leaves the four signals
 
 | signal | status |
@@ -3173,7 +3200,7 @@ format, which is the same shape of fault as 24.5's ablation feeding
 | drift | robust to paraphrase; the strongest of the four, consistent with Section 13 |
 | grounding | stable on acceptances, erratic on refusals (24.9.3); truncation not triggered here but unrecorded when it is |
 | tool-claim | extracts only when the prompt dictates the format; 0 of 9 otherwise |
-| disagreement | measured performance was an artifact; alerting withdrawn (24.9.5) |
+| disagreement | measured performance was an artifact; alerting withdrawn (24.9.5) — **[2026-10-13] at `7f78b3f` and on PR #60; live on `main` (28.3)** |
 
 Two of four have performance that comes from the harness rather than the signal,
 and in both cases the earlier external-validation failures — Section 11 for
@@ -3185,6 +3212,84 @@ against independently labelled production data in this session; they have only
 been shown not to fail in the specific way disagreement failed. Section 14's
 "three for three" record stands, and this section explains two of the three
 rather than overturning any of them.
+
+### 25.5 The tool-claim decision, and why it differs from disagreement
+
+> **[2026-10-13] Status — read before the rest.** 25.5 and 25.6 were written on PR #57 (`docs/handoff-25-5`, open, conflicting) and are folded in here from there. **Their code is not all on `main`.** 25.5's change was merged as #55, then removed by `e31fb58` (28.3): on current `main` `tool_claims_found`, its migration `a7f2c3d9e104` and `tests/test_tool_claim_coverage.py` are gone, and the `AGENT_DISAGREEMENT` alert that 25.5's table calls *withdrawn* is live. **PR #60 restores them.** 25.6's change is PR #56, which was never merged and now conflicts, so `grounding_input_truncated` exists on no merged branch. The reasoning below is unchanged; its present tense describes `7f78b3f` for 25.5 and PR #56's branch for 25.6.
+
+Both signals failed external validation. They needed opposite responses, and the
+reason is worth stating because "two signals failed, remove both" would have
+been the wrong call.
+
+| | disagreement | tool-claim |
+| :--- | :--- | :--- |
+| when it fires | **wrong** — the score measures noise | **right** — verified both directions |
+| the fault | the signal itself | its applicability |
+| decision | alert **withdrawn** (24.9.5) | alert **kept** |
+
+Tool-claim was checked in both directions before deciding. A stub claiming five
+documents against a tool that returned three raises `TOOL_CLAIM_MISMATCH`; a
+retriever that counts honestly stays silent. True positive and true negative,
+both observed. A precise detector with narrow reach is worth keeping — the harm
+was never a false alarm.
+
+**What was actually broken was its silence.** `tool_claim_score` is 0.0 both
+when every claim checked out and when there was nothing to check, and per
+Section 11 the second is almost always the case in production. `total_claims`
+was computed and then dropped on the way to the database, so nothing recorded
+which of the two a 0.0 meant.
+
+It is now persisted as `tool_claims_found` — `None` when the validator did not
+run, `0` when it ran and found nothing, `N` when it checked N claims. Verified
+live: three spans sharing one tool result produce `(0.0, 1)`, `(0.0, 0)` and
+`(1.0, 1)`.
+
+**Broadening `COUNT_PATTERNS` was considered and rejected on evidence.** The
+obvious fix is word-numbers, since the models in 25.3 wrote "I retrieved three
+documents" unprompted and the regex is digit-only. But Section 11's corpus shows
+agents do not narrate counts in *any* form — the prose is "First, I need to log
+into the file system application" — so "three" versus "3" is not the binding
+constraint. `tests/test_tool_claim_coverage.py` pins that limit as a documented
+property rather than asserting it is correct.
+
+**The general rule this produced:** a green signal that means "I did not look"
+is worse than no signal, because it is read as assurance. Wherever a score can
+be produced by absence as well as by success, the two have to be distinguishable
+on the row. 25.6 is the same fault in grounding.
+
+**Still owed:** the coverage claim. Tool-claim is presented in positioning and
+on the dashboard as a general capability, and its reach on real traces is
+roughly 2% of tool calls and 0 of 8,353 prose spans. Persisting the count makes
+the gap visible in the data; it does not correct what the product says about it.
+
+### 25.6 The same fault in grounding, fixed the same way
+
+`compute_nli_grounding` measures whether the premise exceeded DeBERTa's
+512-token window and stores the answer on its result object. The runner surfaced
+it as a `logger.warning` fired **once per worker process** and then dropped it
+before writing the row. After the first occurrence, nothing recorded that a
+score described only the part of the evidence the model read.
+
+That is 25.5's fault exactly: a value the evaluator knows, discarded on the way
+to the database, leaving a number nobody can audit. Now persisted as
+`grounding_input_truncated` and `grounding_input_tokens`.
+
+Not currently triggered here -- 25.2 measured 100 comparisons at 209-288 tokens
+against a 512 limit -- but a production retriever returning longer documents
+crosses it, and that is precisely when nobody is reading worker logs.
+
+**A test double had drifted, and finding out took a baseline run.** Adding the
+two fields failed four durable-queue tests, with jobs stuck in `queued` and no
+evaluation written. `StubGrounding` in `_queue_harness.py` carried five fields
+while the runner persists seven. The failure was confirmed against `origin/main`
+before being diagnosed, rather than assumed pre-existing -- main passes 12/12,
+so it was this change.
+
+**The runner reads those fields directly rather than through `getattr`
+defaults**, and that is deliberate. A `getattr` default would turn a genuinely
+missing field into a silent `None` in the database, which is the precise
+pattern that produced a fabricated result in 24.9.1. Failing the job loudly is
+correct; the cost is that the stub has to keep up, which is a fair trade.
 
 ---
 
@@ -3276,3 +3381,242 @@ SUPPORTED` after 30 seconds without an evaluation, and writes fixed drift values
 once 32 spans are counted. Those are fabricated numbers presented as measured.
 Until they are removed, **do not demo that view as live telemetry**, whether or
 not this server is running.
+
+---
+
+## 27. The 34-turn probe, and the first measured drift (2026-09-20/21; record corrected 2026-10-13)
+
+This is the "Section 26" of PR #58, renumbered because the Oct-1 branch already has its own Section 26 above. It records a measurement. The chatbot that produced it, `demo/chatbot/app.py`, exists only at commit `fe3e30b` on branch `fix/no-mock-fallback` (PR #58); it is **not** on `main` and **not** on the Oct-1 branch (PR #60), which carries a different chat service, `demo/chat_server.py` (26.2, 28.1). Corrections found by the 2026-10-13 audit are written into the text rather than added after it.
+
+### 27.1 The chatbot used for the probe
+
+`demo/chatbot/app.py` serves `POST /chat` and `GET /corpus`: three agents on three models, one trace per turn. The answerer carries the retrieved text as `input_summary` and its reply as `output_summary`, the pair `evaluate_grounding` compares. Errors return HTTP 200 with an `error` field and whichever agents completed, with the real trace id (so, unlike `chat_server.py`, there is no 502/503, no `/health` and no input validation).
+
+First real turn, end to end:
+
+    retriever  mistralai/mistral-nemotron     56.1s
+    verifier   meta/muse-glimmer-30b           2.2s
+    answerer   deepseek-ai/deepseek-v4-flash   7.5s
+
+    3 spans sent, 3 evaluated, grounding 0.052 / 0.040 / 0.494
+
+**Those three models are that first smoke turn, not what is committed.** `AGENT_MODELS` in `app.py` is retriever `nvidia/nemotron-3-super-120b-a12b`, verifier `meta/muse-glimmer-30b`, answerer `nvidia/nemotron-3.5-lightning-30b-a3b`: two of three from one family, which the file's own comment concedes is wrong for disagreement and acceptable for drift. **The 75 s timeout is per attempt, not per call.** The OpenAI client keeps its default `max_retries=2`, so a hung call can take about three times that plus backoff; the probe recorded one at 226 s, which is why 27.3's "between 9 and 247 seconds" is wider than 75 s suggests.
+
+**Model volatility is worse than 24.7 recorded.** Over roughly two hours, on the same key:
+
+| model | observed |
+| :--- | :--- |
+| `google/gemma-4-31b-it` | answered the 24.8 scan, then hung indefinitely -- 90s, no response, no error |
+| `z-ai/glm-5.3-flash` | same, later the same day |
+| `mistralai/mistral-nemotron` | 56s, then over 75s, then 26.9s |
+| `deepseek-ai/deepseek-v4-flash` | 4.4s, then 7.5s, then 30.8s |
+
+24.7's rule was "listed is not served". This adds a third state: **served, then not**, within hours, with no error to tell it from slowness. Two consequences were engineered for: a 75 s request timeout, because the three calls are sequential and a hung provider takes the whole turn and shows as a spinner; and model choices re-measured rather than carried forward.
+
+`/corpus` also returned `{"documents": []}` because the attribute is `corpus`, not `documents`. It answered 200, so a frontend would have rendered "no corpus" rather than a fault.
+
+### 27.2 Drift, measured against real traffic
+
+34 turns, deliberately split: 17 on-corpus questions the six documents can answer, then 17 off-corpus ones they cannot. Sending 34 similar questions would have filled the windows and proved only that a counter increments; drift exists to detect a change, so there had to be one. 33 turns succeeded, one timed out, 46 minutes.
+
+**Drift produces values. It had never been given the chance.**
+
+| agent | drift rows | with a window value | max |
+| :--- | ---: | ---: | ---: |
+| verifier | 58 | 28 | 0.4261 |
+| retriever | 57 | 17 | 0.1073 |
+| answerer | 36 | 4 | 0.5142 |
+
+Earlier in the same session the same agents had 33-34 rows and **zero** window values, which looked like the signal being broken. It was not. The window needs 20 baseline samples plus 12 current ones; the baseline pool is persisted (16.3's fix) and **the current pool is in-memory by design**:
+
+> "The current window is deliberately left empty: it holds the most recent outputs, and outputs from before a restart are no longer current."
+
+That reasoning is sound. Its consequence had never been stated: **after every worker restart, every agent needs 12 fresh spans before `window_centroid_distance` returns anything at all.** The worker was restarted several times during the session, which is why 33 spans produced nothing. It is not a bug, and it is a real operational property: every deploy, crash or restart blinds the signal alerting depends on, per agent, until traffic re-warms it.
+
+**Did it detect the shift? Not in a way this run can show.**
+
+| agent | before the switch | after |
+| :--- | :--- | :--- |
+| verifier | n=11, mean **0.305** (7 of 11 above 0.30) | n=17, mean **0.396**, 17/17 above 0.30 (range 0.345-0.426) |
+| answerer | n=0 | n=4, mean 0.502 |
+| retriever | n=0 | n=17, mean **0.093**, 0/17 above 0.30 |
+
+*The earlier text of this section said the verifier's pre-switch mean was 0.306 and that it "detected the shift, and detected it correctly". Recomputed from the evaluation database on 2026-10-11 and checked again by an independent audit on 2026-10-13:*
+
+- The verifier's mean did rise, by about 0.09, across the switch (21:41:27 on 2026-09-20).
+- But the value was **already over the threshold before the topic changed**: 7 of the 11 pre-switch windows exceed 0.30, and the climb from 0.18 settles at 0.32-0.38 (its last seven pre-switch values are all above 0.30).
+- The alert agrees: the first `DRIFT_DETECTED` for the verifier fired at **21:34:02, distance 0.378, seven minutes before the switch**; the next at 21:49:16 (0.408), and one for the answerer at 21:57:23 (0.479).
+
+So this run shows that drift values exist and move, and that the mean rose across the boundary. It does **not** show a signal that separated "before" from "after": a 0.30 alert was already firing before the questions changed.
+
+**The retriever did not move, and the usual explanation is incomplete.** Its output barely changes with the question ("three documents were retrieved, covering X, Y and Z"), and the corpus is the same six documents regardless of what is asked. But the chatbot process never calls `load_models`, so `get_embedding()` returns `None` and `LocalVectorIndex` falls back to a character-count hash of the first 64 characters (`demo/workflows/retrieval.py` lines 89-135, `emb[ord(char) % 384] += 1.0`). Retrieval in the 34-turn run was character matching, not semantic search; the 17 "on-corpus" questions were not guaranteed to retrieve what they were about, and the retriever's stable output says as much about that index as about the corpus. How often the right document came back was not re-measured; each turn reports the titles it retrieved.
+
+**Only the verifier has data on both sides of the switch.** The retriever and answerer have no pre-switch window values, because their windows filled after the boundary, so this run cannot compare before with after for those two at all.
+
+### 27.3 What this settles, and what it does not
+
+The question was "is AgentPulse actually monitoring a live conversation, or does it only look like it is". For grounding and drift the answer is now yes in the sense that matters here: 33 conversational turns, 99 spans, evaluated scores, and drift values that moved. It does not say the scores are correct; that needs labelled data, which is what 24.9 and 25 were for. It says the machine runs.
+
+One qualifier: the measured drift values are in AgentPulse's database and behind `/v1/drift`. The RAG chat view's own drift column is **not** a view of them. Past 32 spans it shows constants (28.4).
+
+Two things it surfaced that no dashboard would have:
+
+- **drift is blind for 12 spans per agent after every restart**, which in a demo is most of the demo and in production is every deploy
+- **the free tier's latency moves by an order of magnitude within an hour**, so a turn costs between 9 and 247 seconds with no way to predict which
+
+Open: the retriever and answerer still have no before/after comparison, and getting one means a second run of this length without a restart in the middle, with the embedding model loaded.
+
+---
+
+## 28. State of the repository as of 2026-10-13, and what the earlier sections no longer say
+
+Every earlier section was written against whichever branch its session was on. This one was written by checking the file against `origin/main`, every open and closed PR, every remote branch, GitHub's repository settings and the working tree. **It supersedes the Section 27 that PR #58 carries**, which was written first, missed the Oct-1 branch, and was then corrected by an adversarial audit of its 214 checkable statements (132 held, 50 were overstated, 14 unsupported and 18 wrong; several of the 18 became wrong only because PR #60 was opened and #59 closed after the text was written). Those corrections are folded in here.
+
+**"Checked" has grades.** *By hand*: re-read, re-counted or re-scored in this pass. *Audit*: confirmed by an independent agent that did not see the first agent's command. *Finder*: reported by an automated read of the old handoff, not independently confirmed. All 106 findings of the first pass, with the skeptic verdicts (103 confirmed, 3 refuted: D-11, D-30, C22), are in [`HANDOFF_AUDIT_2026-10-10.md`](HANDOFF_AUDIT_2026-10-10.md). 28.10 says what was not checked.
+
+### 28.1 Where each thing lives
+
+| ref | tip | state | holds |
+| :--- | :--- | :--- | :--- |
+| `origin/main` | `e31fb58` (2026-09-21 01:50 IST) | — | `7f78b3f` plus exactly one commit. Its `SESSION_HANDOFF.md` ends at Section 23. |
+| `7f78b3f` | — | last `main` before `e31fb58` | merged #47–#55: Sections 24–25.4 and everything they cite |
+| **#60** `claude/optimistic-knuth-0z7l6z` | `79c2b52` | open, mergeable; ahead 5 / behind 0 of `main` | the restore of what `e31fb58` overwrote, mock-data removal, `demo/chat_server.py`, release packaging, its own Section 26 (26.1–26.3). Opened 2026-10-13; the commits are from 2026-10-01. |
+| #59 `fix/restore-e31fb58-regressions` | `11a1eb1` | **closed unmerged** 2026-10-13 as a duplicate of #60 | six files restored from `7f78b3f`, byte-identical to what #60 holds. Branch kept. |
+| #58 `fix/no-mock-fallback` | `7a4786c` | open, built on `e31fb58`; **conflicts with #60** | `demo/chatbot/app.py` (a second chat service), two `RagChatbotApp.tsx` fixes, the first reconciliation. A trial merge with #60 conflicts in `SESSION_HANDOFF.md` (7 hunks), `useTelemetry.ts` (2) and `vite.config.ts` (2). |
+| #57 `docs/handoff-25-5` | `74c7bb3` | open, conflicting | the prose of 25.5/25.6, folded into this file; superseded |
+| #56 `fix/grounding-truncation-visible` | `f95d135` | open, conflicting | `grounding_input_truncated` / `_tokens` persisted (25.6). Never merged. |
+| `claude/session-handoff-20ykc9` | 2026-08-28, 3 commits | no PR | a frontend clean-slate reset (deletes `SideRail.tsx` and `ui.tsx`, guts `App.tsx`) from before the dashboard was replaced; superseded, not deleted |
+| `claude/check-f88a0c` | `b8531b8`, 2026-09-17, 1 commit | no PR | the trace-workspace view 22.9 rescued; built on the pre-#2 dashboard, so it will not apply |
+| this document | `docs/handoff-reconcile-on-pr60` | stacked on #60 | retargets to `main` when #60 merges |
+
+34 remote branches exist; 7 have commits not in `main` (the rows above), 26 are fully merged and were never deleted. *By hand / audit: `git rev-list --count`, `gh pr list --state all`, `git merge-base --is-ancestor`.*
+
+### 28.2 What `e31fb58` was
+
+`e31fb58` is titled *"refactor: remove tool claim tracking and alerting"*, authored and committed under the repository owner's name, **unsigned, with no PR**, and is **48 files, +3,609 / −12,482**. `main` is `7f78b3f` plus this commit and nothing else. The title describes a small change; the diff is not that.
+
+- **removed or reverted:** the `tool_claims_found` migration `a7f2c3d9e104`, models and runner plumbing; `experiments/refusal_disagreement.py` and `paraphrase_stability.py`, their result JSON and reports; `tests/test_alerting.py` and `tests/test_tool_claim_coverage.py`; `dashboard/package-lock.json`, `dashboard/bun.lock`, `presentation/package-lock.json` and `dashboard/.env.example`; the withdrawal in `alerting.py` (the `AGENT_DISAGREEMENT` HIGH alert is live again); the 24.1–24.3 fixes in `demo/multi_model_pipeline.py`; the 24.5 ablation re-run and `THRESHOLD_ANALYSIS.md`; `.claude/launch.json`; `.env.example` (all 23 values blanked); and `SESSION_HANDOFF.md`, cut back to Section 23.
+- **added:** the RAG Live Monitor itself (`dashboard/src/components/rag/*`, `ragApi.ts`, `ragTypes.ts`, `riskTone.ts` and its test, `mockData.ts`, the `agentpulse-mock-api` middleware in `vite.config.ts`, a `MOCK_*` fallback in `useTelemetry.ts` that reported `connected: true`), edits to the public page that put four removed claims back, and a root `metadata.json` and `package.json`. **So the fabrication paths in 28.4 did not predate this commit; they arrived in it.**
+
+**What it was.** The best-supported reading is a Google AI Studio sync push of a stale working tree, and 19 of its 48 files support that directly: they are **byte-identical to `main` at the #46 merge (`469e494`, 2026-09-18 22:19 IST)**, i.e. a snapshot taken before #47–#55 landed. The other 29 are the app's own edits (the RAG UI and its mock layer, the root `package.json`, the lockfile and `.env.example` deletions, four regenerated PDFs). *By hand: `git diff --name-only` of `7f78b3f..e31fb58` against `469e494..e31fb58`, 48 against 29.* That an AI Studio app was imported around 2026-09-19 02:02 IST and that its sync overwrites rather than merges was read in the owner's AI Studio screens during this check; it cannot be verified from the repository, and AI Studio's own logs were not available. The Oct-1 branch's handoff (its 26.1) records "Soum confirmed it was not intended": a Claude session's report of what the owner said, not independently checked.
+
+**It can happen again.** Two AI Studio apps were seen: `agentpulse` (linked to this repository; the likely source) and `AgentPulse` (linked to `Soum-Code/frontend`). The second had 41 changed files waiting on 2026-10-10; its work reached GitHub as the new repository `Soum-Code/Soum-frontend-` instead (28.8). Chat saying "push it" in AI Studio makes only a local commit; the push is the **Push changes to GitHub** button in Settings → GitHub. Do not sync the `agentpulse` app into this repository again without reading its diff.
+
+### 28.3 What is true of `main` today, and what #60 changes
+
+| earlier sections say | on `main` today | on #60 |
+| :--- | :--- | :--- |
+| the `AGENT_DISAGREEMENT` alert is withdrawn (TL;DR, 24.9.5, 25.4) | **live**: HIGH, threshold 0.6 on `disagreement_score`, `alerting.py:299-306` | withdrawn; `tests/test_alerting.py` asserts its absence |
+| `tool_claims_found` is persisted (25.5) | **gone** (migration, models, runner, tests); `TOOL_CLAIM_MISMATCH` still exists | restored |
+| `grounding_input_truncated` is persisted (25.6) | never on `main` | not there either — it is PR #56 |
+| the 23.4 pipeline "now works" (24.1–24.3) | the pre-fix form: no `await pulse.start()`, `pulse.shutdown()` not awaited, `max_tokens=320`, no `EmptyCompletion`. An offline harness (stub model client, local stub HTTP server) found it delivering **0 spans** where the restored file delivers **5** | restored |
+| the 24.9 experiments, results, reports exist | absent | present |
+| the ablation was re-run (24.5) | `ablation_results.json` is the 2026-08-23 17:56 UTC file again | restored |
+| `.claude/launch.json` starts the stack | `uvicorn.exe` (a stale console-script shim that exits 1 on this machine's venv) and dashboard port 5173 while `npm run dev` serves 3000 | fixed |
+| Docker "verified working" | `dashboard/Dockerfile` and `deploy/huggingface/Dockerfile` `COPY` `package-lock.json`, which is absent: the build fails there | restored; **CI built both images successfully** (28.7) |
+| `cp .env.example .env` gives a working config | all 23 values blank | restored |
+| `npm run dev` shows real data | `vite.config.ts` has `agentpulse-mock-api` and `mockData.ts` exists (both from `e31fb58`): fixtures | removed |
+| 209/209 tests | 260 tests collect | **290 passed** (backend, 4m45s) |
+| the repo is private; `main` can't be protected | **public** (no later than 2026-09-12), MIT; `main` has **no** branch protection (API 404) | — |
+| `bedhi_frontend.md` holds the design direction | deleted 2026-09-14 in `c6198e3` | — |
+| the populated DB is `backend/data/agentpulse.db` | backwards: the populated one is `./data/agentpulse.db`; `backend/data/` is empty | — |
+
+*By hand: file reads at `origin/main` and at #60's worktree, `git grep`, `pytest` on #60, `gh api`.*
+
+### 28.4 The RAG chat view's fabrications
+
+`e31fb58` shipped a RAG Live Monitor that produces a working-looking screen with nothing behind it. Counting the paths that existed:
+
+1. **`vite.config.ts` was a mock API server** (`agentpulse-mock-api` answering `/v1/*`, `/chat`, `/corpus` from `mockData.ts`). *Removed on #58 and #60.*
+2. **`useTelemetry.ts` fell back to `MOCK_*` data and set `connected = true, error = null`.** *Removed on #58 and #60.*
+3. **`RagChatbotApp` ran `simulateSequentialTurn` when `!ragStatus.ok`**, so a missing backend produced a fake conversation. *Removed on #58 only.*
+4. **`RagChatbotApp` invented a trace id** (`'tr_' + Math.random()`) when a turn had none. *Removed on #58 only.*
+5. **Invented drift.** `RagChatbotApp.tsx` lines 308–315: once the UI's own count of answerer spans reaches 32 it sets `agentDriftValues` to constants (`answerer: 0.082, verifier: 0.045, retriever: 0.024`); `MonitoringPanel.tsx` then shows "WINDOW FILLED • SUSTAINED DRIFT COMPUTED" (line 397) next to a caption saying AgentPulse "never displays 0.00 when unmeasured" (line 426). *On every line, including #58 and #60.*
+6. **An invented grounding score — the worst of them.** `RagChatbotApp.tsx` lines 197–212: the UI polls the trace for the answerer's evaluation, and when its attempts run out (about 31 s) it sets `groundingScore: 0.942` (L204), `groundingLabel: 'SUPPORTED'` (L206) and `groundingEvaluationStage: 'STAGE_2_NLI_VERIFIED'` (L207) on every non-error turn still `pending`. **With the worker stopped, every answer renders as verified and supported.** *On every line.* (The Oct-1 branch found this independently; the first pass of this reconciliation missed it.)
+
+Smaller ones, also on every line: `ragApi.ts` falls back to `DEFAULT_CORPUS_DOCUMENTS` (six titles, five invented, one real) when `/corpus` is unreachable; `ChatConsole.tsx` lines 491–493 hard-code the in-flight stage models (`mistralai/mistral-nemotron`, `google/gemma-4-31b-it`, `deepseek-ai/deepseek-v4-flash-0731`), none of which either chat service runs; the "verifier at 8 s, answerer at 25 s" stage progress is two timers (`RagChatbotApp.tsx` ~261–262); and `MonitoringPanel.tsx` hard-codes an 8-point drift sparkline and a "Stable (ASI: 96.4)" label (~lines 400, 435, 439). The opt-in simulator is labelled "SIMULATOR ACTIVE" and is not counted. `RagApiClient` calls `VITE_RAG_API_URL || http://localhost:8100` directly, so the `/chat` and `/corpus` proxies in `vite.config.ts` are not on the chat path.
+
+**Net: neither open line of work fixes 5 and 6.** Do not demo the RAG chat view as live telemetry. A code PR for all of the above is proposed in 28.9.
+
+### 28.5 Corrections to this file's own analysis
+
+Errors of reasoning in earlier sections, found while checking them:
+
+- **Fabrication count (26.3 on the Oct-1 branch, and the first pass here).** Six paths, not four; the first correction in this pass said five.
+- **The probe's retriever was a hash (27.2).** And its verifier value was already over the alert threshold, with `DRIFT_DETECTED` firing seven minutes before the topic switch (27.2). *By hand: evaluation database, read-only.*
+- **"10 of 34" (24.9.3, TL;DR).** 34 paraphrases were generated and 2 discarded; 32 were scored on 2 signals = 64 pairs. **10 of 64** flipped: disagreement 7 of 32 (the table's 1+3+1+2+0), contradiction 3 of 32; 9 distinct paraphrases of 32 flipped on at least one signal. *By hand: `paraphrase_stability.json` at `7f78b3f`.*
+- **87 against 90 (TL;DR, 24.4, 24.9, 24.10).** Those figures are from a superseded snapshot (97 rows, 87 scorable, cell A n=37, mean 0.219, AUC 0.9797). The committed data has 100 rows, 90 scorable, cell A n=40, mean 0.2485, AUC 0.9792. 24.9.5 uses the second without saying so. The three rows between the snapshots are reruns of the one query already known to be bimodal and move "above 0.6" from 7 of 37 to 9 of 40; ten correct acceptances on one query are unscored. *By hand for the 90-row figures; the rest finder.*
+- **"Tracks stance, not error" is retracted by 24.9.5 and still stated as a result (TL;DR, 24.10).** 24.9.5 concludes the 0.980 AUC was an artifact and that "tracks stance" described a planner comparison. The TL;DR bullet and 24.10 still present it, and the open "cell D" question, as standing. *Finder, confirmed by a skeptic.*
+- **AUC 0.457 holds.** Re-scored by hand with the planner's questions excluded: 0.4570 (accept n=40, refuse n=50); the live configuration gives 0.9792. *By hand. The independent audit could not repeat it (it needs the NLI models), so it is by hand only.*
+- **25.3's 0 of 9 is partly by construction, and its mechanism conflicts with Section 11.** The removal regex deletes the only digit-count phrase in each output, so 0 of 9 follows; the informative cases are the six outputs with prose left. Section 11 says the zero extractions on 8,353 external spans come from agents not narrating tool use at all, which the digits-versus-words explanation does not establish. *Finder; read from the stored outputs.*
+- **25.1's "0.948–0.984" covers four of five anchors**; the fifth has disagreement spread 0.0006, narrower than its drift spread of 0.084. *Finder; not repeated.*
+- **24.5's "bit-identical" compares against the second of two files dated 2026-08-23.** Config B latencies by file: 300.48 ms (`e83b783`), 188.07 (`73b533f`), 132.09 (`9cd0819`, the re-run), and 188.07 on `main` (the 73b533f file, restored by `e31fb58`). *Finder.*
+- **The 75 s timeout is per attempt; the model set printed in 26.2/27.1 is the first smoke turn (27.1).** *By hand.*
+- **Section 4/5/6 and the header chain**, corrected inline: private → public, `launch.json`, Docker, the test count (226 on 2026-09-15, 237 on 09-16, 260 on 09-17, 269 at `7f78b3f`; the "269" in 20.5 is a typo for 237), the DB path, `.env`, the branch/PR question, items 3, 7, 8 and 9, and "What is actually next". The header's "Updated" chain omits Sections 19–23 and 25 and is not in date order.
+
+### 28.6 What held up
+
+Checked and found correct: the retriever-only AUC of 0.457 and the live 0.979; the flip numerator of 10; the withdrawal at `7f78b3f` being a real 24.9.5 change that `e31fb58` undid; 26.3's verifier row counts (28 window values, 11 before and 17 after the switch); and the repository being public. What the probe's data do not support is "the drift signal detected the shift" (27.2).
+
+### 28.7 Other repository state found by the sweep
+
+Read-only, by `gh` and `git`:
+
+- **#60's CI ran for the first time in this repository's history and passed:** `release` workflow on the pull request — `sdk-test` 46 passed, `images (backend)` and `images (dashboard)` built, `sdk-publish` skipped (tag-only). Nothing was pushed or published; before 2026-10-13 `.github/workflows` did not exist and no run had ever happened.
+- **`RELEASING.md` tells the next release to tag `v0.1.0`, which already exists** (an annotated tag, ancestor of `main`, with a published GitHub release of the same name). A new tag needs a version bump. The PyPI project `agentpulse-observe`, the `pypi` environment and GHCR package visibility (RELEASING.md "One-time setup") do not exist yet.
+- **On 2026-10-13 the live deployment was a 2026-09-17 build (superseded on 2026-10-20: see 28.11).** `https://agentpulse.centralindia.cloudapp.azure.com/v1/health/live` reports `process_started_at 2026-09-17T11:39:22` and about 26 days of uptime (checked 2026-10-13), 36 seconds after #44 merged. It contains none of #45 onward, and by a bundle probe none of the RAG UI. *By hand: `curl`; the bundle probe is the audit's.*
+- **The repository homepage and the `v0.1.0` release notes link a dead hostname** (`agentpulse-demo.centralindia.cloudapp.azure.com`, which does not resolve); the working host is `agentpulse.` without `-demo`. Fixed in the repository's files on 2026-10-13, and in both GitHub fields on 2026-10-20 (the homepage URL and the "Live demo" line of the `v0.1.0` notes; nothing else in the notes changed).
+- **Security settings on the now-public repo:** secret scanning, push protection and Dependabot are disabled; there are no rulesets and no `SECURITY.md`; `main` is unprotected; collaborator `SkSahoo98` still has push (one commit, `b7dc43c`, 2026-08-31). A `.claude/settings.local.json` is tracked on `main` (7 lines, no secrets).
+- **Other repositories under `Soum-Code`:** 13, all public. `frontend` (the AI Studio app's earlier repo, last push 2026-09-16) and `Soum-frontend-` (28.8) are the relevant ones; `agenttrace` is an unrelated project of similar name.
+- No tags or releases other than `v0.1.0`; no issues, discussions, Pages, deployments or Actions secrets.
+
+### 28.8 The standalone frontend: `Soum-Code/Soum-frontend-` (pushed 2026-10-10)
+
+Public, two commits by the owner on 2026-10-10 (21:24–21:25 UTC), 75 files, AI Studio layout (`src/`, `server.ts`, Firebase files); `package.json` is named `react-example`. Read through the GitHub API only; it was not cloned, built or run, and its tests were not run.
+
+- **Built against the Oct-1 branch's contract, not #58's.** `src/lib/ragTypes.ts` says it is aligned with `demo/chat_server.py`; `ragApi.ts` calls `GET /health` on the chat server, handles 502 / 503 / 422, reads `/v1/traces/{id}`, `/v1/drift`, `/v1/health/ready`, `/v1/health/evaluator`, `PATCH /v1/alerts/{id}` and the WebSocket `/v1/ws/live`, and defaults to `http://localhost:8100` and `:8000`. All of those routes exist in this repo's backend, **but two do not match**: the client reads `/v1/drift` as `{drift: [...]}` where the backend returns `{agents: [...]}` with different field names, and sends `{status: 'acknowledged'}` to `PATCH /v1/alerts/{id}`, which expects `{acknowledged: true}` (audit).
+- **The RAG view is honest about failure; the product views are not.** `ragApi.ts` states "NO mock data fallbacks" and surfaces errors. But `src/App.tsx` seeds agents, traces and incidents from `mockTelemetry.ts` (L235–237) and, with `isSimulatingLive` defaulting to true (L247), prepends a `Math.random()`-built trace every 12 s (L486–527); the Telemetry Lab handler builds incidents with a `Math.random()` id (L562). `PerformanceView.tsx` imports `mockPerformanceMetrics.ts` and jitters latency and error rates with `Math.random()` (~L127–308). None of those view files contains a `fetch(` call. That is the Section 18/21–23 pattern again.
+- **Security.** `firestore.rules` lets any signed-in user read and write the `spans` of every project (`allow read, write: if request.auth != null`) while `projects` are owner-scoped; `firebase-blueprint.json` stores a per-project `apiKey` field. `firebase-applet-config.json` — a Firebase web config with an API key and an OAuth client id (its `recaptchaSiteKey` and `measurementId` are empty) — is committed to a public repository, and the same key is hard-coded at `src/lib/firebase.ts:38`. Firebase web keys are meant to ship to browsers and are protected by key restrictions and rules, so this is a hygiene finding; the `spans` rule is the real one. A scan of the 74 text files (`bun.lock` skipped) for Google, NVIDIA, OpenRouter, GitHub, AWS and Slack key formats and private-key blocks found only that key, in those two places.
+- **No built-in path to the backend in production.** `vite.config.ts` and `server.ts` have no proxy and the URLs default to `localhost`; they can be overridden with `VITE_CHAT_SERVER_URL`, `VITE_AGENTPULSE_API_URL` or `window.__AGENTPULSE_*_URL__`, none of which is documented in `.env.example`; CORS has to allow the frontend's origin on both services.
+
+### 28.9 Open decisions
+
+Everything here is the owner's; nothing below has been done unless it says so.
+
+1. **Merge #60** (the owner chose the Oct-1 branch as the base), then #63 (the pinned dependencies, 28.11), then this document and #62 (comments only). CI passed on #60 and #63. Use "Create a merge commit" (the repository's convention; #61–#63 are built on #60's commits, which a squash would make them repeat), and retarget #61, #62 and #63 to `main` before merging them: branch auto-delete is off, so GitHub will not do it, and a merge into the old branch never reaches `main`. `main` is unprotected and no workflow runs on a push to it (`release.yml` runs on tags and pull requests), so merging publishes nothing. Checked with `git merge-tree` on 2026-10-20: merging #60 into `main` gives exactly #60's tree, and merging #63 gives the tree that runs on Azure.
+2. **#58:** do not merge it. After #60, close it (the branch is kept). What only it has: the two `RagChatbotApp.tsx` fixes (items 3 and 4 in 28.4) and `demo/chatbot/app.py`, the instrument of the 27.2 probe. Carry the two fixes into the code PR below; keep `app.py` only if a second chat service is wanted.
+3. **#57:** close as superseded by 25.5/25.6 here. **#56:** rebase onto `main` or drop; it was never merged.
+4. **A code PR for the RAG chat view** (28.4): remove the invented grounding score and the invented drift, the corpus fallback, the hard-coded stage models and the timer-driven stages, the hard-coded sparkline and ASI label, and the two paths only #58 fixed; and make whichever chat service survives load the embedding model or fail loudly instead of hashing. A proposal card for this exists in the app.
+5. **Should `AGENT_DISAGREEMENT` alert at all?** #60 returns to the 24.9.5 decision (withdrawn). Keeping it live would be a different, deliberate decision; nothing measured supports it.
+6. **Next release:** a new tag (not `v0.1.0`) with a version bump, after the one-time PyPI/GHCR setup in `RELEASING.md`.
+7. **Housekeeping** (the homepage, the `v0.1.0` notes and the redeploy were done on 2026-10-20, 28.11): turn on branch protection, secret scanning and push protection; remove `SkSahoo98`'s push access if it is no longer wanted; untrack `.claude/settings.local.json`; unlink or stop syncing the `agentpulse` AI Studio app from this repository.
+8. **The standalone frontend:** fix the `spans` Firestore rule before it holds real data; match its `/v1/drift` and alert-acknowledge calls to the backend's shapes; decide whether its product views stay on mock data.
+9. **Rotate the NVIDIA key** that was pasted into a chat session and is in the local, gitignored `.env`. The OpenRouter key pasted earlier was revoked (a call with it returned 401 when checked).
+
+### 28.10 Method and limits
+
+The first pass of this check ran as eight automated finders against the old handoff; five finished (B1, B3, C, D, E), producing 106 findings. Skeptic agents then re-checked all 106 independently: 103 confirmed, 3 refuted. The finder for Section 24's repository claims (A1) also finished, with 16 findings that no skeptic reached. Finders A2 and B2 (the TL;DR, 25 and 26 repository claims; the model-dependent numbers in 24.9.4–25.2) never completed because the usage limit was hit three times, so **the 25.1 paraphrase spreads and the 25.2 "0 of 100 truncated" figure were not re-checked.** A second automated audit then went through the text the first reconciliation added (214 statements: 132 held, 50 overstated, 14 unsupported, 18 wrong), all folded into this section; a completeness sweep of GitHub state produced 28.1 and 28.7.
+
+Not re-checked at all: Sections 1–3 and 7–23, most of 24.2–24.4 and 24.6–24.8, the retriever and answerer rows in 27.2. Statements that depend on the owner's AI Studio screens (28.2) and on a Claude session's report of what the owner said (26.1) are marked as such. The Oct-1 branch's own tests passed here (290 backend, 35 dashboard) but no model provider was called. Section 28.11 was written on 2026-10-20 from the commands it lists, not from the audit.
+
+
+### 28.11 The 2026-10-19 redeploy that failed, and the pinned dependencies (#63) (2026-10-20)
+
+**What went wrong.** `backend/pyproject.toml` gave only version ranges, so every image rebuild took the newest of each package. The rebuild of #60's code on the Azure VM on 2026-10-19 resolved SQLAlchemy 2.1.5 (the image that was running has 2.0.54), fastapi 0.146.0 (0.141.1), pydantic 2.14.1 (2.13.5), starlette 1.9.0 (1.6.0), sqlmodel 0.0.48 (0.0.42) and others. SQLAlchemy 2.1 made `greenlet` an optional extra, so the new backend image stopped on start with `ImportError: greenlet`. The stack was rolled back the same day and the old images were kept as `agentpulse-{backend,worker,dashboard}:rollback-20261019`. The process mistake: the candidate image was swapped in before it had been started against a copy of the database. *By hand: the versions are from the VM's build log and from `pip freeze` of the running image.*
+
+**What #63 changes.** A new `backend/constraints.txt` with the exact versions of the 69 packages in the image that ran correctly (its `pip freeze`; torch is left out); both Dockerfiles install with `-c constraints.txt` and pin `torch==2.14.0` from the CPU index; `pyproject.toml` now asks for `sqlalchemy[asyncio]>=2.0.14,<2.1`. Nothing under `backend/app/` changed. `deploy/huggingface/Dockerfile` got the same two changes; no workflow builds it and it was not built here.
+
+**Checked on 2026-10-20.**
+
+- An image built from #63's branch has a `pip freeze` identical to the running Azure image's (empty diff); `app.main` and `app.worker` import; the API starts and `/v1/health` returns 200.
+- The whole `tests/` directory inside that image: 290 passed (`langgraph`, which the demo workflow tests need, was installed on top for the run; it is not a backend dependency).
+- CI on #63: `images (backend)` passed in 5m16s, `images (dashboard)` in 1m27s, `sdk-test` in 13s; `sdk-publish` was skipped (tag-only).
+- The candidate image against a copy of the live database, before the swap: it read 117 evaluations (`tool_claims_found` NULL), 53 traces, 117 spans and 9 alerts; `/v1/health` returned 200 and an authenticated `/v1/traces` returned 200. The live database already had the nullable `evaluations.tool_claims_found` column (the pre-attempt backup of 2026-10-19 does not), so no ALTER was needed.
+
+**Deployed state.** At about 07:15 UTC on 2026-10-20 the backend, worker and dashboard containers were recreated from the new images (tag `pins-20261020`); the backend was healthy after 35 seconds. `/v1/health` reports state healthy, and `/v1/health/evaluator` reports ready with one live worker on the ONNX NLI backend. No container restarted or was OOM-killed. Caddy and the volumes were not touched. The temporary 3 GB swapfile added for the build was removed afterwards (it was never in `/etc/fstab`). On the VM, `~/backups/` holds `agentpulse-pre-pr60-20261019.db` and `agentpulse-pre-pins-20261020-0653.db`. The VM checkout is on `fix/pin-backend-dependencies` at `cfe6a56`; its tree equals what `main` will be after #60 and #63 merge, so merging needs no redeploy (#61 changes only this file and #62 only comments).
+
+**Rolling back:** tag the three `rollback-20261019` images as `:latest`, then `docker compose -f docker-compose.yml -f deploy/azure/docker-compose.azure.yml up -d --no-build backend worker dashboard`.
+
+**Building on this VM** (4 GB, no swap now, no buildx): build with `docker compose ... build <service>`, one service at a time. Plain `docker build` uses the legacy builder, which rejects the Dockerfile's `COPY a b .`, and `DOCKER_BUILDKIT=1` fails without buildx. The dashboard must be built through compose, because `VITE_API_KEY` and `VITE_API_URL` are baked in from `.env` as build args. Compose overwrites `:latest` on every build, so point `:latest` back at the `rollback-*` tags until the swap. Add a swapfile again before a rebuild.
+
+---
