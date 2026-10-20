@@ -33,6 +33,19 @@ on its own terms. It is written beside the results JSON under
 `experiments/results/` and the curated report is left alone.
 """
 
+# WHAT THIS FILE IS FOR
+# A one-off experiment script, not part of the running product. It checks AgentPulse's drift
+# detector on 11 made-up scenarios. 5 are marked is_anomaly=True (real drift the detector
+# should flag) and 6 are marked False (small changes and "negative controls" that should NOT
+# raise an alert). Each scenario feeds the detector 40 fake spans: 20 normal ones, then 20
+# shifted ones. The embedding vectors are built by hand, not made from real text. It records
+# whether and how fast the detector reacted, then writes a JSON file and a markdown summary.
+#
+# HOW IT FITS IN
+# Uses DriftDetector (app/services/drift.py). drift_real_text_diagnosis.py repeats the same
+# detector settings on real text so the two can be compared. The curated report
+# DRIFT_EXPERIMENT_REPORT.md is written by hand and is NOT written by this file.
+
 from __future__ import annotations
 
 import json
@@ -40,26 +53,38 @@ import time
 from pathlib import Path
 from typing import Any, Dict, List
 
+# numpy: builds and scales the hand-made embedding vectors.
 import numpy as np
 
 # Ensure modules are importable
+# (backend/ holds the "app" package; the SDK source and the repo root are added too.)
 import sys
 sys.path.insert(0, str(Path(__file__).parent.parent / "backend"))
 sys.path.insert(0, str(Path(__file__).parent.parent / "sdk" / "src"))
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+# DriftDetector = the production drift engine. load_models loads the NLI and embedding
+# models. get_embedding is imported but never called in this file.
 from app.services.drift import DriftDetector
 from app.services.grounding import get_embedding, load_models
 
 
+# Runs all scenarios, writes the JSON and the markdown summary, and returns the JSON data
+# as a dict. It takes no arguments.
 def run_drift_scenarios_experiment() -> Dict[str, Any]:
     print("=" * 64)
     print("AGENTPULSE GRADED DRIFT BENCHMARK WITH NEGATIVE CONTROLS")
     print("=" * 64)
 
+    # use_onnx=False picks the plain PyTorch engine for the NLI model; sync=True waits until
+    # loading is done. Nothing below calls the models, because the vectors are built by hand.
     load_models(use_onnx=False, sync=True)
 
     # Scenarios covering positive shifts and negative controls
+    # Fields: id and name label the row. type says what kind of change it imitates; it also
+    # switches two behaviours in the loop below (tool_entropy and quality_regression).
+    # shift_level (0 to 1) is how far the made-up vector moves; it is a setting, not a
+    # measured distance. is_anomaly = True means the detector SHOULD flag this scenario.
     scenarios = [
         # ── Graded Prompt Shift ──
         {"id": "sc_prompt_10", "name": "Prompt Formatting Change (10% shift)", "type": "prompt_drift", "shift_level": 0.10, "is_anomaly": False},
@@ -83,25 +108,37 @@ def run_drift_scenarios_experiment() -> Dict[str, Any]:
         {"id": "ctrl_neg_stable_flow", "name": "Negative Control: Baseline Invariant Operation", "type": "negative_control", "shift_level": 0.00, "is_anomaly": False},
     ]
 
+    # The "normal" output: a vector of 384 numbers (the size of a MiniLM embedding) that is 1
+    # in the first slot and 0 everywhere else. All normal spans use it.
     base_vector = np.zeros(384, dtype=np.float32)
     base_vector[0] = 1.0
 
     experiment_results = []
 
     for sc in scenarios:
+        # Step 1: a fresh detector per scenario (settings as in drift_real_text_diagnosis.py).
+        # detected = did an alert fire after the shift began; false_alert = it fired for a
+        # scenario that is not an anomaly; ttd = time to detect, counted in spans.
         dd = DriftDetector(window_size=20, min_samples_for_alert=5, drift_threshold=0.30)
         detected = False
         false_alert = False
         ttd = None
 
+        # Step 2: send 40 spans. Steps 0-19 are normal; steps 20-39 are shifted.
         for step in range(40):
             is_shifted = step >= 20
 
             if is_shifted:
+                # The shifted vector moves weight from slot 0 to slot 1: slot 1 gets
+                # shift_level and slot 0 keeps the rest. A bigger shift_level turns the
+                # vector further away from the normal one.
                 vec = np.zeros(384, dtype=np.float32)
                 vec[1] = sc["shift_level"]
                 vec[0] = max(0.0, 1.0 - sc["shift_level"])
+                # Only an anomalous "tool_entropy" scenario starts calling a second, new
+                # tool; the extra tool raises the tool-spread signal and so lowers the ASI.
                 tool = "unverified_tool" if sc["type"] == "tool_entropy" and sc["is_anomaly"] else "base_tool"
+                # Only "quality_regression" raises the risk score (0.85 instead of 0.08).
                 risk = 0.85 if sc["type"] == "quality_regression" else 0.08
                 is_err = False
             else:
@@ -110,6 +147,8 @@ def run_drift_scenarios_experiment() -> Dict[str, Any]:
                 risk = 0.08
                 is_err = False
 
+            # Scale the vector to length 1, as MiniLM does for real embeddings. An all-zero
+            # vector cannot be scaled, so it is left alone.
             norm = np.linalg.norm(vec)
             if norm > 0:
                 vec = vec / norm
@@ -123,17 +162,28 @@ def run_drift_scenarios_experiment() -> Dict[str, Any]:
             )
 
             # Drift triggers when centroid distance exceeds threshold or ASI drops below 70
+            # This rule exists only in this script. The live ASI_DROP alert uses 50 (config
+            # asi_low_threshold) and live DRIFT_DETECTED reads window_centroid_distance, so
+            # neither live alert behaves exactly like this rule.
             is_drift_fired = (
                 (res.centroid_distance is not None and res.centroid_distance >= 0.30)
                 or (res.stability_index is not None and res.stability_index < 70.0)
             )
 
+            # Step 3: remember only the FIRST alert, and only if it comes after the shift began
+            # (an alert during the normal steps is ignored). ttd counts shifted spans, so 1
+            # means the very first shifted span. An alert on a scenario that is not an anomaly
+            # is a false alert.
             if is_drift_fired and not detected and is_shifted:
                 detected = True
                 ttd = step - 20 + 1
                 if not sc["is_anomaly"]:
                     false_alert = True
 
+        # Step 4: save one row per scenario. `res` still holds the result of the LAST span,
+        # so final_asi and final_centroid_dist are end-of-run values, not the peak. A missing
+        # value shows as 100 for ASI and 0 for the distance. Because of `or`, an ASI of
+        # exactly 0 would also show as 100.
         experiment_results.append({
             "scenario_id": sc["id"],
             "scenario_name": sc["name"],
@@ -147,6 +197,7 @@ def run_drift_scenarios_experiment() -> Dict[str, Any]:
             "final_centroid_dist": round(res.centroid_distance or 0.0, 3),
         })
 
+    # Step 5: save the raw results as JSON (the results folder is created if missing).
     out_payload = {
         "timestamp": time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime()),
         "drift_threshold": 0.30,
@@ -162,11 +213,17 @@ def run_drift_scenarios_experiment() -> Dict[str, Any]:
 
     # Generated summary. Written under results/ deliberately -- see the module
     # docstring for why this must never target DRIFT_EXPERIMENT_REPORT.md.
+    # Step 6: the headline counts. n_anomalies = scenarios that should be flagged; n_detected
+    # = how many of those were flagged (so recall = n_detected / n_anomalies); n_false =
+    # alerts on scenarios that should not be flagged; max_dist = the biggest end-of-run
+    # centroid distance in any scenario.
     n_anomalies = sum(1 for r in experiment_results if r["is_anomaly"])
     n_detected = sum(1 for r in experiment_results if r["is_anomaly"] and r["detected"])
     n_false = sum(1 for r in experiment_results if r["false_alert"])
     max_dist = max((r["final_centroid_dist"] for r in experiment_results), default=0.0)
 
+    # The markdown text below is an f-string: each {...} is filled in from the numbers above,
+    # and the table has one row per scenario. The file is overwritten on every run.
     report_path = res_dir / "drift_scenarios_generated_report.md"
     with open(report_path, "w", encoding="utf-8") as f:
         f.write(f"""# Drift Scenarios — Generated Summary

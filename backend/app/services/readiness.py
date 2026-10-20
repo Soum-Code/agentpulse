@@ -37,11 +37,26 @@ view. These are the machine-readable signals a deployment system polls, so they
 stay cheap and single-purpose.
 """
 
+# WHAT THIS FILE IS FOR
+# Small checks that answer "is AgentPulse up?" in separate ways. Is this process alive
+# (liveness)? Can the API reach its database (API readiness)? Is any evaluation worker alive
+# (evaluator readiness)? And one combined word for all of it: healthy, degraded or failing
+# (overall_state). A worker is judged by its "heartbeat": a row it keeps rewriting in the
+# database to say "I am still running".
+#
+# HOW IT FITS IN
+# The /v1/health, /v1/health/live, /v1/health/ready and /v1/health/evaluator routes in
+# routers/__init__.py call these functions. This file uses the WorkerHeartbeat table
+# (models.py), WORKER_STALE_AFTER_SECONDS (platform_health.py) and the in-memory counters
+# (runtime_metrics.py, for liveness). platform_health.py calls api_readiness too.
+
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
+# func = SQL functions such as COUNT. select = builds a SELECT query.
+# text = wraps a plain SQL string so it can be run.
 from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -52,6 +67,8 @@ from app.models import WorkerHeartbeat
 from app.services.platform_health import WORKER_STALE_AFTER_SECONDS
 
 
+# The current UTC time without a timezone label ("naive"). The worker heartbeat times are
+# stored in this style (see models.py), so this value can be compared with them directly.
 def _now() -> datetime:
     return datetime.now(timezone.utc).replace(tzinfo=None)
 
@@ -64,9 +81,14 @@ async def check_database(session: AsyncSession) -> dict[str, Any]:
     it".
     """
     try:
+        # SELECT 1 just asks the database to send back the number 1. If it answers, the
+        # database is reachable.
         await session.execute(text("SELECT 1"))
         return {"ok": True, "detail": None}
     except Exception as exc:  # noqa: BLE001 - report, do not raise, on a probe
+        # Any error means "not ok". The error name and message go into "detail" instead of
+        # being raised, so the caller can still build a reply with ready = false (the /ready
+        # route adds a 503 status to it).
         return {"ok": False, "detail": f"{type(exc).__name__}: {exc}"}
 
 
@@ -78,8 +100,12 @@ async def evaluator_readiness(session: AsyncSession) -> dict[str, Any]:
     implies a usable evaluator; the API having models loaded implies nothing,
     because the API does not claim jobs.
     """
+    # Step 1: the oldest heartbeat time that still counts as "alive". A heartbeat older than
+    # this many seconds (WORKER_STALE_AFTER_SECONDS) means the worker is presumed gone.
     stale_cutoff = _now() - timedelta(seconds=WORKER_STALE_AFTER_SECONDS)
 
+    # Step 2: load the live workers: rows whose status is "running" AND whose last heartbeat
+    # is not older than the cutoff. A worker that wrote "stopping" is left out.
     rows = (
         await session.execute(
             select(WorkerHeartbeat)
@@ -88,10 +114,16 @@ async def evaluator_readiness(session: AsyncSession) -> dict[str, Any]:
         )
     ).scalars().all()
 
+    # Step 3: count ALL registered workers (live or not), to report how many are stale.
     total_registered = (
         await session.execute(select(func.count(WorkerHeartbeat.worker_id)))
     ).scalar_one() or 0
 
+    # Step 4: among the live workers, count how many use each NLI backend. NLI (natural
+    # language inference) is the model that checks whether one text supports another; its
+    # backend is the engine that runs it, such as "onnx" or "pytorch". Also count the workers
+    # flagged degraded (running a slower backend than was asked for). A missing name is
+    # counted as "unknown".
     backends: dict[str, int] = {}
     degraded = 0
     for w in rows:
@@ -100,6 +132,7 @@ async def evaluator_readiness(session: AsyncSession) -> dict[str, Any]:
         if w.backend_degraded:
             degraded += 1
 
+    # Step 5: write the reasons in plain words: no live worker, and/or some degraded ones.
     reasons: list[str] = []
     if not rows:
         reasons.append(
@@ -112,6 +145,9 @@ async def evaluator_readiness(session: AsyncSession) -> dict[str, Any]:
             f"inference backend"
         )
 
+    # Step 6: build the reply. "ready" is true when at least one live worker exists.
+    # "workers_stale" is registered minus alive, so it also counts workers that are
+    # "stopping". max(0, ...) stops the number from going below zero.
     return {
         "ready": bool(rows),
         "workers_alive": len(rows),
@@ -132,6 +168,7 @@ async def api_readiness(session: AsyncSession) -> dict[str, Any]:
     its readiness on model state would hold it out of service over a capability
     it never uses.
     """
+    # Only one check exists so far (the database), so there is at most one reason text.
     database = await check_database(session)
     reasons = [] if database["ok"] else [f"database unavailable: {database['detail']}"]
     return {
@@ -147,6 +184,8 @@ def liveness() -> dict[str, Any]:
 
     from app.services.runtime_metrics import COUNTERS
 
+    # The start time and uptime come from the in-memory counters (runtime_metrics.py).
+    # os.getpid() is the operating system's number for this running process.
     snapshot = COUNTERS.snapshot()
     return {
         "alive": True,
@@ -168,8 +207,14 @@ def overall_state(api: dict[str, Any], evaluator: dict[str, Any],
                 backend. Slower, not wrong -- explicitly NOT unhealthy.
       healthy   everything as configured.
     """
+    # Step 1: join the reasons from both checks into one list. Every reason is kept, even
+    # if the state below is decided by only one of them.
     reasons = list(api["reasons"]) + list(evaluator["reasons"])
 
+    # Step 2: pick the state. The first rule that fits wins. Unlike derive_state in
+    # platform_health.py, this version has no "starting" or "backlogged" state, and it
+    # does not look at the queue size. api_backend_degraded is True when this API
+    # process itself fell back to a slower inference backend.
     if not api["ready"]:
         state = "failing"
     elif not evaluator["ready"]:

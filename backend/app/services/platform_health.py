@@ -34,12 +34,27 @@ in-process counters instead, so the observability path does not become the
 expensive part of the request path.
 """
 
+# WHAT THIS FILE IS FOR
+# Builds the big "how is AgentPulse itself doing?" report. It reads the database (how many
+# evaluation jobs are in each state, how long they take, how often they fail, which workers
+# are alive, the last retention run, how often each score is really filled in) and the
+# in-memory counters. Then it reduces all of that to one word: healthy, starting, degraded,
+# backlogged or failing, plus the reasons for it.
+#
+# HOW IT FITS IN
+# The GET /v1/platform route in routers/__init__.py calls collect_platform_health. This file
+# uses the tables in models.py, api_readiness from readiness.py, COUNTERS from
+# runtime_metrics.py, and the model/backend info from grounding.py. readiness.py imports
+# WORKER_STALE_AFTER_SECONDS from here.
+
 from __future__ import annotations
 
+# json is used to turn the saved retention counts (JSON text) back into a dictionary.
 import json
 from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
 
+# func = SQL functions such as COUNT and SUM. select = builds a SELECT query.
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -47,28 +62,37 @@ from app.models import Evaluation, EvaluationJob, RetentionRun, WorkerHeartbeat
 
 # A worker that has not written a heartbeat in this long is presumed gone.
 # Comfortably above the heartbeat interval so a slow beat is not read as death.
+# (An idle worker writes a heartbeat every 15 seconds, a busy one more often; see worker.py.)
 WORKER_STALE_AFTER_SECONDS = 90
 
 # Queue depth above which the platform is described as backlogged. Chosen
 # relative to measured throughput (~12 spans/sec at 4 workers), so this is
 # roughly a minute of work outstanding, not an arbitrary round number.
+# "Queue depth" here means jobs that are queued plus jobs that are running.
 BACKLOG_THRESHOLD = 750
 
+# Every status an evaluation job can have (see services/job_queue.py). Used so that a status
+# with no jobs still shows up with a count of 0.
 ALL_JOB_STATUSES = ("queued", "running", "succeeded", "failed", "dead_letter")
 
 
+# The current UTC time without a timezone label ("naive"). The worker heartbeat and job times
+# in the database are stored in this style (see models.py), so they can be compared with it.
 def _now() -> datetime:
     return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 async def job_state_counts(session: AsyncSession) -> dict[str, int]:
     """Counts by job status. One grouped query on an indexed column."""
+    # SQL: SELECT status, COUNT(id) FROM evaluation_jobs GROUP BY status.
+    # That gives one row per status that has at least one job.
     rows = (
         await session.execute(
             select(EvaluationJob.status, func.count(EvaluationJob.id))
             .group_by(EvaluationJob.status)
         )
     ).all()
+    # Start every known status at 0, then fill in the counts. A status with no jobs stays 0.
     counts = {status: 0 for status in ALL_JOB_STATUSES}
     for status, count in rows:
         counts[status] = count
@@ -82,6 +106,8 @@ async def evaluation_timing(session: AsyncSession, sample: int = 500) -> dict[st
     is "how is it performing now", and a lifetime average would be dominated by
     history and would get slower to compute as the table grows.
     """
+    # Step 1: ask for the three timestamps of the newest `sample` jobs (default 500) that
+    # succeeded. "Newest" means the latest completed_at first.
     rows = (
         await session.execute(
             select(EvaluationJob.created_at, EvaluationJob.started_at,
@@ -93,6 +119,12 @@ async def evaluation_timing(session: AsyncSession, sample: int = 500) -> dict[st
         )
     ).all()
 
+    # Step 2: for each job, work out three durations in milliseconds:
+    #   queue_wait = started - created   (time waiting for a worker)
+    #   evaluation = completed - started (time spent being scored)
+    #   end_to_end = completed - created (the whole time)
+    # started_at is overwritten at every claim, so for a retried job it holds the LAST claim.
+    # That makes queue_wait include the earlier tries and the retry delays as well.
     queue_wait: list[float] = []
     evaluation: list[float] = []
     end_to_end: list[float] = []
@@ -104,6 +136,9 @@ async def evaluation_timing(session: AsyncSession, sample: int = 500) -> dict[st
         if created and completed:
             end_to_end.append((completed - created).total_seconds() * 1000)
 
+    # pct = the p-th percentile: sort the values and pick the one p% of the way along (the
+    # position is rounded to the nearest place). p50 is the middle value. p95 is a value that
+    # about 95 out of 100 jobs stayed under. No values at all gives None.
     def pct(values: list[float], p: float) -> Optional[float]:
         if not values:
             return None
@@ -111,6 +146,7 @@ async def evaluation_timing(session: AsyncSession, sample: int = 500) -> dict[st
         k = min(int(round(p / 100 * (len(ordered) - 1))), len(ordered) - 1)
         return round(ordered[k], 1)
 
+    # Step 3: report how many jobs were sampled, and p50 / p95 of each duration.
     return {
         "sample_size": len(rows),
         "queue_wait_ms": {"p50": pct(queue_wait, 50), "p95": pct(queue_wait, 95)},
@@ -119,19 +155,25 @@ async def evaluation_timing(session: AsyncSession, sample: int = 500) -> dict[st
     }
 
 
+# How often jobs fail and how often they are retried, over ALL jobs in the table.
+# Four counts come from the database, and the numbers in the reply are worked out from them.
 async def retry_and_failure_stats(session: AsyncSession) -> dict[str, Any]:
+    # Number of jobs in the table, whatever their status.
     total_jobs = (
         await session.execute(select(func.count(EvaluationJob.id)))
     ).scalar_one() or 0
+    # Sum of the `attempts` column. coalesce(..., 0) gives 0 instead of NULL on an empty table.
     total_attempts = (
         await session.execute(select(func.coalesce(func.sum(EvaluationJob.attempts), 0)))
     ).scalar_one() or 0
+    # Jobs that ended badly: "failed" (cannot work) or "dead_letter" (ran out of attempts).
     terminal_failures = (
         await session.execute(
             select(func.count(EvaluationJob.id))
             .where(EvaluationJob.status.in_(("failed", "dead_letter")))
         )
     ).scalar_one() or 0
+    # Jobs that are finished, good or bad (not queued and not running).
     completed = (
         await session.execute(
             select(func.count(EvaluationJob.id))
@@ -141,7 +183,10 @@ async def retry_and_failure_stats(session: AsyncSession) -> dict[str, Any]:
 
     # An attempt beyond the first is a retry, by definition of the queue's
     # claim logic (attempts increments on claim).
+    # Note: a job nobody has claimed yet has attempts = 0, so each one lowers this result
+    # by 1. With many queued jobs, the retry count can read too low (never below 0).
     retries = max(0, int(total_attempts) - int(total_jobs))
+    # failure_rate = terminal failures / finished jobs, or None if no job has finished yet.
     return {
         "jobs_total": int(total_jobs),
         "jobs_completed": int(completed),
@@ -153,6 +198,8 @@ async def retry_and_failure_stats(session: AsyncSession) -> dict[str, Any]:
 
 async def worker_fleet(session: AsyncSession) -> dict[str, Any]:
     """Which evaluator processes exist, and what each is running on."""
+    # Step 1: load every heartbeat row (one row per worker process). Unlike readiness.py,
+    # this also loads stale and stopping workers, so they can be listed in the report.
     rows = (await session.execute(select(WorkerHeartbeat))).scalars().all()
     now = _now()
     stale_cutoff = now - timedelta(seconds=WORKER_STALE_AFTER_SECONDS)
@@ -162,6 +209,9 @@ async def worker_fleet(session: AsyncSession) -> dict[str, Any]:
     degraded_workers = 0
     backends: dict[str, int] = {}
 
+    # Step 2: go through the workers. A worker is "alive" only if its last heartbeat is
+    # recent enough AND its status is "running". The backend counts and the degraded count
+    # include live workers only. Every worker, alive or not, gets an entry in the list.
     for w in rows:
         is_alive = w.last_heartbeat_at >= stale_cutoff and w.status == "running"
         if is_alive:
@@ -184,7 +234,12 @@ async def worker_fleet(session: AsyncSession) -> dict[str, Any]:
             "fallback_reason": w.fallback_reason,
         })
 
+    # Step 3: sort the list. The key (not alive, worker_id) puts live workers first
+    # (False sorts before True), and then orders by worker_id.
     workers.sort(key=lambda w: (not w["alive"], w["worker_id"]))
+    # Step 4: reply with the totals for the whole fleet (registered, alive, stale), the backend
+    # counts from step 2 (live workers only), then the list. "stale" means every registered
+    # worker that is not alive, which includes workers that said "stopping".
     return {
         "registered": len(rows),
         "alive": alive,
@@ -196,6 +251,9 @@ async def worker_fleet(session: AsyncSession) -> dict[str, Any]:
     }
 
 
+# The most recent real retention run (the one with the newest started_at), or None if
+# retention has never run. Dry runs are not saved, so they never show up here.
+# The deleted-row counts are stored as JSON text, so json.loads turns them back into a dict.
 async def last_retention_run(session: AsyncSession) -> Optional[dict[str, Any]]:
     row = (
         await session.execute(
@@ -217,6 +275,14 @@ async def last_retention_run(session: AsyncSession) -> Optional[dict[str, Any]]:
     }
 
 
+# Inputs (all keyword-only, from collect_platform_health below):
+#   api_ready       True when the database answers.
+#   api_degraded    True when the API process's own inference backend fell back to a slower one.
+#   workers         the dictionary that worker_fleet returned.
+#   queue_depth     jobs that are queued plus jobs that are running.
+#   models_pending  True when this deployment asked the API to load models and some are not
+#                   loaded yet.
+# Output: {"state": one word, "reasons": a list of plain-English texts}.
 def derive_state(*, api_ready: bool, api_degraded: bool, workers: dict,
                  queue_depth: int, models_pending: bool = False) -> dict[str, Any]:
     """Reduce the signals to a single operator-facing verdict, with reasons.
@@ -231,6 +297,8 @@ def derive_state(*, api_ready: bool, api_degraded: bool, workers: dict,
     performs no inference. Model state only participates via `models_pending`,
     and only for deployments that opt into API-side model loading.
     """
+    # Step 1: collect a reason text for EVERY problem found. Several can be true at once,
+    # and all of them are listed even though only one state is chosen in step 2.
     reasons: list[str] = []
 
     if not api_ready:
@@ -249,6 +317,9 @@ def derive_state(*, api_ready: bool, api_degraded: bool, workers: dict,
     if queue_depth > BACKLOG_THRESHOLD:
         reasons.append(f"evaluation queue depth {queue_depth} exceeds {BACKLOG_THRESHOLD}")
 
+    # Step 2: choose ONE state. The rules run from top to bottom and the first that fits
+    # wins, so the order is the order of importance: failing, starting, backlogged,
+    # degraded, healthy.
     if not api_ready:
         state = "failing"          # cannot serve at all
     elif workers["alive"] == 0:
@@ -286,6 +357,8 @@ async def signal_coverage(session: AsyncSession, sample: int = 200) -> dict[str,
     call cannot produce a tool-claim score -- so low coverage there is normal
     and is reported without comment.
     """
+    # Step 1: load the three score columns of the newest `sample` evaluations (default 200),
+    # newest first. A column holds None when that score was not produced for the span.
     rows = (
         await session.execute(
             select(
@@ -298,13 +371,20 @@ async def signal_coverage(session: AsyncSession, sample: int = 200) -> dict[str,
         )
     ).all()
 
+    # Step 2: with no evaluations at all there is nothing to measure. Return an empty result.
     total = len(rows)
     if total == 0:
         return {"sample_size": 0, "signals": {}, "notes": []}
 
+    # ratio(i) = the share of rows where column i (0 = grounding, 1 = tool claim,
+    # 2 = disagreement) is not None. 1.0 means every evaluation has that score and 0.0
+    # means none does. The share is rounded to 4 decimal places.
     def ratio(index: int) -> float:
         return round(sum(1 for r in rows if r[index] is not None) / total, 4)
 
+    # Step 3: only grounding gets an explanation. When it is exactly 0.0, add a note saying
+    # grounding may be switched off, because the SDK was not told to capture the input and
+    # output text (see the docstring).
     grounding = ratio(0)
     notes = []
     if grounding == 0.0:
@@ -317,6 +397,7 @@ async def signal_coverage(session: AsyncSession, sample: int = 200) -> dict[str,
             "grounding signal is switched off rather than failing.".format(n=total)
         )
 
+    # Step 4: return the sample size, the three ratios and the notes.
     return {
         "sample_size": total,
         "signals": {
@@ -330,18 +411,27 @@ async def signal_coverage(session: AsyncSession, sample: int = 200) -> dict[str,
 
 async def collect_platform_health(session: AsyncSession) -> dict[str, Any]:
     """The full self-monitoring picture."""
+    # These imports are inside the function, not at the top of the file. In particular,
+    # readiness.py imports this file at its top, so importing it back at the top here
+    # would make a circular import.
     from app.config import settings
     from app.services.grounding import backend_info, models_loaded
     from app.services.readiness import api_readiness
     from app.services.runtime_metrics import COUNTERS
 
+    # Step 1: ask THIS process (the API) which models it has loaded and which inference
+    # backend it uses. This says nothing about the workers; they report for themselves.
     loaded = models_loaded()
     api_backend = backend_info()
+    # Step 2: read the job counts per status and the worker list from the database.
+    # Queue depth = jobs waiting plus jobs being worked on right now.
     counts = await job_state_counts(session)
     fleet = await worker_fleet(session)
     queue_depth = counts["queued"] + counts["running"]
+    # Step 3: check that the API itself can serve (that the database answers).
     api = await api_readiness(session)
 
+    # Step 4: reduce all of this to one state word plus the reasons.
     verdict = derive_state(
         api_ready=api["ready"],
         api_degraded=bool(api_backend.get("degraded")),
@@ -352,6 +442,8 @@ async def collect_platform_health(session: AsyncSession) -> dict[str, Any]:
         models_pending=settings.api_load_models and not all(loaded.values()),
     )
 
+    # Step 5: build the report. **verdict puts "state" and "reasons" at the top level. The
+    # sections below hold the raw numbers behind the verdict, so it can be checked.
     return {
         **verdict,
         "checked_at": _now().isoformat(),
@@ -363,15 +455,24 @@ async def collect_platform_health(session: AsyncSession) -> dict[str, Any]:
             "models_required": settings.api_load_models,
             "inference_backend": api_backend,
         },
+        # The queue: how many jobs are outstanding, the limit for "backlogged", and the count
+        # for each status.
         "evaluation_queue": {
             "depth": queue_depth,
             "backlog_threshold": BACKLOG_THRESHOLD,
             "by_status": counts,
         },
+        # Four sections below (evaluation_timing, signal_coverage, reliability, retention) each
+        # run their own database queries while the reply is built.
+        # evaluation_timing: how long jobs waited and took (p50 / p95 over recent jobs).
         "evaluation_timing": await evaluation_timing(session),
+        # How often each score was really produced in recent evaluations.
         "signal_coverage": await signal_coverage(session),
+        # Retry and failure numbers over all jobs.
         "reliability": await retry_and_failure_stats(session),
         "workers": fleet,
         "retention": {"last_run": await last_retention_run(session)},
+        # In-memory counters of this API process (see runtime_metrics.py). They reset when
+        # the process restarts.
         "runtime_counters": COUNTERS.snapshot(),
     }

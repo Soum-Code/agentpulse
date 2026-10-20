@@ -16,6 +16,20 @@ Outputs:
 - experiments/results/tool_claim_benchmark_results.json
 """
 
+# WHAT THIS FILE IS FOR
+# A small test of the "tool claim" check in backend/app/services/tool_claim.py. A tool claim is
+# something an agent says about a tool, for example "we retrieved 3 records". The check compares
+# that sentence with the tool calls that really happened. Here, each test case is one sentence
+# plus a list of real tool calls plus a hand-written answer: should the check raise a flag?
+# The script runs the check on every case, counts right and wrong verdicts, and prints
+# precision, recall and F1 (explained near the end). The cases are written by hand, not taken
+# from real agents, so the score is only a rough guide (see the note in the docstring above).
+#
+# HOW IT FITS IN
+# Run by hand: python experiments/tool_claim_benchmark.py. It imports evaluate_tool_claims and
+# ToolCallRecord from the backend and writes a JSON file under experiments/results/.
+# Nothing in the app imports this file.
+
 from __future__ import annotations
 
 import json
@@ -25,6 +39,8 @@ from typing import Any, Dict, List
 
 # Ensure modules are importable
 import sys
+# The three paths below let this script import "app" (in backend/), the SDK (in sdk/src) and
+# top-level folders of the repo, even though the script lives in experiments/.
 sys.path.insert(0, str(Path(__file__).parent.parent / "backend"))
 sys.path.insert(0, str(Path(__file__).parent.parent / "sdk" / "src"))
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -32,11 +48,18 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from app.services.tool_claim import evaluate_tool_claims, ToolCallRecord
 
 
+# Runs every hand-written case through the validator, prints the scores and saves them to a
+# JSON file. Takes no input. Returns the same data that it saves (a dict).
 def run_tool_claim_benchmark() -> Dict[str, Any]:
     print("=" * 64)
     print("AGENTPULSE TOOL-CLAIM VALIDATOR EMPIRICAL BENCHMARK")
     print("=" * 64)
 
+    # Each case is a dict with:
+    #   id / category : a name, and the group it belongs to (used in the printed report).
+    #   claim         : the sentence an agent might write in its answer.
+    #   tool_records  : the tool calls that REALLY happened (name, how many results, status).
+    #   expected_failure : True if the validator should flag this case, False if it should not.
     test_cases = [
         # ─── WRONG_COUNT: exact tool-name match ────────────────────────
         {
@@ -177,6 +200,9 @@ def run_tool_claim_benchmark() -> Dict[str, Any]:
         # ─── Known misses: adversarial paraphrases ─────────────────────
         # Not tuned against — included to keep recall honest rather than
         # reporting a perfect score on a self-selected, already-fixed set.
+        # Both cases below are labelled "flag this" but are expected to be missed: the wording
+        # gives the validator no digit count to compare and no success phrase to match. Such a
+        # miss counts as a false negative (fn).
         {
             "id": "tc_known_miss_semantic_paraphrase",
             "category": "Known limitation (untuned paraphrase)",
@@ -193,20 +219,31 @@ def run_tool_claim_benchmark() -> Dict[str, Any]:
         },
     ]
 
+    # Four counters, one for each kind of verdict (together called a "confusion matrix"):
+    #   tp (true positive)  = the validator flagged the case, and it should have.
+    #   fp (false positive) = flagged, but it should not have been (a false alarm).
+    #   fn (false negative) = not flagged, but it should have been (a miss).
+    #   tn (true negative)  = not flagged, and it should not have been.
     tp, fp, fn, tn = 0, 0, 0, 0
+    # Start a timer so that we can report the average time per case at the end.
     t0 = time.perf_counter()
 
     results = []
     for tc in test_cases:
+        # Step 1: run the real validator on the sentence and the real tool calls.
         res = evaluate_tool_claims(tc["claim"], tc["tool_records"])
+        # Step 2: the score is the share of claims that did not match (0.0 to 1.0). A case
+        # counts as "flagged" when at least half of its claims are mismatches.
         pred_failure = res.tool_claim_score >= 0.50
         actual_failure = tc["expected_failure"]
 
+        # Step 3: compare with the hand-written answer and add 1 to exactly one counter.
         if pred_failure and actual_failure: tp += 1
         elif pred_failure and not actual_failure: fp += 1
         elif not pred_failure and actual_failure: fn += 1
         else: tn += 1
 
+        # Keep one record per case so the saved file shows exactly what happened.
         results.append({
             "case_id": tc["id"],
             "category": tc["category"],
@@ -218,11 +255,18 @@ def run_tool_claim_benchmark() -> Dict[str, Any]:
             "correct": pred_failure == actual_failure,
         })
 
+    # Average time per case in milliseconds: total seconds since t0, times 1000, divided by
+    # the number of cases.
     lat = (time.perf_counter() - t0) * 1000.0 / len(test_cases)
+    # Precision: of the cases the validator flagged, how many really needed a flag.
+    # Recall: of the cases that needed a flag, how many the validator caught.
+    # F1: one number that mixes both (their harmonic mean), low if either one is low.
+    # Each "if ... else 0.0" avoids dividing by zero when there is nothing to divide by.
     prec = tp / (tp + fp) if (tp + fp) > 0 else 0.0
     rec = tp / (tp + fn) if (tp + fn) > 0 else 0.0
     f1 = (2 * prec * rec) / (prec + rec) if (prec + rec) > 0 else 0.0
 
+    # Everything that goes into the saved JSON file. The scores and the latency are rounded.
     out_payload = {
         "timestamp": time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime()),
         "total_test_cases": len(test_cases),
@@ -234,6 +278,7 @@ def run_tool_claim_benchmark() -> Dict[str, Any]:
         "results": results,
     }
 
+    # Save to experiments/results/, creating the folder first if it does not exist yet.
     res_dir = Path(__file__).parent / "results"
     res_dir.mkdir(parents=True, exist_ok=True)
     res_json_path = res_dir / "tool_claim_benchmark_results.json"
@@ -242,6 +287,7 @@ def run_tool_claim_benchmark() -> Dict[str, Any]:
 
     print(f"\nTool-claim benchmark complete. Precision: {prec:.3f} | Recall: {rec:.3f} | F1: {f1:.3f} | Latency: {lat:.4f}ms")
     print(f"Confusion matrix: TP={tp} FP={fp} FN={fn} TN={tn}")
+    # List the cases where the validator's verdict differed from the hand-written answer.
     misses = [r for r in results if not r["correct"]]
     if misses:
         print(f"\nMissed cases ({len(misses)}):")
@@ -251,5 +297,6 @@ def run_tool_claim_benchmark() -> Dict[str, Any]:
     return out_payload
 
 
+# Only run the benchmark when this file is started directly, not when it is imported.
 if __name__ == "__main__":
     run_tool_claim_benchmark()

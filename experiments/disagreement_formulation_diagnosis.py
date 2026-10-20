@@ -42,6 +42,20 @@ Outputs:
 - experiments/results/disagreement_formulation_diagnosis.json
 """
 
+# WHAT THIS FILE IS FOR
+# An experiment script, not part of the product. The truncation test did not explain why the
+# disagreement detector missed all 10 labelled real contradictions. This script tries two
+# other ideas on the same 40 probe pairs: swap which agent text is the NLI "premise" (NLI = a
+# model that says if a hypothesis follows from, contradicts, or is unrelated to a premise),
+# and give the detector only each agent's concluding sentence. That makes 4 conditions. For
+# each it counts hits and false alarms, then prints a verdict.
+#
+# HOW IT FITS IN
+# It imports ANSWER_RE, THRESHOLD, final_answer and rebuild_probe_cases from
+# disagreement_truncation_diagnosis.py and calls the real detector from
+# backend/app/services/disagreement.py. disagreement_extraction_generalization.py imports
+# conclusion_only from this file.
+
 from __future__ import annotations
 
 import json
@@ -50,6 +64,7 @@ import sys
 import time
 from pathlib import Path
 
+# Add backend/ and the repo root to the import path so `from app.services...` works.
 sys.path.insert(0, str(Path(__file__).parent.parent / "backend"))
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
@@ -70,31 +85,47 @@ RESULTS = Path(__file__).parent / "results"
 OUT_PATH = RESULTS / "disagreement_formulation_diagnosis.json"
 LABELS_PATH = RESULTS / "disagreement_probe_labels.json"
 
+# The pattern matches the white space that comes right after a full stop, "!" or "?". The
+# "(?<=...)" part only looks backwards, so the punctuation stays with its sentence.
+# Splitting a text on this pattern cuts it into sentences.
 SENTENCE_SPLIT = re.compile(r"(?<=[.!?])\s+")
 
 
+# In: one agent's full text. Out: a short piece of it. The rule uses only position, no
+# rewriting: the last sentence that holds an "A) Yes" / "B) No" marker; if no sentence has
+# one, the last two sentences. If the text has no sentences, it is returned unchanged.
 def conclusion_only(text: str) -> str:
     """Positional extraction of the concluding assertion. No paraphrase."""
+    # Step 1: cut the text into sentences and drop empty pieces.
     sentences = [s.strip() for s in SENTENCE_SPLIT.split(text or "") if s.strip()]
     if not sentences:
         return text
+    # Step 2: walk from the last sentence to the first; the first one that has an answer
+    # marker is the conclusion.
     for index in range(len(sentences) - 1, -1, -1):
         if ANSWER_RE.search(sentences[index]):
             return sentences[index]
+    # Step 3: no marker anywhere, so fall back to the last two sentences.
     return " ".join(sentences[-2:])
 
 
+# Runs the whole test: no input. It scores the 40 probe pairs under 4 conditions, prints a
+# table and a verdict, and saves experiments/results/disagreement_formulation_diagnosis.json.
 def main() -> None:
     print("=" * 78)
     print("FORMULATION DIAGNOSIS — pair direction and claim extraction")
     print("=" * 78)
     print(f"\nthreshold={THRESHOLD}  relevance_floor={RELEVANCE_FLOOR}")
+    # Step 1: load the NLI and embedding models (sync=True waits until they are ready) and
+    # stop if any did not load.
     print("\nLoading models...")
     load_models(sync=True)
     loaded = models_loaded()
     print(f"  models_loaded(): {loaded}")
     if not all(loaded.values()):
         raise SystemExit(f"ABORT: models not all loaded ({loaded}).")
+    # Step 2: sanity check on an obvious contradiction. A None result means the detector
+    # cannot score pairs at all, so all later numbers would be meaningless.
     guard = evaluate_inter_agent_disagreement(
         "a", "The migration completed successfully with no errors.",
         "b", "The migration failed and was rolled back.", threshold=THRESHOLD)
@@ -102,6 +133,8 @@ def main() -> None:
         raise SystemExit("ABORT: detector returned None on a known-contradictory pair.")
     print(f"  guard OK — contradiction={guard.contradiction_prob:.3f}")
 
+    # Step 3: rebuild the 40 probe pairs and read the human labels (case id -> label such as
+    # CONTRADICTION). Pair number n gets the id P001, P002, ... so labels line up by position.
     print("\nRebuilding the 40 frozen probe pairs...")
     cases = rebuild_probe_cases()
     labels = json.loads(LABELS_PATH.read_text(encoding="utf-8"))["labels"]
@@ -110,6 +143,8 @@ def main() -> None:
     conditions = ("forward", "reversed", "conclusion", "conclusion_reversed")
     per_case, started = [], time.time()
 
+    # Step 4: for each pair, cut both texts down to their conclusion, then run the detector
+    # under every condition. Only the first 300 characters of each conclusion are saved.
     for index, pair in enumerate(cases, start=1):
         case_id = f"P{index:03d}"
         a_text, b_text = pair["a"]["message"], pair["b"]["message"]
@@ -124,12 +159,24 @@ def main() -> None:
             "conditions": {},
         }
 
+        # Each entry is (premise, hypothesis). NLI is not symmetric, so swapping them can
+        # change the answer.
+        #   forward              full text A, then full text B (the order the product uses:
+        #                        the earlier agent is the premise)
+        #   reversed             full text B, then full text A
+        #   conclusion           only the concluding sentences, A then B
+        #   conclusion_reversed  only the concluding sentences, B then A
         variants = {
             "forward": (a_text, b_text),
             "reversed": (b_text, a_text),
             "conclusion": (a_concl, b_concl),
             "conclusion_reversed": (b_concl, a_concl),
         }
+        # The detector may return None (could not check the pair); then the numbers are
+        # stored as None and the alarm as False.
+        # contradiction_prob = NLI chance of contradiction; similarity = how close the two
+        # meanings are; gated = True if the pair was treated as off-topic and never flagged;
+        # alarm = the detector flagged the pair.
         for name, (premise, hypothesis) in variants.items():
             result = evaluate_inter_agent_disagreement(
                 "agent_p", premise, "agent_h", hypothesis, threshold=THRESHOLD)
@@ -143,6 +190,15 @@ def main() -> None:
         if index % 10 == 0:
             print(f"  {index}/{len(cases)} scored ({time.time()-started:.0f}s)")
 
+    # Step 5: score each condition against the labels.
+    #   tp = a real contradiction and an alarm (a hit)
+    #   fn = a real contradiction and no alarm (a miss)
+    #   fp = not a contradiction but an alarm (a false alarm)
+    #   tn = not a contradiction and no alarm
+    #   recall = tp / (tp + fn);  precision = tp / (tp + fp), or None if there was no alarm
+    # "fp / 30" uses 30 as the number of non-contradictions among the 40 cases; it is written
+    # into the code, not counted. The "probs" list holds the contradiction probability on the
+    # real contradictions only (None counts as 0.0).
     summary = {}
     for condition in conditions:
         tp = sum(1 for r in per_case if r["is_contradiction"] and r["conditions"][condition]["alarm"])
@@ -172,6 +228,9 @@ def main() -> None:
               f"{s['mean_contradiction_prob_on_positives']:>8.4f} "
               f"{s['max_contradiction_prob_on_positives']:>8.4f}")
 
+    # Step 6: turn the numbers into a verdict. fwd and rev = recall of the full-text runs in
+    # the two directions. con and con_fp = recall and false-positive rate of the better of the
+    # two conclusion runs (the one with higher recall; on a tie, the lower false-positive rate).
     fwd, rev = summary["forward"]["recall"], summary["reversed"]["recall"]
     # Take the BEST extraction variant, not just the forward one. An earlier
     # version of this logic checked `conclusion` alone, missed that
@@ -183,6 +242,12 @@ def main() -> None:
     con = summary[best_extraction]["recall"]
     con_fp = summary[best_extraction]["fp_rate_on_30_negatives"]
 
+    # The first branch that is true wins:
+    #   1. conclusions give recall >= 0.7 with a false-alarm rate <= 0.2: extraction is the gap.
+    #   2. recall >= 0.7 but a false-alarm rate > 0.2: a misleading gain.
+    #   3. reversing the full texts raises recall by more than 0.3: direction matters.
+    #   4. conclusions give recall >= 0.4 and beat forward: extraction helps, partly.
+    #   5. otherwise: NLI is the wrong tool for this task.
     if con >= 0.7 and con_fp <= 0.2:
         verdict = ("CLAIM EXTRACTION IS THE GAP. NLI judges these contradictions "
                    "correctly once given the concluding assertion instead of the "
@@ -209,6 +274,7 @@ def main() -> None:
 
     print(f"\nVERDICT: {verdict}")
 
+    # Step 7: save the settings, the summary, the verdict and every case to a JSON file.
     payload = {
         "timestamp": time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime()),
         "purpose": "localize the cause of 0/10 recall after truncation was ruled out",

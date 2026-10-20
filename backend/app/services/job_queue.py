@@ -29,8 +29,21 @@ Backoff is stored, not slept. A failed job's next attempt time is written to
 block that worker from doing other work meanwhile.
 """
 
+# ---- What this file is for ---------------------------------------------------
+# This file is the to-do list for scoring spans. One job = one row in the
+# `evaluation_jobs` table (the EvaluationJob model). The API adds a row for each new
+# span. A separate worker process claims rows one by one, scores the span, and then
+# marks the row as done or failed. The list lives in the database, so a crash of the
+# API or the worker does not lose the work that is waiting.
+#
+# How it fits in: routers/ingest.py calls `enqueue_job`. app/worker.py calls
+# `claim_next`, `mark_succeeded`, `mark_failed` and `recover_expired_leases`.
+# This file only uses the EvaluationJob table from app/models.py.
+# ------------------------------------------------------------------------------
+
 from __future__ import annotations
 
+# hashlib makes the SHA-256 fingerprint that is used as the job key (see job_key_for).
 import hashlib
 import json
 import logging
@@ -38,13 +51,17 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
 
+# update() builds a SQL UPDATE statement. (select() comes from sqlmodel below.)
 from sqlalchemy import update
+# AsyncSession = a database session that is used with `await`.
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
 from app.models import EvaluationJob
 
 
+# In short: a plain, read-only copy of one job row. frozen=True means its fields cannot
+# be changed after it is created.
 @dataclass(frozen=True)
 class ClaimedJob:
     """A detached snapshot of a claimed job.
@@ -56,6 +73,8 @@ class ClaimedJob:
     lifetime independent of any session's, which is what a queue consumer needs.
     """
 
+    # The fields copy the columns of the evaluation_jobs row. `payload_json` is the span's
+    # data as JSON text. `attempts` counts claims so far, including this one.
     id: int
     job_key: str
     span_id: str
@@ -67,26 +86,44 @@ class ClaimedJob:
 
 logger = logging.getLogger("agentpulse.job_queue")
 
+# The five states a job can be in:
+#   queued      = waiting for a worker to take it
+#   running     = a worker holds it right now
+#   succeeded   = done
+#   failed      = can never work (for example a broken payload), so it is not retried
+#   dead_letter = kept failing and used up all its attempts
+# (The state diagram is in the EvaluationJob docstring in app/models.py.)
 STATUS_QUEUED = "queued"
 STATUS_RUNNING = "running"
 STATUS_SUCCEEDED = "succeeded"
 STATUS_FAILED = "failed"
 STATUS_DEAD_LETTER = "dead_letter"
 
+# The end states. No function in this file moves a job out of them. (Nothing in the
+# repo reads this set at the moment.)
 TERMINAL_STATUSES = {STATUS_SUCCEEDED, STATUS_FAILED, STATUS_DEAD_LETTER}
 
+# How many attempts a job gets by default (stored on the row as max_attempts). When a
+# retryable failure happens and attempts has reached it, mark_failed makes the job
+# dead_letter. mark_failed is the only place that checks this limit.
 DEFAULT_MAX_ATTEMPTS = 3
+# In short: a claim lasts 120 seconds. If the worker has not finished by then,
+# recover_expired_leases puts the job back in the queue for another worker to claim.
 # Must exceed realistic worst-case evaluation time. Evaluation is ~90-190ms per
 # span for short text but runs to seconds on long agent outputs, and a batch is
 # processed one span per job. 120s leaves a wide margin; too low and healthy
 # work gets reclaimed and duplicated.
 DEFAULT_LEASE_SECONDS = 120
+# Retry delay: it starts at 2 seconds, doubles after each failed attempt, and is never
+# more than 300 seconds (5 minutes). See compute_backoff_seconds.
 BACKOFF_BASE_SECONDS = 2
 BACKOFF_MAX_SECONDS = 300
 
 
 def _now() -> datetime:
     """Naive UTC, matching how every other timestamp in this schema is stored."""
+    # Get the current time in UTC, then remove the timezone label. A datetime without a
+    # timezone label is called "naive".
     return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
@@ -101,14 +138,19 @@ def job_key_for(trace_id: str, span_id: str) -> str:
     Hashed rather than concatenated so the column has a bounded length
     regardless of how long trace and span identifiers get.
     """
+    # Join the two ids as "trace_id::span_id", turn the text into bytes, take its SHA-256
+    # fingerprint, and return it as hex text (always 64 characters).
     return hashlib.sha256(f"{trace_id}::{span_id}".encode()).hexdigest()
 
 
 def compute_backoff_seconds(attempts: int) -> int:
     """Exponential backoff, capped. `attempts` is the count already made."""
+    # No attempt made yet means there is nothing to wait for.
     if attempts <= 0:
         return 0
+    # The wait doubles with every attempt: 1st attempt -> 2 s, 2nd -> 4 s, 3rd -> 8 s, ...
     delay = BACKOFF_BASE_SECONDS * (2 ** (attempts - 1))
+    # ...but it never goes above the cap (300 s).
     return int(min(delay, BACKOFF_MAX_SECONDS))
 
 
@@ -132,8 +174,13 @@ async def enqueue_job(
 
     The caller owns the transaction; this does not commit.
     """
+    # Step 1: work out the job's identity. The same span always gives the same key.
     key = job_key_for(trace_id, span_id)
 
+    # Step 2: ask the database "is there already a job with this key?" We only need the
+    # id, and .first() gives None when nothing matches. If one exists, do nothing.
+    # (If two requests pass this check at the same moment, the UNIQUE rule on job_key makes
+    # the database reject the second insert, so no duplicate job is created.)
     existing = (
         await session.execute(
             select(EvaluationJob.id).where(EvaluationJob.job_key == key)
@@ -142,6 +189,9 @@ async def enqueue_job(
     if existing is not None:
         return False
 
+    # Step 3: build the new row. The span's data is stored as JSON text; default=str
+    # turns values JSON cannot handle (for example dates) into plain text instead of
+    # raising an error. available_at = now means a worker may take it immediately.
     job = EvaluationJob(
         job_key=key,
         span_id=span_id,
@@ -153,6 +203,7 @@ async def enqueue_job(
         available_at=_now(),
         created_at=_now(),
     )
+    # Only add it to the session. Nothing is saved until the caller commits.
     session.add(job)
     return True
 
@@ -172,9 +223,15 @@ async def claim_next(
 
     Returns a detached snapshot, not an ORM row -- see `ClaimedJob`.
     """
+    # One fixed "now" for the whole call, so every time used below is consistent.
     now = _now()
 
+    # Each pass of the loop tries one candidate job. We only go round again when another
+    # worker took that candidate first. max_candidates (default 10) limits the retries.
     for _ in range(max_candidates):
+        # Step 1: find the job that has waited longest. SQL meaning: status is 'queued',
+        # available_at has already passed (so any retry delay is over), sorted by
+        # available_at then id, take only the first one.
         candidate = (
             await session.execute(
                 select(EvaluationJob)
@@ -185,9 +242,16 @@ async def claim_next(
             )
         ).scalar_one_or_none()
 
+        # Nothing to do: the queue is empty, or every queued job is still waiting out
+        # its retry delay.
         if candidate is None:
             return None
 
+        # Step 2: try to take the job. This is one UPDATE that says "set status to
+        # running, but only where this row is STILL queued". If another worker changed
+        # it a moment ago, no row matches and nothing changes. That is the guard.
+        # `attempts + 1` is worked out by the database from the stored value, not from the
+        # copy read in step 1. The lease runs for lease_seconds from now.
         result = await session.execute(
             update(EvaluationJob)
             .where(EvaluationJob.id == candidate.id)
@@ -200,8 +264,10 @@ async def claim_next(
                 lease_expires_at=now + timedelta(seconds=lease_seconds),
             )
         )
+        # Save now, so the claim is stored and other workers can see it.
         await session.commit()
 
+        # rowcount = how many rows the UPDATE changed. 1 means we won the race.
         if result.rowcount == 1:
             # Re-read as a plain row so the snapshot reflects the post-claim
             # state (attempts incremented) without carrying ORM identity.
@@ -219,15 +285,22 @@ async def claim_next(
                     ).where(EvaluationJob.id == candidate.id)
                 )
             ).one()
+            # The selected columns are in the same order as the ClaimedJob fields, so
+            # `*row` fills them one by one.
             return ClaimedJob(*row)
 
         # Lost the race; another worker took it. Try the next candidate.
         logger.debug("claim race lost on job %s, retrying", candidate.id)
 
+    # We lost the race max_candidates times in a row, so give up for now.
     return None
 
 
 async def mark_succeeded(session: AsyncSession, job_id: int) -> None:
+    """Mark a job as done. Also clears its lease, its worker and any old error text.
+
+    The worker calls this after the evaluation finished. It saves (commits) at once.
+    """
     await session.execute(
         update(EvaluationJob)
         .where(EvaluationJob.id == job_id)
@@ -255,6 +328,8 @@ async def mark_failed(
     further attempts -- a malformed payload is still malformed on attempt three,
     so retrying it only wastes a worker and delays the queue.
     """
+    # Step 1: load the job row, because we need its attempts and max_attempts.
+    # If the row is gone there is nothing to update, so warn and report "failed".
     job = (
         await session.execute(select(EvaluationJob).where(EvaluationJob.id == job_id))
     ).scalar_one_or_none()
@@ -262,8 +337,13 @@ async def mark_failed(
         logger.warning("mark_failed called for missing job %s", job_id)
         return STATUS_FAILED
 
+    # Keep at most the first 2000 characters of the error text. `error or ""` turns a
+    # missing error (None) into empty text first.
     trimmed = (error or "")[:2000]
 
+    # Step 2: choose the next state. There are three cases. Each case builds `values`,
+    # the columns to change. All three clear the lease and the worker id.
+    # Case A: the job can never succeed -> `failed`, no more retries.
     if not retryable:
         new_status, values = STATUS_FAILED, {
             "status": STATUS_FAILED,
@@ -272,6 +352,7 @@ async def mark_failed(
             "worker_id": None,
             "last_error": trimmed,
         }
+    # Case B: it may be retried, but all attempts are used up -> `dead_letter` (given up).
     elif job.attempts >= job.max_attempts:
         new_status, values = STATUS_DEAD_LETTER, {
             "status": STATUS_DEAD_LETTER,
@@ -280,6 +361,9 @@ async def mark_failed(
             "worker_id": None,
             "last_error": trimmed,
         }
+    # Case C: it may be retried and attempts are left -> back to `queued`, but not before
+    # a delay. The delay is saved in available_at. `attempts` is not changed here, because
+    # claim_next already added 1 when a worker took the job.
     else:
         delay = compute_backoff_seconds(job.attempts)
         new_status, values = STATUS_QUEUED, {
@@ -290,6 +374,8 @@ async def mark_failed(
             "last_error": trimmed,
         }
 
+    # Step 3: write the chosen columns (`**values` spreads the dict into keyword
+    # arguments), save, and tell the caller which state the job ended up in.
     await session.execute(
         update(EvaluationJob).where(EvaluationJob.id == job_id).values(**values)
     )
@@ -309,6 +395,10 @@ async def recover_expired_leases(session: AsyncSession) -> int:
     reliably kills its worker retry forever.
     """
     now = _now()
+    # One UPDATE does the whole job. It finds every row that is `running`, has a lease
+    # time, and whose lease time is already in the past. Those rows go back to `queued`
+    # and can be claimed again at once (available_at = now). The last_error text records
+    # why, so someone looking at the table can tell.
     result = await session.execute(
         update(EvaluationJob)
         .where(EvaluationJob.status == STATUS_RUNNING)
@@ -323,19 +413,25 @@ async def recover_expired_leases(session: AsyncSession) -> int:
         )
     )
     await session.commit()
+    # rowcount = how many rows the UPDATE changed. `or 0` turns a missing value into 0.
     count = result.rowcount or 0
     if count:
         logger.warning("Recovered %d job(s) abandoned by a dead worker", count)
     return count
 
 
+# Note: no code in the repo calls queue_stats at the moment. The docstring below says
+# the worker's logging uses it, but app/worker.py does not.
 async def queue_stats(session: AsyncSession) -> dict[str, int]:
     """Counts by status. Used by the worker's logging and, later, by health."""
+    # Step 1: read the status of every job row. (It loads one row per job and counts in
+    # Python below, instead of letting SQL do the counting with GROUP BY.)
     rows = (
         await session.execute(
             select(EvaluationJob.status, EvaluationJob.id)
         )
     ).all()
+    # Step 2: count the rows for each status. `_` is the job id, which we do not need.
     stats: dict[str, int] = {}
     for status, _ in rows:
         stats[status] = stats.get(status, 0) + 1

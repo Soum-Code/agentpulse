@@ -4,39 +4,66 @@ Uses sentence-transformers / MiniLM embeddings to index a curated local corpus
 and perform genuine top-k semantic search over structured document chunks.
 """
 
+# What this file is for: a tiny document search used by the demo workflows. A few
+# hand-written documents live in memory. Each one is turned into an embedding (a list of
+# numbers that stands for its meaning). A question is turned into an embedding too, and the
+# documents whose embeddings are closest to it are returned (that is "top-k" search).
+#
+# How it fits in: research_assistant.py and tech_support.py call local_retriever.search().
+# demo/chat_server.py, demo/multi_model_pipeline.py and several experiments use it too. The
+# embeddings come from get_embedding() in the backend package (backend/app/services/
+# grounding.py). It gives nothing back until its MiniLM model has been loaded in this
+# process; until then a crude letter-count stand-in vector is used (see build_index()).
+
 from __future__ import annotations
 
 import logging
+# Note: `time` is imported but not used in this file.
 import time
+# dataclass = a class that mostly just holds fields; asdict turns one into a plain dict.
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
+# numpy = maths on arrays. Here: the embedding vectors and the similarity scores.
 import numpy as np
 
 logger = logging.getLogger("agentpulse.retrieval")
 
 
+# One search hit. LocalVectorIndex.search() returns a list of these, best match first.
 @dataclass
 class RetrievedDocument:
     """A retrieved document chunk with provenance metadata."""
 
+    # Id of the source document, and of the chunk. Each document is one chunk, so
+    # chunk_id is just the document id plus "_chunk_0".
     document_id: str
     chunk_id: str
     title: str
     content: str
+    # Cosine similarity between the question and this document (see search() below).
+    # Higher means closer in meaning. search() rounds it to 4 decimals.
     similarity_score: float
+    # Position in the results: 1 is the best match.
     rank: int
+    # Extra facts copied from the corpus entry (author, year, ...). Not used for ranking.
     metadata: Dict[str, Any] = field(default_factory=dict)
+    # UTC time (ISO text) set automatically when this object is created.
     retrieval_timestamp: str = field(
         default_factory=lambda: datetime.now(timezone.utc).isoformat()
     )
 
+    # Plain-dict copy of the hit. The workflow nodes store hits in the LangGraph state
+    # this way.
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
 
 
 # Curated, realistic local knowledge corpus across research, support, and data domains
+# In short: a hand-written list kept in this file. Each entry has a doc_id, a title, a
+# "domain" (research, support or data_analysis; search() can filter on it), the content
+# text that gets embedded and returned, and free-form metadata.
 DEFAULT_CORPUS = [
     # Academic / Research Corpus
     {
@@ -86,35 +113,56 @@ DEFAULT_CORPUS = [
 ]
 
 
+# Holds the documents and their embeddings, and answers search() calls. The embeddings are
+# not made when the object is created; they are made once, on the first search (or when
+# build_index() is called by hand).
 class LocalVectorIndex:
     """In-memory semantic vector index for document retrieval."""
 
+    # corpus: a list of document dicts shaped like DEFAULT_CORPUS entries. If it is left out
+    # (or is an empty list), DEFAULT_CORPUS is used.
     def __init__(self, corpus: Optional[List[Dict[str, Any]]] = None):
         self.corpus = corpus or DEFAULT_CORPUS
+        # A matrix with one row per document; stays None until build_index() runs.
         self._doc_embeddings: Optional[np.ndarray] = None
         self._is_indexed = False
 
     def build_index(self) -> None:
         """Compute embeddings for all corpus chunks."""
+        # Imported here, not at the top, so the backend code is only loaded when an index
+        # is really built. `app` is the backend package (backend/app).
         from app.services.grounding import get_embedding
 
+        # Step 1: get one embedding per document, in the same order as self.corpus.
         embeddings = []
         for doc in self.corpus:
             emb = get_embedding(doc["content"])
             if emb is None:
+                # get_embedding returns None when the embedding model is not loaded in this
+                # process (or when encoding fails). Then a crude stand-in vector is made
+                # instead: 384 slots (the same length as a MiniLM embedding), add 1 to slot
+                # (character code mod 384) for each of the first 64 characters, then scale
+                # the vector to length 1. It is a letter-count fingerprint, so it does not
+                # capture meaning. The index keeps these stand-ins until build_index() runs
+                # again, even if the model is loaded in the meantime.
                 # Deterministic fallback vector if models not yet in memory
                 emb = np.zeros(384, dtype=np.float32)
                 for char in doc["content"][:64]:
                     emb[ord(char) % 384] += 1.0
+                # Dividing by the length (norm) makes the vector length 1; skip if all zeros.
                 norm = np.linalg.norm(emb)
                 if norm > 0:
                     emb = emb / norm
             embeddings.append(emb)
 
+        # Step 2: stack the vectors into one matrix and mark the index as ready.
         self._doc_embeddings = np.array(embeddings, dtype=np.float32)
         self._is_indexed = True
         logger.info("Indexed %d documents in LocalVectorIndex.", len(self.corpus))
 
+    # In: the question text, how many hits to return (top_k), and an optional domain name.
+    # Out: up to top_k RetrievedDocument objects, best first. With a domain_filter only
+    # documents whose "domain" equals it are considered; without one, all are.
     def search(
         self,
         query: str,
@@ -122,11 +170,14 @@ class LocalVectorIndex:
         domain_filter: Optional[str] = None,
     ) -> List[RetrievedDocument]:
         """Perform semantic cosine search over indexed documents."""
+        # Step 1: build the document embeddings on first use (they are then kept and reused).
         if not self._is_indexed or self._doc_embeddings is None:
             self.build_index()
 
         from app.services.grounding import get_embedding
 
+        # Step 2: embed the question the same way the documents were embedded. If there is
+        # no embedding model, use the same letter-count stand-in as in build_index().
         query_emb = get_embedding(query)
         if query_emb is None:
             query_emb = np.zeros(384, dtype=np.float32)
@@ -137,11 +188,18 @@ class LocalVectorIndex:
                 query_emb = query_emb / norm
 
         # Cosine similarities
+        # Step 3: score every document. Cosine similarity = dot product of two vectors
+        # divided by the product of their lengths. It measures the angle between them:
+        # 1 means the same direction (similar meaning), 0 unrelated, negative opposite.
+        # Both vectors normally already have length 1, so this is mostly the dot product.
+        # The product of the two lengths is floored at 1e-9, so a zero-length vector cannot
+        # cause a divide-by-zero.
         dot_products = np.dot(self._doc_embeddings, query_emb)
         norms = np.linalg.norm(self._doc_embeddings, axis=1) * np.linalg.norm(query_emb)
         norms = np.maximum(norms, 1e-9)
         similarities = dot_products / norms
 
+        # Step 4: pair each score with its document, skipping documents from other domains.
         scored_docs = []
         for idx, sim in enumerate(similarities):
             doc = self.corpus[idx]
@@ -149,8 +207,11 @@ class LocalVectorIndex:
                 continue
             scored_docs.append((float(sim), doc, idx))
 
+        # Step 5: highest score first, then keep the first top_k.
         scored_docs.sort(key=lambda x: x[0], reverse=True)
 
+        # Step 6: wrap each kept document in a RetrievedDocument. rank starts at 1; the
+        # score is rounded to 4 decimals; every document counts as one chunk (chunk_0).
         results = []
         for rank, (score, doc, orig_idx) in enumerate(scored_docs[:top_k]):
             results.append(
@@ -169,4 +230,6 @@ class LocalVectorIndex:
 
 
 # Global singleton instance
+# One shared index for the whole process: other files import this one ready-made object.
+# Creating it is cheap; the embeddings are only made on the first search().
 local_retriever = LocalVectorIndex()
