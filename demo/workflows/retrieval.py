@@ -116,6 +116,22 @@ DEFAULT_CORPUS = [
 # Holds the documents and their embeddings, and answers search() calls. The embeddings are
 # not made when the object is created; they are made once, on the first search (or when
 # build_index() is called by hand).
+# A crude stand-in for an embedding, used when the embedding model is not loaded in this process.
+# It has 384 slots (the same length as a MiniLM embedding): add 1 to slot (character code mod
+# 384) for each of the first 64 characters, then scale the vector to length 1. It is a
+# letter-count fingerprint, so it does not capture meaning, and it must never be compared with a
+# real model embedding: the two live in different spaces and the scores would mean nothing.
+def _stand_in_vector(text: str) -> np.ndarray:
+    vec = np.zeros(384, dtype=np.float32)
+    for char in text[:64]:
+        vec[ord(char) % 384] += 1.0
+    # Dividing by the length (norm) makes the vector length 1; skip if all zeros.
+    norm = np.linalg.norm(vec)
+    if norm > 0:
+        vec = vec / norm
+    return vec
+
+
 class LocalVectorIndex:
     """In-memory semantic vector index for document retrieval."""
 
@@ -126,39 +142,42 @@ class LocalVectorIndex:
         # A matrix with one row per document; stays None until build_index() runs.
         self._doc_embeddings: Optional[np.ndarray] = None
         self._is_indexed = False
+        # True when the rows of _doc_embeddings came from the embedding model; False when they
+        # are the letter-count stand-ins. search() reads it to embed the question the same way.
+        self._index_is_real = False
 
-    def build_index(self) -> None:
+    # force_stand_in=True skips the model and uses the stand-in vectors for every document.
+    def build_index(self, force_stand_in: bool = False) -> None:
         """Compute embeddings for all corpus chunks."""
         # Imported here, not at the top, so the backend code is only loaded when an index
         # is really built. `app` is the backend package (backend/app).
         from app.services.grounding import get_embedding
 
-        # Step 1: get one embedding per document, in the same order as self.corpus.
+        # Step 1: ask the model for one embedding per document, in the same order as
+        # self.corpus. get_embedding returns None when the model is not loaded in this process
+        # (or when encoding fails). All or nothing: if even one document gets None, every
+        # document gets the stand-in vector, because a mix of the two kinds cannot be compared
+        # with a single question vector.
         embeddings = []
-        for doc in self.corpus:
-            emb = get_embedding(doc["content"])
-            if emb is None:
-                # get_embedding returns None when the embedding model is not loaded in this
-                # process (or when encoding fails). Then a crude stand-in vector is made
-                # instead: 384 slots (the same length as a MiniLM embedding), add 1 to slot
-                # (character code mod 384) for each of the first 64 characters, then scale
-                # the vector to length 1. It is a letter-count fingerprint, so it does not
-                # capture meaning. The index keeps these stand-ins until build_index() runs
-                # again, even if the model is loaded in the meantime.
-                # Deterministic fallback vector if models not yet in memory
-                emb = np.zeros(384, dtype=np.float32)
-                for char in doc["content"][:64]:
-                    emb[ord(char) % 384] += 1.0
-                # Dividing by the length (norm) makes the vector length 1; skip if all zeros.
-                norm = np.linalg.norm(emb)
-                if norm > 0:
-                    emb = emb / norm
-            embeddings.append(emb)
+        if not force_stand_in:
+            for doc in self.corpus:
+                emb = get_embedding(doc["content"])
+                if emb is None:
+                    embeddings = []
+                    break
+                embeddings.append(emb)
+        self._index_is_real = len(embeddings) == len(self.corpus)
+        if not self._index_is_real:
+            embeddings = [_stand_in_vector(doc["content"]) for doc in self.corpus]
 
         # Step 2: stack the vectors into one matrix and mark the index as ready.
         self._doc_embeddings = np.array(embeddings, dtype=np.float32)
         self._is_indexed = True
-        logger.info("Indexed %d documents in LocalVectorIndex.", len(self.corpus))
+        logger.info(
+            "Indexed %d documents in LocalVectorIndex (%s vectors).",
+            len(self.corpus),
+            "model" if self._index_is_real else "stand-in",
+        )
 
     # In: the question text, how many hits to return (top_k), and an optional domain name.
     # Out: up to top_k RetrievedDocument objects, best first. With a domain_filter only
@@ -176,16 +195,23 @@ class LocalVectorIndex:
 
         from app.services.grounding import get_embedding
 
-        # Step 2: embed the question the same way the documents were embedded. If there is
-        # no embedding model, use the same letter-count stand-in as in build_index().
+        # Step 2: embed the question the same way the documents were embedded. The model can be
+        # loaded (or lost) after the index was built, for example when the first search runs
+        # before the model has finished loading. Then the index and the question would be
+        # different kinds of vector and every score would be meaningless, so the index is
+        # rebuilt to match the question.
         query_emb = get_embedding(query)
+        if (query_emb is not None) != self._index_is_real:
+            logger.warning(
+                "The embedding model state changed since the index was built; rebuilding it."
+            )
+            self.build_index(force_stand_in=query_emb is None)
+            if query_emb is not None and not self._index_is_real:
+                # The model embedded the question but could not embed the documents:
+                # use the stand-in for both sides.
+                query_emb = None
         if query_emb is None:
-            query_emb = np.zeros(384, dtype=np.float32)
-            for char in query[:64]:
-                query_emb[ord(char) % 384] += 1.0
-            norm = np.linalg.norm(query_emb)
-            if norm > 0:
-                query_emb = query_emb / norm
+            query_emb = _stand_in_vector(query)
 
         # Cosine similarities
         # Step 3: score every document. Cosine similarity = dot product of two vectors
