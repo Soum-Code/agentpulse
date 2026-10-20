@@ -46,11 +46,17 @@ class StubDrift:
 
 
 class StubGrounding:
+    # Must carry every field evaluation_runner persists. The runner reads these
+    # directly rather than through getattr defaults, so a field missing here
+    # fails the job loudly instead of writing a silent None to the row -- which
+    # is the behaviour we want, and the reason this stub has to keep up.
     grounding_score = 0.25
     entailment_prob = 0.7
     contradiction_prob = 0.1
     neutral_prob = 0.2
     evaluation_stage = "stage2"
+    input_tokens = 128
+    input_truncated = False
 
 
 class StubResult:
