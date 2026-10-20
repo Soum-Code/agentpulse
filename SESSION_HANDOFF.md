@@ -12,9 +12,9 @@
 
 Everything below this banner was written session by session, against whichever branch that session was on. Sections 0–23 were checked against `origin/main` as it stood in August–September and nothing was re-checked after `e31fb58` landed on 2026-09-21. Section 28 is the reconciliation; the short version:
 
-- **`main` is `e31fb58`: an unsigned direct push with no PR, most likely a Google AI Studio sync of a stale working tree, not a reviewed change.** Its message is *"refactor: remove tool claim tracking and alerting"*; its diff is **48 files, +3,609 / −12,482**. It re-enabled the `AGENT_DISAGREEMENT` HIGH alert that 24.9.5 withdrew, put `demo/multi_model_pipeline.py` back to the version that delivers zero spans (24.1), deleted the 24.9 experiments and the `tool_claims_found` migration and tests, deleted the dashboard lockfiles, blanked `.env.example`, cut this file back to Section 23, and **added** the RAG chat view with its mock middleware. 28.2.
-- **PR #60 (branch `claude/optimistic-knuth-0z7l6z`, five commits from 2026-10-01) already undoes that** and adds a real chat service. It is not merged. Sections 24–26 of this file describe `7f78b3f` plus that branch, not `main` today. 28.1, 28.3.
-- **The code behind 25.5/25.6** was merged in #55, removed by `e31fb58` and is restored on #60; 25.6 is PR #56, never merged. 25.5, 25.6.
+- **`main` is `e31fb58`: an unsigned direct push with no PR, most likely a Google AI Studio sync of a stale working tree, not a reviewed change.** Its message is *"refactor: remove tool claim tracking and alerting"*; its diff is **48 files, +3,609 / −12,482**. It re-enabled the `AGENT_DISAGREEMENT` HIGH alert that 24.9.5 withdrew, put `demo/multi_model_pipeline.py` back to the version that delivers zero spans (24.1), deleted the 24.9 experiments and the `tool_claims_found` migration and tests, deleted the dashboard lockfiles, blanked `.env.example`, cut this file back to Section 23, and **added** the RAG chat view with its mock middleware. 28.2. **[2026-10-20] No longer: #60, #63, #61 and #62 were merged on top of `e31fb58` between 07:34 and 07:37 UTC, and #56 at 11:44; `main` is now `a73c99a` (28.9 item 1, 28.12). The other lines of this file that still describe `e31fb58` as `main` were not all re-checked.**
+- **PR #60 (branch `claude/optimistic-knuth-0z7l6z`, five commits from 2026-10-01) already undoes that** and adds a real chat service. It is not merged. Sections 24–26 of this file describe `7f78b3f` plus that branch, not `main` today. 28.1, 28.3. **[2026-10-20] Merged at 07:34 UTC (`c45be66`).**
+- **The code behind 25.5/25.6** was merged in #55, removed by `e31fb58` and is restored on #60; 25.6 is PR #56, never merged. 25.5, 25.6. **[2026-10-20] #60 was merged (07:34 UTC), so 25.5's code is on `main` again; #56 was merged (`a73c99a`) and deployed; 28.12.**
 - **The RAG chat view has six fabrication paths, not four, and two of the worst are on every branch:** it stamps `groundingScore 0.942 / SUPPORTED` on any turn whose evaluation never arrives, and it shows invented drift once its own counter reaches 32. 28.4.
 - **The 34-turn drift probe (Section 27) is weaker than first written:** the verifier was already over the alert threshold before the topic switched. 27.2.
 
@@ -893,7 +893,7 @@ provenance line — a file that has never existed.
 - **Evaluation coverage is ~6%** (1,268 of 20,701 spans). An empty queue means nothing is
   *waiting*, not that everything has been scored — the console badge was changed from "All
   evaluated" to "Queue empty" for exactly this reason.
-- **Migration state is inconsistent on the live database.** `alembic_version` reads
+- **Migration state is inconsistent on the live database.** **[2026-10-20] "Live" here means the local `./data/agentpulse.db`. The Azure database has no `alembic_version` table at all (21.6, 28.12).** `alembic_version` reads
   `8d86fee0d663` while the schema already has both `worker_heartbeats` and
   `window_centroid_distance`. `alembic upgrade head` therefore fails with a duplicate
   column. Reconcile with `alembic stamp c4b7e91a2f08` before running migrations again.
@@ -1783,7 +1783,7 @@ migration from the beginning against a database that already has the tables.
 
 **This works only for new tables.** `create_all` does not add a column, rename
 one, or change a type. The first migration that does any of those will need
-applying by hand, and the version table reconciling first. That is now two
+applying by hand, and the version table reconciling first. **[2026-10-20] That has now happened on the VM: `tool_claims_found` was on the live database by the 28.11 deploy (how it was added is not recorded), and the two `b8e4d1c72f35` columns were added with `ALTER TABLE` in 28.12. The version table was still not created or stamped.** That is now two
 unrelated Alembic hazards standing at once -- this one, and the local
 `alembic_version` that reads `8d86fee0d663` while the schema is further ahead.
 
@@ -3160,7 +3160,7 @@ model read.
 evaluation and surfaced only as a `logger.warning` fired **once per worker
 process**. It is not stored on the evaluation row. A user reading a grounding
 score cannot tell whether the model saw all of the evidence, and after the first
-occurrence neither can the logs.
+occurrence neither can the logs. **[2026-10-20] Closed on `main` by #56 (`a73c99a`, 25.6, 28.12).**
 
 ### 25.3 Tool-claim only works because the prompt dictates the phrasing
 
@@ -3198,7 +3198,7 @@ format, which is the same shape of fault as 24.5's ablation feeding
 | signal | status |
 | :--- | :--- |
 | drift | robust to paraphrase; the strongest of the four, consistent with Section 13 |
-| grounding | stable on acceptances, erratic on refusals (24.9.3); truncation not triggered here but unrecorded when it is |
+| grounding | stable on acceptances, erratic on refusals (24.9.3); truncation not triggered here but unrecorded when it is **[2026-10-20] recorded on `main` since #56 (25.6, 28.12)** |
 | tool-claim | extracts only when the prompt dictates the format; 0 of 9 otherwise |
 | disagreement | measured performance was an artifact; alerting withdrawn (24.9.5) — **[2026-10-13] at `7f78b3f` and on PR #60; live on `main` (28.3)** |
 
@@ -3215,7 +3215,7 @@ rather than overturning any of them.
 
 ### 25.5 The tool-claim decision, and why it differs from disagreement
 
-> **[2026-10-13] Status — read before the rest.** 25.5 and 25.6 were written on PR #57 (`docs/handoff-25-5`, open, conflicting) and are folded in here from there. **Their code is not all on `main`.** 25.5's change was merged as #55, then removed by `e31fb58` (28.3): on current `main` `tool_claims_found`, its migration `a7f2c3d9e104` and `tests/test_tool_claim_coverage.py` are gone, and the `AGENT_DISAGREEMENT` alert that 25.5's table calls *withdrawn* is live. **PR #60 restores them.** 25.6's change is PR #56, which was never merged and now conflicts, so `grounding_input_truncated` exists on no merged branch. The reasoning below is unchanged; its present tense describes `7f78b3f` for 25.5 and PR #56's branch for 25.6.
+> **[2026-10-13] Status — read before the rest.** 25.5 and 25.6 were written on PR #57 (`docs/handoff-25-5`, open, conflicting) and are folded in here from there. **Their code is not all on `main`.** 25.5's change was merged as #55, then removed by `e31fb58` (28.3): on current `main` `tool_claims_found`, its migration `a7f2c3d9e104` and `tests/test_tool_claim_coverage.py` are gone, and the `AGENT_DISAGREEMENT` alert that 25.5's table calls *withdrawn* is live. **PR #60 restores them.** 25.6's change is PR #56, which was never merged and now conflicts, so `grounding_input_truncated` exists on no merged branch. **[2026-10-20] #60 was merged at 07:34 UTC, so `tool_claims_found`, `a7f2c3d9e104` and `tests/test_tool_claim_coverage.py` are on `main` again and the alert is withdrawn there; #57 was closed unmerged at 07:39 UTC; #56 is now merged (`a73c99a`) and running on Azure (28.12).** The reasoning below is unchanged; its present tense describes `7f78b3f` for 25.5 and PR #56's branch for 25.6.
 
 Both signals failed external validation. They needed opposite responses, and the
 reason is worth stating because "two signals failed, remove both" would have
@@ -3263,6 +3263,8 @@ roughly 2% of tool calls and 0 of 8,353 prose spans. Persisting the count makes
 the gap visible in the data; it does not correct what the product says about it.
 
 ### 25.6 The same fault in grounding, fixed the same way
+
+> **[2026-10-20]** Merged as #56 (`a73c99a`) and deployed the same day; see 28.12.
 
 `compute_nli_grounding` measures whether the premise exceeded DeBERTa's
 512-token window and stores the answer on its result object. The runner surfaced
@@ -3484,7 +3486,7 @@ Every earlier section was written against whichever branch its session was on. T
 | #59 `fix/restore-e31fb58-regressions` | `11a1eb1` | **closed unmerged** 2026-10-13 as a duplicate of #60 | six files restored from `7f78b3f`, byte-identical to what #60 holds. Branch kept. |
 | #58 `fix/no-mock-fallback` | `7a4786c` | open, built on `e31fb58`; **conflicts with #60** | `demo/chatbot/app.py` (a second chat service), two `RagChatbotApp.tsx` fixes, the first reconciliation. A trial merge with #60 conflicts in `SESSION_HANDOFF.md` (7 hunks), `useTelemetry.ts` (2) and `vite.config.ts` (2). |
 | #57 `docs/handoff-25-5` | `74c7bb3` | open, conflicting | the prose of 25.5/25.6, folded into this file; superseded |
-| #56 `fix/grounding-truncation-visible` | `f95d135` | open, conflicting | `grounding_input_truncated` / `_tokens` persisted (25.6). Never merged. |
+| #56 `fix/grounding-truncation-visible` | `f95d135` **[2026-10-20] rebased; tip `93614b0`** | open, conflicting. **[2026-10-20] merged as `a73c99a`, deployed (28.12)** | `grounding_input_truncated` / `_tokens` persisted (25.6). Never merged before 2026-10-20. |
 | `claude/session-handoff-20ykc9` | 2026-08-28, 3 commits | no PR | a frontend clean-slate reset (deletes `SideRail.tsx` and `ui.tsx`, guts `App.tsx`) from before the dashboard was replaced; superseded, not deleted |
 | `claude/check-f88a0c` | `b8531b8`, 2026-09-17, 1 commit | no PR | the trace-workspace view 22.9 rescued; built on the pre-#2 dashboard, so it will not apply |
 | this document | `docs/handoff-reconcile-on-pr60` | stacked on #60 | retargets to `main` when #60 merges |
@@ -3508,7 +3510,7 @@ Every earlier section was written against whichever branch its session was on. T
 | :--- | :--- | :--- |
 | the `AGENT_DISAGREEMENT` alert is withdrawn (TL;DR, 24.9.5, 25.4) | **live**: HIGH, threshold 0.6 on `disagreement_score`, `alerting.py:299-306` | withdrawn; `tests/test_alerting.py` asserts its absence |
 | `tool_claims_found` is persisted (25.5) | **gone** (migration, models, runner, tests); `TOOL_CLAIM_MISMATCH` still exists | restored |
-| `grounding_input_truncated` is persisted (25.6) | never on `main` | not there either — it is PR #56 |
+| `grounding_input_truncated` is persisted (25.6) | not on `main` **[2026-10-20] until `a73c99a` (28.12)** | not there either — it is PR #56 |
 | the 23.4 pipeline "now works" (24.1–24.3) | the pre-fix form: no `await pulse.start()`, `pulse.shutdown()` not awaited, `max_tokens=320`, no `EmptyCompletion`. An offline harness (stub model client, local stub HTTP server) found it delivering **0 spans** where the restored file delivers **5** | restored |
 | the 24.9 experiments, results, reports exist | absent | present |
 | the ablation was re-run (24.5) | `ablation_results.json` is the 2026-08-23 17:56 UTC file again | restored |
@@ -3564,7 +3566,7 @@ Read-only, by `gh` and `git`:
 
 - **#60's CI ran for the first time in this repository's history and passed:** `release` workflow on the pull request — `sdk-test` 46 passed, `images (backend)` and `images (dashboard)` built, `sdk-publish` skipped (tag-only). Nothing was pushed or published; before 2026-10-13 `.github/workflows` did not exist and no run had ever happened.
 - **`RELEASING.md` tells the next release to tag `v0.1.0`, which already exists** (an annotated tag, ancestor of `main`, with a published GitHub release of the same name). A new tag needs a version bump. The PyPI project `agentpulse-observe`, the `pypi` environment and GHCR package visibility (RELEASING.md "One-time setup") do not exist yet.
-- **On 2026-10-13 the live deployment was a 2026-09-17 build (superseded on 2026-10-20: see 28.11).** `https://agentpulse.centralindia.cloudapp.azure.com/v1/health/live` reports `process_started_at 2026-09-17T11:39:22` and about 26 days of uptime (checked 2026-10-13), 36 seconds after #44 merged. It contains none of #45 onward, and by a bundle probe none of the RAG UI. *By hand: `curl`; the bundle probe is the audit's.*
+- **On 2026-10-13 the live deployment was a 2026-09-17 build (superseded on 2026-10-20: see 28.11 and 28.12).** `https://agentpulse.centralindia.cloudapp.azure.com/v1/health/live` reports `process_started_at 2026-09-17T11:39:22` and about 26 days of uptime (checked 2026-10-13), 36 seconds after #44 merged. It contains none of #45 onward, and by a bundle probe none of the RAG UI. *By hand: `curl`; the bundle probe is the audit's.*
 - **The repository homepage and the `v0.1.0` release notes link a dead hostname** (`agentpulse-demo.centralindia.cloudapp.azure.com`, which does not resolve); the working host is `agentpulse.` without `-demo`. Fixed in the repository's files on 2026-10-13, and in both GitHub fields on 2026-10-20 (the homepage URL and the "Live demo" line of the `v0.1.0` notes; nothing else in the notes changed).
 - **Security settings on the now-public repo:** secret scanning, push protection and Dependabot are disabled; there are no rulesets and no `SECURITY.md`; `main` is unprotected; collaborator `SkSahoo98` still has push (one commit, `b7dc43c`, 2026-08-31). A `.claude/settings.local.json` is tracked on `main` (7 lines, no secrets).
 - **Other repositories under `Soum-Code`:** 13, all public. `frontend` (the AI Studio app's earlier repo, last push 2026-09-16) and `Soum-frontend-` (28.8) are the relevant ones; `agenttrace` is an unrelated project of similar name.
@@ -3583,21 +3585,22 @@ Public, two commits by the owner on 2026-10-10 (21:24–21:25 UTC), 75 files, AI
 
 Everything here is the owner's; nothing below has been done unless it says so.
 
-1. **Merge #60** (the owner chose the Oct-1 branch as the base), then #63 (the pinned dependencies, 28.11), then this document and #62 (comments only). CI passed on #60 and #63. Use "Create a merge commit" (the repository's convention; #61–#63 are built on #60's commits, which a squash would make them repeat), and retarget #61, #62 and #63 to `main` before merging them: branch auto-delete is off, so GitHub will not do it, and a merge into the old branch never reaches `main`. `main` is unprotected and no workflow runs on a push to it (`release.yml` runs on tags and pull requests), so merging publishes nothing. Checked with `git merge-tree` on 2026-10-20: merging #60 into `main` gives exactly #60's tree, and merging #63 gives the tree that runs on Azure.
+1. **Merge #60** (the owner chose the Oct-1 branch as the base), then #63 (the pinned dependencies, 28.11), then this document and #62 (comments only). CI passed on #60 and #63. Use "Create a merge commit" (the repository's convention; #61–#63 are built on #60's commits, which a squash would make them repeat), and retarget #61, #62 and #63 to `main` before merging them: branch auto-delete is off, so GitHub will not do it, and a merge into the old branch never reaches `main`. `main` is unprotected and no workflow runs on a push to it (`release.yml` runs on tags and pull requests), so merging publishes nothing. Checked with `git merge-tree` on 2026-10-20: merging #60 into `main` gives exactly #60's tree, and merging #63 gives the tree that runs on Azure. **[2026-10-20] Done: #60, #63, #61 and #62 were merged between 07:34 and 07:37 UTC.**
 2. **#58:** do not merge it. After #60, close it (the branch is kept). What only it has: the two `RagChatbotApp.tsx` fixes (items 3 and 4 in 28.4) and `demo/chatbot/app.py`, the instrument of the 27.2 probe. Carry the two fixes into the code PR below; keep `app.py` only if a second chat service is wanted.
-3. **#57:** close as superseded by 25.5/25.6 here. **#56:** rebase onto `main` or drop; it was never merged.
+3. **#57:** close as superseded by 25.5/25.6 here. **[2026-10-20] Closed unmerged at 07:39 UTC.** **#56:** rebase onto `main` or drop; it was never merged. **[2026-10-20] Rebased, merged and deployed (28.12).**
 4. **A code PR for the RAG chat view** (28.4): remove the invented grounding score and the invented drift, the corpus fallback, the hard-coded stage models and the timer-driven stages, the hard-coded sparkline and ASI label, and the two paths only #58 fixed; and make whichever chat service survives load the embedding model or fail loudly instead of hashing. A proposal card for this exists in the app.
 5. **Should `AGENT_DISAGREEMENT` alert at all?** #60 returns to the 24.9.5 decision (withdrawn). Keeping it live would be a different, deliberate decision; nothing measured supports it.
 6. **Next release:** a new tag (not `v0.1.0`) with a version bump, after the one-time PyPI/GHCR setup in `RELEASING.md`.
 7. **Housekeeping** (the homepage, the `v0.1.0` notes and the redeploy were done on 2026-10-20, 28.11): turn on branch protection, secret scanning and push protection; remove `SkSahoo98`'s push access if it is no longer wanted; untrack `.claude/settings.local.json`; unlink or stop syncing the `agentpulse` AI Studio app from this repository.
 8. **The standalone frontend:** fix the `spans` Firestore rule before it holds real data; match its `/v1/drift` and alert-acknowledge calls to the backend's shapes; decide whether its product views stay on mock data.
 9. **Rotate the NVIDIA key** that was pasted into a chat session and is in the local, gitignored `.env`. The OpenRouter key pasted earlier was revoked (a call with it returned 401 when checked).
+10. **[2026-10-20] #64 and #65 are open** (28.12). #64 changes only `demo/` and needs no redeploy. #65 adds the first CI job that runs the backend suite on pull requests; making it a required check is a branch-protection setting.
 
 ### 28.10 Method and limits
 
 The first pass of this check ran as eight automated finders against the old handoff; five finished (B1, B3, C, D, E), producing 106 findings. Skeptic agents then re-checked all 106 independently: 103 confirmed, 3 refuted. The finder for Section 24's repository claims (A1) also finished, with 16 findings that no skeptic reached. Finders A2 and B2 (the TL;DR, 25 and 26 repository claims; the model-dependent numbers in 24.9.4–25.2) never completed because the usage limit was hit three times, so **the 25.1 paraphrase spreads and the 25.2 "0 of 100 truncated" figure were not re-checked.** A second automated audit then went through the text the first reconciliation added (214 statements: 132 held, 50 overstated, 14 unsupported, 18 wrong), all folded into this section; a completeness sweep of GitHub state produced 28.1 and 28.7.
 
-Not re-checked at all: Sections 1–3 and 7–23, most of 24.2–24.4 and 24.6–24.8, the retriever and answerer rows in 27.2. Statements that depend on the owner's AI Studio screens (28.2) and on a Claude session's report of what the owner said (26.1) are marked as such. The Oct-1 branch's own tests passed here (290 backend, 35 dashboard) but no model provider was called. Section 28.11 was written on 2026-10-20 from the commands it lists, not from the audit.
+Not re-checked at all: Sections 1–3 and 7–23, most of 24.2–24.4 and 24.6–24.8, the retriever and answerer rows in 27.2. Statements that depend on the owner's AI Studio screens (28.2) and on a Claude session's report of what the owner said (26.1) are marked as such. The Oct-1 branch's own tests passed here (290 backend, 35 dashboard) but no model provider was called. Section 28.11 was written on 2026-10-20 from the commands it lists, not from the audit. So was 28.12.
 
 
 ### 28.11 The 2026-10-19 redeploy that failed, and the pinned dependencies (#63) (2026-10-20)
@@ -3613,10 +3616,45 @@ Not re-checked at all: Sections 1–3 and 7–23, most of 24.2–24.4 and 24.6�
 - CI on #63: `images (backend)` passed in 5m16s, `images (dashboard)` in 1m27s, `sdk-test` in 13s; `sdk-publish` was skipped (tag-only).
 - The candidate image against a copy of the live database, before the swap: it read 117 evaluations (`tool_claims_found` NULL), 53 traces, 117 spans and 9 alerts; `/v1/health` returned 200 and an authenticated `/v1/traces` returned 200. The live database already had the nullable `evaluations.tool_claims_found` column (the pre-attempt backup of 2026-10-19 does not), so no ALTER was needed.
 
-**Deployed state.** At about 07:15 UTC on 2026-10-20 the backend, worker and dashboard containers were recreated from the new images (tag `pins-20261020`); the backend was healthy after 35 seconds. `/v1/health` reports state healthy, and `/v1/health/evaluator` reports ready with one live worker on the ONNX NLI backend. No container restarted or was OOM-killed. Caddy and the volumes were not touched. The temporary 3 GB swapfile added for the build was removed afterwards (it was never in `/etc/fstab`). On the VM, `~/backups/` holds `agentpulse-pre-pr60-20261019.db` and `agentpulse-pre-pins-20261020-0653.db`. The VM checkout is on `fix/pin-backend-dependencies` at `cfe6a56`; its tree equals what `main` will be after #60 and #63 merge, so merging needs no redeploy (#61 changes only this file and #62 only comments).
+**Deployed state.** At about 07:15 UTC on 2026-10-20 the backend, worker and dashboard containers were recreated from the new images (tag `pins-20261020`); the backend was healthy after 35 seconds. `/v1/health` reports state healthy, and `/v1/health/evaluator` reports ready with one live worker on the ONNX NLI backend. No container restarted or was OOM-killed. Caddy and the volumes were not touched. The temporary 3 GB swapfile added for the build was removed afterwards (it was never in `/etc/fstab`). On the VM, `~/backups/` holds `agentpulse-pre-pr60-20261019.db` and `agentpulse-pre-pins-20261020-0653.db`. The VM checkout is on `fix/pin-backend-dependencies` at `cfe6a56`; its tree equals what `main` will be after #60 and #63 merge, so merging needs no redeploy (#61 changes only this file and #62 only comments). **[2026-10-20, later] Superseded at about 11:56 UTC: the backend and worker now run #56 (28.12), the VM checkout is on `main` at `a73c99a`, and `~/backups/` also holds `agentpulse-pre-pr56-20261020.db`.**
 
-**Rolling back:** tag the three `rollback-20261019` images as `:latest`, then `docker compose -f docker-compose.yml -f deploy/azure/docker-compose.azure.yml up -d --no-build backend worker dashboard`.
+**Rolling back:** tag the three `rollback-20261019` images as `:latest`, then `docker compose -f docker-compose.yml -f deploy/azure/docker-compose.azure.yml up -d --no-build backend worker dashboard`. **[2026-10-20, later]** After 28.12 the images just before it are `pins-20261020`; roll back to those first (28.12).
 
-**Building on this VM** (4 GB, no swap now, no buildx): build with `docker compose ... build <service>`, one service at a time. Plain `docker build` uses the legacy builder, which rejects the Dockerfile's `COPY a b .`, and `DOCKER_BUILDKIT=1` fails without buildx. The dashboard must be built through compose, because `VITE_API_KEY` and `VITE_API_URL` are baked in from `.env` as build args. Compose overwrites `:latest` on every build, so point `:latest` back at the `rollback-*` tags until the swap. Add a swapfile again before a rebuild.
+**Building on this VM** (4 GB, no swap now, no buildx): build with `docker compose ... build <service>`, one service at a time. Plain `docker build` uses the legacy builder, which rejects the Dockerfile's `COPY a b .`, and `DOCKER_BUILDKIT=1` fails without buildx. The dashboard must be built through compose, because `VITE_API_KEY` and `VITE_API_URL` are baked in from `.env` as build args. Compose overwrites `:latest` on every build, so point `:latest` back at the `rollback-*` tags until the swap. **[2026-10-20, later] Point it back at the tags that are running, not `rollback-*`: since 28.12 that is `pr56-20261020` for backend and worker and `pins-20261020` for the dashboard.** Add a swapfile again before a rebuild.
+
+### 28.12 #56 merged and deployed; what was not deployed (2026-10-20)
+
+**What changed.** #56 was merged at 11:44 UTC as `a73c99a`, a merge commit. Its branch had been rebased onto `main` after 28.1 listed it as conflicting, and GitHub reported it mergeable. It is the 25.6 change: `Evaluation` in `backend/app/models.py` gets two nullable fields, `grounding_input_truncated` and `grounding_input_tokens`; `evaluation_runner.py` writes them; migration `b8e4d1c72f35` adds the columns; `tests/_queue_harness.py` and a new `tests/test_grounding_truncation.py` cover it. Nothing in the dashboard changed, so the site looks the same. From now on the two values are stored for each new evaluation that computes a grounding score (older rows, and evaluations with no grounding result, hold NULL), and no dashboard view or API response shows them yet. `main` now collects 293 tests: 290 plus the three in `tests/test_grounding_truncation.py`.
+
+**Not deployed, and why.**
+
+- #64 (the retriever fix) changes only `demo/workflows/retrieval.py` and a test. No image on the VM contains `demo/` (the stack is backend, worker, dashboard and Caddy), so there is nothing to deploy. It is still open.
+- #65 (a CI job that runs `pytest tests` on pull requests, and on pushes to `main`, that touch the backend, demo, tests, SDK, adapters or reasoning code) changes only `.github/workflows/tests.yml`. It is still open. It has two runs, each run twice; all four attempts passed 290 tests on `main` as it was before #56, so neither #56's nor #64's new tests were included. `pytest` took 66 to 86 s and the job 2 min 16 s to 2 min 52 s. Both re-runs restored the model cache instead of downloading the models.
+- PR #1 of `Soum-Code/Soum-frontend-` is still open. Nothing on the VM is built from that repository (the site's dashboard is this repository's `dashboard/`), so merging it alone would not put it on the site.
+
+**The live database has no `alembic_version` table.** Its schema comes from `SQLModel.metadata.create_all` when the API starts (`backend/app/database.py`). That creates missing tables but never adds a column to an existing one. With no `alembic_version` table, `alembic upgrade` would start from the baseline migration `60a86ca23d8c` and fail on tables that already exist, so it was not used; to use it, the database would first have to be stamped at the revision its schema matches, now `b8e4d1c72f35`. The running image has no `migrations/` or `alembic.ini` anyway (the Dockerfile copies only `app/`). The two columns were added by hand with `ALTER TABLE`. (`tool_claims_found` was already there at the 28.11 deploy, though the 2026-10-19 backup lacks it; 28.11 does not record how it was added.) Rows written before that hold NULL in both, on purpose: the migration's docstring says that writing False would claim the premise was not cut.
+
+**Steps, in order** (*by hand, over SSH; times are UTC*):
+
+1. The VM checkout was already on `main` at `67986bc` when this started (28.11 had left it on `fix/pin-backend-dependencies`; that switch is not recorded). `git pull --ff-only` took it to `a73c99a`.
+2. A backup through SQLite's backup API: `~/backups/agentpulse-pre-pr56-20261020.db`, 117 evaluations, `integrity_check` ok.
+3. A 3 GB `/swapfile` (not in `/etc/fstab`), then `docker compose -f docker-compose.yml -f deploy/azure/docker-compose.azure.yml build backend`, then `build worker`; both succeeded. The new images are tagged `pr56-20261020` (backend `e5ea16238c78`, worker `0d48e6993755`), and `:latest` was pointed back at `pins-20261020` until the swap.
+4. The candidate image against a copy of the live database. The two columns were added to the copy; the candidate API started and `/v1/health` returned 200 with the database check ok; through the app's own `Evaluation` model it read all 117 rows, wrote `True` and `321` into the new fields of one row and read them back. The copy was deleted afterwards.
+5. The two columns added to the live database (117 rows, `integrity_check` ok afterwards). The old code does not read them, so this was safe before the swap.
+6. At about 11:56, `:latest` pointed at `pr56-20261020` and `up -d --no-build backend worker`. The dashboard and Caddy containers were not recreated (up 5 hours and 5 weeks). No volume was recreated or removed; the only change to the data volume was the `ALTER TABLE` in step 5.
+7. The swapfile removed.
+
+**Checked after the swap.**
+
+- `/v1/health`: state healthy, the API ready, the database check ok; the evaluator ready with one live worker on the ONNX backend, not degraded.
+- The worker logged `models_loaded()` with all three parts True at 11:57:03, then that it was starting.
+- `docker logs <container> 2>&1 | grep -Eci 'error|traceback'` gives 0 for the new backend (759 lines) and the new worker (11 lines).
+- Both running containers use the `pr56-20261020` image IDs, and the `models.py` and `evaluation_runner.py` inside them contain `grounding_input_truncated`.
+
+**Not checked.** No evaluation has run since the deploy (117 evaluations before and after; no row has `grounding_input_tokens` set), so a real evaluation filling the new columns has not been seen, and no test span was sent to production to force one. The whole test suite was not run on `a73c99a` for this deploy: CI on #56 ran only `sdk-test` and the two image builds. The session that asked for #65 reported 298 passing on `main` with #64 and #56 applied, earlier the same day; that run was not repeated here.
+
+**Rolling back:** tag `agentpulse-backend:pins-20261020` and `agentpulse-worker:pins-20261020` as `:latest`, then `docker compose -f docker-compose.yml -f deploy/azure/docker-compose.azure.yml up -d --no-build backend worker`. The two columns can stay; the older code does not read them. `rollback-20261019` is older still (before #63).
+
+**Also seen.** `/v1/health` counts 11 registered workers, 10 of them stale. Every restart leaves the previous worker's heartbeat row behind. Readiness is not affected (one worker is alive), but the count grows with each redeploy.
 
 ---
