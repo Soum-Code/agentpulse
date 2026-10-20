@@ -1,0 +1,60 @@
+# Run AgentPulse from published images -- no clone-and-build.
+#
+#   curl -O https://raw.githubusercontent.com/Soum-Code/agentpulse/main/docker-compose.release.yml
+#   export AGENTPULSE_API_KEY=$(openssl rand -hex 24)
+#   docker compose -f docker-compose.release.yml up -d
+#   open http://localhost:5173
+#
+# AGENTPULSE_VERSION pins a release (default: latest). The evaluator downloads
+# two models (~0.5 GB) into the `models` volume on first worker start, so the
+# first scores take a few minutes; see STARTUP_GUIDE.md section 2.3 for offline hosts.
+#
+# AGENTPULSE_API_KEY is required. The dashboard container attaches it to API
+# calls itself, so it never reaches the browser -- which also means anyone who
+# can reach port 5173 can use the API. Do not expose that port to an untrusted
+# network without your own authentication in front.
+
+x-backend: &backend
+  image: ghcr.io/soum-code/agentpulse-backend:${AGENTPULSE_VERSION:-latest}
+  environment:
+    AGENTPULSE_API_KEY: ${AGENTPULSE_API_KEY:?set AGENTPULSE_API_KEY, e.g. openssl rand -hex 24}
+    AGENTPULSE_DATABASE_URL: sqlite+aiosqlite:////data/agentpulse.db
+    AGENTPULSE_MODEL_CACHE_DIR: /models
+    AGENTPULSE_LOCAL_DEV_MODE: "false"
+  volumes:
+    # Named volumes, not bind mounts: SQLite WAL needs a working shared-memory
+    # mmap, which Docker Desktop's bind-mount translation on Windows lacks.
+    - agentpulse_data:/data
+    - agentpulse_models:/models
+
+services:
+  backend:
+    <<: *backend
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/v1/health', timeout=5).status == 200 else 1)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Without the worker the stack accepts spans and never evaluates them.
+  worker:
+    <<: *backend
+    command: ["python", "-m", "app.worker"]
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  dashboard:
+    image: ghcr.io/soum-code/agentpulse-dashboard:${AGENTPULSE_VERSION:-latest}
+    environment:
+      AGENTPULSE_API_KEY: ${AGENTPULSE_API_KEY:?set AGENTPULSE_API_KEY}
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+
+volumes:
+  agentpulse_data:
+  agentpulse_models:
