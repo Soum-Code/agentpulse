@@ -13,6 +13,11 @@ dependencies = [
     "fastapi>=0.111,<1.0",
     "uvicorn[standard]>=0.30,<1.0",
     "sqlmodel>=0.0.16,<1.0",
+    # The async engine (aiosqlite) needs greenlet. SQLAlchemy 2.0 installed it by itself;
+    # 2.1 made it an optional extra, so a fresh resolve that picked 2.1.5 built an image
+    # that crashed on start with "ImportError: greenlet". Ask for the extra, and stay on
+    # the 2.0 line, which is the one this app was run and tested on.
+    "sqlalchemy[asyncio]>=2.0.14,<2.1",
     "alembic>=1.13,<2.0",
     "aiosqlite>=0.20,<1.0",
     "pydantic>=2.0,<3.0",
