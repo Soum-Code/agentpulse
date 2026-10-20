@@ -16,13 +16,15 @@ ENV PATH="/venv/bin:$PATH"
 # though this service only ever runs CPU inference (onnxruntime/torch on CPU,
 # no GPU anywhere in this stack) — that download is what was timing out.
 RUN pip install --no-cache-dir --timeout=180 --retries=5 \
-    --index-url https://download.pytorch.org/whl/cpu torch
+    --index-url https://download.pytorch.org/whl/cpu torch==2.14.0
 
-COPY pyproject.toml README.md .
+COPY pyproject.toml constraints.txt README.md .
 COPY app/ app/
 # torch is already satisfied by the CPU wheel above, so this resolves the
 # rest of pyproject.toml's deps without pulling in a second (CUDA) torch.
-RUN pip install --no-cache-dir --timeout=180 --retries=5 .
+# constraints.txt pins every other package to the versions known to work; without
+# it a rebuild takes the newest of everything and can break (see that file).
+RUN pip install --no-cache-dir --timeout=180 --retries=5 -c constraints.txt .
 
 # ── Runtime: slim image, no compiler, non-root user ──
 FROM python:3.11-slim
