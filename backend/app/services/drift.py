@@ -16,24 +16,55 @@ Baseline management policies:
 - Baseline versioning & configuration tracking
 """
 
+# WHAT THIS FILE IS FOR
+# For each agent it remembers how the agent's outputs have looked so far, and says how much
+# the newest span differs from that history (this is "drift"). An embedding is a list of
+# numbers that stands for the meaning of a text. The file tracks these signals:
+#   centroid_distance         how far one output is from the agent's running average
+#   window_centroid_distance  how far the average of the latest outputs is from the average
+#                             of the first outputs; the DRIFT_DETECTED alert reads this one
+#   quality_drift             did the risk score rise over time
+#   tool_drift                how evenly the agent's tool calls are spread over its tools
+#   error_rate_delta          did the share of failed spans rise
+# From some of these it builds the ASI (Agent Stability Index), a 0 to 100 number.
+# Everything is kept in memory, per agent. Saving to the database is done elsewhere.
+#
+# HOW IT FITS IN
+# evaluator.py calls DriftDetector.analyze() once per span. main.py and worker.py create the
+# detector and load saved baselines into it; evaluation_runner.py saves them back with the
+# serialize_* methods. alerting.py compares the numbers with its thresholds; evaluator.py
+# passes them across.
+
 from __future__ import annotations
 
 import logging
+# threading.Lock lets only one thread at a time change the shared per-agent data.
 import threading
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Optional
 
+# numpy = fast maths on arrays of numbers; here it holds the embedding vectors.
 import numpy as np
 
 logger = logging.getLogger("agentpulse.drift")
 
 
+# What analyze() returns for one span. A signal is None when it could not be computed (for
+# example no embedding was given). baseline_size is how many spans of this agent were seen
+# before this one. is_bootstrapping is True while that count is below min_samples_for_alert;
+# it is only a flag, nothing in backend/app uses it to hold back an alert.
 @dataclass
 class DriftResult:
     """Result of drift analysis for a single span."""
 
+    # Cosine distance between this output's embedding and the agent's running-average
+    # centroid. 0.0 for the agent's very first output. Range 0 to 2 (see
+    # _update_embedding_drift).
     centroid_distance: Optional[float] = None
+    # In plain words: the distance between the average of the agent's first outputs and the
+    # average of its latest outputs. It is None until both averages are ready. With the
+    # default settings (20 first, 12 latest) the first value appears on the 32nd embedding.
     # Distance between the baseline window mean and the current window mean.
     #
     # `centroid_distance` above compares ONE output against an EMA centroid,
@@ -50,9 +81,15 @@ class DriftResult:
     # `centroid_distance` remains the spike signal and this is the sustained
     # shift signal. Neither replaces the other.
     window_centroid_distance: Optional[float] = None
+    # Spread of the agent's tool calls over its tools: 0 = one tool only, 1 = all used equally.
+    # It is not compared with an earlier period. 0.0 until 10 tool calls were counted.
     tool_drift: Optional[float] = None
+    # How far the newer half of the recent risk scores has risen above the older half
+    # (never below 0). The evaluator passes the grounding score as the "risk score".
     quality_drift: Optional[float] = None
+    # Same idea for errors: share of failed spans in the newer half minus the older half.
     error_rate_delta: Optional[float] = None
+    # The ASI: see _compute_asi for how it is built.
     stability_index: Optional[float] = None  # ASI ∈ [0, 100]
     baseline_size: int = 0
     is_bootstrapping: bool = False
@@ -61,9 +98,18 @@ class DriftResult:
     details: str = ""
 
 
+# One detector object watches ALL agents. The data for each agent sits in dicts that are
+# keyed by the agent id.
 class DriftDetector:
     """Per-agent drift detection with controlled baseline management policies."""
 
+    # window_size: how many recent risk scores and error flags to keep per agent.
+    # min_samples_for_alert: how many spans count as "cold start", and how many embeddings
+    #   make up the baseline average.
+    # drift_threshold: stored, but not read anywhere in this file (alerting.py has its own).
+    # ema_alpha: how far the running-average centroid moves toward each new output
+    #   (0.05 = 5%). EMA = exponential moving average: newer values weigh more.
+    # mean_window: how many of the latest outputs make up the "current" average.
     def __init__(
         self,
         window_size: int = 100,
@@ -90,6 +136,12 @@ class DriftDetector:
         self._mean_window = mean_window
 
         # Per-agent state
+        # Every dict below is keyed by agent id (_frozen_agents is a set of agent ids).
+        # _centroids: the EMA centroid. _sample_counts: spans seen so far (every span counts,
+        # also one with no embedding). _risk_history and _error_counts: the newest risk
+        # scores and error flags, newest last. _tool_distributions: how many times each tool
+        # name was used. _frozen_agents: agents whose baseline is locked.
+        # _baseline_versions: starts at 1 and goes up by 1 on every reset.
         self._centroids: dict[str, np.ndarray] = {}
         # Baseline window: running sum + count over the bootstrap period, then
         # frozen. Kept as a sum so the mean is exact rather than EMA-weighted.
@@ -107,8 +159,14 @@ class DriftDetector:
         # Guards all read-modify-write access to the per-agent state above.
         # `analyze()` now runs on a thread-pool worker (see ingest.py), so
         # two spans for the same agent_id can race on the same dicts/arrays.
+        # Today the thread pool is in worker.py, reached through run_in_executor in
+        # evaluation_runner.execute_job. Its pool has one thread and the worker runs one job
+        # at a time, so analyze() calls do not overlap today. The lock matters if that changes.
         self._lock = threading.Lock()
 
+    # Frozen means the centroid stops moving and the baseline average stops growing; the
+    # recent-outputs window still updates. Returns False if the agent has no centroid yet.
+    # No code in backend/app calls this today.
     def freeze_baseline(self, agent_id: str) -> bool:
         """Freeze baseline centroid for an agent to prevent contamination."""
         with self._lock:
@@ -118,6 +176,7 @@ class DriftDetector:
                 return True
             return False
 
+    # Always returns True, even if the agent was not frozen. Not called in backend/app.
     def unfreeze_baseline(self, agent_id: str) -> bool:
         """Unfreeze baseline centroid for an agent."""
         with self._lock:
@@ -125,11 +184,16 @@ class DriftDetector:
             logger.info("Baseline unfrozen for agent: %s", agent_id)
             return True
 
+    # Takes the lock, then wipes the agent's memory with the helper below. Not called in
+    # backend/app.
     def reset_baseline(self, agent_id: str) -> None:
         """Reset baseline calibration for an agent."""
         with self._lock:
             self._reset_baseline_locked(agent_id)
 
+    # Forgets everything stored for this agent, sets its span count back to 0 (so it starts
+    # a new cold start), unfreezes it and raises its baseline version by 1. "_locked" in the
+    # name means the CALLER must already hold self._lock; this method does not take it.
     def _reset_baseline_locked(self, agent_id: str) -> None:
         self._centroids.pop(agent_id, None)
         self._baseline_sums.pop(agent_id, None)
@@ -143,6 +207,10 @@ class DriftDetector:
         self._baseline_versions[agent_id] = self._baseline_versions.get(agent_id, 1) + 1
         logger.info("Baseline reset for agent: %s (v%d)", agent_id, self._baseline_versions[agent_id])
 
+    # In: the agent id, plus what is known about this span: the output's embedding (or None),
+    # a risk score (the evaluator passes the grounding score), the name of the first tool
+    # called, and whether the span failed. Out: a DriftResult. It also updates the agent's
+    # memory, so calling it twice for the same span counts that span twice.
     def analyze(
         self,
         agent_id: str,
@@ -159,6 +227,7 @@ class DriftDetector:
         relative to each other, not just individually.
         """
         with self._lock:
+            # Read the agent's state BEFORE this span is added. `count` = spans seen so far.
             count = self._sample_counts.get(agent_id, 0)
             is_bootstrapping = count < self._min_samples_for_alert
             is_frozen = agent_id in self._frozen_agents
@@ -172,6 +241,8 @@ class DriftDetector:
             )
 
             # 1. Embedding drift
+            # Two signals come from the same embedding: its distance from the running-average
+            # centroid, and the distance between the baseline average and the recent average.
             if embedding is not None:
                 result.centroid_distance = self._update_embedding_drift(
                     agent_id, embedding, is_frozen=is_frozen
@@ -193,12 +264,19 @@ class DriftDetector:
             # 4. Error rate drift
             result.error_rate_delta = self._update_error_drift(agent_id, is_error)
 
+            # error_rate_delta is always a number here, so the ASI below always has at least
+            # one signal to work with.
             # 5. Compute ASI
+            # (It uses centroid_distance, quality_drift, tool_drift and error_rate_delta, but
+            # not window_centroid_distance.)
             result.stability_index = self._compute_asi(result)
 
             # Update sample count
+            # (Every span counts, also one without an embedding.)
             self._sample_counts[agent_id] = count + 1
 
+            # A readable note is set only while bootstrapping or frozen; otherwise `details`
+            # stays empty.
             if is_bootstrapping:
                 result.details = (
                     f"Cold-start calibration: {count + 1}/{self._min_samples_for_alert} samples. "
@@ -218,6 +296,7 @@ class DriftDetector:
         """Update centroid and compute distance to it."""
         embedding = embedding.flatten()
 
+        # The agent's first output becomes its centroid, and its distance is 0.0.
         if agent_id not in self._centroids:
             self._centroids[agent_id] = embedding.copy()
             return 0.0
@@ -225,10 +304,15 @@ class DriftDetector:
         centroid = self._centroids[agent_id]
 
         # Cosine distance
+        # Cosine similarity = dot product divided by the two vector lengths. It is 1 when the
+        # vectors point the same way, 0 when unrelated, -1 when opposite. Distance = 1 minus
+        # similarity, so it runs from 0 (same) to 2 (opposite). np.clip forces the similarity
+        # into -1..1, so rounding errors cannot push the distance below 0 or above 2.
         dot = np.dot(embedding, centroid)
         norm_e = np.linalg.norm(embedding)
         norm_c = np.linalg.norm(centroid)
 
+        # A vector of length 0 has no direction, so the distance is set to 1.0 ("unrelated").
         if norm_e == 0 or norm_c == 0:
             distance = 1.0
         else:
@@ -236,6 +320,8 @@ class DriftDetector:
             distance = 1.0 - float(np.clip(similarity, -1.0, 1.0))
 
         # Update centroid with EMA only if not frozen
+        # New centroid = (1 - ema_alpha) * old centroid + ema_alpha * this output. The distance
+        # above was measured against the OLD centroid, before this update.
         if not is_frozen:
             self._centroids[agent_id] = (
                 (1 - self._ema_alpha) * centroid + self._ema_alpha * embedding
@@ -272,10 +358,14 @@ class DriftDetector:
         """
         embedding = embedding.flatten()
 
+        # baseline_count = how many embeddings are already in this agent's baseline pool.
         baseline_count = self._baseline_counts.get(agent_id, 0)
 
         # Phase 1: fill the baseline. A frozen agent stops accumulating, so
         # whatever it had is what it keeps.
+        # The pool is kept as a running SUM of embeddings; the mean is the sum divided by the
+        # count. The first embedding starts the sum (as a float64 copy), the rest are added.
+        # While the pool is filling there is no distance yet, so return None.
         if baseline_count < self._min_samples_for_alert and not is_frozen:
             if agent_id not in self._baseline_sums:
                 self._baseline_sums[agent_id] = embedding.astype(np.float64).copy()
@@ -284,10 +374,14 @@ class DriftDetector:
             self._baseline_counts[agent_id] = baseline_count + 1
             return None
 
+        # Reached with an empty baseline only if the agent is frozen (or min_samples is 0):
+        # there is nothing to compare with.
         if baseline_count == 0:
             return None
 
         # Phase 2: accumulate post-baseline outputs only.
+        # Keep only the newest mean_window embeddings (`del recent[:-n]` deletes all but the
+        # last n). Until the window is full there is no answer yet.
         recent = self._recent_embeddings.setdefault(agent_id, [])
         recent.append(embedding.copy())
         if len(recent) > self._mean_window:
@@ -296,6 +390,9 @@ class DriftDetector:
         if len(recent) < self._mean_window:
             return None
 
+        # Phase 3: both pools are ready. Baseline mean = sum / count. Current mean = plain
+        # average of the recent embeddings. Then the cosine distance between the two means,
+        # worked out as in _update_embedding_drift (1.0 if either has length 0).
         baseline_mean = self._baseline_sums[agent_id] / baseline_count
         current_mean = np.mean(recent, axis=0)
 
@@ -319,12 +416,16 @@ class DriftDetector:
         history = self._risk_history[agent_id]
         history.append(risk_score)
 
+        # Keep only the newest window_size scores (the list is cut in place).
         if len(history) > self._window_size:
             history[:] = history[-self._window_size:]
 
+        # Fewer than 10 scores is too few to see a trend, so report no drift (0.0).
         if len(history) < 10:
             return 0.0
 
+        # Split the history into an older half and a newer half. The drift is how much the
+        # newer half's average is ABOVE the older half's. A fall in risk counts as 0.0.
         midpoint = len(history) // 2
         historical_mean = np.mean(history[:midpoint])
         recent_mean = np.mean(history[midpoint:])
@@ -341,17 +442,25 @@ class DriftDetector:
         if agent_id not in self._tool_distributions:
             self._tool_distributions[agent_id] = {}
 
+        # dist maps tool name -> how many times it was used. Count this call.
         dist = self._tool_distributions[agent_id]
         dist[tool_name] = dist.get(tool_name, 0) + 1
 
+        # Fewer than 10 counted calls is too few, so report 0.0.
         total = sum(dist.values())
         if total < 10:
             return 0.0
 
+        # probs = each tool's share of all calls. Entropy = -sum(p * log2(p)): it is 0 when one
+        # tool does all the calls and grows as the calls spread over more tools. The tiny
+        # 1e-10 is added so log2 is never given exactly 0.
         probs = np.array([c / total for c in dist.values()])
         entropy = -np.sum(probs * np.log2(probs + 1e-10))
+        # The largest entropy possible for this many tools is log2(number of tools). With one
+        # tool log2(1) would be 0, so 1.0 is used instead.
         max_entropy = np.log2(len(dist)) if len(dist) > 1 else 1.0
 
+        # Dividing gives a number from 0 to 1.
         normalized_entropy = entropy / max_entropy if max_entropy > 0 else 0.0
         return round(float(normalized_entropy), 4)
 
@@ -364,15 +473,19 @@ class DriftDetector:
         if agent_id not in self._error_counts:
             self._error_counts[agent_id] = []
 
+        # errors is a list of True/False flags (True = the span failed), newest last.
         errors = self._error_counts[agent_id]
         errors.append(is_error)
 
         if len(errors) > self._window_size:
             errors[:] = errors[-self._window_size:]
 
+        # Fewer than 10 flags is too few, so report 0.0.
         if len(errors) < 10:
             return 0.0
 
+        # Error rate = share of True flags. Compare the older half with the newer half. A
+        # fall in the rate counts as 0.0. (sum() counts the True values.)
         midpoint = len(errors) // 2
         historical_rate = sum(errors[:midpoint]) / midpoint
         recent_rate = sum(errors[midpoint:]) / (len(errors) - midpoint)
@@ -393,6 +506,10 @@ class DriftDetector:
           - Tool-use stability:        0.15
           - Error-rate stability:      0.20
         """
+        # Step 1: turn each signal that exists into a "stability" from 0 (bad) to 1 (good):
+        # stability = 1 - signal * multiplier, never below 0. With the multipliers below,
+        # stability reaches 0 when centroid_distance or tool_drift reaches 1, when
+        # quality_drift reaches 0.5, and when error_rate_delta reaches 0.2.
         signals = []
         weights = []
 
@@ -416,15 +533,22 @@ class DriftDetector:
             signals.append(stability)
             weights.append(0.20)
 
+        # No signal at all means no ASI. (analyze() always supplies error_rate_delta, so in
+        # practice this does not happen.)
         if not signals:
             return None
 
+        # Step 2: weighted average of the stabilities. Dividing by total_weight means that
+        # when a signal is missing, the weights of the others are scaled to add up to 1 again.
+        # Then multiply by 100, keep the result between 0 and 100, and round to 1 decimal.
         total_weight = sum(weights)
         weighted_sum = sum(s * w for s, w in zip(signals, weights))
         asi = (weighted_sum / total_weight) * 100
 
         return round(max(0.0, min(100.0, asi)), 1)
 
+    # A small summary of what is remembered for one agent. evaluation_runner.py reads the
+    # sample count from it when it saves baselines.
     def get_baseline_info(self, agent_id: str) -> dict:
         """Get baseline metadata for an agent."""
         with self._lock:
@@ -439,6 +563,9 @@ class DriftDetector:
                 "is_bootstrapping": self._sample_counts.get(agent_id, 0) < self._min_samples_for_alert,
             }
 
+    # Returns the centroid as raw bytes (numpy tobytes) to store in the baselines table, or
+    # None if the agent has no centroid. load_centroid reads the bytes back as float32, so
+    # the round trip is only right when the centroid itself is float32.
     def serialize_centroid(self, agent_id: str) -> bytes | None:
         """Serialize centroid for database storage."""
         with self._lock:
@@ -446,12 +573,18 @@ class DriftDetector:
                 return None
             return self._centroids[agent_id].tobytes()
 
+    # Puts a saved centroid back and restores the span count with it, so the agent does not
+    # go through the cold start again. It does not restore the window baseline; that is
+    # load_window_baseline.
     def load_centroid(self, agent_id: str, data: bytes, sample_count: int) -> None:
         """Load a centroid from database."""
         with self._lock:
             self._centroids[agent_id] = np.frombuffer(data, dtype=np.float32).copy()
             self._sample_counts[agent_id] = sample_count
 
+    # Returns (the running sum of the baseline embeddings as float64 bytes, how many there
+    # are), or None if there is nothing to save. evaluation_runner.py stores it as a
+    # "window_baseline_pool" row.
     def serialize_window_baseline(self, agent_id: str) -> tuple[bytes, int] | None:
         """Serialize the window-drift baseline pool for database storage.
 
@@ -473,6 +606,8 @@ class DriftDetector:
                 return None
             return self._baseline_sums[agent_id].astype(np.float64).tobytes(), count
 
+    # In: the bytes and the count that serialize_window_baseline produced. worker.py calls
+    # this at start-up; main.py (the API) does not.
     def load_window_baseline(self, agent_id: str, data: bytes, count: int) -> None:
         """Restore the window-drift baseline pool from database.
 
@@ -486,6 +621,8 @@ class DriftDetector:
             self._baseline_sums[agent_id] = np.frombuffer(data, dtype=np.float64).copy()
             self._baseline_counts[agent_id] = count
 
+    # evaluation_runner.persist_drift_baselines uses this to skip agents that have nothing
+    # to save.
     def touched_agent_ids(self, agent_ids: set[str]) -> set[str]:
         """Filter `agent_ids` down to those this detector currently has a centroid for."""
         with self._lock:

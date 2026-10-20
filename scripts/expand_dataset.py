@@ -22,13 +22,32 @@ sysadmin/networking behavior, elementary statistics) so nothing fabricated
 is introduced into the dataset as if it were true.
 """
 
+# About this file
+# - What it is: a one-off script that added 23 hand-written test cases to the three
+#   benchmark files datasets/v1.0_dev.json, v1.0_val.json and v1.0_test.json.
+# - A "case" = a question, some evidence text, what an agent claimed, and the correct label
+#   (SUPPORTED or CONTRADICTED) with the kind of failure.
+# - How it fits in: experiments/ (for example ablation.py) read these dataset files. This
+#   script uses only the standard library.
+# - Warning: it appends to the files each time it runs and does not check for earlier
+#   runs. The files already hold these cases (dev 21, val 22, test 30), so a second run
+#   would add the same cases again under new ids.
+
 from __future__ import annotations
 
 import json
 from pathlib import Path
 
+# The datasets/ folder at the repo root (this file is in scripts/, so go up one level).
 DATASETS_DIR = Path(__file__).parent.parent / "datasets"
 
+# The 23 new cases, written as short "specs". There are three shapes:
+#  - "supported" (True or False) plus one "agent_claim": a plain text claim with a label.
+#  - a tool spec with "result_count": a tool returned that many results. It has a
+#    "supported_claim" (states the true count) and a "mismatch_claim" (states another count).
+#  - a tool spec with status "error": the tool failed. It has a "supported_claim" (says it
+#    failed) and a "failure_claim" (wrongly says it worked).
+# Each spec becomes exactly one case. For tool specs, build_case() picks which claim to use.
 NEW_CASES = [
     # research (grounding contradiction / supported)
     {
@@ -185,10 +204,15 @@ NEW_CASES = [
 ]
 
 
+# Turns one spec from NEW_CASES into one full case (a dict) in the same shape as the older
+# cases. idx = the number in the new id (16 gives "dev_16"); split = "dev", "val" or "test".
 def build_case(idx: int, split: str, spec: dict) -> dict:
     domain = spec["domain"]
     case_id = f"{split}_{idx:02d}"
 
+    # Case A: a tool spec. The case also carries tool_records, i.e. what the tool really
+    # returned. Which claim is used depends on the id number: an even idx gets the wrong
+    # claim and an odd idx gets the faithful one, so the labels alternate.
     if "tool" in spec:
         if spec.get("status") == "error":
             tool_records = [{"tool_name": spec["tool"], "status": "error", "error": spec["error"]}]
@@ -199,6 +223,8 @@ def build_case(idx: int, split: str, spec: dict) -> dict:
             claim = spec["mismatch_claim"] if idx % 2 == 0 else spec["supported_claim"]
             is_supported = claim == spec["supported_claim"]
 
+        # Labels: the faithful claim is SUPPORTED. A wrong claim is CONTRADICTED, and its
+        # failure type says what went wrong (claimed success after an error, or a wrong count).
         if is_supported:
             classification, failure_type, is_failure = "SUPPORTED", "NO_FAILURE", False
         elif spec.get("status") == "error":
@@ -214,6 +240,8 @@ def build_case(idx: int, split: str, spec: dict) -> dict:
             "expected_failure_type": failure_type, "is_failure": is_failure,
         }
 
+    # Case B: a plain claim spec. The label comes straight from spec["supported"]; an
+    # unsupported claim is always labelled a grounding contradiction.
     supported = spec["supported"]
     return {
         "id": case_id, "domain": domain,
@@ -225,9 +253,12 @@ def build_case(idx: int, split: str, spec: dict) -> dict:
     }
 
 
+# For each split file: load it, append its share of NEW_CASES with ids that continue after
+# the highest existing id, update total_cases, and write the file back.
 def main() -> None:
     # 23 new cases, split roughly proportional to the existing 15/15/20 dev/val/test ratio.
     split_sizes = {"dev": 6, "val": 7, "test": 10}
+    # cursor = how many NEW_CASES are already used, so each split takes the next slice.
     cursor = 0
 
     for split, n in split_sizes.items():
@@ -235,10 +266,13 @@ def main() -> None:
         with open(path, "r", encoding="utf-8") as f:
             data = json.load(f)
 
+        # The largest number in the existing ids: "dev_15".rsplit("_", 1) gives
+        # ["dev", "15"], and we take the part after the last underscore as a number.
         existing_max = max(int(c["id"].rsplit("_", 1)[1]) for c in data["cases"])
         batch = NEW_CASES[cursor:cursor + n]
         cursor += n
 
+        # New ids start at existing_max + 1 and go up by one.
         for i, spec in enumerate(batch):
             new_case = build_case(existing_max + i + 1, split, spec)
             data["cases"].append(new_case)

@@ -27,22 +27,44 @@ Design decisions:
 - Fail-open: evaluation failure returns None, never blocks
 """
 
+# ---- What this file is for ---------------------------------------------------
+# Grounding asks: "is the agent's answer supported by the evidence it was given?" This
+# file loads two small models and uses them on one (evidence, answer) pair:
+#   - an NLI model (natural language inference): it says if the answer follows from the
+#     evidence (entailment), contradicts it, or neither (neutral);
+#   - an embedding model (MiniLM): it turns a text into a list of numbers for its meaning,
+#     so two texts with similar meaning get numbers that are close.
+# The file also has helpers that report which models loaded and which engine runs them.
+#
+# How it fits in: services/evaluator.py calls evaluate_grounding and get_embedding.
+# services/disagreement.py reuses compute_nli_grounding and compute_semantic_similarity.
+# app/worker.py calls load_models, models_loaded and backend_info. routers/__init__.py and
+# services/platform_health.py read models_loaded and backend_info for health reports.
+# ------------------------------------------------------------------------------
+
 from __future__ import annotations
 
 import logging
+# time.perf_counter is a precise stopwatch, used to measure latency in milliseconds.
 import time
 from dataclasses import dataclass
 from typing import Any, Optional
 
+# numpy does the array maths here: softmax (probabilities) and the dot product (similarity).
 import numpy as np
 
 logger = logging.getLogger("agentpulse.evaluator.grounding")
 
 # Lazy imports to avoid loading models at import time
+# These three module-level holders stay None until load_models fills them. Each function
+# that uses a model checks for None first. A model that is missing or failed to load only
+# means that score is skipped (the function returns None); it does not crash the caller.
 _nli_model = None
 _nli_tokenizer = None
 _embedding_model = None
 
+# In short: three variables that remember which engine (ONNX or PyTorch) really runs the
+# NLI model, which one was asked for, and why a fallback happened (if it did).
 # Which inference backend the NLI model is ACTUALLY running on, as opposed to
 # which one was asked for.
 #
@@ -63,6 +85,19 @@ _nli_backend_fallback_reason: Optional[str] = None
 class GroundingResult:
     """Result of a grounding evaluation."""
 
+    # Field guide:
+    #   grounding_score  : the risk number. Low = supported, high = not supported.
+    #   *_prob           : how likely each NLI class is. From the NLI model they add up
+    #                      to 1. In the similarity-only fallback they are rough numbers
+    #                      worked out from the similarity (see evaluate_grounding).
+    #   label            : the NLI class with the highest probability (in the fallback:
+    #                      "entailment" or "neutral", chosen from the similarity).
+    #   evaluation_stage : "stage2" = an NLI result. "stage1" = the similarity-only
+    #                      fallback.
+    #   latency_ms       : milliseconds spent. For "stage2" it covers only the NLI step
+    #                      (not the MiniLM similarity). For "stage1" it is the time since
+    #                      evaluate_grounding started.
+    #   semantic_similarity : MiniLM closeness of the two texts, 0 to 1, or None.
     grounding_score: float  # 0.0 = grounded, 1.0 = ungrounded
     entailment_prob: float
     contradiction_prob: float
@@ -72,6 +107,10 @@ class GroundingResult:
     latency_ms: float
     semantic_similarity: Optional[float] = None
 
+    # In short: input_tokens = the length of evidence + claim in tokens (a token is a small
+    # piece of a word), counted before any cutting. input_truncated = True when that is
+    # over the 512 limit, so the text was cut. The similarity-only fallback does not set
+    # them, so they keep their defaults (None, False) there.
     # DeBERTa reads at most 512 tokens of premise and hypothesis combined. Past
     # that the rest of the premise is dropped, and the score is computed from
     # evidence the model never saw -- a long RAG context can have its supporting
@@ -88,6 +127,9 @@ class GroundingResult:
 
 # Stage 1: Semantic Similarity
 
+# In short: STAGE1_SAFE_THRESHOLD (0.85) matters only in the fallback, where a similarity
+# at or above it is "safe" (label "entailment") and a lower one is not (label "neutral").
+# Neither it nor STAGE1_RISK_THRESHOLD gates the NLI model: that is always tried.
 # Neither constant gates anything. They were written for a cascade that skips
 # the NLI call, which this module does not implement.
 #
@@ -97,12 +139,17 @@ class GroundingResult:
 # "neutral".
 STAGE1_SAFE_THRESHOLD = 0.85
 
+# In short: this constant is not used by any code. It is kept only because
+# disagreement.py says its RELEVANCE_FLOOR (0.40) reuses this value.
 # STAGE1_RISK_THRESHOLD is read nowhere in this codebase. It is kept because
 # `disagreement.py` documents its RELEVANCE_FLOOR as reusing this value, so the
 # constant is the recorded origin of that 0.40 rather than dead weight. Delete
 # it and that provenance comment points at nothing.
 STAGE1_RISK_THRESHOLD = 0.40
 
+# In short: a neutral answer counts as half a contradiction in the risk score. By the
+# formula below: a fully "contradiction" result scores 1.0, a fully "neutral" one 0.5 and
+# a fully "entailment" one 0.0.
 # grounding_score = contradiction_prob + NEUTRAL_RISK_WEIGHT * neutral_prob.
 # DeBERTa NLI classifies verbatim/near-verbatim premise-hypothesis pairs as
 # "neutral" far more often than "entailment" (out-of-distribution for a model
@@ -116,6 +163,8 @@ STAGE1_RISK_THRESHOLD = 0.40
 # improvement this produced (F1 0.703 -> 0.963, FPR 0.647 -> 0.059).
 NEUTRAL_RISK_WEIGHT = 0.5
 
+# In short: the longest input, in tokens, that the NLI model can read. Anything longer is
+# cut off. A token is a small piece of a word.
 # DeBERTa-v3-small's position embeddings stop here. Premise and hypothesis share
 # the budget, so a long premise is what gets cut. This is a property of the
 # model, not a configuration choice, which is why it is a constant rather than a
@@ -123,6 +172,8 @@ NEUTRAL_RISK_WEIGHT = 0.5
 MAX_NLI_TOKENS = 512
 
 
+# Used by evaluate_grounding below, and by disagreement.py to check whether two agent
+# outputs are about the same topic.
 def compute_semantic_similarity(
     source_text: str,
     claim_text: str,
@@ -133,17 +184,24 @@ def compute_semantic_similarity(
     """
     global _embedding_model
 
+    # The embedding model is not loaded (yet), so no similarity can be computed.
     if _embedding_model is None:
         return None
 
     try:
+        # Step 1: turn both texts into embeddings (lists of numbers for their meaning).
+        # normalize_embeddings=True scales each embedding to length 1, so the dot product
+        # in step 2 equals the cosine similarity (1 = same meaning direction).
         embeddings = _embedding_model.encode(
             [source_text, claim_text],
             convert_to_numpy=True,
             normalize_embeddings=True,
         )
+        # Step 2: multiply the two embeddings number by number and add up the results.
         similarity = float(np.dot(embeddings[0], embeddings[1]))
+        # Step 3: keep the value inside 0..1 (a negative similarity becomes 0).
         return max(0.0, min(1.0, similarity))
+    # Any failure is logged and turned into None, so scoring never crashes the caller.
     except Exception as exc:
         logger.warning("Semantic similarity failed: %s", exc)
         return None
@@ -151,6 +209,8 @@ def compute_semantic_similarity(
 
 # Stage 2: NLI Grounding
 
+# Used by evaluate_grounding below, and by disagreement.py to test whether two agent
+# outputs contradict each other.
 def compute_nli_grounding(
     source_text: str,
     claim_text: str,
@@ -161,12 +221,16 @@ def compute_nli_grounding(
     """
     global _nli_model, _nli_tokenizer
 
+    # Both the model and its tokenizer (turns text into token numbers) must be loaded.
     if _nli_model is None or _nli_tokenizer is None:
         return None
 
     try:
+        # Start the stopwatch. latency_ms below covers tokenizing and the model run.
         start = time.perf_counter()
 
+        # In short: pass 1 only counts the tokens. Pass 2 builds the real model input,
+        # cut at MAX_NLI_TOKENS.
         # Tokenize once without truncation purely to learn the true length,
         # then again with it. The second pass costs well under a millisecond
         # against ~188 ms of inference, which is a cheap price for knowing
@@ -175,9 +239,15 @@ def compute_nli_grounding(
         # tokenizer's own warning ("will result in indexing errors") is both
         # noisy and wrong here -- the inference pass below truncates properly.
         full = _nli_tokenizer(source_text, claim_text, truncation=False, verbose=False)
+        # input_ids = the token numbers. Their count is the length of evidence + claim
+        # together. If it is over the limit, the real input below will lose some text.
         input_tokens = len(full["input_ids"])
         input_truncated = input_tokens > MAX_NLI_TOKENS
 
+        # Pass 2: the real input. The pair is (premise, hypothesis): the evidence first,
+        # then the claim. return_tensors="pt" gives PyTorch tensors. truncation=True with
+        # max_length cuts anything over 512 tokens. padding=True only pads when several
+        # inputs are batched; with one pair nothing is added.
         inputs = _nli_tokenizer(
             source_text,
             claim_text,
@@ -188,10 +258,14 @@ def compute_nli_grounding(
         )
 
         # Inference
+        # Run the model. Its output "logits" are three raw scores, one per NLI class.
+        # [0] picks our single pair out of the batch of one.
         outputs = _nli_model(**inputs)
         logits = outputs.logits.detach().numpy()[0]
 
         # Softmax
+        # Softmax turns the raw scores into probabilities that add up to 1. Subtracting the
+        # biggest score first avoids huge numbers and does not change the result.
         exp_logits = np.exp(logits - np.max(logits))
         probs = exp_logits / exp_logits.sum()
 
@@ -205,12 +279,16 @@ def compute_nli_grounding(
         grounding_score = contradiction_prob + NEUTRAL_RISK_WEIGHT * neutral_prob
 
         # Label
+        # The label is the class with the highest probability. argmax gives its position,
+        # and the list below uses the same order as the model's output.
         label_idx = int(np.argmax(probs))
         labels = ["contradiction", "neutral", "entailment"]
         label = labels[label_idx]
 
+        # Seconds since the stopwatch started, converted to milliseconds.
         latency_ms = (time.perf_counter() - start) * 1000
 
+        # The scores are rounded to 4 decimals. "stage2" marks this as an NLI result.
         return GroundingResult(
             grounding_score=round(grounding_score, 4),
             entailment_prob=round(entailment_prob, 4),
@@ -223,6 +301,8 @@ def compute_nli_grounding(
             input_truncated=input_truncated,
         )
 
+    # Any failure is logged (with a traceback) and becomes None, so evaluate_grounding can
+    # fall back to the similarity-only result.
     except Exception as exc:
         logger.error("NLI grounding failed: %s", exc, exc_info=True)
         return None
@@ -230,6 +310,8 @@ def compute_nli_grounding(
 
 # Two-Stage Cascade
 
+# The main entry point of this file. services/evaluator.py calls it for each span that has
+# both an input text (the evidence) and an output text (the claim).
 def evaluate_grounding(
     source_text: str,
     claim_text: str,
@@ -247,21 +329,36 @@ def evaluate_grounding(
 
     Returns None when either text is empty or when neither model is available.
     """
+    # Nothing to compare if either text is missing or empty.
     if not source_text or not claim_text:
         return None
 
+    # Stopwatch for the fallback result below (the NLI result times itself).
     start = time.perf_counter()
 
     # Stage 1: Semantic similarity
+    # Always runs. The value can be None, for example when the embedding model is not loaded.
     similarity = compute_semantic_similarity(source_text, claim_text)
 
     # Stage 2: NLI Cross-Encoder
+    # Always runs too. This is the normal path: when NLI works, attach the similarity to
+    # its result and return it.
     result = compute_nli_grounding(source_text, claim_text)
     if result:
         result.semantic_similarity = similarity
         return result
 
     # Fallback to Stage 1 if NLI model is not yet loaded
+    # Reached only when the NLI call gave no result. Build a rough result from the
+    # similarity alone. Rules used below:
+    #   grounding_score = 1 - similarity (similar texts mean low risk);
+    #   "safe" means similarity >= STAGE1_SAFE_THRESHOLD (0.85);
+    #   if safe: entailment_prob = similarity and contradiction_prob = 0;
+    #   if not safe: entailment_prob = half the similarity, contradiction_prob =
+    #     0.8 x (1 - similarity);
+    #   neutral_prob = 1 - similarity in both cases.
+    # These are not real NLI probabilities. The label is "entailment" if safe, else
+    # "neutral", and the stage is "stage1".
     if similarity is not None:
         latency_ms = (time.perf_counter() - start) * 1000
         is_safe = similarity >= STAGE1_SAFE_THRESHOLD
@@ -276,11 +373,14 @@ def evaluate_grounding(
             semantic_similarity=similarity,
         )
 
+    # Neither model gave a result, so there is no score.
     return None
 
 
 # Model Loading
 
+# Called at startup. app/worker.py calls it with sync=True and waits. app/main.py calls it
+# only when the setting api_load_models is on.
 def load_models(
     nli_model_name: str = "cross-encoder/nli-deberta-v3-small",
     embedding_model_name: str = "sentence-transformers/all-MiniLM-L6-v2",
@@ -294,15 +394,24 @@ def load_models(
     """
     import threading
 
+    # Remember which engine the configuration asked for, so backend_info() can later
+    # compare it with the engine that really loaded. ONNX Runtime is an engine made for
+    # fast model runs on CPU. PyTorch is the standard framework, used as the fallback.
     global _nli_backend_requested
     _nli_backend_requested = "onnx" if use_onnx else "pytorch"
 
+    # The inner function does the real loading. It runs at once (sync=True) or in a
+    # background thread (see the end of load_models). It fills the module-level holders.
     def _do_load():
         global _nli_model, _nli_tokenizer, _embedding_model
         global _nli_backend, _nli_backend_fallback_reason
 
         logger.info("Loading evaluation models...")
 
+        # Note: the thread pool named below is the older design. Today the worker runs one
+        # evaluation at a time (a one-thread pool in app/worker.py); ingest.py no longer
+        # evaluates. The cap of 1 thread per model call is still applied.
+        # In short: limit each model call to 1 CPU thread so threads do not fight.
         # Cap intra-op threading to 1 per inference call. Evaluation concurrency
         # comes from the ThreadPoolExecutor in ingest.py running multiple spans
         # in parallel; if each of those threads also let torch/onnxruntime spawn
@@ -312,26 +421,37 @@ def load_models(
         try:
             import torch
             torch.set_num_threads(1)
+        # Ignored on purpose: this only tunes speed (for example torch may be missing), so
+        # a failure here must not stop the models from loading.
         except Exception:
             pass
 
         # Load NLI model
+        # Three outcomes: (1) ONNX loads (best case); (2) ONNX fails, so PyTorch is loaded
+        # instead and the reason is saved; (3) use_onnx is False, so PyTorch is loaded as
+        # configured. If every load fails, the outer `except` below logs the error.
         try:
             if use_onnx:
                 try:
                     from optimum.onnxruntime import ORTModelForSequenceClassification
                     from onnxruntime import SessionOptions
+                    # SessionOptions are ONNX Runtime settings. intra_op = threads inside
+                    # one operation, inter_op = threads across operations. Both set to 1.
                     session_options = SessionOptions()
                     session_options.intra_op_num_threads = 1
                     session_options.inter_op_num_threads = 1
+                    # cache_dir is the folder where the downloaded model files are kept.
                     _nli_model = ORTModelForSequenceClassification.from_pretrained(
                         nli_model_name,
                         cache_dir=cache_dir,
                         session_options=session_options,
                     )
+                    # ONNX worked: record that, and clear any old fallback reason.
                     _nli_backend = "onnx"
                     _nli_backend_fallback_reason = None
                     logger.info("Loaded NLI model (ONNX): %s", nli_model_name)
+                # ONNX failed for any reason (library missing, model not loadable, ...).
+                # Do not give up: use the slower PyTorch version of the same model.
                 except Exception as e:
                     # Recorded, not just logged. A log line scrolls away; this is
                     # queryable via backend_info() and surfaced on /v1/health so
@@ -342,6 +462,7 @@ def load_models(
                         "The NLI backend is DEGRADED relative to configuration "
                         "(use_onnx=True).", e,
                     )
+                    # transformers is the Hugging Face library that loads the PyTorch model.
                     from transformers import AutoModelForSequenceClassification
                     _nli_model = AutoModelForSequenceClassification.from_pretrained(
                         nli_model_name,
@@ -349,6 +470,7 @@ def load_models(
                     )
                     _nli_backend = "pytorch"
                     logger.info("Loaded NLI model (PyTorch fallback): %s", nli_model_name)
+            # use_onnx is False: PyTorch was chosen on purpose, so this is not "degraded".
             else:
                 from transformers import AutoModelForSequenceClassification
                 _nli_model = AutoModelForSequenceClassification.from_pretrained(
@@ -359,15 +481,22 @@ def load_models(
                 _nli_backend_fallback_reason = None
                 logger.info("Loaded NLI model (PyTorch, as configured): %s", nli_model_name)
 
+            # The tokenizer turns text into the token numbers the NLI model expects. It is
+            # loaded after the model, whichever engine the model ended up on.
             from transformers import AutoTokenizer
             _nli_tokenizer = AutoTokenizer.from_pretrained(
                 nli_model_name,
                 cache_dir=cache_dir,
             )
+        # The error is logged, not raised. Whichever of the NLI model or tokenizer did not
+        # load stays None, so models_loaded() shows False for it and compute_nli_grounding
+        # returns None.
         except Exception as exc:
             logger.error("Failed to load NLI model: %s", exc)
 
         # Load embedding model
+        # SentenceTransformer is the library class that wraps embedding models such as
+        # MiniLM. cache_folder is where the files are kept.
         try:
             from sentence_transformers import SentenceTransformer
             _embedding_model = SentenceTransformer(
@@ -375,9 +504,14 @@ def load_models(
                 cache_folder=cache_dir,
             )
             logger.info("Loaded embedding model: %s", embedding_model_name)
+        # Same here: log it and carry on. The similarity and embedding functions then
+        # return None.
         except Exception as exc:
             logger.error("Failed to load embedding model: %s", exc)
 
+    # sync=True: wait here until loading is done. Otherwise load in a background thread
+    # so the caller can carry on at once. daemon=True means the thread does not keep the
+    # program alive when the program wants to exit.
     if sync:
         _do_load()
     else:
@@ -385,25 +519,32 @@ def load_models(
         thread.start()
 
 
+# Used by services/evaluator.py: the embedding of an agent's output feeds the drift check.
 def get_embedding(text: str) -> Optional[np.ndarray]:
     """Generate a 384-dim embedding for text using MiniLM."""
     global _embedding_model
 
+    # No embedding model loaded, so there is no embedding to give.
     if _embedding_model is None:
         return None
 
     try:
+        # One text in, one array of numbers out. normalize_embeddings=True scales the array
+        # so its length is 1.
         embedding = _embedding_model.encode(
             text,
             convert_to_numpy=True,
             normalize_embeddings=True,
         )
         return embedding
+    # Fail-open: log a warning and return None instead of raising.
     except Exception as exc:
         logger.warning("Embedding generation failed: %s", exc)
         return None
 
 
+# The worker uses this to refuse to start unless every model is loaded. The health
+# reports (routers/__init__.py, services/platform_health.py) read it too.
 def models_loaded() -> dict[str, bool]:
     """Check which models are loaded.
 
@@ -412,6 +553,8 @@ def models_loaded() -> dict[str, bool]:
     string in here would make that check silently wrong. Backend identity lives
     in `backend_info()` instead.
     """
+    # For each part: True if it is loaded (not None), False if it is not loaded yet or
+    # its load failed.
     return {
         "nli_model": _nli_model is not None,
         "nli_tokenizer": _nli_tokenizer is not None,
@@ -419,6 +562,8 @@ def models_loaded() -> dict[str, bool]:
     }
 
 
+# Read by app/worker.py (startup log and heartbeat) and by the health reports in
+# routers/__init__.py and services/platform_health.py.
 def backend_info() -> dict[str, Any]:
     """Which inference backend is ACTUALLY active, versus what was configured.
 
@@ -432,11 +577,16 @@ def backend_info() -> dict[str, Any]:
     not load. It is deliberately not an error -- the fallback is correct
     behaviour and inference results are unchanged -- but it must be *visible*.
     """
+    # degraded is True only when all three hold: ONNX was asked for, some NLI backend did
+    # load, and that backend is not ONNX. If nothing has loaded yet it stays False.
     degraded = (
         _nli_backend_requested == "onnx"
         and _nli_backend is not None
         and _nli_backend != "onnx"
     )
+    # First four keys: nli_backend = the engine running now ("onnx", "pytorch" or None);
+    # nli_backend_requested = the engine the configuration asked for;
+    # degraded = see above; fallback_reason = text of the ONNX error, or None.
     return {
         "nli_backend": _nli_backend,
         "nli_backend_requested": _nli_backend_requested,

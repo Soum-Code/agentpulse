@@ -62,20 +62,40 @@ Outputs:
 - experiments/results/disagreement_probe_key.json      (do not open until labelled)
 """
 
+# WHAT THIS FILE IS FOR
+# A one-off experiment script, not part of the product. It reads debates between several LLM
+# agents from the public DEBATE dataset and builds pairs of agent messages from the same
+# turn. It then picks up to 40 pairs (20 "mismatch" and 20 "control") and writes them to a
+# file for a person to label as CONTRADICTION, NO_CONTRADICTION or UNCLEAR. The goal is to
+# find out whether the dataset holds enough real contradictions to test the disagreement
+# detector. The detector is NOT run here.
+#
+# HOW IT FITS IN
+# It talks to the Hugging Face datasets-server over plain HTTP (urllib, no extra library).
+# Later scripts use it: disagreement_alarm_rate_pilot.py and
+# disagreement_truncation_diagnosis.py import fetch, pick_configs, extract_pairs, DATASET_ID
+# and ROWS_API from here, and disagreement_power_analysis.py reads the key file it writes.
+
 from __future__ import annotations
 
 import json
 import random
+# re = regular expressions, for finding text patterns.
 import re
 import sys
 import time
+# urllib is used to download rows from the web (urlencode builds the ?a=1&b=2 query text).
 import urllib.parse
 import urllib.request
+# defaultdict is a dict that creates an empty list the first time a new key is used.
 from collections import defaultdict
+# combinations(list, 2) gives every pair of items from the list, each pair once.
 from itertools import combinations
 from pathlib import Path
 from typing import Any
 
+# The dataset, and two datasets-server web addresses: SPLITS_API lists the dataset's
+# "configs" (named sub-datasets), ROWS_API returns rows of one config.
 DATASET_ID = "Multi-Agent-LLMs/DEBATE"
 DATASET_URL = f"https://huggingface.co/datasets/{DATASET_ID}"
 ROWS_API = "https://datasets-server.huggingface.co/rows"
@@ -85,6 +105,10 @@ RESULTS = Path(__file__).parent / "results"
 BLINDED_PATH = RESULTS / "disagreement_probe_blinded.json"
 KEY_PATH = RESULTS / "disagreement_probe_key.json"
 
+# SEED: fixed so the same rows and pairs are drawn on every run.
+# N_MISMATCH / N_CONTROL: how many pairs to draw for each of the two groups.
+# MIN_POSITIVES: the stop rule from the module docstring.
+# ROWS_PER_CONFIG: rows read from each config. N_CONFIGS: configs to sample in total.
 SEED = 20260827
 N_MISMATCH = 20
 N_CONTROL = 20
@@ -93,12 +117,16 @@ ROWS_PER_CONFIG = 20
 N_CONFIGS = 12             # spread across all 3 task families
 
 # MALLM protocol token that states the agreement label outright. See BLINDING.
+# The pattern matches [AGREE] or [DISAGREE] in any letter case, with optional spaces inside
+# the brackets and an optional full stop right after the closing bracket.
 VOTE_TOKEN = re.compile(r"\[\s*(?:DIS)?AGREE\s*\]\.?", re.I)
 
 # Message shorter than this is pure protocol noise, not an output to compare.
 MIN_MESSAGE_CHARS = 40
 
 
+# Downloads one JSON answer from a web address. In: the address and its query parameters.
+# Out: the decoded JSON as a dict. Raises RuntimeError if every attempt fails.
 def fetch(url: str, params: dict[str, Any], timeout: int = 300,
           retries: int = 4) -> dict[str, Any]:
     """GET with backoff. The datasets-server returns transient 502s; without a
@@ -107,6 +135,8 @@ def fetch(url: str, params: dict[str, Any], timeout: int = 300,
     unchanged, so the same rows and pairs come back."""
     query = urllib.parse.urlencode(params)
     last: Exception | None = None
+    # Try up to `retries` times (timeout = seconds to wait for one answer). After a
+    # failed try, wait 3 s, then 6 s, then 12 s (the wait doubles); no wait after the last.
     for attempt in range(retries):
         try:
             with urllib.request.urlopen(f"{url}?{query}", timeout=timeout) as response:
@@ -118,20 +148,28 @@ def fetch(url: str, params: dict[str, Any], timeout: int = 300,
     raise RuntimeError(f"fetch failed after {retries} attempts: {last}")
 
 
+# In: a seeded random generator. Out: a sorted list of config names, with up to the same
+# number of configs taken from each family (a family = the part of a config name before the
+# first "_"). The same generator state always gives the same list.
 def pick_configs(rng: random.Random) -> list[str]:
     """Spread the sample across all three task families and many paradigms.
 
     Sampling one family would confound "this corpus lacks contradictions" with
     "this task type lacks contradictions".
     """
+    # Step 1: ask the server for every (config, split) of the dataset; keep each config
+    # name once and drop names that start with "_".
     splits = fetch(SPLITS_API, {"dataset": DATASET_ID})
     configs = sorted({s["config"] for s in splits["splits"]})
     configs = [c for c in configs if not c.startswith("_")]
 
+    # Step 2: group the config names by family.
     by_family: dict[str, list[str]] = defaultdict(list)
     for config in configs:
         by_family[config.split("_")[0]].append(config)
 
+    # Step 3: take N_CONFIGS // (number of families) random configs from each family, but
+    # at least 1 per family and never more than the family has.
     chosen: list[str] = []
     per_family = max(1, N_CONFIGS // len(by_family))
     for family in sorted(by_family):
@@ -139,17 +177,26 @@ def pick_configs(rng: random.Random) -> list[str]:
     return sorted(chosen)
 
 
+# Removes the [AGREE] / [DISAGREE] tokens from a message and trims the ends. A missing
+# message (None) becomes an empty string.
 def clean(message: Any) -> str:
     return VOTE_TOKEN.sub("", str(message or "")).strip()
 
 
+# In: one dataset row (one debate), its config name and its row number. Out: a list of
+# pair dicts; empty if the debate has no task text or no messages.
 def extract_pairs(row: dict[str, Any], config: str, row_index: int) -> list[dict[str, Any]]:
     """All within-turn, cross-agent output pairs from one debate."""
+    # Step 1: "globalMemory" is the list of messages in the debate; "instruction" is the
+    # task the agents were given. Without both there is nothing to compare.
     memory = row.get("globalMemory") or []
     instruction = str(row.get("instruction") or "").strip()
     if not instruction or not memory:
         return []
 
+    # Step 2: clean each message and group the messages by turn. Messages that are too
+    # short, or that have no agent id, are dropped. "raw_message" keeps the original text
+    # so main() can later count how often a vote token was removed.
     by_turn: dict[Any, list[dict[str, Any]]] = defaultdict(list)
     for entry in memory:
         message = clean(entry.get("message"))
@@ -165,6 +212,9 @@ def extract_pairs(row: dict[str, Any], config: str, row_index: int) -> list[dict
             "message_id": entry.get("message_id"),
         })
 
+    # Step 3: inside each turn, pair up every two messages. "solution_mismatch" is True when
+    # both agents gave a solution and the two differ. It is only used to oversample pairs
+    # that may disagree; it is never used as a label.
     pairs = []
     for turn, entries in by_turn.items():
         for a, b in combinations(entries, 2):
@@ -172,6 +222,7 @@ def extract_pairs(row: dict[str, Any], config: str, row_index: int) -> list[dict
             # inter-agent disagreement -- a different question entirely.
             if a["agent_id"] == b["agent_id"]:
                 continue
+            # Two different agents with exactly the same text give nothing to compare.
             if a["message"] == b["message"]:
                 continue
             pairs.append({
@@ -188,15 +239,20 @@ def extract_pairs(row: dict[str, Any], config: str, row_index: int) -> list[dict
     return pairs
 
 
+# Runs the whole probe. No input: it downloads the data itself, draws the pairs with the
+# fixed SEED, and writes the blinded file and the key file to experiments/results/.
 def main() -> None:
     rng = random.Random(SEED)
     print("=" * 78)
     print("DISAGREEMENT FEASIBILITY PROBE — does DEBATE contain real contradictions?")
     print("=" * 78)
 
+    # Step 1: choose which configs to read.
     configs = pick_configs(rng)
     print(f"\nsampling {len(configs)} configs x {ROWS_PER_CONFIG} rows")
 
+    # Step 2: download the first ROWS_PER_CONFIG rows of each config and turn every row into
+    # pairs. If a download fails, skip that config and carry on with the others.
     all_pairs: list[dict[str, Any]] = []
     rows_seen = 0
     for config in configs:
@@ -221,6 +277,7 @@ def main() -> None:
     if not all_pairs:
         raise SystemExit("No pairs extracted — aborting rather than emitting an empty probe.")
 
+    # Step 3: find the pairs whose solutions differ. base_rate is their share of all pairs.
     mismatch_pool = [p for p in all_pairs if p["solution_mismatch"]]
     base_rate = len(mismatch_pool) / len(all_pairs)
     print(f"\ntotal pairs={len(all_pairs)} from {rows_seen} rows")
@@ -231,6 +288,8 @@ def main() -> None:
         print(f"\n  NOTE: only {len(mismatch_pool)} mismatch pairs available; "
               f"requested {N_MISMATCH}. Using all of them.")
 
+    # Step 4: draw up to N_MISMATCH pairs from the mismatch pool (all of them if fewer
+    # exist). id(p) is the identity of the pair object; it remembers which pairs are taken.
     mismatch_sample = rng.sample(mismatch_pool, min(N_MISMATCH, len(mismatch_pool)))
     chosen_keys = {id(p) for p in mismatch_sample}
     # Controls are drawn from the NATURAL distribution, not from non-mismatch
@@ -239,10 +298,14 @@ def main() -> None:
     control_pool = [p for p in all_pairs if id(p) not in chosen_keys]
     control_sample = rng.sample(control_pool, min(N_CONTROL, len(control_pool)))
 
+    # Step 5: label each pair with its group, then shuffle so the order does not reveal it.
     probe = ([{"group": "mismatch", **p} for p in mismatch_sample]
              + [{"group": "control", **p} for p in control_sample])
     rng.shuffle(probe)
 
+    # Step 6: split each pair into a blinded part (task and the two messages) and a key part
+    # (everything that must stay hidden while labelling). Case ids run P001, P002, ... in the
+    # shuffled order. `stripped` counts pairs where a vote token was found in a raw message.
     blinded, key = [], []
     stripped = 0
     for index, pair in enumerate(probe, start=1):
@@ -271,6 +334,8 @@ def main() -> None:
                   "message_id": pair["b"]["message_id"]},
         })
 
+    # Step 7: write the blinded file (the labelling instructions plus the cases) and the key
+    # file (settings, counts, the stop rule, the blinding steps and the hidden facts).
     RESULTS.mkdir(parents=True, exist_ok=True)
     BLINDED_PATH.write_text(json.dumps({
         "instructions": (
@@ -309,6 +374,7 @@ def main() -> None:
         "cases": key,
     }, indent=2), encoding="utf-8")
 
+    # Step 8: tell the user what was written and which stop rule applies to the labels.
     print(f"\n  {len(blinded)} pairs written "
           f"({sum(c['group'] == 'mismatch' for c in key)} mismatch, "
           f"{sum(c['group'] == 'control' for c in key)} control)")

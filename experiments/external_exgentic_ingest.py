@@ -35,8 +35,23 @@ Outputs (derived data only, raw corpus is not mirrored):
 - datasets/external/exgentic_v2/README.md
 """
 
+# WHAT THIS FILE IS FOR
+# A one-off data-preparation script, not part of the running product. It reads an outside
+# dataset of recorded agent runs from Hugging Face (a site that hosts datasets). It picks
+# one "cell" (one benchmark + harness pair, set in main; the benchmark names the task set and
+# the harness the agent setup that ran it), pulls out the text each agent said at every step,
+# groups the sessions that were given the SAME task prompt, and keeps the tasks that at least
+# --min-models (default 2) different models worked on. It writes the result as JSON files,
+# plus a README, under datasets/external/exgentic_v2/.
+#
+# HOW IT FITS IN
+# Its file derived/drift_pairs.json is the input of drift_real_text_diagnosis.py and
+# drift_representation_test.py (and drift_production_validation.py). It needs internet access
+# and the pyarrow, pandas and huggingface_hub libraries. Nothing under backend/ uses it.
+
 from __future__ import annotations
 
+# argparse: reads the command-line options. hashlib: makes the SHA-256 fingerprints.
 import argparse
 import hashlib
 import json
@@ -46,16 +61,24 @@ from collections import Counter, defaultdict
 from pathlib import Path
 from typing import Any
 
+# pyarrow.parquet reads parquet files (a column-based file format). Reading only some columns
+# is much cheaper than reading the whole file. huggingface_hub talks to the Hugging Face
+# site: HfApi asks for dataset facts (such as its version), HfFileSystem lets us open the
+# dataset's files like normal files.
 import pyarrow.parquet as pq
 from huggingface_hub import HfApi, HfFileSystem
 
+# Which dataset to read, its web page, and a pattern (** = any folder depth) that matches
+# every parquet file in it.
 DATASET_ID = "Exgentic/agent-llm-traces-v2"
 DATASET_URL = f"https://huggingface.co/datasets/{DATASET_ID}"
 GLOB = f"datasets/{DATASET_ID}/**/*.parquet"
 
+# Where all output files go.
 OUT_DIR = Path(__file__).parent.parent / "datasets" / "external" / "exgentic_v2"
 
 # Cheap columns — safe to read from every shard.
+# (A shard here is one parquet file of the dataset; one row in it is one session.)
 RUN_COLS = [
     "session_id", "run_id", "config_path", "schema_version",
     "benchmark", "benchmark_subset", "harness", "models",
@@ -64,6 +87,7 @@ RUN_COLS = [
 ]
 
 # Run-level fields carried through to every derived record, verbatim.
+# (Same as RUN_COLS except "models": that one is turned into a single "model" value in main.)
 PROVENANCE_FIELDS = [
     "session_id", "run_id", "config_path", "schema_version",
     "benchmark", "benchmark_subset", "harness",
@@ -83,6 +107,9 @@ UNMAPPED_FIELDS = {
 }
 
 
+# Returns the SHA-256 fingerprint of a text as a hex string. Two identical texts always give
+# the same fingerprint, so it works as the key that pairs sessions given the same task prompt.
+# Only the fingerprint is saved, not the prompt itself.
 def sha256(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
@@ -96,16 +123,20 @@ def jsonable(value: Any) -> Any:
     strict parsers. Absent stays absent — it is emitted as null, never
     replaced with a substitute value.
     """
+    # NaN is the only value that is not equal to itself, so `value != value` spots it.
     if isinstance(value, float) and value != value:  # NaN
         return None
+    # Plain types that JSON already handles are returned unchanged.
     if value is None or isinstance(value, (str, int, bool)):
         return value
     if isinstance(value, float):
         return value
+    # Dicts and lists are cleaned item by item (this calls the function again on each item).
     if isinstance(value, dict):
         return {k: jsonable(v) for k, v in value.items()}
     if isinstance(value, (list, tuple)):
         return [jsonable(v) for v in value]
+    # Anything else becomes its text form, so json.dump cannot fail on an unknown type.
     return str(value)
 
 
@@ -116,8 +147,11 @@ def first_user_text(spans: Any) -> str | None:
     cumulative (span N carries 2N+1 messages), so the first user text of the
     first span is the original task statement.
     """
+    # Step 1: no spans means no prompt.
     if spans is None or len(spans) == 0:
         return None
+    # Step 2: the first span's input messages are stored as a JSON string. Read and parse it.
+    # A missing or broken value gives None, so that session is skipped later (not an error).
     raw = spans[0]["attributes"].get("gen_ai.input.messages")
     if not raw:
         return None
@@ -125,6 +159,8 @@ def first_user_text(spans: Any) -> str | None:
         messages = json.loads(raw)
     except (json.JSONDecodeError, TypeError):
         return None
+    # Step 3: scan the messages in order and return the first non-empty text part found in a
+    # message from the "user". `or []` guards a message whose parts value is None.
     for msg in messages:
         if msg.get("role") != "user":
             continue
@@ -144,6 +180,8 @@ def assistant_outputs(spans: Any) -> list[str]:
     """
     outputs: list[str] = []
     for span in spans:
+        # The output messages of a span are stored as a JSON string. A span without them, or
+        # with text that does not parse, adds nothing.
         raw = span["attributes"].get("gen_ai.output.messages")
         if not raw:
             continue
@@ -151,6 +189,8 @@ def assistant_outputs(spans: Any) -> list[str]:
             messages = json.loads(raw)
         except (json.JSONDecodeError, TypeError):
             continue
+        # Collect the non-empty text parts of the assistant's messages in this span. The
+        # list comprehension has two loops: over the messages, then over each message's parts.
         texts = [
             part["content"]
             for msg in messages
@@ -158,24 +198,34 @@ def assistant_outputs(spans: Any) -> list[str]:
             for part in (msg.get("parts", []) or [])
             if part.get("type") == "text" and part.get("content")
         ]
+        # One entry per span that has text; its text parts are joined with newlines. So the
+        # list can be shorter than the number of spans.
         if texts:
             outputs.append("\n".join(texts))
     return outputs
 
 
+# In: the file system object and the list of parquet file paths. Out: a dict, file number ->
+# a Counter that maps each (benchmark, harness) pair to how many rows of the file have it.
+# Only those two columns are read, so this is fast. Prints one line per file.
 def scan_shard_index(fs: HfFileSystem, files: list[str]) -> dict[int, Counter]:
     """Which (benchmark, harness) cells live in which shard — cheap projection."""
     index: dict[int, Counter] = {}
     for i, path in enumerate(files):
         with fs.open(path, "rb") as fh:
             table = pq.read_table(fh, columns=["benchmark", "harness"])
+        # zip pairs up the two columns row by row; Counter counts how often each pair occurs.
         cells = Counter(zip(table["benchmark"].to_pylist(), table["harness"].to_pylist()))
         index[i] = cells
         print(f"  shard {i}: {sum(cells.values())} rows, {len(cells)} cells", flush=True)
     return index
 
 
+# Runs the whole ingest: find the right files, read the sessions, group them by task, run some
+# sanity checks, write the output files. Options come from the command line: --benchmark and
+# --harness choose the cell to read, --min-models sets how many models a task needs.
 def main() -> None:
+    # description=__doc__ shows the module docstring at the top of --help.
     parser = argparse.ArgumentParser(description=__doc__)
     # Cell chosen on measured prose coverage, not convenience. Assistant text
     # availability is strongly harness- and model-dependent in this corpus:
@@ -196,16 +246,21 @@ def main() -> None:
     print("=" * 70)
     print(f"target cell: benchmark={args.benchmark} harness={args.harness}")
 
+    # Step 1: note the time (UTC) and ask Hugging Face for the dataset's revision (a commit hash
+    # = the exact version) and record it. The script does not pin to it: it reads the latest.
     retrieved_at = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
     api = HfApi()
     info = api.dataset_info(DATASET_ID)
     revision = info.sha
     print(f"dataset revision: {revision}")
 
+    # Step 2: list every parquet file of the dataset, in a fixed (sorted) order.
     fs = HfFileSystem()
     files = sorted(fs.glob(GLOB))
     print(f"parquet shards: {len(files)}\n")
 
+    # Step 3: find which files contain the target cell, reading only two cheap columns.
+    # Stop with a list of the available cells if the chosen one exists nowhere.
     print("Indexing shards (run-level columns only)...")
     shard_index = scan_shard_index(fs, files)
 
@@ -218,6 +273,9 @@ def main() -> None:
           f"({sum(shard_index[i][target] for i in target_shards)} sessions) "
           f"-- reading spans from these only")
 
+    # Step 4: read the full rows (including the large "spans" column) from only the files that
+    # contain the target cell, and turn each matching row into one record. `skipped` counts
+    # the rows that had to be dropped, by reason.
     sessions: list[dict[str, Any]] = []
     rows_seen = 0
     skipped: Counter = Counter()
@@ -225,19 +283,24 @@ def main() -> None:
     for shard in target_shards:
         with fs.open(files[shard], "rb") as fh:
             table = pq.read_table(fh, columns=RUN_COLS + ["spans"])
+        # pandas table; keep only the rows of the target benchmark and harness.
         df = table.to_pandas()
         rows_seen += len(df)
         df = df[(df.benchmark == args.benchmark) & (df.harness == args.harness)]
         print(f"  shard {shard}: {len(df)} matching sessions", flush=True)
 
         for row in df.itertuples(index=False):
+            # Copy the run-level fields as they are (missing values become null).
             record = {f: jsonable(getattr(row, f)) for f in PROVENANCE_FIELDS}
+            # Keep only sessions with exactly one model, so each session has one clear model
+            # name (the model is the thing being compared in the drift experiments).
             models = list(row.models)
             if len(models) != 1:
                 skipped["model_count_not_1"] += 1
                 continue
             record["model"] = models[0]
 
+            # Drop sessions where the task prompt or the assistant's text cannot be found.
             task = first_user_text(row.spans)
             if not task:
                 skipped["no_task_prompt"] += 1
@@ -248,6 +311,8 @@ def main() -> None:
                 skipped["no_assistant_output"] += 1
                 continue
 
+            # Add the derived fields. Only a fingerprint and the length of the prompt are
+            # kept, not its text. n_spans counts all spans; n_outputs counts those with text.
             record["task_prompt_sha256"] = sha256(task)
             record["task_prompt_chars"] = len(task)
             record["n_spans"] = len(row.spans)
@@ -258,6 +323,8 @@ def main() -> None:
 
     print(f"\nsessions extracted: {len(sessions)} (skipped: {dict(skipped) or 'none'})")
 
+    # Step 5: group the sessions by task fingerprint. A defaultdict(list) starts each new key
+    # with an empty list, so we can append straight away.
     # Group by task; keep only tasks covered by >= min_models distinct models.
     by_task: dict[str, list[dict]] = defaultdict(list)
     for s in sessions:
@@ -281,6 +348,9 @@ def main() -> None:
     print(f"sessions inside paired groups: {paired_sessions}")
 
     # ── Verification checks (section 24 of the research brief) ────────
+    # Step 6: collect counts that let a reader confirm the extraction looks sane. They are
+    # saved in source_metadata.json and printed at the end. The two checks after the dict
+    # stop the script before anything is written if the data is empty or has repeated ids.
     checks = {
         "shards_read_for_spans": target_shards,
         "shards_available": len(files),
@@ -303,9 +373,14 @@ def main() -> None:
         raise SystemExit("Refusing to write: duplicate session_ids detected.")
 
     # ── Write derived artifacts ───────────────────────────────────────
+    # Step 7: write four files. "raw/" only holds a list of the source sessions, not the raw
+    # data itself. jsonable() cleans the values and allow_nan=False makes json.dumps raise an
+    # error if a NaN (not valid JSON) is still left, instead of writing a broken file.
     (OUT_DIR / "raw").mkdir(parents=True, exist_ok=True)
     (OUT_DIR / "derived").mkdir(parents=True, exist_ok=True)
 
+    # File 1: where the data came from, how it was transformed, what was left out, and the
+    # verification counts above.
     source_metadata = {
         "dataset_id": DATASET_ID,
         "dataset_url": DATASET_URL,
@@ -341,6 +416,8 @@ def main() -> None:
     (OUT_DIR / "source_metadata.json").write_text(
         json.dumps(jsonable(source_metadata), indent=2, allow_nan=False), encoding="utf-8")
 
+    # File 2: a list of every source session that was used (its session id, run id, config
+    # path, model and task fingerprint), sorted by session id, to trace the extraction back.
     manifest = {
         "dataset_id": DATASET_ID,
         "revision": revision,
@@ -356,6 +433,8 @@ def main() -> None:
     (OUT_DIR / "raw" / "manifest.json").write_text(
         json.dumps(jsonable(manifest), indent=2, allow_nan=False), encoding="utf-8")
 
+    # File 3: the data the drift experiments read: the paired task groups, each with its
+    # sessions and their output texts, plus the source details.
     derived = {
         "provenance": {
             "dataset_id": DATASET_ID, "dataset_url": DATASET_URL,
@@ -373,6 +452,8 @@ def main() -> None:
     (OUT_DIR / "derived" / "drift_pairs.json").write_text(
         json.dumps(jsonable(derived), indent=2, allow_nan=False), encoding="utf-8")
 
+    # File 4: a README for the folder. The text below is an f-string, so the {...} parts are
+    # filled in with the dataset id, url, revision and time.
     (OUT_DIR / "README.md").write_text(f"""# External corpus: Exgentic agent-llm-traces-v2
 
 **Source:** [{DATASET_ID}]({DATASET_URL})
@@ -414,6 +495,7 @@ drift benchmark.
 - `derived/drift_pairs.json` — paired task groups with per-session agent outputs
 """, encoding="utf-8")
 
+    # Step 8: print the verification counts and the paths of the files that were written.
     print("\n" + "-" * 70)
     print("VERIFICATION")
     print("-" * 70)

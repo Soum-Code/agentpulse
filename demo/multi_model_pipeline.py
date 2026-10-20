@@ -46,8 +46,25 @@ free tier take a while, and free models are rate limited. --models lets you cut
 it down while testing.
 """
 
+# ABOUT THIS FILE
+# ---------------
+# A demo script. It runs five LLM "agents" in a row (researcher, retriever, verifier,
+# analyst, writer). Each one calls a real model (a different one per agent by default),
+# and each call is sent to AgentPulse as one "span" (one recorded step of an agent).
+# No agent text is made up by this code; it all comes from the models. The file also
+# holds helpers that other code reuses: the provider and model tables, build_client()
+# and ask().
+#
+# HOW IT FITS IN
+# Run it directly: python demo/multi_model_pipeline.py. demo/chat_server.py imports
+# its tables and helpers. It uses the AgentPulse SDK (sdk/src/agentpulse) and the
+# document search in demo/workflows/retrieval.py. The AgentPulse worker scores the
+# spans later; this script only sends them.
+
 from __future__ import annotations
 
+# argparse reads the command-line flags. asyncio runs the async code and moves blocking
+# calls into threads. traceback prints the full error trace when a run fails.
 import argparse
 import asyncio
 import os
@@ -56,9 +73,12 @@ import time
 import traceback
 from typing import Any
 
+# Make two folders importable without installing anything: the SDK source (so that
+# "import agentpulse" works) and the repo root (so that "import demo.xxx" works).
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "sdk", "src"))
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
+# In short: make printing safe, so a character the console cannot show does not crash us.
 # Real model prose is not ASCII. This one emits U+2011 (non-breaking hyphen) in
 # ordinary words like "Retrieval-augmented", and a Windows console is cp1252, so
 # echoing a completion raises UnicodeEncodeError and kills the run. Only the
@@ -66,13 +86,20 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 # original text -- so replacing unmappable characters here loses nothing that
 # matters. A stub client never surfaces this, because fixtures are ASCII.
 for _stream in (sys.stdout, sys.stderr):
+    # Only some streams can be changed this way, so check first. errors="replace" prints
+    # a "?" for a character the console cannot show, instead of raising an error.
     if hasattr(_stream, "reconfigure"):
         _stream.reconfigure(errors="replace")
 
+# AgentPulse = the SDK client that sends spans. SpanKind and SpanStatus are labels for
+# a span (here: an LLM call, and whether it succeeded).
 from agentpulse import AgentPulse
 from agentpulse.schemas.enums import SpanKind, SpanStatus
+# local_retriever = the ready-made search index over a small set of local documents.
 from demo.workflows.retrieval import local_retriever
 
+# In short: load the project's .env file, if python-dotenv is installed, so keys can
+# live there. Variables already set in the environment are not overwritten.
 # The usage note above has always said the key can live "in a .env this script
 # is run with". Nothing in the import chain loaded one, so that was only true
 # if the caller had already exported it. Load the project .env here and make
@@ -85,8 +112,11 @@ try:
 except ImportError:  # python-dotenv is not an SDK dependency; export instead
     pass
 
+# OpenRouter = a service that offers many models behind one OpenAI-style API.
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 
+# In short: provider name -> web address (base URL) of its OpenAI-style API. "OpenAI-style"
+# means it accepts the same requests as OpenAI's API, so one client library fits all.
 # Any OpenAI-compatible gateway works, because that is all the SDK needs: the
 # provider detection behind instrument_llm keys on the client's module root,
 # not on the host it points at. Named here so --provider can select one without
@@ -116,6 +146,7 @@ PROVIDERS: dict[str, str] = {
 }
 
 # Which environment variable carries each provider's key.
+# Pollinations has no entry because it needs no key (see KEYLESS_PROVIDERS below).
 PROVIDER_KEY_ENV: dict[str, str] = {
     "openrouter": "OPENROUTER_API_KEY",
     "nvidia": "NVIDIA_API_KEY",
@@ -125,8 +156,10 @@ PROVIDER_KEY_ENV: dict[str, str] = {
 # a non-empty api_key string, so one is supplied; it is never checked.
 KEYLESS_PROVIDERS = {"pollinations"}
 
+# The one model name that pollinations' anonymous tier serves (see the comment above).
 POLLINATIONS_MODEL = "openai-fast"
 
+# In short: the default OpenRouter model for each of the five agents (free-tier models).
 # One family each, and every one of these was sent a real request rather than
 # just read out of the catalogue. That distinction is the whole point: the
 # previous set was picked by checking that all five existed at zero pricing,
@@ -144,6 +177,7 @@ AGENT_MODELS: dict[str, str] = {
     "writer": "inclusionai/ling-3.0-flash-vl:free",
 }
 
+# In short: the default model for each agent when --provider nvidia is used.
 # Defaults for --provider nvidia. Every one of these was sent a real request
 # and answered; the set this replaced was picked by reading /v1/models and not
 # one of its five could be called.
@@ -163,6 +197,7 @@ NVIDIA_AGENT_MODELS: dict[str, str] = {
     "writer": "z-ai/glm-5.3-flash",
 }
 
+# A readable job title for each agent. It is sent on each span as agent_role.
 AGENT_ROLES: dict[str, str] = {
     "researcher": "Query Planner",
     "retriever": "Evidence Retriever",
@@ -172,6 +207,8 @@ AGENT_ROLES: dict[str, str] = {
 }
 
 
+# Make a client (from the openai library) that talks to base_url with api_key. The import
+# is inside the function, so the openai package is only needed when this is called.
 def build_client(api_key: str, base_url: str = OPENROUTER_BASE_URL) -> Any:
     from openai import OpenAI
 
@@ -188,12 +225,18 @@ class EmptyCompletion(RuntimeError):
     """
 
 
+# Ask one model one question. In: the client, a model id and the prompt text.
+# Out: (answer text, tokens in the prompt, tokens in the answer). Raises EmptyCompletion
+# if the model sends back no text, and re-raises any other error it gives up on.
 def ask(
     client: Any,
     model: str,
     prompt: str,
     *,
+    # max_tokens = the most tokens (small pieces of words) the model may write. Reasoning
+    # models spend part of it on hidden thinking, so see NVIDIA_AGENT_MODELS above.
     max_tokens: int = 1200,
+    # retries = how many extra tries after a temporary failure. 4 means up to 5 tries.
     retries: int = 4,
 ) -> tuple[str, int, int]:
     """One completion, returned with its token counts.
@@ -208,8 +251,11 @@ def ask(
     else is calling the same model. Without this a batch of runs loses roughly
     one agent per run to a transient upstream limit, which is not a result.
     """
+    # delay = seconds to wait before the next try. It starts at 5 and doubles after each
+    # retry (5, 10, 20, 40), so with the default retries=4 the waits add up to 75 seconds.
     delay = 5.0
     for attempt in range(retries + 1):
+        # Step 1: send one chat request with the prompt as a single user message.
         try:
             response = client.chat.completions.create(
                 model=model,
@@ -217,6 +263,11 @@ def ask(
                 max_tokens=max_tokens,
             )
         except Exception as exc:
+            # The error counts as temporary if its text contains "429" (the HTTP code for
+            # "too many requests") or the letters "rate" (as in "rate limit"). That is
+            # looser than the docstring says: "rate" matches anywhere in the text.
+            # A temporary error is retried; any other error, or any error on the last
+            # attempt, is raised to the caller.
             transient = "429" in str(exc) or "rate" in str(exc).lower()
             if not transient or attempt == retries:
                 raise
@@ -225,25 +276,40 @@ def ask(
             delay *= 2
             continue
 
+        # Step 2: read the answer. A missing (None) content becomes empty text. Empty text
+        # is treated as a failure, and it is not retried (it is raised outside the try).
         text = (response.choices[0].message.content or "").strip()
         if not text:
             raise EmptyCompletion(
                 f"{model} returned HTTP 200 with empty content -- the model is "
                 "listed and reachable but produces no text"
             )
+        # Step 3: read the token counts from the response. If the provider leaves them
+        # out, report 0.
         usage = getattr(response, "usage", None)
         return (
             text,
             getattr(usage, "prompt_tokens", None) or 0,
             getattr(usage, "completion_tokens", None) or 0,
         )
+    # Safety net only. The loop always returns or raises before it gets here.
     raise RuntimeError("unreachable")
 
 
+# Run the five agents once for one query. In: the AgentPulse client, the model client,
+# the query text, and a dict of agent name -> model id. Out: the trace id of this run.
+# All five spans share that trace id, so AgentPulse can show them as one run.
 async def run_once(pulse: AgentPulse, client: Any, query: str, models: dict[str, str]) -> str:
+    # Step 1: start a trace and print its id above a line of dashes.
     trace = pulse.create_trace(pipeline_id="multi_model_research")
     print(f"\ntrace {trace.trace_id}\n" + "-" * 68)
 
+    # call() runs ONE agent: open a span, ask the model, close the span, print a status line.
+    #   agent        which agent this is (a key of models)
+    #   prompt       the full text sent to the model
+    #   source       text to record as the span's input instead of the prompt
+    #   span_kwargs  extra span fields, for example tool_name / tool_result_summary
+    # Returns the model's text. A failure is printed and then raised again.
     async def call(agent: str, prompt: str, *, source: str | None = None, **span_kwargs: Any) -> str:
         model = models[agent]
         span = pulse.start_span(
@@ -268,11 +334,16 @@ async def run_once(pulse: AgentPulse, client: Any, query: str, models: dict[str,
             # they are produced.
             text, tin, tout = await asyncio.to_thread(ask, client, model, prompt)
         except Exception as exc:
+            # Close the span as an ERROR with the message, so the failed step shows up in
+            # AgentPulse. Then print it and pass the exception up to stop the run.
             span.output_summary = None
             span.error_message = f"{type(exc).__name__}: {exc}"
             pulse.end_span(span, status=SpanStatus.ERROR)
             print(f"  {agent:<11} {model:<42} FAILED  {exc}")
             raise
+        # Success: put the text and token counts (in / out) on the span and send it. Then
+        # print a status line (agent, model, seconds, tokens written) and the first 150
+        # characters of the text, with "..." if it was cut.
         span.output_summary = text
         span.tokens_in, span.tokens_out = tin, tout
         pulse.end_span(span)
@@ -281,6 +352,8 @@ async def run_once(pulse: AgentPulse, client: Any, query: str, models: dict[str,
         print(f"      {text[:150]}{'...' if len(text) > 150 else ''}")
         return text
 
+    # Step 2: the researcher plans sub-questions. No source is given, so the span input is
+    # the prompt itself (there is no retrieved text yet).
     plan = await call(
         "researcher",
         f"You are planning a literature review on: {query}\n"
@@ -289,11 +362,19 @@ async def run_once(pulse: AgentPulse, client: Any, query: str, models: dict[str,
 
     # The real tool. Whatever the index returns is what the retriever's claim
     # gets compared against.
+    # Step 3: search the local index for the 3 best-matching documents.
     docs = local_retriever.search(query, top_k=3)
+    # evidence = the found documents as "title: text" blocks, one blank line apart.
     evidence = "\n\n".join(f"{d.title}: {d.content}" for d in docs)
+    # tool_result = what the search really returned (count and titles). It is saved on the
+    # retriever's span as tool_result_summary, to be compared with what the model says.
     tool_result = f"Found {len(docs)} documents: " + "; ".join(d.title for d in docs)
     print(f"  {'[tool]':<11} local_retriever                            -> {len(docs)} docs")
 
+    # Step 4: the retriever describes what was found. This prompt tells it to say
+    # "Retrieved N documents", a phrase the backend's tool-claim reader looks for (see
+    # COUNT_PATTERNS in backend/app/services/tool_claim.py). tool_name, tool_args and
+    # tool_result_summary go on the span as its tool details.
     await call(
         "retriever",
         f"A search for '{query}' returned these documents:\n\n{evidence}\n\n"
@@ -305,6 +386,7 @@ async def run_once(pulse: AgentPulse, client: Any, query: str, models: dict[str,
         tool_result_summary=tool_result,
     )
 
+    # Step 5: the verifier says whether the evidence answers the question.
     await call(
         "verifier",
         f"Question: {query}\n\nEvidence:\n{evidence}\n\n"
@@ -312,6 +394,7 @@ async def run_once(pulse: AgentPulse, client: Any, query: str, models: dict[str,
         source=evidence,
     )
 
+    # Step 6: the analyst writes a short synthesis (a summary that joins the evidence).
     synthesis = await call(
         "analyst",
         f"Question: {query}\n\nEvidence:\n{evidence}\n\n"
@@ -319,6 +402,9 @@ async def run_once(pulse: AgentPulse, client: Any, query: str, models: dict[str,
         source=evidence,
     )
 
+    # Step 7: the writer turns the synthesis into a report paragraph. Its prompt holds the
+    # synthesis, but source=evidence means the span's recorded input is still the original
+    # documents, so the grounding check compares the report with them.
     await call(
         "writer",
         f"Turn this synthesis into a short report paragraph:\n\n{synthesis}",
@@ -328,7 +414,11 @@ async def run_once(pulse: AgentPulse, client: Any, query: str, models: dict[str,
     return trace.trace_id
 
 
+# The command-line entry point. It returns the exit code of the program:
+# 0 = all runs worked, 1 = a run failed, 2 = bad setup (missing key or unknown agent).
 async def main() -> int:
+    # Step 1: define and read the command-line flags. description=__doc__ reuses the text
+    # at the top of this file as the --help text.
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--query", default="retrieval augmented generation")
     parser.add_argument("--runs", type=int, default=1, help="repeat, for the drift signal")
@@ -344,6 +434,9 @@ async def main() -> int:
     )
     args = parser.parse_args()
 
+    # Step 2: find the provider's web address and its key. A keyless provider gets a
+    # stand-in string because the openai library needs a non-empty key. For the others
+    # the key must be in the environment; if not, print how to get one and exit with 2.
     base_url = PROVIDERS[args.provider]
 
     if args.provider in KEYLESS_PROVIDERS:
@@ -369,10 +462,14 @@ async def main() -> int:
             )
             return 2
 
+    # Step 3: choose the default model for each agent. dict(...) makes a copy, so the
+    # changes below do not alter the module-level tables.
     models = dict(NVIDIA_AGENT_MODELS if args.provider == "nvidia" else AGENT_MODELS)
     if args.provider == "pollinations":
         # One model is all the anonymous tier offers, so every agent gets it.
         models = {agent: POLLINATIONS_MODEL for agent in models}
+    # Step 4: apply --models, written as "agent=model,agent=model". Each pair is split at
+    # its first "=" into an agent name and a model id. An unknown agent name stops the run.
     if args.models:
         for pair in args.models.split(","):
             agent, _, model = pair.partition("=")
@@ -381,6 +478,7 @@ async def main() -> int:
                 return 2
             models[agent.strip()] = model.strip()
 
+    # Step 5: warn (on stderr) if every agent ended up on the same model.
     if len(set(models.values())) == 1:
         print(
             f"NOTE: all five agents are running {next(iter(set(models.values())))}. "
@@ -389,6 +487,10 @@ async def main() -> int:
             file=sys.stderr,
         )
 
+    # Step 6: make the AgentPulse client (address and key from the environment) and the
+    # model client. capture_inputs / capture_outputs = True are the SDK's switches for
+    # keeping span text, used by @monitor and wrapped clients. The spans in call() get
+    # their text set by hand, so these two flags change nothing for them.
     pulse = AgentPulse(
         endpoint=os.getenv("AGENTPULSE_ENDPOINT", "http://localhost:8000"),
         api_key=os.getenv("AGENTPULSE_API_KEY"),
@@ -402,6 +504,7 @@ async def main() -> int:
     print(f"provider  {args.provider} ({base_url})")
     print("models    " + ", ".join(f"{a}={m}" for a, m in models.items()))
 
+    # In short: start the SDK's background sender by hand, or the spans are never sent.
     # start() is not optional here. The SDK auto-starts its transport only when
     # there is already a running event loop (client._ensure_transport), so a
     # synchronous script never starts it at all: end_span still enqueues, the
@@ -409,6 +512,8 @@ async def main() -> int:
     # prints five happy agent lines and delivers nothing.
     await pulse.start()
 
+    # Step 7: run the pipeline args.runs times and collect the trace ids. The first run
+    # that fails stops everything and makes the program exit with 1.
     traces = []
     try:
         for i in range(args.runs):
@@ -425,12 +530,14 @@ async def main() -> int:
                 print(f"\nrun failed: {type(exc).__name__}: {exc}", file=sys.stderr)
                 return 1
     finally:
+        # In short: send any spans still waiting in memory before the program exits.
         # shutdown drains the buffer. Without it the process can exit with spans
         # still batched in memory, which is the transport working as designed --
         # it never blocks the caller -- and looks like the run silently did
         # nothing. It is a coroutine: calling it without await is the same as
         # not calling it.
         await pulse.shutdown()
+    # Step 8: list the trace ids. The scoring is done later by the worker, not here.
     print(f"\nsent {len(traces)} trace(s). Evaluation runs in the worker; "
           "give it a moment, then look at Incidents.")
     for t in traces:
@@ -438,5 +545,6 @@ async def main() -> int:
     return 0
 
 
+# asyncio.run runs main() to the end. Its return value becomes the program's exit code.
 if __name__ == "__main__":
     raise SystemExit(asyncio.run(main()))
