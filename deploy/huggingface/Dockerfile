@@ -34,11 +34,12 @@ ENV PATH="/venv/bin:$PATH"
 # CPU-only torch, from PyTorch's own index. The default resolver pulls the
 # CUDA build (~1.5GB of nvidia wheels) for a stack that never touches a GPU.
 RUN pip install --no-cache-dir --timeout=180 --retries=5 \
-    --index-url https://download.pytorch.org/whl/cpu torch
+    --index-url https://download.pytorch.org/whl/cpu torch==2.14.0
 
-COPY backend/pyproject.toml backend/README.md ./
+# constraints.txt pins every other package to the versions known to work (see that file).
+COPY backend/pyproject.toml backend/constraints.txt backend/README.md ./
 COPY backend/app/ app/
-RUN pip install --no-cache-dir --timeout=180 --retries=5 .
+RUN pip install --no-cache-dir --timeout=180 --retries=5 -c constraints.txt .
 
 # ---- Stage 3: runtime --------------------------------------------------------
 FROM python:3.11-slim
