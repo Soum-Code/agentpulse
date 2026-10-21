@@ -1,0 +1,68 @@
+name: deploy-azure
+
+# Deploys main to the Azure VM when a push changes code that runs there. The work is done on
+# the VM by deploy/azure/deploy.sh, sent over SSH: it rebuilds only the images whose code
+# changed, tests the new backend against a copy of the live database, swaps, and puts the
+# previous images back if the new containers are not healthy.
+#
+# Two repository secrets are needed (deploy/azure/README.md says how to make them):
+#   AZURE_VM_SSH_KEY      the private key for azureuser on the VM
+#   AZURE_VM_KNOWN_HOSTS  the VM's host key as a known_hosts line, so the runner talks only
+#                         to that machine and never accepts whatever key answers
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "backend/**"
+      - "dashboard/**"
+      - "docker-compose.yml"
+      - "deploy/azure/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# One deploy at a time, and a newer push never cancels one that has started: stopped halfway
+# it would leave the swapfile in place or the stack mid-swap. GitHub keeps at most one more
+# run waiting; a newer push replaces it, and the waiting run deploys the newest main anyway.
+concurrency:
+  group: deploy-azure
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    # A manual run started from another branch would run that branch's deploy.sh on production.
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    # The backend build alone takes about 20 minutes on the VM's 2 vCPUs. This only stops a
+    # stuck run from waiting for GitHub's 6-hour limit.
+    timeout-minutes: 90
+    env:
+      VM: azureuser@agentpulse.centralindia.cloudapp.azure.com
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up SSH
+        env:
+          SSH_KEY: ${{ secrets.AZURE_VM_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.AZURE_VM_KNOWN_HOSTS }}
+        run: |
+          if [ -z "$SSH_KEY" ] || [ -z "$KNOWN_HOSTS" ]; then
+            echo "::error::Set the AZURE_VM_SSH_KEY and AZURE_VM_KNOWN_HOSTS secrets first (deploy/azure/README.md)."
+            exit 1
+          fi
+          install -d -m 700 ~/.ssh
+          (umask 077 && printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key)
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+
+      - name: Deploy
+        run: |
+          ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o BatchMode=yes \
+            -o StrictHostKeyChecking=yes -o ConnectTimeout=30 \
+            -o ServerAliveInterval=30 -o ServerAliveCountMax=10 \
+            "$VM" 'bash -s' < deploy/azure/deploy.sh
+
+      - name: Remove the key
+        if: always()
+        run: rm -f ~/.ssh/deploy_key
