@@ -108,6 +108,7 @@ cp .env.example .env
 # Set AGENTPULSE_API_KEY and VITE_API_KEY to the same generated value —
 # `openssl rand -hex 24` — and never leave the placeholder on a public host.
 # Set AGENTPULSE_SITE_ADDRESS to the DNS name created above.
+# Set AGENTPULSE_WRITE_USER and AGENTPULSE_WRITE_HASH: see "Password for writes".
 # Leave VITE_API_URL empty: see the note in .env.example.
 
 sudo docker compose -f docker-compose.yml -f deploy/azure/docker-compose.azure.yml up -d --build
@@ -116,6 +117,80 @@ sudo docker compose -f docker-compose.yml -f deploy/azure/docker-compose.azure.y
 The backend build takes roughly 20 minutes on 2 vCPUs, most of it installing
 torch. The first worker start then downloads the models, which takes another
 minute or two before `/v1/health/evaluator` reports ready.
+
+## Password for writes
+
+nginx adds the server's `AGENTPULSE_API_KEY` to every `/v1/` request, so whoever can reach
+the site holds that key's privileges. The Caddyfile therefore asks for a password on every
+method except `GET` and `HEAD`: without it a stranger with plain `curl` could post ingest
+batches until the disk is full, mark alerts resolved, mint or revoke keys and add dataset
+cases. Reads stay public.
+
+What changes for people and programs:
+
+- **The SDK can no longer write through the public URL.** It sends `X-API-Key`, and Caddy asks
+  for HTTP basic auth before the request reaches the key check. A `curl` from outside needs
+  `-u <user>`; the `X-API-Key` header is not needed, because nginx adds the key.
+- **The dashboard's write buttons** (Telemetry Lab "Run scenario", acknowledging an incident,
+  curating a span into the dataset) make the browser ask for the username and password on the
+  first write, in a login box titled "AgentPulse writes". The browser then sends them with
+  later requests until it is closed. If the box is cancelled, "Run scenario" shows its error,
+  while acknowledge and curate only log a warning to the browser console and look like they did
+  nothing. Every view that only reads works without a password.
+- **Nothing on the VM is affected.** The worker and `seed_demo.py` (run with `docker compose
+  exec`) talk to the backend over the Docker network, and `deploy.sh` checks health inside the
+  containers and with `GET`s through Caddy.
+
+If the two values are missing, Caddy still starts, serves reads, and refuses every write. So
+deploying this change before the password exists closes the writes; it does not open them.
+
+To turn writes on:
+
+1. Get this change onto the VM: `git pull --ff-only` in `~/agentpulse`, or run the
+   deploy-azure workflow, which only fast-forwards the checkout when nothing under `backend/`
+   or `dashboard/` changed. The running Caddy keeps its old configuration until step 4.
+2. Make the hash. Use a long random password: nothing limits how often it can be guessed. The
+   password is typed at a prompt, so it stays out of the shell history.
+
+   ```bash
+   sudo docker run --rm -it caddy:2-alpine caddy hash-password
+   ```
+
+   It prints one line that starts with `$2a$14$`. That line is the hash; the password itself is
+   never stored anywhere.
+3. In `~/agentpulse/.env` on the VM add both lines. The single quotes around the hash are
+   required: compose reads each `$…` in an unquoted value as a variable and silently mangles
+   the hash.
+
+   ```
+   AGENTPULSE_WRITE_USER=<the username you want>
+   AGENTPULSE_WRITE_HASH='<the whole hash>'
+   ```
+4. Check the configuration, then recreate Caddy. A value that is set but is not a hash (the
+   password pasted by mistake) makes Caddy refuse to start, and recreating it would take the
+   site down; the check catches that first and must end with `Valid configuration`. The
+   recreation takes a few seconds and keeps the certificate, which lives in the `caddy_data`
+   volume.
+
+   ```bash
+   cd ~/agentpulse
+   F="-f docker-compose.yml -f deploy/azure/docker-compose.azure.yml"
+   sudo docker compose $F run --rm --no-deps --entrypoint caddy caddy validate --config /etc/caddy/Caddyfile
+   sudo docker compose $F up -d --no-deps --force-recreate caddy
+   ```
+5. Check it from outside:
+
+   ```bash
+   curl -s -o /dev/null -w '%{http_code}\n' https://<hostname>/v1/alerts                      # 200
+   curl -s -o /dev/null -w '%{http_code}\n' -X POST -d '{}' https://<hostname>/v1/ingest      # 401
+   curl -s -o /dev/null -w '%{http_code}\n' -X POST -d '{}' -u <user> https://<hostname>/v1/ingest
+   ```
+
+   The last one asks for the password. Any status other than 401 means Caddy accepted it.
+
+To change the password, repeat steps 2 to 4. A write that must stay public, such as a planned
+chat endpoint, is one more line in the `@write` block of the Caddyfile; the comment there shows
+where.
 
 ## Seeding demo data
 
