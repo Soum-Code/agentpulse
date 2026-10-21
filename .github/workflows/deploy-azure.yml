@@ -53,8 +53,10 @@ jobs:
             exit 1
           fi
           install -d -m 700 ~/.ssh
-          (umask 077 && printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key)
-          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          # A key or host line copied on Windows carries CRLF line endings, and OpenSSH on the
+          # runner then rejects the key as "invalid format". `tr -d '\r'` drops the carriage returns.
+          (umask 077 && printf '%s\n' "$SSH_KEY" | tr -d '\r' > ~/.ssh/deploy_key)
+          printf '%s\n' "$KNOWN_HOSTS" | tr -d '\r' > ~/.ssh/known_hosts
 
       - name: Deploy
         run: |
