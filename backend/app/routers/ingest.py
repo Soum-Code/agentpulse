@@ -14,8 +14,10 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
+from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 
 # FastAPI: APIRouter groups URLs; Request gives access to the incoming request (and to
@@ -52,6 +54,22 @@ from app.services.runtime_metrics import COUNTERS
 # this router. Evaluator logic is unchanged.
 
 logger = logging.getLogger("agentpulse.router.ingest")
+
+# One batch is written at a time. Two batches for the same new trace (or the same span) both
+# saw "not there yet" and both inserted it, so the second commit failed on a UNIQUE
+# constraint and the whole batch was lost (HTTP 500). SQLite lets only one writer in at a
+# time anyway, so this costs almost nothing.
+# shortcut: the lock is per process. With more than one uvicorn worker the UNIQUE error can
+# come back; then use INSERT ... ON CONFLICT DO NOTHING in _ensure_trace and the agent record.
+_WRITE_LOCK = asyncio.Lock()
+
+
+@asynccontextmanager
+async def _write_session():
+    async with _WRITE_LOCK, get_session() as session:
+        yield session
+
+
 # All routes in this file start with /v1 (the full paths are /v1/ingest and /v1/simulate).
 router = APIRouter(prefix="/v1", tags=["ingest"])
 
@@ -154,7 +172,7 @@ async def ingest_spans(
 
     # Step 2: save the spans, one by one. Each span has its own try/except below, so one bad
     # span is counted as failed and does not stop the others.
-    async with get_session() as session:
+    async with _write_session() as session:
         for span_input in payload.spans:
             try:
                 # Ensure trace exists
