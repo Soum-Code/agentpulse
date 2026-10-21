@@ -47,11 +47,18 @@ services:
       context: ./dashboard
       dockerfile: Dockerfile
       args:
-        VITE_API_KEY: ${AGENTPULSE_API_KEY:-change-me-to-a-secure-key}
+        # No key in the build. A VITE_* value is inlined into the JavaScript that every
+        # visitor downloads, so a key baked in here is public. nginx adds the key to /v1
+        # requests at runtime instead (see `environment` below and nginx.conf.template).
+        VITE_API_KEY: ""
         # Empty means same-origin: the SPA calls /v1/... and nginx proxies it
         # to the backend service. Baking an absolute URL here would point every
         # visitor's browser at their own machine rather than the server.
         VITE_API_URL: ${VITE_API_URL:-}
+    environment:
+      # Read by nginx at container start, never shipped to the browser. Same as the
+      # dashboard service in docker-compose.release.yml.
+      AGENTPULSE_API_KEY: ${AGENTPULSE_API_KEY:-change-me-to-a-secure-key}
     ports:
       - "5173:5173"
     depends_on:
