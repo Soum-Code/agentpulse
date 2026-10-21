@@ -28,13 +28,30 @@ from typing import Any, Callable, Optional
 
 # AgentPulse (client.py) owns the transport that finished spans are queued into.
 from agentpulse.client import AgentPulse
-from agentpulse.context import TraceContext, ensure_context
+from agentpulse.context import (
+    TraceContext,
+    ensure_context,
+    reset_current_context,
+    set_current_context,
+)
 from agentpulse.integrations.base import BaseIntegration
 from agentpulse.schemas.enums import EventType, SpanKind, SpanStatus
 from agentpulse.schemas.events import SpanPayload
 from agentpulse.utils import extract_summary, hash_content, safe_serialize
 
 logger = logging.getLogger("agentpulse.integrations.langgraph")
+
+
+# Puts back the trace context that was current before start_agent()/start_tool() made its span
+# the parent. Reset only works in the thread or task that made the change; if end_* is called
+# from another one, the value there was never changed, so there is nothing to undo.
+def _restore_context(span_meta: dict) -> None:
+    token = span_meta.get("context_token")
+    if token is not None:
+        try:
+            reset_current_context(token)
+        except ValueError:
+            pass
 
 
 # One adapter works with one AgentPulse object. While a span is open, its details wait in
@@ -46,9 +63,11 @@ logger = logging.getLogger("agentpulse.integrations.langgraph")
 #   and are never redacted. The input is not cleaned of keys such as password, and
 #   error_message is not redacted either.
 # - It ignores the enabled, sampling_rate and fail_open settings.
-# - It does not write the trace keys into the node's result, and it does not make the
-#   current span the parent of spans created inside the node. A parent comes only from
-#   the parent_span_id argument, or from a parent that the context already holds.
+# - It does not write the trace keys into the node's result. From start_agent()/start_tool()
+#   until the matching end_*, the span is the current parent, so spans created inside the node
+#   (a tool call, a wrapped LLM client) join its trace; afterwards the previous context is
+#   put back. The span's own parent comes from the parent_span_id argument, or from the
+#   trace keys in the input state, or from a parent that the context already holds.
 class LangGraphAdapter(BaseIntegration):
     """LangGraph-specific observability adapter."""
 
@@ -78,7 +97,8 @@ class LangGraphAdapter(BaseIntegration):
         # Step 3: remember the start details until end_agent() is called. The parent is the
         # parent_span_id argument if given, else the parent held by the context. The role
         # falls back to the agent id. start_time is a stopwatch reading (not a date) that is
-        # only used later to work out the latency.
+        # only used later to work out the latency. context_token is what end_agent() needs
+        # to put the previous context back (see Step 4).
         self._active_spans[span_id] = {
             "trace_id": ctx.trace_id,
             "span_id": span_id,
@@ -94,6 +114,10 @@ class LangGraphAdapter(BaseIntegration):
             # and hash_content(None) raises AttributeError, so always pass a state.
             "input_hash": hash_content(safe_serialize(input_state)),
         }
+        # Step 4: make this span the current parent until end_agent(), so a tool call or an
+        # LLM call made inside the node joins this trace under this span. ensure_context()
+        # does not do that by itself: without this, each of them would start a trace of its own.
+        self._active_spans[span_id]["context_token"] = set_current_context(ctx.child(span_id))
         return span_id
 
     # Closes the span that start_agent() opened: works out the latency, summarises the
@@ -110,6 +134,7 @@ class LangGraphAdapter(BaseIntegration):
         span_meta = self._active_spans.pop(span_id, None)
         if not span_meta:
             return
+        _restore_context(span_meta)
 
         # Step 2: latency in milliseconds = (stopwatch now - stopwatch at start) * 1000.
         latency_ms = (time.perf_counter() - span_meta["start_time"]) * 1000
@@ -176,6 +201,9 @@ class LangGraphAdapter(BaseIntegration):
             "tool_args": safe_serialize(tool_args),
             "start_time": time.perf_counter(),
         }
+        # Step 4: as in start_agent, anything the tool itself instruments joins this trace
+        # until end_tool().
+        self._active_spans[span_id]["context_token"] = set_current_context(ctx.child(span_id))
         return span_id
 
     # Closes the span that start_tool() opened, with the tool's result (or its error).
@@ -191,6 +219,7 @@ class LangGraphAdapter(BaseIntegration):
         span_meta = self._active_spans.pop(span_id, None)
         if not span_meta:
             return
+        _restore_context(span_meta)
 
         # Step 2: latency in milliseconds, and the result as JSON text.
         latency_ms = (time.perf_counter() - span_meta["start_time"]) * 1000

@@ -363,3 +363,71 @@ class TestMonitorErrorPath:
         with pytest.raises(RuntimeError, match="sdk bug"):
             node({})
         assert len(calls) == 1
+
+
+@pytest.fixture
+def fresh_context():
+    """No current trace context before the test, and none left behind after it."""
+    from agentpulse.context import _current_context
+    token = _current_context.set(None)
+    yield
+    _current_context.reset(token)
+
+
+class TestImplicitContextIsNotSticky:
+    """ensure_context() only looks the context up; it must not keep a trace alive for the thread."""
+
+    def test_separate_calls_get_separate_traces(self, fresh_context):
+        first = ensure_context()
+        second = ensure_context()
+        assert first.trace_id != second.trace_id
+
+    def test_nothing_is_left_current_after_reading_ids_from_state(self, fresh_context):
+        from agentpulse.context import get_current_context
+        ensure_context({"__agentpulse_trace_id": "t" * 32, "__agentpulse_parent_span_id": "p" * 16})
+        assert get_current_context() is None
+
+    def test_independent_top_level_monitor_calls_are_separate_traces(self, fresh_context):
+        decorator, transport = _monitor()
+
+        @decorator
+        def node(state):
+            return {}
+
+        node({})
+        node({})
+        assert len({s.trace_id for s in transport._buffer}) == 2
+
+    def test_nested_monitored_call_is_a_child_in_the_same_trace(self, fresh_context):
+        from agentpulse.context import get_current_context
+        decorator, transport = _monitor()
+
+        @decorator
+        def inner(state):
+            return {}
+
+        @decorator
+        def outer(state):
+            inner({})
+            return {}
+
+        outer({})
+        inner_span, outer_span = transport._buffer  # the inner span is queued first
+        assert inner_span.trace_id == outer_span.trace_id
+        assert inner_span.parent_span_id == outer_span.span_id
+        assert outer_span.parent_span_id is None
+        assert get_current_context() is None  # nothing left behind
+
+    def test_async_runs_in_one_task_are_separate_traces(self, fresh_context):
+        decorator, transport = _monitor()
+
+        @decorator
+        async def node(state):
+            return {}
+
+        async def main():
+            for _ in range(3):
+                await node({})
+
+        asyncio.run(main())
+        assert len({s.trace_id for s in transport._buffer}) == 3
