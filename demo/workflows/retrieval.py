@@ -132,6 +132,19 @@ def _stand_in_vector(text: str) -> np.ndarray:
     return vec
 
 
+# Loads the embedding model into this process unless it is already there. The demo entry points
+# (chat_server.py, multi_model_pipeline.py) call it once at start-up; without it search() quietly
+# uses the stand-in vectors above and picks documents near-randomly. The guard is needed:
+# load_models cannot run twice in one process (the second load leaves torch tensors on the
+# `meta` device, see SESSION_HANDOFF.md 15.3). It loads the NLI model too and, with the default
+# cache_dir, looks in ./models, so run from the folder that holds the model cache.
+def ensure_embedding_model() -> None:
+    from app.services.grounding import load_models, models_loaded
+
+    if not models_loaded()["embedding_model"]:
+        load_models(use_onnx=False, sync=True)
+
+
 class LocalVectorIndex:
     """In-memory semantic vector index for document retrieval."""
 
@@ -170,14 +183,20 @@ class LocalVectorIndex:
         if not self._index_is_real:
             embeddings = [_stand_in_vector(doc["content"]) for doc in self.corpus]
 
-        # Step 2: stack the vectors into one matrix and mark the index as ready.
+        # Step 2: stack the vectors into one matrix. The index counts as ready only when every
+        # vector came from the model; a stand-in index is rebuilt by the next search(), so it is
+        # replaced as soon as the model is loaded instead of being kept for good.
         self._doc_embeddings = np.array(embeddings, dtype=np.float32)
-        self._is_indexed = True
-        logger.info(
-            "Indexed %d documents in LocalVectorIndex (%s vectors).",
-            len(self.corpus),
-            "model" if self._index_is_real else "stand-in",
-        )
+        self._is_indexed = self._index_is_real
+        if self._index_is_real:
+            logger.info("Indexed %d documents in LocalVectorIndex (model vectors).", len(self.corpus))
+        else:
+            logger.warning(
+                "Indexed %d documents in LocalVectorIndex with stand-in letter-count vectors "
+                "(embedding model not loaded, or forced): retrieval is near-random. The index is "
+                "rebuilt on the next search once the model is loaded.",
+                len(self.corpus),
+            )
 
     # In: the question text, how many hits to return (top_k), and an optional domain name.
     # Out: up to top_k RetrievedDocument objects, best first. With a domain_filter only
