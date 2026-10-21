@@ -107,8 +107,10 @@ class AgentPulseConfig:
     pipeline_id: Optional[str] = None
 
     # Transport
-    # Once the transport is running, it starts a send as soon as this many spans are waiting
-    # in its buffer.
+    # No longer starts a send. It used to make the transport send as soon as this many spans
+    # were waiting, but that early send could not run when a span was queued from a worker
+    # thread, so spans are now sent only by the periodic flush (flush_interval_ms). The
+    # setting is still accepted so that existing code keeps working.
     batch_size: int = 10
 
     # In short: a memory cap. Once this many spans are waiting, each new span pushes out the
