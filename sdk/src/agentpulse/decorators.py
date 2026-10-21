@@ -353,9 +353,15 @@ def _finalize_span(
     # Step 4: only the returned dict is read here, not the input state. The model name comes
     # from its "model" or "__model" key. Token counts come from "__token_usage", which holds
     # input/prompt_tokens and output/completion_tokens.
+    # Only a text model name and whole-number token counts are copied: a node can return
+    # anything under these keys, and an object that cannot be turned into JSON would make the
+    # whole batch fail when it is sent.
     if isinstance(result, dict):
-        span.model = result.get("model") or result.get("__model")
+        model = result.get("model") or result.get("__model")
+        span.model = model if isinstance(model, str) else None
         tokens = result.get("__token_usage", {})
         if isinstance(tokens, dict):
-            span.tokens_in = tokens.get("input") or tokens.get("prompt_tokens")
-            span.tokens_out = tokens.get("output") or tokens.get("completion_tokens")
+            tokens_in = tokens.get("input") or tokens.get("prompt_tokens")
+            tokens_out = tokens.get("output") or tokens.get("completion_tokens")
+            span.tokens_in = tokens_in if isinstance(tokens_in, int) else None
+            span.tokens_out = tokens_out if isinstance(tokens_out, int) else None

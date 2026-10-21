@@ -224,23 +224,32 @@ class AsyncTransport:
                 return
             batch, self._buffer = self._buffer, []
 
-        # Step 2: wrap the batch in the request body. sdk_version is written here as "0.1.0".
-        request = IngestRequest(
-            spans=batch,
-            sdk_version="0.1.0",
-            service_name=self._config.service_name,
-        )
-
-        # Step 3: send it. If every attempt fails, save the batch to the fallback file. The
-        # batch is no longer in the buffer, so this file is its only remaining copy. The same
-        # goes for a send that is cancelled half way (a stop that ran out of time).
+        # Steps 2 and 3 are guarded: whatever goes wrong with one batch must not end the flush
+        # loop that every later batch depends on.
         try:
-            success = await self._send_with_retry(request)
-        except asyncio.CancelledError:
-            self._write_fallback(batch)
-            raise
-        if not success:
-            self._write_fallback(batch)
+            # Step 2: wrap the batch in the request body. sdk_version is written here as "0.1.0".
+            request = IngestRequest(
+                spans=batch,
+                sdk_version="0.1.0",
+                service_name=self._config.service_name,
+            )
+
+            # Step 3: send it. If every attempt fails, save the batch to the fallback file. The
+            # batch is no longer in the buffer, so this file is its only remaining copy. The same
+            # goes for a send that is cancelled half way (a stop that ran out of time).
+            try:
+                success = await self._send_with_retry(request)
+            except asyncio.CancelledError:
+                self._write_fallback(batch)
+                raise
+            if not success:
+                self._write_fallback(batch)
+        except Exception as exc:
+            # For example a span whose metadata holds an object that cannot be turned into
+            # JSON (start_span(**kwargs) accepts anything). Sending it again would fail the same
+            # way, so the batch is counted as failed and dropped; the loop carries on.
+            self._total_failed += len(batch)
+            logger.error("AgentPulse dropped a batch of %d spans: %s", len(batch), exc)
 
     async def _send_with_retry(self, request: IngestRequest) -> bool:
         """Send with exponential backoff retries."""
@@ -312,8 +321,9 @@ class AsyncTransport:
     # SDK reads this file back or sends its spans again.
     def _write_fallback(self, spans: list[SpanPayload]) -> None:
         """Write spans to local JSONL file as fallback."""
-        # Only OSError is caught (disk full, no permission, bad path). It is logged and the
-        # spans are lost, but the agent code is not affected.
+        # Any error is caught (disk full, no permission, bad path, a span that cannot be turned
+        # into JSON). It is logged and the spans are lost, but the agent code and the flush loop
+        # are not affected.
         try:
             path = Path(self._config.fallback_file)
             path.parent.mkdir(parents=True, exist_ok=True)
@@ -326,7 +336,7 @@ class AsyncTransport:
                 "Wrote %d spans to fallback file: %s",
                 len(spans), self._config.fallback_file,
             )
-        except OSError as exc:
+        except Exception as exc:
             logger.error("Fallback write failed: %s", exc)
 
     # Headers sent with every request. The body is JSON. If an API key is set, it goes in the

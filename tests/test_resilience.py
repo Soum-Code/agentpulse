@@ -329,6 +329,34 @@ class TestTransportStop:
         assert "span000000000007" in (tmp_path / "fallback.jsonl").read_text()
 
 
+class TestTransportSurvivesABadBatch:
+    def test_a_span_that_cannot_be_serialised_does_not_stop_the_flush_loop(self, backend, tmp_path):
+        """metadata accepts any object (start_span(**kwargs) is not validated); JSON then fails."""
+        config = AgentPulseConfig(
+            endpoint=backend.url, flush_interval_ms=20, max_retries=1,
+            fallback_file=str(tmp_path / "fallback.jsonl"),
+        )
+        transport = AsyncTransport(config)
+        bad = _span(1)
+        bad.metadata["obj"] = object()
+        loop_was_alive = []
+
+        async def main():
+            await transport.start()
+            transport.enqueue(bad)
+            await asyncio.sleep(0.2)
+            loop_was_alive.append(not transport._flush_task.done())
+            transport.enqueue(_span(2))
+            await asyncio.sleep(0.2)
+            await transport.stop()
+
+        asyncio.run(main())
+
+        assert loop_was_alive == [True]
+        assert backend.span_ids() == ["span000000000002"]
+        assert transport.stats["total_failed"] == 1
+
+
 class TestTransportRetries:
     def _run(self, backend, tmp_path, statuses):
         backend.statuses = list(statuses)

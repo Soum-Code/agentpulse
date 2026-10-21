@@ -374,6 +374,23 @@ def fresh_context():
     _current_context.reset(token)
 
 
+class TestMonitorResultFields:
+    def test_a_model_or_token_count_of_the_wrong_type_is_not_copied_to_the_span(self):
+        """A node can return anything under "model"; the span must stay serialisable."""
+        decorator, transport = _monitor()
+
+        @decorator
+        def node(state):
+            return {"model": object(), "__token_usage": {"input": "many", "output": 7}}
+
+        node({})
+        span = transport._buffer[0]
+        assert span.model is None
+        assert span.tokens_in is None
+        assert span.tokens_out == 7
+        span.model_dump(mode="json")  # would raise if the object had been kept
+
+
 class TestImplicitContextIsNotSticky:
     """ensure_context() only looks the context up; it must not keep a trace alive for the thread."""
 
