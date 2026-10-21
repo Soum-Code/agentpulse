@@ -137,6 +137,7 @@ export interface Trace {
   tags?: string[];
   errorSummary?: string;
   driftDetected?: boolean;
+  // The trace's overall_risk_score: 0 is safe, 1 is risky, despite the name.
   groundingScore?: number;
 }
 

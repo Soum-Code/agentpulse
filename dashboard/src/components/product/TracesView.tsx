@@ -36,6 +36,7 @@ import {
 } from 'lucide-react';
 import { Trace, Span, EvaluatorResult, ChronologicalSortOrder } from '../../types';
 import { parseDateTimeToMs } from '../../utils/dateUtils';
+import { riskTextClasses } from '../../lib/riskTone';
 
 interface TracesViewProps {
   traces: Trace[];
@@ -1099,20 +1100,16 @@ export const TracesView: React.FC<TracesViewProps> = ({
                 </div>
                 <div>
                   <span className="text-neutral-500 block text-[10px]">TOTAL TOKENS</span>
-                  <span className="text-white font-semibold mt-0.5 block">{currentTrace.totalTokens.toLocaleString()}</span>
+                  <span className="text-white font-semibold mt-0.5 block">{currentTrace.totalTokens?.toLocaleString() ?? '—'}</span>
                 </div>
                 <div>
                   <span className="text-neutral-500 block text-[10px]">ESTIMATED COST</span>
-                  <span className="text-white font-semibold mt-0.5 block">${currentTrace.cost.toFixed(4)}</span>
+                  <span className="text-white font-semibold mt-0.5 block">{currentTrace.cost != null ? `$${currentTrace.cost.toFixed(4)}` : '—'}</span>
                 </div>
                 <div>
-                  <span className="text-neutral-500 block text-[10px]">GROUNDING SCORE</span>
-                  <span
-                    className={`font-semibold mt-0.5 block ${
-                      (currentTrace.groundingScore || 0) < 0.7 ? 'text-rose-400' : 'text-white'
-                    }`}
-                  >
-                    {currentTrace.groundingScore ? `${(currentTrace.groundingScore * 100).toFixed(0)}%` : 'N/A'}
+                  <span className="text-neutral-500 block text-[10px]">RISK SCORE</span>
+                  <span className={`font-semibold mt-0.5 block ${riskTextClasses(currentTrace.groundingScore)}`}>
+                    {currentTrace.groundingScore != null ? `${(currentTrace.groundingScore * 100).toFixed(0)}%` : 'N/A'}
                   </span>
                 </div>
               </div>
