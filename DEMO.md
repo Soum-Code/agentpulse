@@ -90,9 +90,11 @@ being caught on it is much worse than volunteering it.
 
 **No model generates the agent text anywhere in this project.**
 
-- `POST /v1/simulate` writes five spans whose outputs are string literals in
-  `backend/app/routers/ingest.py`. The scenario flag picks between two versions
-  of each string.
+- `POST /v1/simulate` writes the spans of one scenario, and their texts are
+  string literals in `backend/app/routers/ingest.py`: five spans for `clean`,
+  `hallucination` and `tool_mismatch` (the flag picks between two versions of
+  each string), 32 spans from one demo agent for `drift`, and two spans for
+  `disagreement`.
 - `demo/research_assistant.py` is a five-node LangGraph pipeline with no
   `openai` or `anthropic` import in it at all.
 - `instrument_llm()` is tested against stub clients. The OpenAI and Anthropic

@@ -261,6 +261,10 @@ export default function App() {
     return result;
   };
 
+  // Handler: read back what the worker has stored for a Lab run. Does not catch either; the
+  // Lab shows an unreachable API as an error.
+  const handleReadScenario = (traceId: string) => api.getScenarioResult(traceId);
+
   // Handler: acknowledge an incident against the alerts API.
   const handleResolveIncident = async (incidentId: string) => {
     try {
@@ -270,6 +274,10 @@ export default function App() {
       console.warn('Acknowledge failed:', err);
     }
   };
+
+  // The Telemetry Lab is how an empty instance gets its first telemetry, so it is shown even
+  // when there is none yet (the empty-state message below points the reader to it).
+  const hasTelemetry = agents.length > 0 || traces.length > 0;
 
   const handleClearSelection = () => {
     setSelectedAgent(undefined);
@@ -373,14 +381,14 @@ export default function App() {
               </div>
             )}
 
-            {!telemetryLoading && !telemetryError && agents.length === 0 && traces.length === 0 && (
+            {!telemetryLoading && !telemetryError && !hasTelemetry && productTab !== 'telemetry-lab' && (
               <div className="ios-liquid-card rounded-2xl p-10 text-center font-mono text-xs text-neutral-400">
                 Connected, but this instance has no telemetry yet. Send spans through the SDK
                 or run a scenario in the Telemetry Lab.
               </div>
             )}
 
-            {!telemetryLoading && !telemetryError && (agents.length > 0 || traces.length > 0) && (
+            {!telemetryLoading && !telemetryError && (hasTelemetry || productTab === 'telemetry-lab') && (
             <>
             {productTab === 'overview' && (
               <OverviewView
@@ -513,7 +521,7 @@ export default function App() {
             )}
 
             {productTab === 'telemetry-lab' && (
-              <TelemetryLabView onRunScenario={handleRunScenario} />
+              <TelemetryLabView onRunScenario={handleRunScenario} onReadResult={handleReadScenario} />
             )}
 
             {productTab === 'performance' && (

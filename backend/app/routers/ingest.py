@@ -4,8 +4,10 @@
 # The "write side" of the API. POST /v1/ingest receives a batch of spans from the SDK and
 # saves them (a span = one recorded step of an agent). For every span it also adds a job to
 # a durable queue (rows in a database table), so a separate worker process can score the span
-# later. This file never scores anything itself. POST /v1/simulate builds a fake 5-agent run
-# and sends it through the same ingest code, so the dashboard can show demo failures.
+# later. This file never scores anything itself. POST /v1/simulate builds the spans of a demo
+# scenario (a fake 5-agent run, a 32-span drift run or a two-agent disagreement) and sends it
+# through the same ingest code, so the dashboard can show demo failures. GET /v1/simulate/{id}
+# reads back what the worker stored for that run.
 #
 # HOW IT FITS IN
 # main.py adds `router`. It uses job_queue.enqueue_job, runtime_metrics.COUNTERS, the Trace /
@@ -23,13 +25,18 @@ from datetime import datetime, timezone
 # FastAPI: APIRouter groups URLs; Request gives access to the incoming request (and to
 # request.app.state). BackgroundTasks is still a parameter below but nothing uses it now.
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
+from sqlalchemy import literal_column
 from sqlalchemy.ext.asyncio import AsyncSession
-# select() builds a SQL query.
-from sqlmodel import select
+# select() builds a SQL query; col() marks a model attribute as a column for .in_() and
+# .order_by().
+from sqlmodel import col, select
 
 from app.database import get_session
 from app.models import (
     AgentRecord,
+    Alert,
+    DriftRecord,
+    Evaluation,
     Span,
     Trace,
 )
@@ -78,7 +85,7 @@ router = APIRouter(prefix="/v1", tags=["ingest"])
 # pydantic models describe the shape of JSON data. FastAPI uses them to check what arrives
 # and answers 422 on its own if a required field is missing or has the wrong type.
 from pydantic import BaseModel, Field
-from typing import Any, Optional
+from typing import Any, Literal, Optional
 
 
 # One span as the SDK sends it in the request body. A span = one recorded step of an agent.
@@ -326,41 +333,146 @@ async def ingest_spans(
     )
 
 
+# The scenarios POST /v1/simulate accepts. Literal makes FastAPI answer 422 for any other
+# name, instead of quietly running the clean scenario for a typo.
+Scenario = Literal["clean", "hallucination", "tool_mismatch", "drift", "disagreement"]
+
+
 # The request body of POST /v1/simulate. scenario picks which fake run to build; query is the
-# topic text that is put into the first span.
+# topic text that is put into the first span (only the three five-agent scenarios use it).
 class SimulateRequest(BaseModel):
-    scenario: str = "clean"  # "clean", "hallucination", "tool_mismatch", "drift"
+    scenario: Scenario = "clean"
     query: str = "Advances in multimodal foundation models"
 
 
-# POST /v1/simulate -> build five made-up spans and ingest them like a real SDK batch.
-# Used for demos. The route calls ingest_spans() directly, so the spans are saved, queued
-# and pushed to WebSocket clients exactly like real ones. The worker must still score them.
-@router.post("/simulate")
-async def simulate_pipeline(
-    req: SimulateRequest,
-    background_tasks: BackgroundTasks,
-    request: Request,
-):
-    """Simulate a 5-agent LangGraph workflow with configurable failure scenarios."""
-    # Note: the docstring says "LangGraph", but no LangGraph code runs here. The five spans are
-    # written out by hand below.
-    import uuid
-    # Step 1: make new random ids. trace_id is 32 hex characters. span_base is the first 8
-    # characters of a second random id; the five span ids are span_base plus "01" ... "05".
-    trace_id = uuid.uuid4().hex
-    span_base = uuid.uuid4().hex[:8]
-    now = datetime.now(timezone.utc).replace(tzinfo=None)
+# The reply of POST /v1/simulate: the ingest counts plus the trace to read the results from
+# (GET /v1/simulate/{trace_id}).
+class SimulateResponse(IngestResponse):
+    trace_id: str
 
-    # Step 2: choose the failure to fake. "hallucination" and "drift" give the same spans here
-    # (the code treats them alike). "tool_mismatch" changes only the retriever span. Any other
-    # scenario text gives the clean run.
-    is_hallucination = req.scenario in ("hallucination", "drift")
-    is_mismatch = req.scenario == "tool_mismatch"
 
-    # Step 3: five spans, one per agent. Each span after the first has the span before it as
-    # its parent, so they form a chain: researcher -> retriever -> verifier -> analyst -> writer.
-    spans = [
+# The service name every simulated trace is stored under. GET /v1/simulate/{trace_id} only
+# answers for traces with this name, so it cannot be used to read real traces.
+SIMULATION_SERVICE = "simulation_studio"
+
+# The drift scenario writes to this one agent only, so it never touches the baseline of a real
+# agent. The drift engine takes the agent's first 20 outputs as its baseline and compares the
+# latest 12 against it (DriftDetector min_samples_for_alert and mean_window), so a first run
+# needs 20 + 12 = 32 spans before the first distance exists.
+DRIFT_AGENT_ID = "drift_demo_agent"
+
+# 20 replies on one topic (billing support), then 12 on another (mountain hiking). Every text
+# is different, so the baseline is a spread of outputs and not one repeated sentence. The two
+# topics are far apart in embedding space; tests/test_simulate_scenarios.py checks with the
+# real embedding model that this shift crosses the 0.30 DRIFT_DETECTED threshold.
+DRIFT_BASELINE_REPLIES = [
+    "Your refund of $42.00 was issued to the original card and should appear within 5 business days.",
+    "I resent the March invoice to your billing email, and it is attached as a PDF.",
+    "The duplicate charge on your account has been reversed, and no further action is needed.",
+    "Your subscription renews on the first of each month, and you can cancel it from the billing page.",
+    "The payment failed because the card expired, so please update the card in your billing settings.",
+    "I moved your plan from Basic to Pro, and the price difference is prorated on your next invoice.",
+    "Invoice 20418 shows a tax line of 8 percent, which applies to your billing region.",
+    "We credited $15.00 to your account balance, and it will be used on the next invoice.",
+    "The annual plan is billed once a year, and I emailed you the receipt for this payment.",
+    "I cancelled the extra seat, and your next invoice will show the lower amount.",
+    "Your refund request was approved, and the money returns to your bank within 7 days.",
+    "The charge labelled ACME SUBSCRIPTION on your card statement is your monthly fee.",
+    "I updated the billing address on your account, and past invoices stay unchanged.",
+    "Your coupon code was applied, which reduces the next payment by 20 percent.",
+    "The payment is still pending, because banks can take two days to confirm a card transaction.",
+    "I downloaded your last six invoices and attached them in a single ZIP file.",
+    "Your trial ended yesterday, so the first charge of $29.00 was made to your card today.",
+    "I removed the late fee from your invoice because the delay came from our payment system.",
+    "You can switch from monthly to annual billing in the plan settings to get two months free.",
+    "The refund for the cancelled order was processed, and a confirmation email has been sent.",
+]
+DRIFT_SHIFTED_REPLIES = [
+    "The ridge trail takes about six hours, so start before sunrise and carry two litres of water.",
+    "Snow is expected above 2,500 metres this weekend, so pack crampons and a warm jacket.",
+    "The best view of the glacier is from the north lookout, a gentle forty-minute walk from the car park.",
+    "For a first alpine trek, I recommend the three-day circuit with a mountain hut every night.",
+    "Late September is ideal for the valley hike, with clear skies and fewer people on the path.",
+    "Bring waterproof boots, because the river crossing near the old bridge is knee-deep after rain.",
+    "The sunrise summit climb is steep, so take trekking poles and a headlamp.",
+    "Pitch your tent beside the lake, where the wind is weaker and the stars are bright at night.",
+    "The cable car saves two hours of climbing, and the last descent leaves at five in the afternoon.",
+    "Altitude sickness is common above 3,000 metres, so climb slowly and rest a day at the halfway camp.",
+    "A local guide knows the safest route across the pass when fog covers the trail markers.",
+    "The coastal path through the pine forest is flat, shaded and good for a relaxed family walk.",
+]
+
+# Two analysts read the same announcement and state opposite results. It supports neither, so
+# grounding stays neutral for both and the only conflict is between the two of them. No planner
+# is involved: the pair is one statement against another.
+DISAGREEMENT_EVIDENCE = "The company reported its quarterly results on Friday."
+
+
+# Builds the spans of one scenario. Pure: no database and no clock, so a test can check the
+# spans without queueing any work. The caller supplies trace_id and span_base.
+def build_scenario_spans(
+    scenario: str, query: str, trace_id: str, span_base: str,
+) -> list[SpanInput]:
+    # Drift: one agent, 32 outputs in order, the first 20 on the baseline topic and the last
+    # 12 on the shifted one. The worker scores spans in the order they were queued, so the
+    # drift engine sees them in this order. Each reply restates the knowledge-base text it was
+    # given, so grounding is low for every span and only the drift signal reacts.
+    if scenario == "drift":
+        return [
+            SpanInput(
+                trace_id=trace_id,
+                span_id=f"{span_base}{i:02d}",
+                agent_id=DRIFT_AGENT_ID,
+                agent_role="Support Responder",
+                pipeline_id="drift_demo_pipeline",
+                input_summary=f"Knowledge-base article: {reply}",
+                output_summary=reply,
+                status="success",
+            )
+            for i, reply in enumerate(DRIFT_BASELINE_REPLIES + DRIFT_SHIFTED_REPLIES, start=1)
+        ]
+
+    # Disagreement: both analysts get the same evidence and the second span is compared with
+    # the first. The first span has nothing earlier to compare with, so it gets no score.
+    if scenario == "disagreement":
+        return [
+            SpanInput(
+                trace_id=trace_id,
+                span_id=f"{span_base}01",
+                agent_id="analyst_a",
+                agent_role="Finance Reader A",
+                pipeline_id="disagreement_demo_pipeline",
+                input_summary=DISAGREEMENT_EVIDENCE,
+                output_summary="The company's revenue grew this quarter.",
+                status="success",
+            ),
+            SpanInput(
+                trace_id=trace_id,
+                span_id=f"{span_base}02",
+                agent_id="analyst_b",
+                agent_role="Finance Reader B",
+                pipeline_id="disagreement_demo_pipeline",
+                input_summary=DISAGREEMENT_EVIDENCE,
+                output_summary="The company's revenue fell this quarter.",
+                status="success",
+            ),
+        ]
+
+    return _pipeline_spans(scenario, query, trace_id, span_base)
+
+
+# The five-agent run used by the clean, hallucination and tool_mismatch scenarios.
+def _pipeline_spans(
+    scenario: str, query: str, trace_id: str, span_base: str,
+) -> list[SpanInput]:
+    # "hallucination" changes the verifier, analyst and writer spans; "tool_mismatch" changes
+    # only the retriever span; the clean run changes nothing.
+    is_hallucination = scenario == "hallucination"
+    is_mismatch = scenario == "tool_mismatch"
+
+    # Five spans, one per agent. Each span after the first has the span before it as its
+    # parent, so they form a chain: researcher -> retriever -> verifier -> analyst -> writer.
+    return [
         # Span 1: the planner turns the user's request into sub-queries.
         SpanInput(
             trace_id=trace_id,
@@ -369,8 +481,8 @@ async def simulate_pipeline(
             agent_role="Query Planner",
             pipeline_id="research_pipeline_v1",
             latency_ms=18.4,
-            input_summary=f"User request: {req.query}",
-            output_summary=f"Generated 3 sub-queries for literature review on {req.query}",
+            input_summary=f"User request: {query}",
+            output_summary=f"Generated 3 sub-queries for literature review on {query}",
             status="success",
         ),
         # Span 2: the retriever. The tool really "found 3 papers" (tool_result_summary). In the
@@ -454,11 +566,103 @@ async def simulate_pipeline(
         ),
     ]
 
-    # Step 4: wrap the spans like an SDK request would and run the normal ingest code. The
-    # reply is ingest_spans' own IngestResponse (accepted / failed counts). `now` above is not
-    # used again.
-    payload = IngestPayload(spans=spans, service_name="simulation_studio")
-    return await ingest_spans(payload, background_tasks, request)
+
+# POST /v1/simulate -> build the made-up spans of one scenario and ingest them like a real
+# SDK batch. Used for demos. The route calls ingest_spans() directly, so the spans are saved,
+# queued and pushed to WebSocket clients exactly like real ones. The worker must still score
+# them. One request is enough even for the 32-span drift scenario: the rate limit only
+# watches /v1/ingest, and this call does not go through HTTP again.
+@router.post("/simulate", response_model=SimulateResponse)
+async def simulate_pipeline(
+    req: SimulateRequest,
+    background_tasks: BackgroundTasks,
+    request: Request,
+):
+    """Run a failure scenario through the real ingest, queue and worker."""
+    import uuid
+    # Step 1: make new random ids. trace_id is 32 hex characters. span_base is the first 8
+    # characters of a second random id; span ids are span_base plus "01", "02", ...
+    trace_id = uuid.uuid4().hex
+    span_base = uuid.uuid4().hex[:8]
+
+    # Step 2: build the spans, wrap them like an SDK request and run the normal ingest code.
+    spans = build_scenario_spans(req.scenario, req.query, trace_id, span_base)
+    payload = IngestPayload(spans=spans, service_name=SIMULATION_SERVICE)
+    ingested = await ingest_spans(payload, background_tasks, request)
+    return SimulateResponse(**ingested.model_dump(), trace_id=trace_id)
+
+
+# GET /v1/simulate/{trace_id} -> what the worker has stored so far for a simulated run: each
+# span's scores and the alerts raised on the trace. Everything is read from the database, so a
+# value the worker has not written yet is null. `evaluated` is false until the worker has
+# scored that span. disagreement_score is shown here because no other endpoint returns it.
+@router.get("/simulate/{trace_id}")
+async def simulate_result(trace_id: str):
+    async with get_session() as session:
+        trace = (
+            await session.execute(select(Trace).where(Trace.trace_id == trace_id))
+        ).scalar_one_or_none()
+        if trace is None or trace.service_name != SIMULATION_SERVICE:
+            raise HTTPException(status_code=404, detail="Simulated trace not found")
+
+        # Spans in trace order. (start_time, rowid) is the same order the evaluator uses.
+        spans = (
+            await session.execute(
+                select(Span.span_id, Span.agent_id)
+                .where(Span.trace_id == trace_id)
+                .order_by(Span.start_time, literal_column("rowid"))
+            )
+        ).all()
+        evaluations = {
+            e.span_id: e
+            for e in (
+                await session.execute(select(Evaluation).where(Evaluation.trace_id == trace_id))
+            ).scalars()
+        }
+        # The agent's drift distance as it stood right after each span was scored.
+        window_distance = dict(
+            (
+                await session.execute(
+                    select(DriftRecord.span_id, DriftRecord.window_centroid_distance).where(
+                        col(DriftRecord.span_id).in_([s.span_id for s in spans])
+                    )
+                )
+            ).all()
+        )
+        alerts = (
+            await session.execute(
+                select(Alert).where(Alert.trace_id == trace_id).order_by(col(Alert.created_at))
+            )
+        ).scalars().all()
+
+    out_spans = []
+    for s in spans:
+        e = evaluations.get(s.span_id)
+        out_spans.append({
+            "span_id": s.span_id,
+            "agent_id": s.agent_id,
+            "evaluated": e is not None,
+            "grounding_score": e.grounding_score if e else None,
+            "tool_claim_score": e.tool_claim_score if e else None,
+            "disagreement_score": e.disagreement_score if e else None,
+            "overall_risk_score": e.overall_risk_score if e else None,
+            "window_centroid_distance": window_distance.get(s.span_id),
+        })
+
+    return {
+        "trace_id": trace_id,
+        "spans": out_spans,
+        "alerts": [
+            {
+                "alert_type": a.alert_type,
+                "severity": a.severity,
+                "agent_id": a.agent_id,
+                "span_id": a.span_id,
+                "message": a.message,
+            }
+            for a in alerts
+        ],
+    }
 
 
 # Called once per incoming span (before the duplicate check). Makes sure a Trace row exists
