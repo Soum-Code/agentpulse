@@ -8,6 +8,10 @@
 
 ---
 
+## READ FIRST (2026-10-21): Section 29 is the current state
+
+Since the banner below was written, 13 PRs (#69 to #81) merged, the first automatic deploy ran, a leaked API key was closed and rotated, and writes on the public site got a password. **Read Section 29 before anything else:** it lists what is live, what is still open, and the traps hit on the way. The banner below is still correct about 2026-10-13 and about how `main` was overwritten; where it says something is open, check 29.5.
+
 ## READ FIRST — the repository is not what the rest of this file describes (checked 2026-10-13)
 
 Everything below this banner was written session by session, against whichever branch that session was on. Sections 0–23 were checked against `origin/main` as it stood in August–September and nothing was re-checked after `e31fb58` landed on 2026-09-21. Section 28 is the reconciliation; the short version: **[2026-10-20] Since #60 merged (07:34 UTC), Sections 24–26 describe `main` again; this banner records the state on 2026-10-13.**
@@ -3660,3 +3664,83 @@ Not re-checked at all: Sections 1–3 and 7–23, most of 24.2–24.4 and 24.6�
 **Also seen.** `/v1/health` counts 11 registered workers, 10 of them stale. Every restart leaves the previous worker's heartbeat row behind. Readiness is not affected (one worker is alive), but the count grows with each redeploy.
 
 ---
+
+## 29. 2026-10-21: the review fixes merged, the first automatic deploy, and what was hardened
+
+Written by the leader chat on 2026-10-21 (about 10:45 UTC). Everything here was checked against GitHub, the live site or the VM on that day, except where a line says otherwise. Nothing in this section contains a key, a password or a hash; the names of the secrets are listed, never their values.
+
+### 29.1 What merged on 2026-10-21
+
+Each was merged as a merge commit after its diff was read and its checks were green (a docs- or workflow-only change that triggers no check was merged once its diff matched what was intended). Merged just before, by other chats: #65 (CI runs the suite), #67, #68 (parallel ingest batches for one new trace no longer lose the batch).
+
+| PR | What it changed | Merge commit |
+|---|---|---|
+| #69 | The NLI model orders its labels contradiction 0, entailment 1, neutral 2; the code assumed neutral 1, entailment 2. The order is now read from the model config; rows are stamped `model_version` v1.1 | 750823f |
+| #70 | The SSH deploy workflow and `deploy/azure/deploy.sh` | 038b0c8 |
+| #72 | Dashboard: the RAG view's fabrications removed (28.4 items 3 to 6), risk scores shown the right way round (they are risks, 0 safe and 1 risky, and were coloured as if high meant good), Traces, Overview and the context panel no longer crash on a trace with no tokens or cost | 6e887f4 |
+| #71 | Six SDK bugs: `@monitor` ran a failing function twice and recorded no error span, `enqueue` from a worker thread raised, redaction missed JSON keys, bare `sk-` keys and Bearer tokens, `instrument_graph` wrapped nothing on a real LangGraph `StateGraph`, the trace context leaked between runs, and nothing was sent without a running event loop. The same PR also fixed `stop()` dropping the batch in flight, a bad batch killing the flush loop, 5xx answers not being retried and `start_agent(None)` | 9fb10b4 |
+| #73 | `overall_risk_score` no longer averages in a tool check that found no claim (0.0 meant "nothing checked") or the disagreement score (measured at chance); `config_version` v1.1 | 3d03db6 |
+| #74 | `/v1/keys` only for the environment key; a lower-case log level no longer crash-loops the worker; a non-ASCII `X-API-Key` answers 401 instead of 500; list `limit` must be 1 to 200 | d5bbffb |
+| #75 | Caddy asks for a password on every method except GET and HEAD (29.3) | 9120039 |
+| #76 | The demo entry points load the embedding model; a stand-in index is no longer marked built. Not done for `demo/chatbot/app.py`, which still has no `load_models` | 62d941e |
+| #77 | A job that kills its worker is dead-lettered after `max_attempts`; `/v1/platform` says `failing` when none of the last 50 finished jobs succeeded | 8c43113 |
+| #78 | Telemetry Lab: a real 32-span drift scenario (before, "drift" built the same spans as "hallucination"), an experimental disagreement scenario, `GET /v1/simulate/{trace_id}`, every scenario labelled "injected fault" | fc77d01 |
+| #79 | `.github/workflows/dashboard.yml` runs `tsc --noEmit` and `vitest run` on `dashboard/**` (not a required check) | 2352568 |
+| #80 | The deploy workflow strips carriage returns from the SSH key and the host line: a key copied on Windows has CRLF endings and OpenSSH rejects it ("error in libcrypto: unsupported", reproduced with a throwaway key) | 5124bcb |
+| #81 | The API key is no longer baked into the dashboard's JavaScript (29.3) | 2616880 |
+
+### 29.2 The first deploy, and what deploys now
+
+- Run 39582272100 (the push of #81), 10:07 to 10:17 UTC: `a73c99a` to `2616880`. Backup `~/backups/agentpulse-pre-deploy-20261021-100748-2616880.db` (integrity ok, 117 evaluations), "schema: 0 nullable column(s) to add", the new backend read all 117 evaluations on a copy of the database, swapped, `/v1/health` went `failing` to `healthy` in about 35 seconds, the swapfile was removed. Images are tagged `deploy-20261021-100748-2616880`; the log prints the rollback commands.
+- Earlier attempts failed for two different reasons: five runs at "Set up SSH" because the repo had no secrets, and one at "Deploy" because `AZURE_VM_KNOWN_HOSTS` had been pasted wrongly. The repo now has `AZURE_VM_SSH_KEY` and `AZURE_VM_KNOWN_HOSTS`. The key is the owner's own `agentpulse_azure` key; a deploy-only key (README, "Secrets") is better and is still to do.
+- **Every push to `main` that touches `backend/**`, `dashboard/**`, `docker-compose.yml` or `deploy/azure/**` now deploys to production in about ten minutes, and the workflow does not wait for the tests.** Merge only when the checks are green. The workflow never recreates Caddy.
+- Live checks after the deploy: process started 10:16:50, `healthy`, one worker alive, `GET /v1/simulate/<unknown>` answers the JSON 404 only the new code has.
+
+### 29.3 Secrets and exposure
+
+- **Leak, now closed.** `docker-compose.yml` passed `AGENTPULSE_API_KEY` as the build arg `VITE_API_KEY`, and Vite inlines every `VITE_*` value into the JavaScript, so the live site had served the backend's real key to every visitor since September. #81 stops it: the build arg is empty and the dashboard container gets the key at runtime, where nginx adds it to `/v1` requests. Checked with docker (a marker key is in the shipped bundle with the old build and in none of the files with the new one; with a fake backend the runtime key reaches it and a client-sent key is replaced) and on the live site (the one `apiKey` literal in the served bundle is empty).
+- **Rotated** on the VM at 10:31 UTC: a new random key in `~/agentpulse/.env` only, never printed; the old key answers 401; `.env` is mode 600; `VITE_API_KEY` is gone from it. Anything of the owner's that still uses the old key now gets 401.
+- **Write password** set at 10:39 UTC by the owner (username `soum`; only the bcrypt hash is on the VM, in `.env`). Verified from outside: reads are public, and POST, PATCH and DELETE without it answer 401 with `WWW-Authenticate: Basic realm="AgentPulse writes"`. Consequences: the SDK and demo probes cannot write through the public URL without `-u soum:<password>`; a public chat needs an exception line in the Caddyfile `@write` block. If the password is lost it is not recoverable: make a new hash (README, "Password for writes").
+- Backups on the VM that still hold old values: `~/backups/env-pre-rotate-*` and `~/backups/env-pre-writepw-*` (mode 600). Delete when convenient.
+- Still open: the Firebase web key hard-coded as a default in `dashboard/src/lib/firebase.ts` (public by design, but it must be restricted to the site and to the Firebase APIs in the Google Cloud console); the NVIDIA key pasted into a chat (28.9 item 9). A scan of tracked files and of every commit for key-shaped strings found only fake test strings in `tests/test_sdk.py` and that Firebase key.
+
+### 29.4 The data on the live site
+
+At the deploy the database held 117 evaluation rows (116 `stage2`, 1 `skipped`), all `model_version` v1.0 and `config_version` v1.0, so their grounding scores used the swapped NLI labels and their risk used the old averaging. Spans scored after the deploy are v1.1. Do not compare v1.0 and v1.1 rows. A re-score tool that defaults to a dry run is being built by a separate session; until it has been reviewed and applied, the dashboard shows the old rows with the old numbers. Drift distances and ASI come from embeddings and are not affected by the label fix.
+
+### 29.5 The 28.9 open decisions, one by one
+
+| 28.9 item | Now |
+|---|---|
+| 1 to 3 | Done (28.12) |
+| 4, a code PR for the RAG chat view | Done: #72 |
+| 5, should `AGENT_DISAGREEMENT` alert | Settled: withdrawn (the score is stored and shown, and #73 keeps it out of the risk number) |
+| 6, a new release tag | Open |
+| 7, housekeeping | Branch protection is on (a pull request is required, no required status checks, admins included, no force push or deletion). Not checked: secret scanning and push protection, `SkSahoo98`'s push access. Open: untrack `.claude/settings.local.json`, and the AI Studio sync (29.6) |
+| 8, the standalone frontend | Frozen (29.6) |
+| 9, rotate the NVIDIA key | Open |
+
+### 29.6 Two frontends, and AI Studio
+
+The product frontend is `dashboard/` (what Azure serves). The AI Studio app named "AgentPulse" is synced to `Soum-Code/Soum-frontend-` (branch `main`, last sync 2026-10-09 20:02) and had 13 changed files not pushed, among them `src/data/mockTelemetry.ts`: **do not push them.** `Soum-frontend-` and its open PR #1 are frozen. A second AI Studio app, "agentpulse", was imported from this repository on 2026-09-19 and is stale. Any UI work done in AI Studio starts from a new app imported from current `main`, goes back only as a branch and a pull request (never to `main`), and is reviewed against CI. The prompt used for that lives outside the repository.
+
+### 29.7 The Ponytail code review
+
+A read-only review of the Python code (backend, SDK, demo, adapters, reasoning; about 16k lines) found 64 confirmed findings (11 must, 15 should, 38 nice; 5 more were refuted by the skeptics). The report is outside the repository. Fixed: must 1 and 2 (#73), 3 (#69), 4 to 9 (#71), 10 (#68), 11 for `demo/chat_server.py` and `demo/multi_model_pipeline.py` (#76); should 13, 14, 16, 19 and 25 (#71), 21, 22, 44 and 45 (#74), 23 and 24 (#77); and the Azure write exposure, 20 (#75). Open, among others: 12 (ASI treats an even two-tool mix as instability; deleting it would remove a detection the project report credits to it, so it is the owner's call). **Never reviewed: the dashboard (TypeScript, about 20.8k lines), the tests, scripts, experiments and benchmarks.** Reading the dashboard for an hour found three real bugs (the inverted risk colours, the Traces crash, the fabricated RAG numbers), so expect more.
+
+### 29.8 Traps hit today
+
+- `docker compose exec` inside `ssh host 'bash -s'` with a here-document reads the rest of the script from stdin and swallows it. Give it `</dev/null`, or give the one command that needs input its own here-document.
+- A private key copied on Windows (`clip`, Notepad, a browser) carries CRLF endings; OpenSSH on Linux rejects it. A `known_hosts` secret must be exactly `hostname ssh-ed25519 KEY`; compare it with `ssh-keygen -F` and with `ssh-keyscan` before blaming the workflow.
+- Anything in a `VITE_*` variable is public. A key belongs in the container's runtime environment.
+- A merge to `main` that touches the paths in 29.2 deploys. The account's usage limits (a five-hour and a weekly window) cap how many sessions can run at once; read the usage before starting several.
+- In PowerShell `<` does not redirect and `clip < file` fails; say which shell a command is for.
+
+### 29.9 What is next
+
+1. Review the re-score PR, then run it on the VM with `--apply` after a fresh backup, and check the dashboard.
+2. Audit the landing page's numbers (91.7% to 6.8%, 203 ms median, under 1.2 ms ingestion) against the project's reports; remove or qualify any that cannot be traced.
+3. Re-measure grounding on correct labels: `NEUTRAL_RISK_WEIGHT` (0.5) and the 0.7 and 0.4 cut-offs were set or measured on swapped labels. Re-run the experiments that depend on them and say so in the report.
+4. The public chat: real embeddings in `demo/chatbot/app.py`, a per-IP rate limit, an input length limit, a daily cap, a kill switch, per-stage progress, a new NVIDIA key, a check that the 4 GB VM holds the API, the worker and the chat service, and the exception line in the Caddyfile.
+5. A read-only review of the dashboard and the tests, in the same style as 29.7.
+6. UI work from AI Studio under 29.6: error boundaries, a real drift view, a card per signal with its measured limit, evaluator health, claim next to evidence, visible write failures.
