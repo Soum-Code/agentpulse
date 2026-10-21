@@ -47,11 +47,11 @@ traces_router = APIRouter(prefix="/v1/traces", tags=["traces"])
 
 
 # GET /v1/traces -> one page of traces, newest first.
-# Options in the URL: limit (page size, at most 200), offset (how many rows to skip, for
+# Options in the URL: limit (page size, 1 to 200), offset (how many rows to skip, for
 # paging), and the optional filters status and pipeline_id.
 @traces_router.get("")
 async def list_traces(
-    limit: int = Query(50, le=200),
+    limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
     status: Optional[str] = None,
     pipeline_id: Optional[str] = None,
@@ -398,17 +398,19 @@ async def get_drift_overview():
 # Two routers are created together here. Alerts live under /v1/alerts. The API-key routes
 # (/v1/keys) are defined near the end of this file.
 alerts_router = APIRouter(prefix="/v1/alerts", tags=["alerts"])
+# Only the key from settings (AGENTPULSE_API_KEY) may call /v1/keys; middleware.py answers 401 to
+# issued keys, because the caller chooses owner_id.
 keys_router = APIRouter(prefix="/v1/keys", tags=["keys"])
 
 
 # GET /v1/alerts -> alerts, newest first. Optional filters: severity, alert_type and
-# acknowledged (true or false). limit is at most 200. An alert = a warning raised when a
+# acknowledged (true or false). limit is 1 to 200. An alert = a warning raised when a
 # score crossed a threshold. alert_type is one of HIGH_HALLUCINATION_RISK,
 # GROUNDING_FAILURE, TOOL_CLAIM_MISMATCH, DRIFT_DETECTED, ASI_DROP, ERROR_RATE_SPIKE;
 # severity is HIGH or MEDIUM.
 @alerts_router.get("")
 async def list_alerts(
-    limit: int = Query(50, le=200),
+    limit: int = Query(50, ge=1, le=200),
     severity: Optional[str] = None,
     alert_type: Optional[str] = None,
     acknowledged: Optional[bool] = None,
