@@ -674,10 +674,10 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
                       backend has no cost model at all. Both were rendered
                       unconditionally and threw on the first real trace. */}
                   {trace.totalTokens !== undefined && (
-                    <span>{trace.totalTokens.toLocaleString()} tok</span>
+                    <span>{trace.totalTokens != null ? `${trace.totalTokens.toLocaleString()} tok` : '— tok'}</span>
                   )}
                   {trace.cost !== undefined && (
-                    <span className="text-neutral-200 font-medium">${trace.cost.toFixed(4)}</span>
+                    <span className="text-neutral-200 font-medium">{trace.cost != null ? `$${trace.cost.toFixed(4)}` : '—'}</span>
                   )}
                 </div>
               </div>

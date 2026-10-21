@@ -451,7 +451,7 @@ export const ActiveContextPanel: React.FC<ActiveContextPanelProps> = ({
                       <div className="text-[9px] font-sans text-neutral-400 uppercase tracking-widest liquid-card-label">
                         Cost
                       </div>
-                      <div className="text-neutral-200 font-medium">${selectedTrace.cost.toFixed(4)}</div>
+                      <div className="text-neutral-200 font-medium">{selectedTrace.cost != null ? `$${selectedTrace.cost.toFixed(4)}` : '—'}</div>
                     </div>
                   </div>
 
