@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { DollarSign, Zap, Clock, ShieldCheck, TrendingDown } from 'lucide-react';
 import { AnimeInteractiveCounter } from './AnimeInteractiveCounter';
+import { JUDGE_ASSUMPTIONS, VM_USD_PER_MONTH, judgeCostPerSpan, monthlyJudgeCost } from '../../lib/judgeCost';
 
 interface CostCalculatorProps {
   palette: 'butter' | 'dark' | 'chalk';
@@ -10,21 +11,23 @@ export const CostCalculator: React.FC<CostCalculatorProps> = ({ palette }) => {
   const [dailySpans, setDailySpans] = useState<number>(50000); // 50k spans/day default
 
   const monthlySpans = dailySpans * 30;
-  
-  // Assuming standard LLM Judge cost (e.g. GPT-4o-mini or GPT-4o evaluation prompt)
-  // Input: 1200 tokens (context + hypothesis + instructions), Output: 80 tokens
-  // At $2.50 / 1M input tokens + $10 / 1M output tokens = ~$0.0038 per evaluation span
-  const costPerLlmJudgeSpan = 0.0038;
-  const monthlyLlmJudgeCost = Math.round(monthlySpans * costPerLlmJudgeSpan);
-  
-  // AgentPulse ONNX Local CPU cost: $0.00 model token fees
-  // 1 small standard cloud VM (2 vCPU, 4GB RAM e.g. Azure B2s or AWS t3.medium) = ~$32/month fixed
-  const monthlyAgentPulseCost = 32;
-  const monthlySavings = Math.max(0, monthlyLlmJudgeCost - monthlyAgentPulseCost);
 
-  // Latency comparison
-  const llmJudgeLatency = 1450; // ms (network roundtrip + LLM generation)
-  const agentPulseLatency = 58;  // ms (quantized ONNX CPU)
+  // An ESTIMATE from assumptions that are printed under the result (see
+  // lib/judgeCost.ts): a judge prompt of 1,200 input and 80 output tokens at
+  // $2.50 / $10 per 1M tokens, every span judged. The prices are assumptions,
+  // not measurements.
+  const monthlyLlmJudgeCost = monthlyJudgeCost(dailySpans);
+
+  // AgentPulse pays no model tokens, only for the machine it runs on: the
+  // Standard_B2als_v2 VM it is deployed on, $24.67/month (deploy/azure/README.md).
+  const monthlyAgentPulseCost = VM_USD_PER_MONTH;
+  const monthlySavings = Math.max(0, Math.round(monthlyLlmJudgeCost - monthlyAgentPulseCost));
+
+  // Latency, from one 30-case comparison on one machine
+  // (LLM_JUDGE_COMPARISON_REPORT.md): the cascade's median against a local
+  // Qwen3-8B Q4_K_M judge on CPU. A hosted judge was not measured.
+  const llmJudgeLatency = 3170; // ms, median
+  const agentPulseLatency = 203; // ms, median
 
   return (
     <div
@@ -53,7 +56,7 @@ export const CostCalculator: React.FC<CostCalculatorProps> = ({ palette }) => {
                 ? 'bg-amber-100 border border-amber-300 text-amber-900'
                 : 'bg-amber-400/20 border border-amber-400/40 text-amber-300 shadow-[0_0_12px_rgba(245,158,11,0.25)]'
             }`}>
-              ROI &amp; Latency Benchmark
+              Cost estimate &amp; measured latency
             </span>
             <span className={`text-xs font-mono font-semibold ${
               palette === 'butter' ? 'text-neutral-800' : palette === 'chalk' ? 'text-neutral-600' : 'text-neutral-300'
@@ -64,13 +67,15 @@ export const CostCalculator: React.FC<CostCalculatorProps> = ({ palette }) => {
           <h3 className={`text-2xl sm:text-3xl font-black mt-2 tracking-tight font-sans ${
             palette === 'butter' ? 'text-neutral-950' : palette === 'chalk' ? 'text-neutral-950' : 'text-white drop-shadow-[0_2px_12px_rgba(0,0,0,0.6)]'
           }`}>
-            Stop paying $3,000+/mo to judge $50 of LLM calls
+            What judging every span with an LLM would cost
           </h3>
           <p className={`text-xs sm:text-sm mt-1 max-w-2xl leading-relaxed ${
             palette === 'butter' ? 'text-neutral-800 font-medium' : palette === 'chalk' ? 'text-neutral-600' : 'text-neutral-300'
           }`}>
-            Platforms like LangSmith and Arize Phoenix rely on secondary LLM API calls to evaluate every agent step.
-            AgentPulse uses quantized local DeBERTa &amp; MiniLM models running on existing CPU workers at zero token cost.
+            A common way to grade an agent&rsquo;s output is a second LLM call for every span.
+            AgentPulse scores each span with two small local models, a DeBERTa NLI classifier and MiniLM embeddings,
+            on the worker&rsquo;s CPU, so there are no judge tokens to pay for. The dollar figures below are an
+            estimate from the assumptions printed under them.
           </p>
         </div>
 
@@ -96,7 +101,7 @@ export const CostCalculator: React.FC<CostCalculatorProps> = ({ palette }) => {
             <span className={`text-[10px] font-mono uppercase block font-bold ${
               palette === 'butter' ? 'text-neutral-950' : palette === 'chalk' ? 'text-emerald-800' : 'text-emerald-300'
             }`}>
-              Projected Monthly Savings
+              Estimated Monthly Difference
             </span>
             <span className={`text-2xl sm:text-3xl font-mono font-black tracking-tight ${
               palette === 'butter' ? 'text-neutral-950' : palette === 'chalk' ? 'text-emerald-900' : 'text-white'
@@ -175,21 +180,21 @@ export const CostCalculator: React.FC<CostCalculatorProps> = ({ palette }) => {
           <div className="flex items-center justify-between">
             <span className={`text-xs font-mono font-bold uppercase ${
               palette === 'butter' ? 'text-rose-950' : palette === 'chalk' ? 'text-rose-900' : 'text-red-400'
-            }`}>Legacy Approach (LangSmith / Arize Phoenix)</span>
+            }`}>Generic LLM judge</span>
             <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${
               palette === 'butter'
                 ? 'bg-white text-rose-950 border border-neutral-950'
                 : palette === 'chalk'
                 ? 'bg-rose-100 text-rose-800 border border-rose-300'
                 : 'bg-red-500/20 text-red-300 border border-red-500/30'
-            }`}>LLM as a Judge</span>
+            }`}>Estimate</span>
           </div>
 
           <div className="space-y-3 font-mono">
             <div>
               <span className={`text-[10px] block uppercase font-semibold ${
                 palette === 'butter' ? 'text-neutral-800' : palette === 'chalk' ? 'text-neutral-600' : 'text-neutral-400'
-              }`}>Monthly Token Judgment Bill</span>
+              }`}>Estimated Monthly Judge Bill</span>
               <span className={`text-3xl font-black ${
                 palette === 'butter' ? 'text-rose-950' : palette === 'chalk' ? 'text-rose-700' : 'text-red-400 drop-shadow-[0_0_12px_rgba(239,68,68,0.3)]'
               }`}>
@@ -203,29 +208,29 @@ export const CostCalculator: React.FC<CostCalculatorProps> = ({ palette }) => {
               <div>
                 <span className={`text-[10px] block font-semibold ${
                   palette === 'butter' ? 'text-neutral-800' : palette === 'chalk' ? 'text-neutral-600' : 'text-neutral-400'
-                }`}>Avg Evaluation Latency</span>
+                }`}>Median latency (Qwen3-8B)</span>
                 <span className={`font-semibold flex items-center mt-0.5 ${
                   palette === 'butter' ? 'text-neutral-950 font-bold' : palette === 'chalk' ? 'text-neutral-900' : 'text-neutral-100'
                 }`}>
                   <Clock className={`w-3.5 h-3.5 mr-1 ${
                     palette === 'butter' ? 'text-rose-950' : palette === 'chalk' ? 'text-rose-600' : 'text-red-400'
-                  }`} /> ~{llmJudgeLatency}ms
+                  }`} /> {llmJudgeLatency.toLocaleString()} ms
                 </span>
               </div>
               <div>
                 <span className={`text-[10px] block font-semibold ${
                   palette === 'butter' ? 'text-neutral-800' : palette === 'chalk' ? 'text-neutral-600' : 'text-neutral-400'
-                }`}>Evaluation Determinism</span>
+                }`}>Same input, same score?</span>
                 <span className={`font-semibold block mt-0.5 ${
                   palette === 'butter' ? 'text-rose-950 font-bold' : palette === 'chalk' ? 'text-rose-700' : 'text-red-300'
-                }`}>Non-deterministic</span>
+                }`}>Not guaranteed</span>
               </div>
             </div>
 
             <p className={`text-[11px] font-sans pt-1 leading-relaxed ${
               palette === 'butter' ? 'text-neutral-900 font-medium' : palette === 'chalk' ? 'text-neutral-700' : 'text-neutral-300'
             }`}>
-              Calls OpenAI/Anthropic APIs repeatedly to grade responses. Temperature variance causes identical regressions to randomly pass or fail.
+              One extra model call per span. The judge benchmarked here sampled at temperature 0.7, so another seed could change its answer. A hosted API judge was not measured.
             </p>
           </div>
         </div>
@@ -254,7 +259,7 @@ export const CostCalculator: React.FC<CostCalculatorProps> = ({ palette }) => {
                 ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
                 : 'bg-emerald-500/25 text-emerald-300 border-emerald-500/40 shadow-[0_0_10px_rgba(16,185,129,0.2)]'
             }`}>
-              100% Local CPU Workers
+              Local CPU workers
             </span>
           </div>
 
@@ -269,7 +274,7 @@ export const CostCalculator: React.FC<CostCalculatorProps> = ({ palette }) => {
                 $0.00
                 <span className={`text-xs font-normal ml-2 ${
                   palette === 'butter' ? 'text-neutral-800 font-medium' : palette === 'chalk' ? 'text-neutral-600' : 'text-neutral-300'
-                }`}>(${monthlyAgentPulseCost}/mo fixed server)</span>
+                }`}>(+ ${monthlyAgentPulseCost}/mo for the VM)</span>
               </span>
             </div>
 
@@ -279,32 +284,52 @@ export const CostCalculator: React.FC<CostCalculatorProps> = ({ palette }) => {
               <div>
                 <span className={`text-[10px] block font-semibold ${
                   palette === 'butter' ? 'text-neutral-800' : palette === 'chalk' ? 'text-neutral-600' : 'text-neutral-400'
-                }`}>Evaluation Latency</span>
+                }`}>Median latency (30 cases)</span>
                 <span className={`font-semibold flex items-center mt-0.5 ${
                   palette === 'butter' ? 'text-neutral-950 font-bold' : palette === 'chalk' ? 'text-neutral-900' : 'text-emerald-200'
                 }`}>
                   <Zap className={`w-3.5 h-3.5 mr-1 ${
                     palette === 'butter' ? 'text-emerald-950' : palette === 'chalk' ? 'text-emerald-700' : 'text-emerald-400'
-                  }`} /> ~{agentPulseLatency}ms ONNX
+                  }`} /> {agentPulseLatency} ms
                 </span>
               </div>
               <div>
                 <span className={`text-[10px] block font-semibold ${
                   palette === 'butter' ? 'text-neutral-800' : palette === 'chalk' ? 'text-neutral-600' : 'text-neutral-400'
-                }`}>Evaluation Determinism</span>
+                }`}>Same input, same score?</span>
                 <span className={`font-semibold block mt-0.5 ${
                   palette === 'butter' ? 'text-emerald-950 font-bold' : palette === 'chalk' ? 'text-emerald-800' : 'text-emerald-200'
-                }`}>100% Deterministic</span>
+                }`}>Same weights, same score</span>
               </div>
             </div>
 
             <p className={`text-[11px] font-sans pt-1 leading-relaxed ${
               palette === 'butter' ? 'text-neutral-900 font-medium' : palette === 'chalk' ? 'text-neutral-700' : 'text-neutral-300'
             }`}>
-              DeBERTa-v3 cross-encoder and MiniLM embeddings execute locally in worker threads. Exact same score on every run with zero token bills.
+              The DeBERTa-v3 NLI classifier and MiniLM embeddings run locally on the worker&rsquo;s CPU and generate no tokens. The same input and the same model weights give the same score.
             </p>
           </div>
         </div>
+      </div>
+
+      {/* The assumptions behind every dollar and latency figure above, beside the result. */}
+      <div className={`mt-6 pt-4 border-t text-[11px] font-sans leading-relaxed space-y-1 relative z-10 ${
+        palette === 'butter' ? 'border-neutral-950 text-neutral-900' : palette === 'chalk' ? 'border-neutral-200 text-neutral-600' : 'border-white/[0.12] text-neutral-400'
+      }`}>
+        <p>
+          <span className="font-bold">An estimate, not a quote.</span> LLM judge: {JUDGE_ASSUMPTIONS.inputTokens.toLocaleString()} input
+          + {JUDGE_ASSUMPTIONS.outputTokens} output tokens per span at ${JUDGE_ASSUMPTIONS.inputUsdPerMillion.toFixed(2)} / ${JUDGE_ASSUMPTIONS.outputUsdPerMillion.toFixed(2)} per
+          1M tokens = ${judgeCostPerSpan().toFixed(4)} per span, every span judged, 30-day month. The prices are assumptions, not measurements.
+        </p>
+        <p>
+          AgentPulse: no model tokens, one Azure Standard_B2als_v2 VM (2 vCPU, 4 GB) at ${VM_USD_PER_MONTH}/month, VM only
+          (Central India retail price recorded in deploy/azure/README.md). One worker evaluated 3.9 spans/s, about 335,000 a day, on a
+          16-thread dev machine and not on that VM (experiments/results/throughput_benchmark.json), so the top of the slider needs more than one worker.
+        </p>
+        <p>
+          Latency: one comparison on 30 test cases on one machine (LLM_JUDGE_COMPARISON_REPORT.md), a small sample. The judge was a local
+          Qwen3-8B Q4 model on CPU; a hosted judge was not measured.
+        </p>
       </div>
     </div>
   );
