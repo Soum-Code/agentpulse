@@ -105,7 +105,7 @@ TERMINAL_STATUSES = {STATUS_SUCCEEDED, STATUS_FAILED, STATUS_DEAD_LETTER}
 
 # How many attempts a job gets by default (stored on the row as max_attempts). When a
 # retryable failure happens and attempts has reached it, mark_failed makes the job
-# dead_letter. mark_failed is the only place that checks this limit.
+# dead_letter. recover_expired_leases applies the same limit to a job whose worker died.
 DEFAULT_MAX_ATTEMPTS = 3
 # In short: a claim lasts 120 seconds. If the worker has not finished by then,
 # recover_expired_leases puts the job back in the queue for another worker to claim.
@@ -384,7 +384,7 @@ async def mark_failed(
 
 
 async def recover_expired_leases(session: AsyncSession) -> int:
-    """Return abandoned `running` jobs to `queued`. Returns how many.
+    """Return abandoned `running` jobs to `queued`. Returns how many were requeued.
 
     This is what makes a killed worker survivable. It is deliberately driven by
     wall-clock lease expiry rather than by any signal from the worker, because a
@@ -392,18 +392,38 @@ async def recover_expired_leases(session: AsyncSession) -> int:
 
     Note that `attempts` is not decremented: a job whose worker died has
     genuinely consumed an attempt, and pretending otherwise would let a job that
-    reliably kills its worker retry forever.
+    reliably kills its worker retry forever. A worker that dies never calls
+    `mark_failed`, so the limit is enforced here too: an abandoned job with no
+    attempts left goes to `dead_letter` instead of back to `queued`.
     """
     now = _now()
-    # One UPDATE does the whole job. It finds every row that is `running`, has a lease
-    # time, and whose lease time is already in the past. Those rows go back to `queued`
-    # and can be claimed again at once (available_at = now). The last_error text records
-    # why, so someone looking at the table can tell.
+    # The rows both UPDATEs below look at: `running`, with a lease time that is already in
+    # the past.
+    abandoned = (
+        EvaluationJob.status == STATUS_RUNNING,
+        EvaluationJob.lease_expires_at.is_not(None),
+        EvaluationJob.lease_expires_at < now,
+    )
+    # First UPDATE: abandoned jobs that have used all their attempts are given up
+    # (`dead_letter`), the same end state mark_failed gives a job that keeps failing.
+    given_up = await session.execute(
+        update(EvaluationJob)
+        .where(*abandoned)
+        .where(EvaluationJob.attempts >= EvaluationJob.max_attempts)
+        .values(
+            status=STATUS_DEAD_LETTER,
+            completed_at=now,
+            lease_expires_at=None,
+            worker_id=None,
+            last_error="worker died on every attempt",
+        )
+    )
+    # Second UPDATE: every abandoned job still running (so with attempts left) goes back to
+    # `queued` and can be claimed again at once (available_at = now). The last_error text
+    # records why, so someone looking at the table can tell.
     result = await session.execute(
         update(EvaluationJob)
-        .where(EvaluationJob.status == STATUS_RUNNING)
-        .where(EvaluationJob.lease_expires_at.is_not(None))
-        .where(EvaluationJob.lease_expires_at < now)
+        .where(*abandoned)
         .values(
             status=STATUS_QUEUED,
             available_at=now,
@@ -414,6 +434,10 @@ async def recover_expired_leases(session: AsyncSession) -> int:
     )
     await session.commit()
     # rowcount = how many rows the UPDATE changed. `or 0` turns a missing value into 0.
+    if given_up.rowcount:
+        logger.error(
+            "Dead-lettered %d job(s) whose worker died on every attempt", given_up.rowcount
+        )
     count = result.rowcount or 0
     if count:
         logger.warning("Recovered %d job(s) abandoned by a dead worker", count)
