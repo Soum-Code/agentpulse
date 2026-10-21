@@ -315,12 +315,12 @@ Practical consequence: window drift needs **32 evaluated spans** for one agent (
 | :--- | ---: |
 | grounding | 0.40 |
 | tool_claim | 0.25 |
-| disagreement | 0.20 |
-| semantic | 0.15 |
+| disagreement | 0.20 (not read) |
+| semantic | 0.15 (not read) |
 
-The divisor is the sum of the weights **present**, not a fixed 1.0. A span with only grounding gets grounding's raw score, not a score diluted by three absent signals.
+The divisor is the sum of the weights **present**, not a fixed 1.0. A span with only grounding gets grounding's raw score, not a score diluted by absent signals. `tool_claim` is present only when the span made at least one checkable claim: a tool check that found no claim scores 0.0 meaning "nothing was checked", and is left out rather than averaged in as "clean".
 
-Note that `RISK_WEIGHTS` declares a `semantic: 0.15` entry that `_aggregate_risk()` never reads — only grounding, tool_claim and disagreement are summed.
+Note that `RISK_WEIGHTS` declares `semantic: 0.15` and `disagreement: 0.20` entries that `_aggregate_risk()` never reads — only grounding and tool_claim are summed. The disagreement score is still stored and shown; it measured at chance (AUC 0.457 without the planner) and its alert is withdrawn, so it does not move the risk number. Rows stored with `config_version` `v1.0` were scored the old way.
 
 Labels: `> 0.7` → `high_risk`, `> 0.4` → `medium_risk`, else `low_risk`.
 
@@ -477,9 +477,9 @@ with key -> {"ready": true, "checks": {"database": {...}}, "reasons": []}
 
 `checks` carries the raw database exception string, which on failure can name a file path or connection target. A probe needs the status code, not that.
 
-### 10.3 `RISK_WEIGHTS["semantic"]` is dead
+### 10.3 `RISK_WEIGHTS["semantic"]` and `["disagreement"]` are dead
 
-Declared at 0.15, never read by `_aggregate_risk()`. `PROJECT_REPORT.md` already records this as "a known gap between the configuration and the implementation, not an intentional design choice" — repeated here so the aggregation section above is not read as describing four contributing signals when only three contribute.
+Declared at 0.15 and 0.20, never read by `_aggregate_risk()`. `PROJECT_REPORT.md` already records the `semantic` one as "a known gap between the configuration and the implementation, not an intentional design choice" — repeated here so the aggregation section above is not read as describing four contributing signals when only two contribute.
 
 ### 10.4 The embedding model has no ONNX path
 

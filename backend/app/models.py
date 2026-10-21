@@ -209,9 +209,9 @@ class Evaluation(SQLModel, table=True):
     grounding_input_tokens: Optional[int] = None
 
     # Composite
-    # A weighted average of the grounding, tool-claim and disagreement scores, using
-    # only the ones that exist for this span. Weights: 0.40, 0.25 and 0.20
-    # (services/evaluator.py, _aggregate_risk).
+    # A weighted average of the grounding and tool-claim scores, using only the ones
+    # that exist for this span (a tool check with no claims does not count). Weights:
+    # 0.40 and 0.25 (services/evaluator.py, _aggregate_risk).
     overall_risk_score: Optional[float] = None
     # Set from overall_risk_score: above 0.7 is "high_risk", above 0.4 is
     # "medium_risk", otherwise "low_risk" (services/evaluator.py, _classify_risk).
