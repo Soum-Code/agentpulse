@@ -61,10 +61,10 @@ from app.services.drift import DriftDetector
 from app.services.evaluator import EvaluationPipeline
 
 # Configure logging
-# settings.log_level is upper-cased here, so "info" works too; an unknown name falls
-# back to INFO. Each log line shows: time [logger name] LEVEL: message.
+# settings.log_level is already upper-case (config.py), so "info" works too; an unknown
+# name falls back to INFO. Each log line shows: time [logger name] LEVEL: message.
 logging.basicConfig(
-    level=getattr(logging, settings.log_level.upper(), logging.INFO),
+    level=getattr(logging, settings.log_level, logging.INFO),
     format="%(asctime)s [%(name)s] %(levelname)s: %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
 )

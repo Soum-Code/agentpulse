@@ -128,7 +128,7 @@ class BackendConfig:
         # app fails to start.
         self.host = os.getenv("AGENTPULSE_HOST", self.host)
         self.port = int(os.getenv("AGENTPULSE_PORT", str(self.port)))
-        self.log_level = os.getenv("AGENTPULSE_LOG_LEVEL", self.log_level)
+        self.log_level = os.getenv("AGENTPULSE_LOG_LEVEL", self.log_level).upper()
         self.database_url = os.getenv("AGENTPULSE_DATABASE_URL", self.database_url)
         self.api_key = os.getenv("AGENTPULSE_API_KEY", self.api_key)
         # Yes/no settings: "true", "1" or "yes" (any letter case) means True, anything
