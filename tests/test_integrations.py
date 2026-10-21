@@ -97,6 +97,27 @@ class TestLangGraphIntegration:
         assert inner_span.parent_span_id == outer_span.span_id
         assert get_current_context() is None
 
+    def test_start_agent_without_a_state_does_not_raise(self, pulse_client):
+        """input_state=None is the documented default."""
+        adapter = LangGraphAdapter(pulse_client)
+        span_id = adapter.start_agent("planner")
+        adapter.end_agent(span_id)
+
+        (span,) = pulse_client._transport._buffer
+        assert span.agent_id == "planner"
+        assert span.input_hash is None
+
+    def test_capture_error_on_a_tool_span_closes_it_as_a_failed_tool_call(self, pulse_client):
+        adapter = LangGraphAdapter(pulse_client)
+        tool_span_id = adapter.start_tool("search_api")
+        adapter.capture_error(tool_span_id, ValueError("503 from search"))
+
+        (span,) = pulse_client._transport._buffer
+        assert span.tool_name == "search_api"
+        assert span.status.value == "error"
+        assert "503 from search" in span.error_message
+        assert tool_span_id not in adapter._active_spans
+
     def test_instrument_node_sync(self, pulse_client):
         adapter = LangGraphAdapter(pulse_client)
         

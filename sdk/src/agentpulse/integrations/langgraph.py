@@ -113,9 +113,9 @@ class LangGraphAdapter(BaseIntegration):
             # First 200 characters of the state as JSON text. Not redacted, and keys such as
             # password are not removed; the capture_* switches are not checked.
             "input_summary": extract_summary(safe_serialize(input_state)),
-            # Fingerprint of the state text. If input_state is None, safe_serialize returns None
-            # and hash_content(None) raises AttributeError, so always pass a state.
-            "input_hash": hash_content(safe_serialize(input_state)),
+            # Fingerprint of the state text. None when there is no state (safe_serialize returns
+            # None for input_state=None, the default, and there is nothing to hash).
+            "input_hash": hash_content(text) if (text := safe_serialize(input_state)) else None,
         }
         # Step 4: make this span the current parent until end_agent(), so a tool call or an
         # LLM call made inside the node joins this trace under this span. ensure_context()
@@ -268,10 +268,15 @@ class LangGraphAdapter(BaseIntegration):
         error: Exception,
         context: Optional[dict] = None,
     ) -> None:
-        # An unknown or already-closed span id is ignored. This calls end_agent(), so it is
-        # meant for agent spans: the saved details of a tool span have no "role" key, which
-        # end_agent() reads, so it would fail with KeyError.
-        if span_id in self._active_spans:
+        # An unknown or already-closed span id is ignored. Only a tool span has a "tool_name"
+        # in its saved details: that one is closed as a failed tool call, anything else as a
+        # failed agent step.
+        span_meta = self._active_spans.get(span_id)
+        if span_meta is None:
+            return
+        if "tool_name" in span_meta:
+            self.end_tool(span_id, status="error", error=error)
+        else:
             self.end_agent(span_id, status="error", error=error)
 
     # Returns a decorator for ONE node function. Each call of the wrapped node opens a span,
