@@ -37,6 +37,7 @@ from app.models import EvaluationJob, RetentionRun, WorkerHeartbeat  # noqa: E40
 from app.services.platform_health import (  # noqa: E402
     BACKLOG_THRESHOLD,
     WORKER_STALE_AFTER_SECONDS,
+    collect_platform_health,
     derive_state,
     evaluation_timing,
     job_state_counts,
@@ -346,6 +347,49 @@ class TestOperatorVerdict:
                          workers=self.fleet(alive=0),
                          queue_depth=BACKLOG_THRESHOLD + 500)
         assert v["state"] == "failing"
+
+    def test_every_recent_job_failing_is_failing_not_healthy(self):
+        """A live worker that fails every job is not evaluating anything.
+
+        Case: a deploy adds a column and the database is not migrated, so every
+        job raises 'no such column' and dead-letters in seconds. The queue stays
+        short and the heartbeat stays fresh, so none of the other signals move.
+        """
+        v = derive_state(api_ready=True, api_degraded=False, workers=self.fleet(),
+                         queue_depth=0, recent_outcomes=("dead_letter", "failed"))
+        assert v["state"] == "failing"
+        assert any("none succeeded" in r for r in v["reasons"])
+
+        # One success in the window is a bad patch, not an outage; no finished
+        # jobs yet says nothing either way.
+        for outcomes in (("dead_letter", "succeeded"), ()):
+            v = derive_state(api_ready=True, api_degraded=False, workers=self.fleet(),
+                             queue_depth=0, recent_outcomes=outcomes)
+            assert v["state"] == "healthy"
+
+    def test_the_platform_report_reads_recent_outcomes_from_the_table(self, db_session):
+        """derive_state is only half of it: collect_platform_health must feed it."""
+        async def go():
+            async with db_session() as session:
+                session.add(WorkerHeartbeat(
+                    worker_id="w1", hostname="h", pid=1, status="running",
+                    started_at=now(), last_heartbeat_at=now(),
+                ))
+                for i in range(3):
+                    session.add(make_job(job_key=f"d{i}", span_id=f"d{i}",
+                                         status="dead_letter", attempts=3,
+                                         completed_at=now() - timedelta(seconds=10 - i)))
+                await session.commit()
+
+                health = await collect_platform_health(session)
+                assert health["workers"]["alive"] == 1
+                assert health["state"] == "failing", health["reasons"]
+
+                session.add(make_job(job_key="ok", span_id="ok", status="succeeded",
+                                     attempts=1, completed_at=now()))
+                await session.commit()
+                assert (await collect_platform_health(session))["state"] == "healthy"
+        run(go)
 
 
 class TestRuntimeCounters:
