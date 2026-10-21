@@ -149,6 +149,40 @@ class TestPrivacy:
         result = pf.redact_text("Using api_key=sk-12345abc")
         assert "sk-12345abc" not in result
 
+    def test_secrets_in_json_text_are_redacted(self):
+        """@monitor turns state into JSON before redacting, so the key is followed by a quote."""
+        pf = PrivacyFilter(CapturePolicy())
+        text = (
+            '{"openai_api_key": "sk-proj-AbCd1234EfGh5678", "password": "hunter2", '
+            '"access_token": "tok123", "query": "weather in Pune"}'
+        )
+        result = pf.redact_text(text)
+        for secret in ("sk-proj-AbCd1234EfGh5678", "hunter2", "tok123"):
+            assert secret not in result
+        assert "weather in Pune" in result  # fields that are not secrets stay
+
+    def test_quoted_secret_with_spaces_is_redacted_whole(self):
+        pf = PrivacyFilter(CapturePolicy())
+        result = pf.redact_text('{"password": "correct horse battery", "step": 2}')
+        assert "horse" not in result
+        assert '"step": 2' in result
+
+    def test_bare_sk_key_is_redacted(self):
+        pf = PrivacyFilter(CapturePolicy())
+        result = pf.redact_text("use sk-proj-AbCd1234EfGh5678 now")
+        assert "sk-proj-AbCd1234EfGh5678" not in result
+        assert result.startswith("use ") and result.endswith(" now")
+
+    def test_bearer_token_is_redacted(self):
+        pf = PrivacyFilter(CapturePolicy())
+        result = pf.redact_text("Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.e30.c2lnbmF0dXJl")
+        assert "eyJhbGciOiJIUzI1NiJ9" not in result
+
+    def test_ordinary_prose_is_left_alone(self):
+        pf = PrivacyFilter(CapturePolicy())
+        text = "The bearer of bad news said the password was wrong and max_tokens was 500."
+        assert pf.redact_text(text) == text
+
     def test_truncation(self):
         policy = CapturePolicy(max_field_length=50)
         pf = PrivacyFilter(policy)
