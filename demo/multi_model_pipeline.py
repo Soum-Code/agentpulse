@@ -96,7 +96,7 @@ for _stream in (sys.stdout, sys.stderr):
 from agentpulse import AgentPulse
 from agentpulse.schemas.enums import SpanKind, SpanStatus
 # local_retriever = the ready-made search index over a small set of local documents.
-from demo.workflows.retrieval import local_retriever
+from demo.workflows.retrieval import ensure_embedding_model, local_retriever
 
 # In short: load the project's .env file, if python-dotenv is installed, so keys can
 # live there. Variables already set in the environment are not overwritten.
@@ -486,6 +486,10 @@ async def main() -> int:
             "not, because it compares two agents that share a model.",
             file=sys.stderr,
         )
+
+    # Load the embedding model first, so the retriever agent searches with real embeddings and
+    # not the letter-count stand-in. It does nothing if the model is already loaded.
+    ensure_embedding_model()
 
     # Step 6: make the AgentPulse client (address and key from the environment) and the
     # model client. capture_inputs / capture_outputs = True are the SDK's switches for
