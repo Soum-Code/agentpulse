@@ -135,9 +135,9 @@ class AgentPulseConfig:
     max_buffered_spans: int = 10_000
     # The background loop also sends whatever is waiting every this many milliseconds.
     flush_interval_ms: int = 100
-    # Send attempts per batch. Network errors and HTTP 429 (rate limited) are retried with
-    # growing waits; any other HTTP error gives up at once. A batch that fails goes to the
-    # fallback file.
+    # Send attempts per batch. Network errors, HTTP 429 (rate limited) and 5xx answers are
+    # retried with growing waits; any other HTTP error gives up at once. A batch that fails
+    # goes to the fallback file.
     max_retries: int = 3
     # Total time allowed for one HTTP request, in seconds.
     timeout_seconds: float = 5.0

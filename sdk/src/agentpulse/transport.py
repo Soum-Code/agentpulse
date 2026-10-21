@@ -268,17 +268,19 @@ class AsyncTransport:
                     if resp.status in (200, 202):
                         self._total_sent += len(request.spans)
                         return True
-                    # 429 = "too many requests": wait 2 ** attempt seconds (1 s, then 2 s, then
-                    # 4 s, ...) and try again.
-                    elif resp.status == 429:
-                        # Rate limited — back off
+                    # 429 = "too many requests", or a 5xx (the backend is restarting or behind a
+                    # proxy that is, for example 502/503 during a deploy): wait 2 ** attempt
+                    # seconds (1 s, then 2 s, then 4 s, ...) and try again. Sending a batch twice
+                    # is safe, because the backend skips span ids it already has.
+                    elif resp.status == 429 or resp.status >= 500:
+                        # Rate limited or backend unavailable — back off
                         wait = 2 ** attempt
                         logger.warning(
-                            "Rate limited, retrying in %ds (attempt %d/%d)",
-                            wait, attempt + 1, self._config.max_retries,
+                            "Ingest answered HTTP %d, retrying in %ds (attempt %d/%d)",
+                            resp.status, wait, attempt + 1, self._config.max_retries,
                         )
                         await asyncio.sleep(wait)
-                    # Any other status (400, 401, 500, ...): no retry, give up on this batch at
+                    # Any other status (400, 401, ...): no retry, give up on this batch at
                     # once. Log the first 200 characters of the reply, count the spans as
                     # failed and return False.
                     else:
