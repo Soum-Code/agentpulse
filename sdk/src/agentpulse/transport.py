@@ -73,6 +73,8 @@ class AsyncTransport:
         # The background task that runs _flush_loop(), and the event loop it runs on.
         self._flush_task: Optional[asyncio.Task] = None
         self._loop: Optional[asyncio.AbstractEventLoop] = None
+        # Set by stop() to wake the flush loop from its wait at once. Made in start(), on the loop.
+        self._wake: Optional[asyncio.Event] = None
         # True from start() until stop().
         self._running = False
         # Lets only one _flush() at a time take spans out of the buffer.
@@ -108,6 +110,7 @@ class AsyncTransport:
         # Step 2: start the background loop. create_task() schedules it on the running event
         # loop (asyncio's task runner); this call does not wait for it.
         self._loop = asyncio.get_running_loop()
+        self._wake = asyncio.Event()
         self._flush_task = asyncio.create_task(self._flush_loop())
         logger.info(
             "AgentPulse transport started → %s", self._config.endpoint,
@@ -131,23 +134,23 @@ class AsyncTransport:
 
     async def stop(self) -> None:
         """Stop the transport: flush remaining spans and close session."""
-        # Step 1: stop the background loop. cancel() asks the task to end, and awaiting it
-        # waits until it has. A cancelled task raises CancelledError; that is the expected
-        # result here, so it is ignored.
+        # Step 1: stop the background loop. It is woken and left to finish: a send it has
+        # already started must run to its end, because the batch it took is no longer in the
+        # buffer and cancelling the send would lose those spans.
         self._running = False
-        if self._flush_task:
-            self._flush_task.cancel()
-            try:
+        try:
+            if self._flush_task:
+                self._wake.set()
                 await self._flush_task
-            except asyncio.CancelledError:
-                pass
-        # Final flush
-        # Step 2: send what is still waiting in the buffer.
-        await self._flush()
-        # Step 3: close the HTTP session, then log the totals.
-        if self._session:
-            await self._session.close()
-            self._session = None
+            # Final flush
+            # Step 2: send what is still waiting in the buffer.
+            await self._flush()
+        finally:
+            # Step 3: close the HTTP session (also when stop() itself is cancelled, for example
+            # because it ran out of time), then log the totals.
+            if self._session:
+                await self._session.close()
+                self._session = None
         logger.info(
             "AgentPulse transport stopped. Sent: %d, Failed: %d, Fallback: %d",
             self._total_sent,
@@ -195,12 +198,16 @@ class AsyncTransport:
 
     # Runs in the background from start() to stop(). Every flush_interval_ms milliseconds
     # (100 by default) it sends whatever is waiting. This is the only thing that sends while
-    # the transport runs. The loop ends when _running turns False or the task is cancelled.
+    # the transport runs. The loop ends when _running turns False (stop() also wakes it from
+    # its wait) or the task is cancelled.
     async def _flush_loop(self) -> None:
         """Periodically flush buffered spans."""
         interval = self._config.flush_interval_ms / 1000.0
         while self._running:
-            await asyncio.sleep(interval)
+            try:
+                await asyncio.wait_for(self._wake.wait(), interval)
+            except asyncio.TimeoutError:
+                pass
             if self._buffer:
                 await self._flush()
 
@@ -225,8 +232,13 @@ class AsyncTransport:
         )
 
         # Step 3: send it. If every attempt fails, save the batch to the fallback file. The
-        # batch is no longer in the buffer, so this file is its only remaining copy.
-        success = await self._send_with_retry(request)
+        # batch is no longer in the buffer, so this file is its only remaining copy. The same
+        # goes for a send that is cancelled half way (a stop that ran out of time).
+        try:
+            success = await self._send_with_retry(request)
+        except asyncio.CancelledError:
+            self._write_fallback(batch)
+            raise
         if not success:
             self._write_fallback(batch)
 
