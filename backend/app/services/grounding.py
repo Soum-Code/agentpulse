@@ -63,6 +63,16 @@ _nli_model = None
 _nli_tokenizer = None
 _embedding_model = None
 
+# In short: which of the model's three output scores is contradiction, neutral and
+# entailment, e.g. {"contradiction": 0, "entailment": 1, "neutral": 2}.
+# The order is NOT the same for every NLI model, so it is read from the loaded model's own
+# config (see _read_nli_label_index) and not assumed. The default model,
+# cross-encoder/nli-deberta-v3-small, uses contradiction=0, entailment=1, neutral=2. An
+# earlier version of compute_nli_grounding assumed contradiction=0, neutral=1,
+# entailment=2, which swapped entailment_prob and neutral_prob on every stored row.
+# Stays None until load_models has set it.
+_nli_label_index: Optional[dict[str, int]] = None
+
 # In short: three variables that remember which engine (ONNX or PyTorch) really runs the
 # NLI model, which one was asked for, and why a fallback happened (if it did).
 # Which inference backend the NLI model is ACTUALLY running on, as opposed to
@@ -161,6 +171,12 @@ STAGE1_RISK_THRESHOLD = 0.40
 # candidate weights. See GROUNDING_SCORE_CALIBRATION_REPORT.md for the full
 # sweep, the self-comparison demonstration, and the held-out test-split
 # improvement this produced (F1 0.703 -> 0.963, FPR 0.647 -> 0.059).
+#
+# NOT RE-CHECKED: everything above was observed and measured while compute_nli_grounding
+# had entailment and neutral swapped (see _nli_label_index). The "neutral" those
+# observations describe was really the model's entailment class, so the claim about
+# verbatim pairs, the 0.5 weight and the figures quoted are unverified for the real
+# neutral class. The value is unchanged here; whether to re-fit it is left to the owner.
 NEUTRAL_RISK_WEIGHT = 0.5
 
 # In short: the longest input, in tokens, that the NLI model can read. Anything longer is
@@ -269,10 +285,12 @@ def compute_nli_grounding(
         exp_logits = np.exp(logits - np.max(logits))
         probs = exp_logits / exp_logits.sum()
 
-        # DeBERTa NLI label order: contradiction=0, neutral=1, entailment=2
-        contradiction_prob = float(probs[0])
-        neutral_prob = float(probs[1])
-        entailment_prob = float(probs[2])
+        # Pick each class's probability by the position the model's own config gives it
+        # (_nli_label_index, set at load time). Not a fixed order: the default model has
+        # contradiction=0, entailment=1, neutral=2.
+        contradiction_prob = float(probs[_nli_label_index["contradiction"]])
+        neutral_prob = float(probs[_nli_label_index["neutral"]])
+        entailment_prob = float(probs[_nli_label_index["entailment"]])
 
         # Grounding score: higher = more risky (ungrounded). See
         # NEUTRAL_RISK_WEIGHT above for why this isn't simply 1 - entailment_prob.
@@ -280,9 +298,10 @@ def compute_nli_grounding(
 
         # Label
         # The label is the class with the highest probability. argmax gives its position,
-        # and the list below uses the same order as the model's output.
+        # and the list below uses the same order as the model's output (the class names
+        # sorted by their position).
         label_idx = int(np.argmax(probs))
-        labels = ["contradiction", "neutral", "entailment"]
+        labels = sorted(_nli_label_index, key=_nli_label_index.get)
         label = labels[label_idx]
 
         # Seconds since the stopwatch started, converted to milliseconds.
@@ -379,6 +398,22 @@ def evaluate_grounding(
 
 # Model Loading
 
+# Used once by load_models. Both loaders (ONNX Runtime and PyTorch) give the model a
+# `.config` read from the same config.json, so one lookup covers both. The names are
+# lower-cased so "Entailment" and "entailment" mean the same. A model whose labels are not
+# exactly these three (for example "LABEL_0") would be read wrongly, so it is refused here
+# instead of being scored with a guessed order.
+def _read_nli_label_index(model: Any) -> dict[str, int]:
+    """Return {"contradiction": i, "entailment": j, "neutral": k} from model.config.label2id."""
+    index = {name.lower(): idx for name, idx in model.config.label2id.items()}
+    if set(index) != {"contradiction", "entailment", "neutral"}:
+        raise ValueError(
+            f"NLI model labels are {sorted(index)}; expected contradiction, entailment "
+            "and neutral. Refusing to guess the output order."
+        )
+    return index
+
+
 # Called at startup. app/worker.py calls it with sync=True and waits. app/main.py calls it
 # only when the setting api_load_models is on.
 def load_models(
@@ -404,7 +439,7 @@ def load_models(
     # background thread (see the end of load_models). It fills the module-level holders.
     def _do_load():
         global _nli_model, _nli_tokenizer, _embedding_model
-        global _nli_backend, _nli_backend_fallback_reason
+        global _nli_backend, _nli_backend_fallback_reason, _nli_label_index
 
         logger.info("Loading evaluation models...")
 
@@ -480,6 +515,13 @@ def load_models(
                 _nli_backend = "pytorch"
                 _nli_backend_fallback_reason = None
                 logger.info("Loaded NLI model (PyTorch, as configured): %s", nli_model_name)
+
+            # Read which output score is which class, from whichever engine loaded above.
+            # This comes before the tokenizer on purpose: if the labels are not the three
+            # expected ones this raises, the tokenizer stays None, and compute_nli_grounding
+            # then returns None instead of scoring with a wrong order. It also means a set
+            # tokenizer always has a label index, even while a background load is running.
+            _nli_label_index = _read_nli_label_index(_nli_model)
 
             # The tokenizer turns text into the token numbers the NLI model expects. It is
             # loaded after the model, whichever engine the model ended up on.

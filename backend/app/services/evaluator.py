@@ -68,7 +68,11 @@ class EvaluationResult:
     # grounding.py runs both of its models on every span; the first does not gate the second.
     evaluator_name: str = "deberta_minilm_cascade"
     model_name: str = "cross-encoder/nli-deberta-v3-small"
-    model_version: str = "v1.0"
+    # v1.1 = the NLI output order is read from the model config (see _nli_label_index in
+    # grounding.py). Rows stored as v1.0 have entailment_prob and neutral_prob swapped, and
+    # with them grounding_score, overall_risk_score, the risk label and the alerts fired
+    # from them. Nothing filters by this field; it only tells the two kinds of rows apart.
+    model_version: str = "v1.1"
     config_version: str = "v1.0"
     threshold_version: str = "v1.0"
 
