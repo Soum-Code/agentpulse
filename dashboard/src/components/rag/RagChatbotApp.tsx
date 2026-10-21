@@ -19,9 +19,9 @@ import { ChatConsole } from './ChatConsole';
 import { MonitoringPanel } from './MonitoringPanel';
 import { CorpusModal } from './CorpusModal';
 import { ConnectionModal } from './ConnectionModal';
-import { ragApi, simulateSequentialTurn, DEFAULT_CORPUS_DOCUMENTS } from '../../lib/ragApi';
+import { ragApi } from '../../lib/ragApi';
 import { api, EvaluatorReadiness, Agent as ApiAgent } from '../../lib/api';
-import type { ChatTurn, ChatResponse } from '../../lib/ragTypes';
+import type { ChatTurn, PipelineAgent, AgentDriftReading } from '../../lib/ragTypes';
 import type { ProductTab, ColorPalette, ChalkSurfacePreset } from '../../types';
 import { getRagTheme } from './ragTheme';
 
@@ -34,6 +34,8 @@ interface RagChatbotAppProps {
   isCalmMode?: boolean;
   chalkSurface?: ChalkSurfacePreset;
 }
+
+const PIPELINE_AGENTS: PipelineAgent[] = ['retriever', 'verifier', 'answerer'];
 
 function generateSessionId(): string {
   return 'sess_' + Math.random().toString(36).substring(2, 8) + Math.random().toString(36).substring(2, 6);
@@ -57,35 +59,32 @@ export const RagChatbotApp: React.FC<RagChatbotAppProps> = ({
 
   // In-Flight Execution State
   const [isInFlight, setIsInFlight] = useState(false);
-  const [activeStage, setActiveStage] = useState<'retriever' | 'verifier' | 'answerer' | undefined>(undefined);
   const [inFlightElapsedSeconds, setInFlightElapsedSeconds] = useState(0);
   const abortControllerRef = useRef<AbortController | null>(null);
   const timerIntervalRef = useRef<number | null>(null);
 
   // Connection & Health State
   const [ragStatus, setRagStatus] = useState<{ ok: boolean; status: string }>({ ok: false, status: 'checking' });
-  const [isSimulatorMode, setIsSimulatorMode] = useState(false);
   const [evaluatorReadiness, setEvaluatorReadiness] = useState<EvaluatorReadiness | null>(null);
   const [evaluatorLoading, setEvaluatorLoading] = useState(false);
   const [apiAgents, setApiAgents] = useState<ApiAgent[]>([]);
 
-  // Agent Spans & Drift Accumulator (Needs 32 spans per agent)
-  const [agentSpansCount, setAgentSpansCount] = useState({
+  // What AgentPulse itself reports for the three agents: span totals from /v1/agents and
+  // drift from /v1/drift. Both are read back from the backend on every refresh; nothing
+  // is counted or computed in the browser.
+  const [agentSpansCount, setAgentSpansCount] = useState<Record<PipelineAgent, number>>({
     answerer: 0,
     verifier: 0,
     retriever: 0,
   });
 
-  const [agentDriftValues, setAgentDriftValues] = useState<{
-    answerer?: number | null;
-    verifier?: number | null;
-    retriever?: number | null;
-  }>({});
+  const [agentDrift, setAgentDrift] = useState<Partial<Record<PipelineAgent, AgentDriftReading>>>({});
 
   // Modals
   const [isCorpusOpen, setIsCorpusOpen] = useState(false);
   const [isConnectionOpen, setIsConnectionOpen] = useState(false);
-  const [corpusDocs, setCorpusDocs] = useState<string[]>(DEFAULT_CORPUS_DOCUMENTS);
+  // null means the service did not answer; an empty list would claim an empty corpus.
+  const [corpusDocs, setCorpusDocs] = useState<string[] | null>(null);
 
   // Endpoint configuration
   const [ragUrl, setRagUrl] = useState(() => ragApi.getBaseUrl());
@@ -99,9 +98,10 @@ export const RagChatbotApp: React.FC<RagChatbotAppProps> = ({
     setRagStatus({ ok: ragHealth.ok, status: ragHealth.status });
 
     // Fetch Corpus
-    const corpus = await ragApi.getCorpus();
-    if (corpus.documents?.length) {
-      setCorpusDocs(corpus.documents);
+    try {
+      setCorpusDocs((await ragApi.getCorpus()).documents ?? []);
+    } catch {
+      setCorpusDocs(null);
     }
 
     // Check AgentPulse Evaluator Readiness (:8000)
@@ -122,26 +122,31 @@ export const RagChatbotApp: React.FC<RagChatbotAppProps> = ({
       setEvaluatorLoading(false);
     }
 
-    // Check Agents in AgentPulse
-    try {
-      const agentsRes = await api.getAgents();
-      if (agentsRes.agents) {
-        setApiAgents(agentsRes.agents);
-        // Find if answerer/verifier/retriever already have spans from database
-        const ans = agentsRes.agents.find((a) => a.agent_id.includes('answer') || a.agent_id.includes('synthesis'));
-        const ver = agentsRes.agents.find((a) => a.agent_id.includes('verif') || a.agent_id.includes('grounding'));
-        const ret = agentsRes.agents.find((a) => a.agent_id.includes('retriev'));
-
-        if (ans || ver || ret) {
-          setAgentSpansCount((prev) => ({
-            answerer: Math.max(prev.answerer, ans?.total_spans ?? 0),
-            verifier: Math.max(prev.verifier, ver?.total_spans ?? 0),
-            retriever: Math.max(prev.retriever, ret?.total_spans ?? 0),
-          }));
+    // What AgentPulse has recorded for the three pipeline agents. On failure the last
+    // values read from it stay on screen; the evaluator badge already shows the outage.
+    const [agentsRes, driftRes] = await Promise.allSettled([api.getAgents(), api.getDrift()]);
+    if (agentsRes.status === 'fulfilled') {
+      const agents = agentsRes.value.agents ?? [];
+      setApiAgents(agents);
+      const spansOf = (id: PipelineAgent) => agents.find((a) => a.agent_id === id)?.total_spans ?? 0;
+      setAgentSpansCount({
+        retriever: spansOf('retriever'),
+        verifier: spansOf('verifier'),
+        answerer: spansOf('answerer'),
+      });
+    }
+    if (driftRes.status === 'fulfilled') {
+      const next: Partial<Record<PipelineAgent, AgentDriftReading>> = {};
+      for (const row of driftRes.value.agents ?? []) {
+        const id = PIPELINE_AGENTS.find((p) => p === row.agent_id);
+        if (id) {
+          next[id] = {
+            windowDistance: row.latest_window_centroid_distance ?? null,
+            asi: row.current_asi ?? null,
+          };
         }
       }
-    } catch {
-      // Offline fallback
+      setAgentDrift(next);
     }
   }, []);
 
@@ -160,16 +165,9 @@ export const RagChatbotApp: React.FC<RagChatbotAppProps> = ({
       attempts++;
       try {
         const fullTrace = await api.getTrace(traceId);
-        const spans = fullTrace.spans ?? [];
-
-        // Look for answerer span evaluation
-        const answererSpan = spans.find(
-          (s) =>
-            s.agent_id?.toLowerCase().includes('answer') ||
-            s.agent_role?.toLowerCase().includes('formulation') ||
-            s.agent_role?.toLowerCase().includes('synthesis') ||
-            s.span_kind === 'agent'
-        ) || spans[spans.length - 1];
+        // Only the answerer's own span. Another agent's score, or the last span's, is
+        // not a score for this answer.
+        const answererSpan = (fullTrace.spans ?? []).find((s) => s.agent_id === 'answerer');
 
         if (answererSpan && answererSpan.evaluation && answererSpan.evaluation.grounding_score != null) {
           // Evaluation completed!
@@ -186,6 +184,8 @@ export const RagChatbotApp: React.FC<RagChatbotAppProps> = ({
                 : t
             )
           );
+          // The evaluation also writes the drift record; read it back.
+          checkHealth();
           return;
         }
       } catch {
@@ -195,17 +195,11 @@ export const RagChatbotApp: React.FC<RagChatbotAppProps> = ({
       if (attempts < maxAttempts) {
         setTimeout(poll, 2000);
       } else {
-        // Mark as evaluated with default or unmeasured
+        // No score arrived in time. Say so; never fill one in.
         setTurns((prev) =>
           prev.map((t) =>
             t.id === turnId && t.groundingStatus === 'pending'
-              ? {
-                  ...t,
-                  groundingScore: 0.942, // Completed async evaluation result
-                  groundingStatus: 'evaluated',
-                  groundingLabel: 'SUPPORTED',
-                  groundingEvaluationStage: 'STAGE_2_NLI_VERIFIED',
-                }
+              ? { ...t, groundingStatus: 'unmeasured' }
               : t
           )
         );
@@ -213,10 +207,10 @@ export const RagChatbotApp: React.FC<RagChatbotAppProps> = ({
     };
 
     setTimeout(poll, 1500);
-  }, []);
+  }, [checkHealth]);
 
   // 3. Send Message Handler
-  const handleSendMessage = async (message: string, forceFailure = false) => {
+  const handleSendMessage = async (message: string) => {
     if (isInFlight) return;
 
     const turnId = 'turn_' + Date.now();
@@ -230,7 +224,6 @@ export const RagChatbotApp: React.FC<RagChatbotAppProps> = ({
 
     setTurns((prev) => [...prev, newTurn]);
     setIsInFlight(true);
-    setActiveStage('retriever');
     setInFlightElapsedSeconds(0);
 
     const controller = new AbortController();
@@ -242,31 +235,14 @@ export const RagChatbotApp: React.FC<RagChatbotAppProps> = ({
     }, 500);
 
     try {
-      let response: ChatResponse;
-
-      if (isSimulatorMode || !ragStatus.ok || forceFailure) {
-        // Use sequential multi-agent simulation
-        response = await simulateSequentialTurn(message, sessionId, {
-          simulateFailure: forceFailure,
-          onProgress: (stage) => setActiveStage(stage),
-        });
-      } else {
-        // Real RAG FastAPI service on :8100
-        // Progress stage simulation while waiting for sequential response
-        const p1 = setTimeout(() => setActiveStage('verifier'), 8000);
-        const p2 = setTimeout(() => setActiveStage('answerer'), 25000);
-
-        try {
-          response = await ragApi.sendChat(message, sessionId, controller.signal);
-        } finally {
-          clearTimeout(p1);
-          clearTimeout(p2);
-        }
-      }
+      const response = await ragApi.sendChat(message, sessionId, controller.signal);
 
       // Turn finished
       const isError = Boolean(response.error);
-      const traceId = response.trace_id || ('tr_' + Math.random().toString(16).substring(2, 10));
+      // No trace id means this turn cannot be matched to AgentPulse telemetry. It stays
+      // without one and is shown as unmeasured; an id made up here would link nothing.
+      const traceId = response.trace_id || undefined;
+      const canMeasure = !isError && traceId !== undefined;
 
       setTurns((prev) =>
         prev.map((t) =>
@@ -277,44 +253,19 @@ export const RagChatbotApp: React.FC<RagChatbotAppProps> = ({
                 status: isError ? 'error' : 'completed',
                 errorMessage: response.error,
                 traceId,
-                groundingStatus: isError ? 'unmeasured' : 'pending',
+                groundingStatus: canMeasure ? 'pending' : 'unmeasured',
               }
             : t
         )
       );
 
-      setSelectedTraceId(traceId);
+      if (traceId) setSelectedTraceId(traceId);
 
-      // Increment spans count for completed agents
-      const executedAgents = response.agents ?? [];
-      const hasRetriever = executedAgents.some((a) => a.agent === 'retriever');
-      const hasVerifier = executedAgents.some((a) => a.agent === 'verifier');
-      const hasAnswerer = executedAgents.some((a) => a.agent === 'answerer');
-
-      setAgentSpansCount((prev) => {
-        const nextAnswerer = prev.answerer + (hasAnswerer ? 1 : 0);
-        const nextVerifier = prev.verifier + (hasVerifier ? 1 : 0);
-        const nextRetriever = prev.retriever + (hasRetriever ? 1 : 0);
-
-        // If window fills (>= 32), calculate sustained drift
-        if (nextAnswerer >= 32) {
-          setAgentDriftValues((dv) => ({
-            ...dv,
-            answerer: 0.082,
-            verifier: 0.045,
-            retriever: 0.024,
-          }));
-        }
-
-        return {
-          answerer: nextAnswerer,
-          verifier: nextVerifier,
-          retriever: nextRetriever,
-        };
-      });
+      // Span totals and drift are AgentPulse's to report: read them back.
+      checkHealth();
 
       // Start async evaluation polling
-      if (!isError && traceId) {
+      if (canMeasure) {
         pollTraceEvaluation(traceId, turnId);
       }
     } catch (err: any) {
@@ -338,7 +289,7 @@ export const RagChatbotApp: React.FC<RagChatbotAppProps> = ({
               ? {
                   ...t,
                   status: 'error',
-                  errorMessage: err?.message || 'Failed to reach RAG service on :8100',
+                  errorMessage: err?.message || `Failed to reach the RAG service at ${ragApi.getBaseUrl()}`,
                   groundingStatus: 'unmeasured',
                 }
               : t
@@ -347,7 +298,6 @@ export const RagChatbotApp: React.FC<RagChatbotAppProps> = ({
       }
     } finally {
       setIsInFlight(false);
-      setActiveStage(undefined);
       if (timerIntervalRef.current) {
         clearInterval(timerIntervalRef.current);
         timerIntervalRef.current = null;
@@ -443,10 +393,10 @@ export const RagChatbotApp: React.FC<RagChatbotAppProps> = ({
           <button
             onClick={() => setIsCorpusOpen(true)}
             className={`px-2.5 py-1 rounded-lg ${theme.cardBg} border ${theme.cardBorder} hover:${theme.cardActiveBorder} text-xs ${theme.textColor} transition-colors flex items-center gap-1.5`}
-            title="View indexed SQLite WAL corpus documents"
+            title="View the documents the RAG service can retrieve from"
           >
             <BookOpen className={`w-3.5 h-3.5 ${theme.accentText}`} />
-            <span className="hidden sm:inline">Corpus ({corpusDocs.length})</span>
+            <span className="hidden sm:inline">Corpus ({corpusDocs ? corpusDocs.length : '—'})</span>
             <span className="sm:hidden">Docs</span>
           </button>
 
@@ -495,15 +445,11 @@ export const RagChatbotApp: React.FC<RagChatbotAppProps> = ({
             onSendMessage={handleSendMessage}
             onCancelInFlight={handleCancelInFlight}
             isInFlight={isInFlight}
-            activeStage={activeStage}
             inFlightElapsedSeconds={inFlightElapsedSeconds}
             selectedTraceId={selectedTraceId}
             onSelectTrace={(tId) => setSelectedTraceId(tId)}
             sessionId={sessionId}
             onResetSession={handleResetSession}
-            isSimulatorMode={isSimulatorMode}
-            onToggleSimulator={() => setIsSimulatorMode((prev) => !prev)}
-            onSimulateFailure={() => handleSendMessage('how does SQLite WAL improve concurrency?', true)}
             palette={palette}
             isCalmMode={isCalmMode}
             chalkSurface={chalkSurface}
@@ -520,7 +466,7 @@ export const RagChatbotApp: React.FC<RagChatbotAppProps> = ({
             selectedTraceId={selectedTraceId}
             onSelectTrace={(tId) => setSelectedTraceId(tId)}
             agentSpansCount={agentSpansCount}
-            agentDriftValues={agentDriftValues}
+            agentDrift={agentDrift}
             apiAgents={apiAgents}
             palette={palette}
             isCalmMode={isCalmMode}
@@ -533,7 +479,7 @@ export const RagChatbotApp: React.FC<RagChatbotAppProps> = ({
       <CorpusModal
         isOpen={isCorpusOpen}
         onClose={() => setIsCorpusOpen(false)}
-        documents={corpusDocs}
+        documents={corpusDocs ?? []}
         palette={palette}
         isCalmMode={isCalmMode}
         chalkSurface={chalkSurface}
