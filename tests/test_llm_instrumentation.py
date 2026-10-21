@@ -358,6 +358,22 @@ class TestTraceShape:
 
         assert transport.spans[0].trace_id == "a" * 32
 
+    def test_independent_calls_outside_any_trace_are_separate_traces(self):
+        """A call with no active trace starts one; it must not stay current for the next call."""
+        from agentpulse.context import _current_context
+        token = _current_context.set(None)
+        try:
+            pulse = _pulse()
+            client, _ = _openai_client()
+            transport = _wire(client, pulse)
+
+            for _ in range(3):
+                client.chat.completions.create(model="gpt-4o", messages=[])
+
+            assert len({s.trace_id for s in transport.spans}) == 3
+        finally:
+            _current_context.reset(token)
+
     def test_llm_span_nests_under_a_monitored_function(self):
         """The waterfall is a tree only if nested calls know their parent.
 

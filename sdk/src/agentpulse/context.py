@@ -108,6 +108,12 @@ def ensure_context(
     1. Extract from LangGraph state dict (explicit propagation)
     2. Get from contextvars (implicit propagation)
     3. Create new context (root of a new trace)
+
+    This only looks a context up; it never makes one current. A caller that wants code
+    running inside its span to join the trace pushes ctx.child(span_id) with
+    set_current_context() and puts the old value back with reset_current_context() when
+    the span ends. Making the context current here instead would leave it behind for the
+    rest of the thread or task, and every later, unrelated run would join the same trace.
     """
     # Step 1: the previous node's @monitor wrapper stores the trace id (and the span id to use
     # as parent) in the state dict under two special keys. If a trace id is there, continue
@@ -117,27 +123,19 @@ def ensure_context(
         trace_id = state.get("__agentpulse_trace_id")
         parent_id = state.get("__agentpulse_parent_span_id")
         if trace_id:
-            ctx = TraceContext(
+            return TraceContext(
                 trace_id=trace_id,
                 parent_span_id=parent_id,
                 pipeline_id=pipeline_id,
             )
-            # Also make it the current context, so code called inside this node (for example a
-            # wrapped LLM client) joins the same trace. The token is ignored, so nothing here
-            # undoes this.
-            set_current_context(ctx)
-            return ctx
 
-    # Step 2: no ids in the state, so reuse the context already active in this task, if any.
-    # On this path the pipeline_id argument is ignored.
+    # Step 2: no ids in the state, so reuse the context active in this task, if any (one that
+    # an enclosing span pushed). On this path the pipeline_id argument is ignored.
     # Try contextvar-based propagation
     existing = get_current_context()
     if existing:
         return existing
 
-    # Step 3: nothing found, so this is the first span of a new trace. Start the trace and
-    # make it current, so later calls in the same task join it.
+    # Step 3: nothing found, so this is the first span of a new trace.
     # Create new root context
-    ctx = TraceContext(pipeline_id=pipeline_id)
-    set_current_context(ctx)
-    return ctx
+    return TraceContext(pipeline_id=pipeline_id)

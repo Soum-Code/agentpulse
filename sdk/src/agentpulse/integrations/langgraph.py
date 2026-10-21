@@ -28,13 +28,30 @@ from typing import Any, Callable, Optional
 
 # AgentPulse (client.py) owns the transport that finished spans are queued into.
 from agentpulse.client import AgentPulse
-from agentpulse.context import TraceContext, ensure_context
+from agentpulse.context import (
+    TraceContext,
+    ensure_context,
+    reset_current_context,
+    set_current_context,
+)
 from agentpulse.integrations.base import BaseIntegration
 from agentpulse.schemas.enums import EventType, SpanKind, SpanStatus
 from agentpulse.schemas.events import SpanPayload
 from agentpulse.utils import extract_summary, hash_content, safe_serialize
 
 logger = logging.getLogger("agentpulse.integrations.langgraph")
+
+
+# Puts back the trace context that was current before start_agent()/start_tool() made its span
+# the parent. Reset only works in the thread or task that made the change; if end_* is called
+# from another one, the value there was never changed, so there is nothing to undo.
+def _restore_context(span_meta: dict) -> None:
+    token = span_meta.get("context_token")
+    if token is not None:
+        try:
+            reset_current_context(token)
+        except ValueError:
+            pass
 
 
 # One adapter works with one AgentPulse object. While a span is open, its details wait in
@@ -46,9 +63,11 @@ logger = logging.getLogger("agentpulse.integrations.langgraph")
 #   and are never redacted. The input is not cleaned of keys such as password, and
 #   error_message is not redacted either.
 # - It ignores the enabled, sampling_rate and fail_open settings.
-# - It does not write the trace keys into the node's result, and it does not make the
-#   current span the parent of spans created inside the node. A parent comes only from
-#   the parent_span_id argument, or from a parent that the context already holds.
+# - It does not write the trace keys into the node's result. From start_agent()/start_tool()
+#   until the matching end_*, the span is the current parent, so spans created inside the node
+#   (a tool call, a wrapped LLM client) join its trace; afterwards the previous context is
+#   put back. The span's own parent comes from the parent_span_id argument, or from the
+#   trace keys in the input state, or from a parent that the context already holds.
 class LangGraphAdapter(BaseIntegration):
     """LangGraph-specific observability adapter."""
 
@@ -57,6 +76,9 @@ class LangGraphAdapter(BaseIntegration):
     def __init__(self, pulse: AgentPulse) -> None:
         self.pulse = pulse
         self._active_spans: dict[str, dict] = {}
+        # The adapter queues spans straight into the transport, so start it here if nobody has
+        # (a script with no event loop would otherwise never send them).
+        pulse._ensure_transport()
 
     # Opens a span for one agent step. In: the agent id, an optional role and pipeline id,
     # the state the node received, and an optional parent span id. Out: the new span id.
@@ -78,7 +100,8 @@ class LangGraphAdapter(BaseIntegration):
         # Step 3: remember the start details until end_agent() is called. The parent is the
         # parent_span_id argument if given, else the parent held by the context. The role
         # falls back to the agent id. start_time is a stopwatch reading (not a date) that is
-        # only used later to work out the latency.
+        # only used later to work out the latency. context_token is what end_agent() needs
+        # to put the previous context back (see Step 4).
         self._active_spans[span_id] = {
             "trace_id": ctx.trace_id,
             "span_id": span_id,
@@ -90,10 +113,14 @@ class LangGraphAdapter(BaseIntegration):
             # First 200 characters of the state as JSON text. Not redacted, and keys such as
             # password are not removed; the capture_* switches are not checked.
             "input_summary": extract_summary(safe_serialize(input_state)),
-            # Fingerprint of the state text. If input_state is None, safe_serialize returns None
-            # and hash_content(None) raises AttributeError, so always pass a state.
-            "input_hash": hash_content(safe_serialize(input_state)),
+            # Fingerprint of the state text. None when there is no state (safe_serialize returns
+            # None for input_state=None, the default, and there is nothing to hash).
+            "input_hash": hash_content(text) if (text := safe_serialize(input_state)) else None,
         }
+        # Step 4: make this span the current parent until end_agent(), so a tool call or an
+        # LLM call made inside the node joins this trace under this span. ensure_context()
+        # does not do that by itself: without this, each of them would start a trace of its own.
+        self._active_spans[span_id]["context_token"] = set_current_context(ctx.child(span_id))
         return span_id
 
     # Closes the span that start_agent() opened: works out the latency, summarises the
@@ -110,6 +137,7 @@ class LangGraphAdapter(BaseIntegration):
         span_meta = self._active_spans.pop(span_id, None)
         if not span_meta:
             return
+        _restore_context(span_meta)
 
         # Step 2: latency in milliseconds = (stopwatch now - stopwatch at start) * 1000.
         latency_ms = (time.perf_counter() - span_meta["start_time"]) * 1000
@@ -176,6 +204,9 @@ class LangGraphAdapter(BaseIntegration):
             "tool_args": safe_serialize(tool_args),
             "start_time": time.perf_counter(),
         }
+        # Step 4: as in start_agent, anything the tool itself instruments joins this trace
+        # until end_tool().
+        self._active_spans[span_id]["context_token"] = set_current_context(ctx.child(span_id))
         return span_id
 
     # Closes the span that start_tool() opened, with the tool's result (or its error).
@@ -191,6 +222,7 @@ class LangGraphAdapter(BaseIntegration):
         span_meta = self._active_spans.pop(span_id, None)
         if not span_meta:
             return
+        _restore_context(span_meta)
 
         # Step 2: latency in milliseconds, and the result as JSON text.
         latency_ms = (time.perf_counter() - span_meta["start_time"]) * 1000
@@ -236,10 +268,15 @@ class LangGraphAdapter(BaseIntegration):
         error: Exception,
         context: Optional[dict] = None,
     ) -> None:
-        # An unknown or already-closed span id is ignored. This calls end_agent(), so it is
-        # meant for agent spans: the saved details of a tool span have no "role" key, which
-        # end_agent() reads, so it would fail with KeyError.
-        if span_id in self._active_spans:
+        # An unknown or already-closed span id is ignored. Only a tool span has a "tool_name"
+        # in its saved details: that one is closed as a failed tool call, anything else as a
+        # failed agent step.
+        span_meta = self._active_spans.get(span_id)
+        if span_meta is None:
+            return
+        if "tool_name" in span_meta:
+            self.end_tool(span_id, status="error", error=error)
+        else:
             self.end_agent(span_id, status="error", error=error)
 
     # Returns a decorator for ONE node function. Each call of the wrapped node opens a span,
@@ -273,6 +310,7 @@ class LangGraphAdapter(BaseIntegration):
                     except Exception as exc:
                         self.end_agent(span_id, status="error", error=exc)
                         raise
+                async_wrapper.__agentpulse_wrapped__ = True
                 return async_wrapper
             else:
                 # The normal-function version: the same steps, without await.
@@ -286,13 +324,15 @@ class LangGraphAdapter(BaseIntegration):
                     except Exception as exc:
                         self.end_agent(span_id, status="error", error=exc)
                         raise
+                sync_wrapper.__agentpulse_wrapped__ = True
                 return sync_wrapper
         return decorator
 
-    # Wraps the plain-function nodes of a graph builder (meant for a LangGraph StateGraph
-    # before .compile(), but see the caution at Step 3 below).
+    # Wraps the nodes of a graph builder (a LangGraph StateGraph before .compile()).
     # In: the builder, an optional dict {node name: role}, and an optional pipeline id.
     # Out: the same builder, changed in place. The node name becomes the agent id.
+    # It logs how many nodes it wrapped, and warns when a node had to be left alone or when
+    # none could be wrapped, so that "no spans" is never a silent result.
     def instrument_graph(
         self,
         graph_builder: Any,
@@ -309,19 +349,51 @@ class LangGraphAdapter(BaseIntegration):
 
         # Step 2: go through the nodes. list(...) makes a copy of the names, so the loop can
         # safely change the dict while it runs.
-        for node_name in list(graph_builder.nodes.keys()):
+        wrapped = 0
+        names = list(graph_builder.nodes.keys())
+        for node_name in names:
             node = graph_builder.nodes[node_name]
             # The role comes from agent_roles; a node with no entry uses its own name.
             role = roles.get(node_name, node_name)
             decorator = self.instrument_node(node_name, role=role, pipeline_id=pipeline_id)
 
-            # Step 3: wrap only plain functions: callable, and with no `.invoke` method (a node
-            # that has one, such as a LangChain runnable, is left as it is). Caution: in langgraph
-            # 1.2.11 (the version in this repo's .venv) a real StateGraph stores each node as a
-            # StateNodeSpec object, which is not callable. So there nothing is wrapped and no
-            # warning is logged. Other langgraph versions were not checked.
-            if callable(node) and not hasattr(node, "invoke"):
+            runnable = getattr(node, "runnable", node)
+            if hasattr(runnable, "func") and hasattr(runnable, "afunc"):
+                # Step 3a: a real langgraph node. In langgraph 1.x, add_node stores a
+                # StateNodeSpec, which is not callable. Its .runnable (a RunnableCallable) holds
+                # the node's function as .func (run by invoke) and .afunc (run by ainvoke; for a
+                # sync node langgraph fills it with a shim that runs .func in a thread). Both
+                # are replaced by wrapped versions, in place, so the graph keeps its retry
+                # policy and the like. Only one of the two runs for a given call, so a node
+                # still records one span per run. A node that already carries the marker set
+                # by instrument_node (an earlier call, or wrapped by hand) is left alone.
+                if not any(
+                    getattr(fn, "__agentpulse_wrapped__", False)
+                    for fn in (runnable.func, runnable.afunc)
+                ):
+                    for attr, is_async in (("func", False), ("afunc", True)):
+                        fn = getattr(runnable, attr)
+                        if fn is not None and inspect.iscoroutinefunction(fn) == is_async:
+                            setattr(runnable, attr, decorator(fn))
+                wrapped += 1
+            elif callable(node) and not hasattr(node, "invoke"):
+                # Step 3b: a plain function (what older langgraph versions and simple graph
+                # builders keep). A callable with an `.invoke` method, such as a LangChain
+                # runnable, is left as it is.
                 graph_builder.nodes[node_name] = decorator(node)
+                wrapped += 1
+            else:
+                logger.warning(
+                    "AgentPulse could not instrument node %r (%s)", node_name, type(node).__name__,
+                )
+
+        # Step 4: say what happened, so a graph that records nothing is not a mystery.
+        if names and not wrapped:
+            logger.warning(
+                "AgentPulse instrumented 0 of %d nodes: the graph will record no spans", len(names),
+            )
+        else:
+            logger.info("AgentPulse instrumented %d of %d graph nodes", wrapped, len(names))
         return graph_builder
 
 

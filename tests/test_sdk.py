@@ -11,9 +11,11 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "sdk", "src"))
 import pytest
 from agentpulse.config import AgentPulseConfig, CapturePolicy
 from agentpulse.context import TraceContext, ensure_context, set_current_context
+from agentpulse.decorators import create_monitor_decorator
 from agentpulse.privacy import PrivacyFilter
 from agentpulse.schemas.enums import EventType, SpanKind, SpanStatus
 from agentpulse.schemas.events import SpanPayload, IngestRequest
+from agentpulse.transport import AsyncTransport
 from agentpulse.utils import (
     generate_trace_id,
     generate_span_id,
@@ -147,6 +149,40 @@ class TestPrivacy:
         result = pf.redact_text("Using api_key=sk-12345abc")
         assert "sk-12345abc" not in result
 
+    def test_secrets_in_json_text_are_redacted(self):
+        """@monitor turns state into JSON before redacting, so the key is followed by a quote."""
+        pf = PrivacyFilter(CapturePolicy())
+        text = (
+            '{"openai_api_key": "sk-proj-AbCd1234EfGh5678", "password": "hunter2", '
+            '"access_token": "tok123", "query": "weather in Pune"}'
+        )
+        result = pf.redact_text(text)
+        for secret in ("sk-proj-AbCd1234EfGh5678", "hunter2", "tok123"):
+            assert secret not in result
+        assert "weather in Pune" in result  # fields that are not secrets stay
+
+    def test_quoted_secret_with_spaces_is_redacted_whole(self):
+        pf = PrivacyFilter(CapturePolicy())
+        result = pf.redact_text('{"password": "correct horse battery", "step": 2}')
+        assert "horse" not in result
+        assert '"step": 2' in result
+
+    def test_bare_sk_key_is_redacted(self):
+        pf = PrivacyFilter(CapturePolicy())
+        result = pf.redact_text("use sk-proj-AbCd1234EfGh5678 now")
+        assert "sk-proj-AbCd1234EfGh5678" not in result
+        assert result.startswith("use ") and result.endswith(" now")
+
+    def test_bearer_token_is_redacted(self):
+        pf = PrivacyFilter(CapturePolicy())
+        result = pf.redact_text("Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.e30.c2lnbmF0dXJl")
+        assert "eyJhbGciOiJIUzI1NiJ9" not in result
+
+    def test_ordinary_prose_is_left_alone(self):
+        pf = PrivacyFilter(CapturePolicy())
+        text = "The bearer of bad news said the password was wrong and max_tokens was 500."
+        assert pf.redact_text(text) == text
+
     def test_truncation(self):
         policy = CapturePolicy(max_field_length=50)
         pf = PrivacyFilter(policy)
@@ -240,3 +276,175 @@ class TestSchemas:
         req = IngestRequest(spans=[span])
         assert len(req.spans) == 1
         assert req.sdk_version == "0.1.0"
+
+
+# ─── @monitor Tests ───────────────────────────────────────────────────
+
+def _monitor(**config_kwargs):
+    """A decorator wired to a transport that is never started, so spans stay in its buffer."""
+    config = AgentPulseConfig(**config_kwargs)
+    transport = AsyncTransport(config)
+    decorator = create_monitor_decorator(
+        transport, config, PrivacyFilter(config.capture_policy), agent_id="node",
+    )
+    return decorator, transport
+
+
+class TestMonitorErrorPath:
+    """A failing user function is the user's error, not an SDK error: run it once, record it."""
+
+    def test_raising_sync_node_runs_once_and_records_an_error_span(self):
+        decorator, transport = _monitor()
+        calls = []
+
+        @decorator
+        def node(state):
+            calls.append(1)
+            raise ValueError("llm timeout")
+
+        with pytest.raises(ValueError, match="llm timeout"):
+            node({"q": "x"})
+
+        assert len(calls) == 1
+        assert len(transport._buffer) == 1
+        span = transport._buffer[0]
+        assert span.status == SpanStatus.ERROR
+        assert "ValueError: llm timeout" in span.error_message
+        assert span.latency_ms is not None
+
+    def test_raising_async_node_runs_once_and_records_an_error_span(self):
+        decorator, transport = _monitor()
+        calls = []
+
+        @decorator
+        async def node(state):
+            calls.append(1)
+            raise ValueError("llm timeout")
+
+        with pytest.raises(ValueError, match="llm timeout"):
+            asyncio.run(node({"q": "x"}))
+
+        assert len(calls) == 1
+        assert [s.status for s in transport._buffer] == [SpanStatus.ERROR]
+
+    def test_sdk_failure_after_a_good_call_does_not_run_the_node_again(self, monkeypatch):
+        import agentpulse.decorators as decorators
+
+        def broken(*args, **kwargs):
+            raise RuntimeError("sdk bug")
+
+        monkeypatch.setattr(decorators, "_finalize_span", broken)
+        decorator, transport = _monitor()
+        calls = []
+
+        @decorator
+        def node(state):
+            calls.append(1)
+            return {"ok": True}
+
+        assert node({}) == {"ok": True}
+        assert len(calls) == 1
+
+    def test_sdk_failure_is_raised_when_fail_open_is_off(self, monkeypatch):
+        import agentpulse.decorators as decorators
+
+        def broken(*args, **kwargs):
+            raise RuntimeError("sdk bug")
+
+        monkeypatch.setattr(decorators, "_finalize_span", broken)
+        decorator, _ = _monitor(fail_open=False)
+        calls = []
+
+        @decorator
+        def node(state):
+            calls.append(1)
+            return {}
+
+        with pytest.raises(RuntimeError, match="sdk bug"):
+            node({})
+        assert len(calls) == 1
+
+
+@pytest.fixture
+def fresh_context():
+    """No current trace context before the test, and none left behind after it."""
+    from agentpulse.context import _current_context
+    token = _current_context.set(None)
+    yield
+    _current_context.reset(token)
+
+
+class TestMonitorResultFields:
+    def test_a_model_or_token_count_of_the_wrong_type_is_not_copied_to_the_span(self):
+        """A node can return anything under "model"; the span must stay serialisable."""
+        decorator, transport = _monitor()
+
+        @decorator
+        def node(state):
+            return {"model": object(), "__token_usage": {"input": "many", "output": 7}}
+
+        node({})
+        span = transport._buffer[0]
+        assert span.model is None
+        assert span.tokens_in is None
+        assert span.tokens_out == 7
+        span.model_dump(mode="json")  # would raise if the object had been kept
+
+
+class TestImplicitContextIsNotSticky:
+    """ensure_context() only looks the context up; it must not keep a trace alive for the thread."""
+
+    def test_separate_calls_get_separate_traces(self, fresh_context):
+        first = ensure_context()
+        second = ensure_context()
+        assert first.trace_id != second.trace_id
+
+    def test_nothing_is_left_current_after_reading_ids_from_state(self, fresh_context):
+        from agentpulse.context import get_current_context
+        ensure_context({"__agentpulse_trace_id": "t" * 32, "__agentpulse_parent_span_id": "p" * 16})
+        assert get_current_context() is None
+
+    def test_independent_top_level_monitor_calls_are_separate_traces(self, fresh_context):
+        decorator, transport = _monitor()
+
+        @decorator
+        def node(state):
+            return {}
+
+        node({})
+        node({})
+        assert len({s.trace_id for s in transport._buffer}) == 2
+
+    def test_nested_monitored_call_is_a_child_in_the_same_trace(self, fresh_context):
+        from agentpulse.context import get_current_context
+        decorator, transport = _monitor()
+
+        @decorator
+        def inner(state):
+            return {}
+
+        @decorator
+        def outer(state):
+            inner({})
+            return {}
+
+        outer({})
+        inner_span, outer_span = transport._buffer  # the inner span is queued first
+        assert inner_span.trace_id == outer_span.trace_id
+        assert inner_span.parent_span_id == outer_span.span_id
+        assert outer_span.parent_span_id is None
+        assert get_current_context() is None  # nothing left behind
+
+    def test_async_runs_in_one_task_are_separate_traces(self, fresh_context):
+        decorator, transport = _monitor()
+
+        @decorator
+        async def node(state):
+            return {}
+
+        async def main():
+            for _ in range(3):
+                await node({})
+
+        asyncio.run(main())
+        assert len({s.trace_id for s in transport._buffer}) == 3
