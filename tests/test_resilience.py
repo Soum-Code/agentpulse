@@ -27,6 +27,7 @@ class _IngestHandler(BaseHTTPRequestHandler):
     def do_POST(self):
         body = self.rfile.read(int(self.headers["Content-Length"]))
         server = self.server
+        time.sleep(server.delay)
         status = server.statuses.pop(0) if server.statuses else 202
         if status in (200, 202):
             server.batches.append(json.loads(body))
@@ -43,6 +44,7 @@ class _FakeBackend(ThreadingHTTPServer):
         super().__init__(("127.0.0.1", 0), _IngestHandler)
         self.batches = []   # request bodies that were answered 200/202
         self.statuses = []  # scripted answers, used up front to back
+        self.delay = 0.0    # seconds to wait before answering
         self.url = f"http://127.0.0.1:{self.server_address[1]}"
         threading.Thread(target=self.serve_forever, daemon=True).start()
 
@@ -269,6 +271,62 @@ class TestClientWithoutARunningLoop:
 
         assert pulse._bg_thread is None
         assert len(backend.span_ids()) == 1
+
+
+class TestTransportStop:
+    def _transport(self, backend, tmp_path, **overrides):
+        config = AgentPulseConfig(
+            endpoint=backend.url, flush_interval_ms=20, max_retries=1,
+            fallback_file=str(tmp_path / "fallback.jsonl"), **overrides,
+        )
+        return AsyncTransport(config)
+
+    def test_stop_lets_the_send_in_progress_finish(self, backend, tmp_path):
+        """The batch the flush loop has already taken is not in the buffer: cancelling lost it."""
+        backend.delay = 0.4
+        transport = self._transport(backend, tmp_path)
+
+        async def main():
+            await transport.start()
+            transport.enqueue(_span(1))
+            await asyncio.sleep(0.15)   # the loop has taken the span and is waiting for the reply
+            assert transport.stats["buffered"] == 0
+            await transport.stop()
+
+        asyncio.run(main())
+
+        assert transport.stats["total_sent"] == 1
+        assert transport.stats["total_fallback"] == 0
+
+    def test_stop_does_not_wait_out_a_long_flush_interval(self, backend, tmp_path):
+        transport = self._transport(backend, tmp_path)
+        transport._config.flush_interval_ms = 60_000
+
+        async def main():
+            await transport.start()
+            started = time.monotonic()
+            await transport.stop()
+            return time.monotonic() - started
+
+        assert asyncio.run(main()) < 5
+
+    def test_a_send_that_is_cancelled_goes_to_the_fallback_file(self, backend, tmp_path):
+        backend.delay = 2.0
+        transport = self._transport(backend, tmp_path)
+
+        async def main():
+            await transport.start()
+            transport.enqueue(_span(7))
+            flushing = asyncio.create_task(transport._flush())
+            await asyncio.sleep(0.2)
+            flushing.cancel()
+            with pytest.raises(asyncio.CancelledError):
+                await flushing
+            await transport.stop()
+
+        asyncio.run(main())
+
+        assert "span000000000007" in (tmp_path / "fallback.jsonl").read_text()
 
 
 class TestTransportResilience:

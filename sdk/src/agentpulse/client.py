@@ -373,10 +373,12 @@ class AgentPulse:
         atexit.unregister(self._stop_in_thread)
         try:
             # The final send retries a few times; do not hold the program up for long if the
-            # backend is down.
-            asyncio.run_coroutine_threadsafe(self._stop_transport(), loop).result(timeout=10)
+            # backend is down. Running out of time cancels the send, which saves its spans to
+            # the fallback file.
+            stopping = asyncio.wait_for(self._stop_transport(), timeout=10)
+            asyncio.run_coroutine_threadsafe(stopping, loop).result(timeout=15)
         except Exception as exc:
-            logger.warning("AgentPulse transport did not stop cleanly: %s", exc)
+            logger.warning("AgentPulse transport did not stop cleanly: %r", exc)
         loop.call_soon_threadsafe(loop.stop)
         thread.join(timeout=5)
         self._transport.resolve_inline = False
