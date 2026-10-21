@@ -34,7 +34,9 @@ async def test_end_to_end_langgraph_pipeline_to_database():
     client = TestClient(app)
 
     # 1. Initialize SDK and Adapter
-    pulse = AgentPulse(service_name="e2e_research_service", endpoint="http://testserver")
+    # Disabled: the spans below go to /v1/ingest through the TestClient, not through the SDK's
+    # sender, so no sender is needed (an enabled client would start one in this loop).
+    pulse = AgentPulse(service_name="e2e_research_service", endpoint="http://testserver", enabled=False)
     adapter = LangGraphAdapter(pulse)
 
     trace_id = f"e2e_trace_{uuid.uuid4().hex}"

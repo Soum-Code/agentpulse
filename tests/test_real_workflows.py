@@ -18,7 +18,7 @@ def test_local_vector_retriever():
 
 
 def test_research_assistant_workflow():
-    pulse = AgentPulse(service_name="test_research")
+    pulse = AgentPulse(service_name="test_research", enabled=False)  # spans stay queued, none are sent
     adapter = get_llm_adapter("qwen-0.5b")
     workflow = create_research_workflow(pulse, adapter, strategy=DirectStrategy())
 
@@ -38,10 +38,14 @@ def test_research_assistant_workflow():
     assert final_state["final_report"] is not None
     assert len(final_state["retrieved_docs"]) > 0
     assert len(final_state["tool_records"]) > 0
+    # instrument_graph must wrap the nodes of a real StateGraph: one span per node run.
+    assert [sp.agent_id for sp in pulse._transport._buffer] == [
+        "planner", "retriever", "verifier", "analyst", "writer",
+    ]
 
 
 def test_tech_support_workflow():
-    pulse = AgentPulse(service_name="test_support")
+    pulse = AgentPulse(service_name="test_support", enabled=False)  # spans stay queued, none are sent
     adapter = get_llm_adapter("qwen-0.5b")
     workflow = create_tech_support_workflow(pulse, adapter, strategy=DirectStrategy())
 
@@ -61,10 +65,13 @@ def test_tech_support_workflow():
 
     assert final_state["final_response"] is not None
     assert len(final_state["kb_articles"]) > 0
+    assert [sp.agent_id for sp in pulse._transport._buffer] == [
+        "router", "kb_retriever", "diagnostic", "verifier", "response_agent",
+    ]
 
 
 def test_data_analysis_workflow():
-    pulse = AgentPulse(service_name="test_data")
+    pulse = AgentPulse(service_name="test_data", enabled=False)  # spans stay queued, none are sent
     adapter = get_llm_adapter("qwen-0.5b")
     workflow = create_data_analysis_workflow(pulse, adapter, strategy=DirectStrategy())
 
@@ -85,3 +92,6 @@ def test_data_analysis_workflow():
     assert len(final_state["raw_data"]) > 0
     assert "mean_latency_ms" in final_state["computed_metrics"]
     assert "p95_latency_ms" in final_state["computed_metrics"]
+    assert [sp.agent_id for sp in pulse._transport._buffer] == [
+        "planner", "data_query", "python_analyzer", "verifier", "reporter",
+    ]
