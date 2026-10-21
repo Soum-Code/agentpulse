@@ -273,6 +273,7 @@ class LangGraphAdapter(BaseIntegration):
                     except Exception as exc:
                         self.end_agent(span_id, status="error", error=exc)
                         raise
+                async_wrapper.__agentpulse_wrapped__ = True
                 return async_wrapper
             else:
                 # The normal-function version: the same steps, without await.
@@ -286,13 +287,15 @@ class LangGraphAdapter(BaseIntegration):
                     except Exception as exc:
                         self.end_agent(span_id, status="error", error=exc)
                         raise
+                sync_wrapper.__agentpulse_wrapped__ = True
                 return sync_wrapper
         return decorator
 
-    # Wraps the plain-function nodes of a graph builder (meant for a LangGraph StateGraph
-    # before .compile(), but see the caution at Step 3 below).
+    # Wraps the nodes of a graph builder (a LangGraph StateGraph before .compile()).
     # In: the builder, an optional dict {node name: role}, and an optional pipeline id.
     # Out: the same builder, changed in place. The node name becomes the agent id.
+    # It logs how many nodes it wrapped, and warns when a node had to be left alone or when
+    # none could be wrapped, so that "no spans" is never a silent result.
     def instrument_graph(
         self,
         graph_builder: Any,
@@ -309,19 +312,51 @@ class LangGraphAdapter(BaseIntegration):
 
         # Step 2: go through the nodes. list(...) makes a copy of the names, so the loop can
         # safely change the dict while it runs.
-        for node_name in list(graph_builder.nodes.keys()):
+        wrapped = 0
+        names = list(graph_builder.nodes.keys())
+        for node_name in names:
             node = graph_builder.nodes[node_name]
             # The role comes from agent_roles; a node with no entry uses its own name.
             role = roles.get(node_name, node_name)
             decorator = self.instrument_node(node_name, role=role, pipeline_id=pipeline_id)
 
-            # Step 3: wrap only plain functions: callable, and with no `.invoke` method (a node
-            # that has one, such as a LangChain runnable, is left as it is). Caution: in langgraph
-            # 1.2.11 (the version in this repo's .venv) a real StateGraph stores each node as a
-            # StateNodeSpec object, which is not callable. So there nothing is wrapped and no
-            # warning is logged. Other langgraph versions were not checked.
-            if callable(node) and not hasattr(node, "invoke"):
+            runnable = getattr(node, "runnable", node)
+            if hasattr(runnable, "func") and hasattr(runnable, "afunc"):
+                # Step 3a: a real langgraph node. In langgraph 1.x, add_node stores a
+                # StateNodeSpec, which is not callable. Its .runnable (a RunnableCallable) holds
+                # the node's function as .func (run by invoke) and .afunc (run by ainvoke; for a
+                # sync node langgraph fills it with a shim that runs .func in a thread). Both
+                # are replaced by wrapped versions, in place, so the graph keeps its retry
+                # policy and the like. Only one of the two runs for a given call, so a node
+                # still records one span per run. A node that already carries the marker set
+                # by instrument_node (an earlier call, or wrapped by hand) is left alone.
+                if not any(
+                    getattr(fn, "__agentpulse_wrapped__", False)
+                    for fn in (runnable.func, runnable.afunc)
+                ):
+                    for attr, is_async in (("func", False), ("afunc", True)):
+                        fn = getattr(runnable, attr)
+                        if fn is not None and inspect.iscoroutinefunction(fn) == is_async:
+                            setattr(runnable, attr, decorator(fn))
+                wrapped += 1
+            elif callable(node) and not hasattr(node, "invoke"):
+                # Step 3b: a plain function (what older langgraph versions and simple graph
+                # builders keep). A callable with an `.invoke` method, such as a LangChain
+                # runnable, is left as it is.
                 graph_builder.nodes[node_name] = decorator(node)
+                wrapped += 1
+            else:
+                logger.warning(
+                    "AgentPulse could not instrument node %r (%s)", node_name, type(node).__name__,
+                )
+
+        # Step 4: say what happened, so a graph that records nothing is not a mystery.
+        if names and not wrapped:
+            logger.warning(
+                "AgentPulse instrumented 0 of %d nodes: the graph will record no spans", len(names),
+            )
+        else:
+            logger.info("AgentPulse instrumented %d of %d graph nodes", wrapped, len(names))
         return graph_builder
 
 

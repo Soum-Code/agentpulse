@@ -1,5 +1,9 @@
 """Unit tests for LangGraph adapter and framework integrations."""
 
+import asyncio
+import logging
+from typing import TypedDict
+
 import pytest
 from agentpulse.client import AgentPulse
 from agentpulse.config import AgentPulseConfig
@@ -93,8 +97,100 @@ class TestLangGraphIntegration:
         assert res == {"step": 1}
         assert len(pulse_client._transport._buffer) == 1
 
+    def test_instrument_graph_that_wraps_nothing_says_so(self, pulse_client, caplog):
+        graph = MockStateGraph()
+        graph.add_node("opaque", object())  # neither callable nor a langgraph node
+
+        with caplog.at_level(logging.WARNING, logger="agentpulse.integrations.langgraph"):
+            LangGraphAdapter(pulse_client).instrument_graph(graph)
+
+        assert "0 of 1" in caplog.text
+
     def test_post_mvp_stubs_raise_not_implemented(self):
         with pytest.raises(NotImplementedError):
             LangChainAdapter()
         with pytest.raises(NotImplementedError):
             CrewAIAdapter()
+
+
+class _CountState(TypedDict):
+    n: int
+
+
+def _real_graph(*, sync_only):
+    """A real langgraph StateGraph: add_node stores each node as a StateNodeSpec."""
+    StateGraph = pytest.importorskip("langgraph.graph").StateGraph
+    from langgraph.graph import END
+
+    def plan(state):
+        return {"n": state["n"] + 1}
+
+    async def write(state):
+        return {"n": state["n"] + 1}
+
+    def write_sync(state):
+        return {"n": state["n"] + 1}
+
+    graph = StateGraph(_CountState)
+    graph.add_node("plan", plan)
+    graph.add_node("write", write_sync if sync_only else write)
+    graph.set_entry_point("plan")
+    graph.add_edge("plan", "write")
+    graph.add_edge("write", END)
+    return graph
+
+
+class TestInstrumentGraphOnRealLangGraph:
+    """instrument_graph used to skip every node of a real StateGraph without saying so."""
+
+    def _spans(self, pulse_client):
+        return [(s.agent_id, s.agent_role) for s in pulse_client._transport._buffer]
+
+    def test_sync_graph_records_one_span_per_node_run(self, pulse_client, caplog):
+        graph = _real_graph(sync_only=True)
+        with caplog.at_level(logging.INFO, logger="agentpulse.integrations.langgraph"):
+            LangGraphAdapter(pulse_client).instrument_graph(
+                graph, {"plan": "Planner"}
+            )
+        assert "2 of 2" in caplog.text
+        app = graph.compile()
+
+        assert app.invoke({"n": 0}) == {"n": 2}
+        assert self._spans(pulse_client) == [("plan", "Planner"), ("write", "write")]
+
+        app.invoke({"n": 0})
+        assert len(pulse_client._transport._buffer) == 4
+
+    def test_async_run_with_a_sync_and_an_async_node_records_one_span_each(self, pulse_client):
+        graph = _real_graph(sync_only=False)
+        LangGraphAdapter(pulse_client).instrument_graph(graph)
+        app = graph.compile()
+
+        assert asyncio.run(app.ainvoke({"n": 0})) == {"n": 2}
+        assert sorted(a for a, _ in self._spans(pulse_client)) == ["plan", "write"]
+
+    def test_instrumenting_twice_does_not_double_the_spans(self, pulse_client):
+        graph = _real_graph(sync_only=True)
+        adapter = LangGraphAdapter(pulse_client)
+        adapter.instrument_graph(graph)
+        adapter.instrument_graph(graph)
+
+        graph.compile().invoke({"n": 0})
+        assert len(pulse_client._transport._buffer) == 2
+
+    def test_a_failing_node_is_recorded_as_an_error_and_still_raises(self, pulse_client):
+        StateGraph = pytest.importorskip("langgraph.graph").StateGraph
+
+        def boom(state):
+            raise ValueError("bad tool reply")
+
+        graph = StateGraph(_CountState)
+        graph.add_node("boom", boom)
+        graph.set_entry_point("boom")
+        graph.set_finish_point("boom")
+        LangGraphAdapter(pulse_client).instrument_graph(graph)
+
+        with pytest.raises(ValueError, match="bad tool reply"):
+            graph.compile().invoke({"n": 0})
+        (span,) = pulse_client._transport._buffer
+        assert span.status.value == "error"
