@@ -9,12 +9,13 @@ The model is replaced by a small fake here, so these tests need no download and 
 answer in any order with any other test.
 """
 
+import logging
 import zlib
 
 import numpy as np
 
 import app.services.grounding as grounding
-from demo.workflows.retrieval import LocalVectorIndex
+from demo.workflows.retrieval import LocalVectorIndex, ensure_embedding_model
 
 QUERY = "transformer attention"
 
@@ -131,3 +132,34 @@ def test_a_stable_model_leaves_the_index_alone(monkeypatch):
     # First search: 3 documents + 1 question. Second search: only the question, no rebuild.
     assert after_first == 4
     assert len(calls) == after_first + 1
+
+
+def test_a_stand_in_index_is_not_marked_built_and_is_rebuilt_once_the_model_loads(
+    monkeypatch, caplog
+):
+    index = LocalVectorIndex(CORPUS)
+
+    monkeypatch.setattr(grounding, "get_embedding", lambda text: None)
+    with caplog.at_level(logging.WARNING, logger="agentpulse.retrieval"):
+        index.build_index()
+    assert index._is_indexed is False
+    assert "stand-in" in caplog.text
+
+    monkeypatch.setattr(grounding, "get_embedding", fake_model)
+    index.search(QUERY, top_k=1)
+    assert index._is_indexed is True
+    assert index._index_is_real is True
+
+
+def test_the_embedding_model_is_loaded_only_when_it_is_not_loaded_yet(monkeypatch):
+    loads = []
+    monkeypatch.setattr(grounding, "load_models", lambda **kwargs: loads.append(kwargs))
+
+    monkeypatch.setattr(grounding, "models_loaded", lambda: {"embedding_model": True})
+    ensure_embedding_model()
+    assert loads == []
+
+    # A second load in one process would leave torch tensors on the meta device, hence the guard.
+    monkeypatch.setattr(grounding, "models_loaded", lambda: {"embedding_model": False})
+    ensure_embedding_model()
+    assert loads == [{"use_onnx": False, "sync": True}]
