@@ -1,5 +1,7 @@
 /** Typed REST client for a single AgentPulse instance. */
 
+import type { ScenarioResult } from './scenarioResult';
+
 export interface AgentPulseConnection {
   baseUrl: string;
   apiKey?: string;
@@ -289,10 +291,13 @@ export function createApiClient(connection: AgentPulseConnection) {
         body: JSON.stringify({ acknowledged: true }),
       }),
     simulatePipeline: (scenario = 'clean', query = 'Multi-agent LLM reasoning') =>
-      fetchApi<{ accepted: number; message: string }>('/v1/simulate', {
+      fetchApi<{ accepted: number; failed: number; message: string; trace_id: string }>('/v1/simulate', {
         method: 'POST',
         body: JSON.stringify({ scenario, query }),
       }),
+    // What the worker has stored so far for a Telemetry Lab run.
+    getScenarioResult: (traceId: string) =>
+      fetchApi<ScenarioResult>(`/v1/simulate/${encodeURIComponent(traceId)}`),
     ingestSpans: (spans: unknown[]) =>
       fetchApi<{ accepted: number; failed: number; message: string; errors: string[] }>('/v1/ingest', {
         method: 'POST',
