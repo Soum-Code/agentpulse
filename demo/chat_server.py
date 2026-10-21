@@ -102,7 +102,7 @@ from demo.multi_model_pipeline import (
     ask,
 )
 # local_retriever = the ready-made search index over a small set of local documents.
-from demo.workflows.retrieval import local_retriever
+from demo.workflows.retrieval import ensure_embedding_model, local_retriever
 
 # The three agents, in the order they run for every question.
 AGENTS = ("retriever", "verifier", "answerer")
@@ -247,10 +247,12 @@ def create_app(
         )
 
     # FastAPI runs this around the life of the app: the code before "yield" runs at
-    # start-up, the code after it at shutdown. Here it starts and stops the SDK's
-    # background sender, but only if we created the client.
+    # start-up, the code after it at shutdown. Here it loads the embedding model (so the
+    # search below uses real embeddings), and starts and stops the SDK's background sender,
+    # but only if we created the client. Loading blocks, so it runs in a worker thread.
     @asynccontextmanager
     async def lifespan(_: FastAPI):
+        await asyncio.to_thread(ensure_embedding_model)
         if owns_pulse:
             await pulse.start()
         yield
