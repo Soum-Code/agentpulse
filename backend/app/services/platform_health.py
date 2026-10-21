@@ -196,6 +196,21 @@ async def retry_and_failure_stats(session: AsyncSession) -> dict[str, Any]:
     }
 
 
+# The statuses of the newest `sample` finished jobs (newest first), e.g. ["succeeded",
+# "dead_letter", ...]. Empty when no job has finished yet. derive_state uses it to tell a
+# worker that is completing jobs from one that is alive but failing every job.
+async def recent_job_outcomes(session: AsyncSession, sample: int = 50) -> list[str]:
+    rows = (
+        await session.execute(
+            select(EvaluationJob.status)
+            .where(EvaluationJob.status.in_(("succeeded", "failed", "dead_letter")))
+            .order_by(EvaluationJob.completed_at.desc())
+            .limit(sample)
+        )
+    ).scalars().all()
+    return list(rows)
+
+
 async def worker_fleet(session: AsyncSession) -> dict[str, Any]:
     """Which evaluator processes exist, and what each is running on."""
     # Step 1: load every heartbeat row (one row per worker process). Unlike readiness.py,
@@ -282,9 +297,11 @@ async def last_retention_run(session: AsyncSession) -> Optional[dict[str, Any]]:
 #   queue_depth     jobs that are queued plus jobs that are running.
 #   models_pending  True when this deployment asked the API to load models and some are not
 #                   loaded yet.
+#   recent_outcomes the statuses of the newest finished jobs (see recent_job_outcomes).
 # Output: {"state": one word, "reasons": a list of plain-English texts}.
 def derive_state(*, api_ready: bool, api_degraded: bool, workers: dict,
-                 queue_depth: int, models_pending: bool = False) -> dict[str, Any]:
+                 queue_depth: int, models_pending: bool = False,
+                 recent_outcomes: tuple[str, ...] | list[str] = ()) -> dict[str, Any]:
     """Reduce the signals to a single operator-facing verdict, with reasons.
 
     The verdict never replaces the underlying numbers; it exists so an operator
@@ -309,6 +326,15 @@ def derive_state(*, api_ready: bool, api_degraded: bool, workers: dict,
         reasons.append("API inference backend is degraded")
     if workers["alive"] == 0:
         reasons.append("no evaluation worker is alive; nothing is being evaluated")
+    # An alive worker that fails every job keeps a fresh heartbeat and a short queue, so
+    # nothing else here would notice. Finished jobs are only succeeded, failed or
+    # dead_letter, so "no success among them" means every one of them failed.
+    all_jobs_failing = bool(recent_outcomes) and "succeeded" not in recent_outcomes
+    if all_jobs_failing:
+        reasons.append(
+            f"none succeeded among the last {len(recent_outcomes)} finished evaluation "
+            f"jobs; every one failed or was dead-lettered"
+        )
     if workers["degraded_backends"]:
         reasons.append(
             f"{workers['degraded_backends']} worker(s) running a degraded "
@@ -324,6 +350,8 @@ def derive_state(*, api_ready: bool, api_degraded: bool, workers: dict,
         state = "failing"          # cannot serve at all
     elif workers["alive"] == 0:
         state = "failing"          # accepting work that will never be evaluated
+    elif all_jobs_failing:
+        state = "failing"          # a worker that scores nothing
     elif models_pending:
         state = "starting"
     elif queue_depth > BACKLOG_THRESHOLD:
@@ -440,6 +468,7 @@ async def collect_platform_health(session: AsyncSession) -> dict[str, Any]:
         # Only a meaningful state when this deployment asked the API to load
         # models; otherwise their absence is the intended configuration.
         models_pending=settings.api_load_models and not all(loaded.values()),
+        recent_outcomes=await recent_job_outcomes(session),
     )
 
     # Step 5: build the report. **verdict puts "state" and "reasons" at the top level. The

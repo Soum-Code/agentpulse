@@ -166,6 +166,23 @@ def fast_forward_availability(db: Path) -> int:
     return pending
 
 
+def abandon_claim(db: Path) -> None:
+    """Leave the row as claim_next does when the worker then dies mid-job.
+
+    Running, one more attempt, and a lease that has already run out. Writing it
+    directly (rather than killing a real worker three times) keeps the test
+    fast; test_worker_killed_mid_evaluation_recovers_exactly_once covers the
+    real kill.
+    """
+    conn = _connect(db)
+    conn.execute(
+        "UPDATE evaluation_jobs SET status='running', worker_id='dead-worker', "
+        "attempts=attempts+1, lease_expires_at=datetime('now', '-1 minute')"
+    )
+    conn.commit()
+    conn.close()
+
+
 def wait_for(predicate, timeout: float = 30, interval: float = 0.1) -> bool:
     deadline = time.time() + timeout
     while time.time() < deadline:
@@ -321,6 +338,29 @@ class TestFailureHandling:
 
         assert "stub evaluator failure" in (jobs(db)[0]["last_error"] or "")
         assert count(db, "evaluations") == 0
+
+    def test_a_job_that_kills_every_worker_is_dead_lettered(self, tmp_path):
+        """A worker that dies never calls mark_failed, so recovery must count too.
+
+        Out of memory or a native crash on one span would otherwise restart the
+        worker for ever: claim, die, lease expires, requeue, claim again.
+        """
+        db = make_db(tmp_path)
+        harness("enqueue", str(db), "span-poison-1")
+
+        for attempt in (1, 2):
+            abandon_claim(db)
+            assert "recovered=1" in harness("recover", str(db)).stdout
+            assert jobs(db)[0]["status"] == "queued", f"attempt {attempt} should be retried"
+
+        abandon_claim(db)
+        assert "recovered=0" in harness("recover", str(db)).stdout
+        job = jobs(db)[0]
+        assert job["status"] == "dead_letter", job
+        assert job["attempts"] == 3
+        assert job["completed_at"] is not None
+        assert job["lease_expires_at"] is None and job["worker_id"] is None
+        assert "worker" in job["last_error"]
 
     def test_malformed_job_fails_permanently_without_retrying(self, tmp_path):
         """A payload that cannot be parsed is still unparseable on attempt three.
