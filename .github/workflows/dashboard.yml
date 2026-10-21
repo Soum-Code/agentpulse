@@ -1,0 +1,61 @@
+name: dashboard
+
+# Type-checks the dashboard (`tsc --noEmit`) and runs its vitest tests. Until now only the
+# Docker image build in release.yml touched dashboard/, and `vite build` does not type-check,
+# so a type error or a failing vitest test was invisible until someone ran them by hand.
+#
+# This is a separate workflow from tests.yml on purpose: path filters apply to a whole
+# workflow, so a `dashboard` job inside tests.yml would make every dashboard-only change run
+# the 2 to 3 minute pytest job too, and every backend change run this one.
+#
+# It does not run a browser or any end-to-end test: vitest runs under jsdom, so it checks the
+# logic in src/lib and nothing about how a view renders or behaves in a real browser.
+#
+# Not a required status check, same as the other workflows: required checks that are
+# path-filtered would block pull requests that never trigger them.
+
+on:
+  pull_request:
+    paths:
+      - "dashboard/**"
+      - ".github/workflows/dashboard.yml"
+  push:
+    branches: [main]
+    paths:
+      - "dashboard/**"
+      - ".github/workflows/dashboard.yml"
+
+permissions:
+  contents: read
+
+# A new push to a pull request makes the older run pointless. Runs on main always finish.
+concurrency:
+  group: dashboard-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  dashboard:
+    runs-on: ubuntu-latest
+    # Not a test timeout: a stuck run would otherwise hold a runner for 6 hours.
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: dashboard
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # The same major version as `FROM node:20-slim` in dashboard/Dockerfile. Update both.
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: dashboard/package-lock.json
+
+      # The Dockerfile installs with `npm ci` too, so this uses the same locked versions.
+      - run: npm ci
+
+      - name: Type-check
+        run: npx tsc --noEmit
+
+      - name: Unit tests
+        run: npx vitest run
