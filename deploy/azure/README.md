@@ -162,6 +162,67 @@ az vm restart -g agentpulse-rg -n agentpulse-vm
 sudo docker compose logs caddy | grep -c "trying to solve challenge"
 ```
 
+## Automatic deploys
+
+`.github/workflows/deploy-azure.yml` deploys `main` when a push changes `backend/`,
+`dashboard/`, `docker-compose.yml` or `deploy/azure/`. It can also be run by hand: Actions →
+**deploy-azure** → **Run workflow**, on `main`. It sends `deploy/azure/deploy.sh` to the VM
+over SSH, and the script's header says what it does. In short, it follows the by-hand steps
+of `SESSION_HANDOFF.md` 28.11 and 28.12: it rebuilds only the images whose directory changed,
+starts the new backend against a copy of the live database before the swap, swaps, and puts
+the previous images back if the new containers are not healthy within five minutes. Each
+run's log is kept in `~/deploy-logs/` on the VM, and each run's backup in `~/backups/`.
+
+### Secrets
+
+| secret | value |
+|---|---|
+| `AZURE_VM_SSH_KEY` | the private key for `azureuser`, the `~/.ssh/agentpulse_azure` made above |
+| `AZURE_VM_KNOWN_HOSTS` | the VM's host key, as a known_hosts line for `agentpulse.centralindia.cloudapp.azure.com` |
+
+Take the host key from the VM over the connection you already trust, not from
+`ssh-keyscan`, which accepts whatever key answers:
+
+```bash
+ssh -i ~/.ssh/agentpulse_azure azureuser@20.235.82.198 cat /etc/ssh/ssh_host_ed25519_key.pub \
+  | awk '{print "agentpulse.centralindia.cloudapp.azure.com " $1 " " $2}' \
+  | gh secret set AZURE_VM_KNOWN_HOSTS --repo Soum-Code/agentpulse
+gh secret set AZURE_VM_SSH_KEY --repo Soum-Code/agentpulse < ~/.ssh/agentpulse_azure
+```
+
+A key made only for the workflow is better than reusing your own, because it can be revoked
+on its own: `ssh-keygen -t ed25519 -f ~/.ssh/agentpulse_deploy -N ""`, append the `.pub` to
+`~/.ssh/authorized_keys` on the VM, and store that private key instead.
+
+### The database schema
+
+The live database has no `alembic_version` table, and `create_all` never adds a column to a
+table that exists. `deploy/azure/schema_check.py` compares the new models with the copy of
+the database. A missing column that is nullable and has no key, index, unique constraint or
+server default is added to the copy first; if the new backend then works on the copy, the same
+`ALTER TABLE` runs on the live database just before the swap. Any other missing column stops
+the deploy before anything live changes: add it by hand, then run the workflow again.
+
+### Not automated
+
+- A change to `docker-compose.yml`, the overlay or the Caddyfile is applied only to the
+  services the run recreates. If nothing under `backend/` or `dashboard/` changed, the run
+  only fast-forwards the checkout and warns. Caddy is never recreated.
+- Old images and the build cache are never removed. Check `sudo docker system df` now and
+  then; the script stops if less than 10 GB is free.
+- It does not wait for the `tests` workflow. The gates are the pull request's checks and the
+  test against the copy of the database.
+- A deallocated VM cannot be reached, so the run fails at SSH. Start the VM and re-run it.
+- Every restart leaves the previous worker's heartbeat row behind (28.12), so the count of
+  stale workers in `/v1/health` grows by one per backend deploy.
+
+### Rolling back
+
+A failed health check after the swap rolls back on its own: the previous images are tagged
+`:latest` again and recreated, and the checkout returns to the commit that was running. The
+job still fails. To roll back a deploy that succeeded, use the commands printed at the end of
+its log.
+
 ## Getting the site into Google
 
 Nothing links to this deployment, so Google has no route to discover it. Search
