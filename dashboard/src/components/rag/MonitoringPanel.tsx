@@ -11,9 +11,9 @@ import {
   Radio,
   BarChart3,
 } from 'lucide-react';
-import type { ChatTurn } from '../../lib/ragTypes';
+import type { ChatTurn, PipelineAgent, AgentDriftReading } from '../../lib/ragTypes';
 import type { EvaluatorReadiness, Agent as ApiAgent } from '../../lib/api';
-import { riskTone, riskBadgeClasses, riskTextClasses, riskDotClasses } from '../../lib/riskTone';
+import { riskTone, riskLabel, riskBadgeClasses, riskTextClasses, riskDotClasses } from '../../lib/riskTone';
 import type { ColorPalette, ChalkSurfacePreset } from '../../types';
 import { getRagTheme } from './ragTheme';
 
@@ -24,16 +24,8 @@ interface MonitoringPanelProps {
   turns: ChatTurn[];
   selectedTraceId?: string;
   onSelectTrace: (traceId: string) => void;
-  agentSpansCount: {
-    answerer: number;
-    verifier: number;
-    retriever: number;
-  };
-  agentDriftValues: {
-    answerer?: number | null;
-    verifier?: number | null;
-    retriever?: number | null;
-  };
+  agentSpansCount: Record<PipelineAgent, number>;
+  agentDrift: Partial<Record<PipelineAgent, AgentDriftReading>>;
   apiAgents: ApiAgent[];
   palette?: ColorPalette;
   isCalmMode?: boolean;
@@ -50,7 +42,7 @@ export const MonitoringPanel: React.FC<MonitoringPanelProps> = ({
   selectedTraceId,
   onSelectTrace,
   agentSpansCount,
-  agentDriftValues,
+  agentDrift,
   apiAgents,
   palette = 'dark',
   isCalmMode = false,
@@ -65,18 +57,14 @@ export const MonitoringPanel: React.FC<MonitoringPanelProps> = ({
 
   // Session totals calculation
   const totalTurns = turns.length;
-  const totalSpansSent = totalTurns * 3;
+  // Stages the service reported it ran. A turn that died at the verifier counts two.
+  const totalStagesRun = turns.reduce((n, t) => n + (t.response?.agents?.length ?? 0), 0);
   const evaluatedTurns = turns.filter((t) => t.groundingStatus === 'evaluated');
   const pendingTurns = turns.filter((t) => t.groundingStatus === 'pending');
   const totalErrors = turns.filter((t) => t.status === 'error' || t.errorMessage).length;
 
   const workersAlive = evaluatorReadiness?.workers_alive ?? 0;
   const isEvaluatorAlive = workersAlive > 0;
-
-  // Answerer drift progress
-  const answererCount = agentSpansCount.answerer;
-  const isAnswererWindowFilled = answererCount >= DRIFT_WINDOW_TARGET;
-  const answererDrift = agentDriftValues.answerer;
 
   return (
     <div className={`flex flex-col h-full ${theme.containerBg} ${theme.textColor} overflow-y-auto font-mono text-xs transition-colors duration-200`}>
@@ -141,11 +129,11 @@ export const MonitoringPanel: React.FC<MonitoringPanelProps> = ({
           </div>
 
           <div className={`p-3 rounded-lg ${theme.cardBg} border ${theme.cardBorder}`}>
-            <div className={`text-[10px] uppercase ${theme.subtextColor} tracking-wider`}>Spans Sent</div>
+            <div className={`text-[10px] uppercase ${theme.subtextColor} tracking-wider`}>Stages Run</div>
             <div className={`text-xl font-bold ${theme.accentText} mt-1 tabular-nums`}>
-              {totalSpansSent}
+              {totalStagesRun}
             </div>
-            <div className={`text-[10px] ${theme.subtextColor} mt-0.5`}>3 / turn (seq)</div>
+            <div className={`text-[10px] ${theme.subtextColor} mt-0.5`}>reported by the service</div>
           </div>
 
           <div className={`p-3 rounded-lg ${theme.cardBg} border ${theme.cardBorder}`}>
@@ -216,12 +204,7 @@ export const MonitoringPanel: React.FC<MonitoringPanelProps> = ({
                             activeTurn.groundingScore
                           )}`}
                         >
-                          {activeTurn.groundingLabel ||
-                            (activeTurn.groundingScore >= 0.8
-                              ? 'Supported'
-                              : activeTurn.groundingScore >= 0.5
-                              ? 'Uncertain'
-                              : 'Refuted')}
+                          {activeTurn.groundingLabel || riskLabel(activeTurn.groundingScore)}
                         </span>
                       </>
                     ) : activeTurn.groundingStatus === 'pending' ? (
@@ -237,10 +220,9 @@ export const MonitoringPanel: React.FC<MonitoringPanelProps> = ({
                   </div>
                 </div>
 
-                {activeTurn.groundingStatus === 'evaluated' && (
+                {activeTurn.groundingStatus === 'evaluated' && activeTurn.groundingEvaluationStage && (
                   <div className={`text-right text-[10px] ${theme.subtextColor} font-mono`}>
-                    <div>Stage: <span className={theme.textColor}>{activeTurn.groundingEvaluationStage || 'STAGE_2_NLI_VERIFIED'}</span></div>
-                    <div className="mt-0.5">Model: <span className={theme.textColor}>cross-encoder/nli-deberta-v3</span></div>
+                    <div>Stage: <span className={theme.textColor}>{activeTurn.groundingEvaluationStage}</span></div>
                   </div>
                 )}
               </div>
@@ -255,15 +237,21 @@ export const MonitoringPanel: React.FC<MonitoringPanelProps> = ({
                 </div>
               )}
 
-              {activeTurn.groundingStatus === 'evaluated' && (
+              {activeTurn.groundingStatus === 'unmeasured' && (
                 <div className={`p-2.5 rounded ${theme.codeBg} border ${theme.codeBorder} text-[11px] ${theme.textColor} leading-relaxed`}>
-                  <div className={`text-[10px] ${theme.subtextColor} font-semibold uppercase mb-0.5`}>
-                    Evaluator Verification Logic:
-                  </div>
-                  NLI cross-encoder compared answerer synthesis against retrieved documents.
-                  {activeTurn.groundingScore != null && activeTurn.groundingScore >= 0.8
-                    ? ' High entailment probability confirms claims are supported by corpus citations.'
-                    : ' Lower entailment score detects potential hallucination or overclaim beyond retrieved evidence.'}
+                  <strong>Not measured:</strong>{' '}
+                  {activeTurn.status === 'error'
+                    ? 'the turn failed, so no answer was scored.'
+                    : !activeTurn.traceId
+                    ? 'the service returned no trace id, so this turn cannot be matched to AgentPulse telemetry.'
+                    : 'no evaluation for the answerer span arrived within 30 s. Check that the evaluation worker is running.'}
+                </div>
+              )}
+
+              {activeTurn.groundingStatus === 'evaluated' && (
+                <div className={`p-2.5 rounded ${theme.codeBg} border ${theme.codeBorder} text-[11px] ${theme.subtextColor} leading-relaxed`}>
+                  A risk score: 0.0 is fully supported by the retrieved text, 1.0 is not supported. A
+                  stage 2 score comes from the NLI model; stage 1 is a similarity-only fallback.
                 </div>
               )}
             </div>
@@ -341,19 +329,20 @@ export const MonitoringPanel: React.FC<MonitoringPanelProps> = ({
           <div className="mt-3 space-y-4">
             {/* Context rationale */}
             <p className={`${theme.subtextColor} text-[11px] leading-relaxed`}>
-              Drift has never produced a sustained value in short testing because it strictly requires
-              a <strong className={theme.textColor}>32-span reference window</strong> per agent. Scripts sending 5 calls produce zero.
-              This panel tracks live accumulation toward the 32-span threshold.
+              Drift needs a <strong className={theme.textColor}>32-span window</strong> per agent (20 baseline
+              plus 12 current), so a script that sends 5 calls never reaches it and the value stays
+              unavailable, not zero. Span counts and drift below are read from AgentPulse
+              (<code>/v1/agents</code>, <code>/v1/drift</code>); nothing is counted or computed in this page.
             </p>
 
             {/* Agent Window Progress Bars */}
             <div className="space-y-3">
-              {[
-                { name: 'answerer', count: agentSpansCount.answerer, drift: agentDriftValues.answerer },
-                { name: 'verifier', count: agentSpansCount.verifier, drift: agentDriftValues.verifier },
-                { name: 'retriever', count: agentSpansCount.retriever, drift: agentDriftValues.retriever },
-              ].map(({ name, count, drift }) => {
-                const isFilled = count >= DRIFT_WINDOW_TARGET;
+              {(['answerer', 'verifier', 'retriever'] as PipelineAgent[]).map((name) => {
+                const count = agentSpansCount[name];
+                const drift = agentDrift[name]?.windowDistance ?? null;
+                const asi = agentDrift[name]?.asi ?? null;
+                const isMeasured = drift != null;
+                const hasEnoughSpans = count >= DRIFT_WINDOW_TARGET;
                 const pct = Math.min(100, Math.round((count / DRIFT_WINDOW_TARGET) * 100));
 
                 return (
@@ -361,7 +350,7 @@ export const MonitoringPanel: React.FC<MonitoringPanelProps> = ({
                     <div className="flex items-center justify-between text-[11px] mb-1.5">
                       <span className={`font-semibold ${theme.textColor} capitalize flex items-center gap-1.5`}>
                         <span>{name}</span>
-                        {isFilled && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />}
+                        {isMeasured && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />}
                       </span>
                       <div className="flex items-center gap-2">
                         <span className={`font-mono ${theme.accentText} font-semibold`}>
@@ -375,7 +364,7 @@ export const MonitoringPanel: React.FC<MonitoringPanelProps> = ({
                     <div className={`w-full h-2 rounded-full ${theme.inputBg} overflow-hidden border ${theme.codeBorder}`}>
                       <div
                         className={`h-full transition-all duration-300 ${
-                          isFilled
+                          isMeasured
                             ? 'bg-emerald-500'
                             : palette === 'butter'
                             ? 'bg-amber-400'
@@ -391,19 +380,22 @@ export const MonitoringPanel: React.FC<MonitoringPanelProps> = ({
 
                     {/* Window Status / Drift Value */}
                     <div className="mt-2 text-[10px] flex items-center justify-between">
-                      {isFilled ? (
+                      {isMeasured ? (
                         <>
                           <span className="text-emerald-400 font-semibold">
-                            WINDOW FILLED • SUSTAINED DRIFT COMPUTED
+                            DRIFT MEASURED BY AGENTPULSE
                           </span>
                           <span className={`font-mono ${theme.textColor}`}>
-                            Centroid dist: <strong>{drift != null ? drift.toFixed(3) : '0.082'}</strong> (thresh: 0.300)
+                            Centroid dist: <strong>{drift.toFixed(3)}</strong> (alert threshold 0.30 by default)
+                            {asi != null && <> • ASI <strong>{asi.toFixed(1)}</strong></>}
                           </span>
                         </>
                       ) : (
                         <>
                           <span className={theme.subtextColor}>
-                            Window accumulating: need {DRIFT_WINDOW_TARGET - count} more spans
+                            {hasEnoughSpans
+                              ? 'Enough spans ingested, but no windowed drift reported yet (evaluation pending, or the evaluator restarted and its current window is refilling)'
+                              : `Window accumulating: need ${DRIFT_WINDOW_TARGET - count} more spans`}
                           </span>
                           <span className={`${theme.subtextColor} font-mono italic`}>
                             drift: <strong className={`${theme.subtextColor} font-normal`}>not available</strong>
@@ -427,35 +419,6 @@ export const MonitoringPanel: React.FC<MonitoringPanelProps> = ({
               </p>
             </div>
 
-            {/* When window fills: Plotted trajectory */}
-            {isAnswererWindowFilled && (
-              <div className="p-3 rounded-lg bg-emerald-950/20 border border-emerald-500/30 text-xs">
-                <div className="flex items-center justify-between text-emerald-300 font-semibold mb-2">
-                  <span>Active Centroid Trajectory (w=32)</span>
-                  <span className={`text-[10px] font-mono ${theme.subtextColor}`}>Stable (ASI: 96.4)</span>
-                </div>
-                {/* SVG Mini sparkline */}
-                <div className="h-16 w-full flex items-end gap-1 pt-2">
-                  {[0.04, 0.06, 0.05, 0.07, 0.082, 0.079, 0.081, 0.082].map((val, vi) => {
-                    const hPct = Math.round((val / 0.3) * 100);
-                    return (
-                      <div key={vi} className="flex-1 flex flex-col items-center gap-1">
-                        <div
-                          className="w-full bg-emerald-500/80 rounded-t hover:bg-emerald-400 transition-colors"
-                          style={{ height: `${hPct}%` }}
-                          title={`Window ${vi + 1}: ${val.toFixed(3)}`}
-                        />
-                        <span className={`text-[8px] ${theme.subtextColor} font-mono`}>w{vi + 1}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-                <div className={`flex justify-between text-[9px] ${theme.subtextColor} mt-1`}>
-                  <span>Baseline</span>
-                  <span className="text-amber-500 font-mono">Threshold: 0.300</span>
-                </div>
-              </div>
-            )}
           </div>
         </div>
       </div>
