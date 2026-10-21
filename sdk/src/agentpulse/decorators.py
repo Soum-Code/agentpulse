@@ -109,61 +109,44 @@ def create_monitor_decorator(
             # an empty dict.
             state = args[0] if args and isinstance(args[0], dict) else {}
 
+            # Step 4: the SDK's own work before the call. Only this part is fail-open: your
+            # function has not run yet, so on an SDK error it is simply called without a span.
             try:
-                # Step 4: create the span (trace id, span id, parent, start time) before your
-                # function runs, then start the stopwatch. time.perf_counter() is a clock for
-                # measuring durations: the gap between two readings is the time that passed.
+                # Create the span (trace id, span id, parent, start time) before your function
+                # runs, then start the stopwatch. time.perf_counter() is a clock for measuring
+                # durations: the gap between two readings is the time that passed.
                 span = _build_pre_span(state, _agent_id, _agent_role, span_kind, event_type, config)
                 start = time.perf_counter()
-
-                # Step 5 (in short): run your function while this span is the "current parent", so
-                # spans made inside it become its children.
-                # Execute the actual agent node, with this span as the active
-                # parent. Anything instrumented inside it -- an LLM call wrapped
-                # by integrations.llm, a nested monitored function -- then hangs
-                # off this node instead of becoming its sibling, which is what
-                # makes the trace a tree rather than a flat list.
+                # Run your function while this span is the "current parent", so spans made
+                # inside it become its children. Anything instrumented inside it -- an LLM call
+                # wrapped by integrations.llm, a nested monitored function -- then hangs off this
+                # node instead of becoming its sibling, which is what makes the trace a tree
+                # rather than a flat list.
                 token = _push_child_context(span.span_id)
-                try:
-                    result = await func(*args, **kwargs)
-                # finally runs even if your function raised, so the previous context is always
-                # restored.
-                finally:
-                    _pop_context(token)
-
-                # Step 6: duration in milliseconds = (stop reading - start reading) * 1000.
-                duration_ms = (time.perf_counter() - start) * 1000
-                # Step 7: fill in end time, latency, hashes and (if the privacy settings allow) the
-                # text summaries, plus model and token counts taken from the result.
-                _finalize_span(span, result, duration_ms, state, config, privacy, capture_state)
-
-                # Fire-and-forget: enqueue span without awaiting
-                transport.enqueue(span)
-
-                # Propagate trace context in state for downstream nodes
-                # Step 8: add two extra keys to the dict your function returned. ensure_context() in
-                # the next node reads them from its state, so the next span joins this trace with
-                # this span as its parent.
-                if isinstance(result, dict):
-                    result["__agentpulse_trace_id"] = span.trace_id
-                    result["__agentpulse_parent_span_id"] = span.span_id
-
-                return result
-
-            # Careful: the try block above also contains the call to your own function, so an error
-            # raised by your function lands here too. No span is recorded for a run that failed.
             except Exception as exc:
-                # Fail-open: if SDK errors, let the agent continue
-                # fail_open on: log the error, then call your function again. So a function that
-                # raised is run a second time (and if it raises again, that error reaches the
-                # caller). Likewise, if recording fails after your function already succeeded, the
-                # function runs twice. fail_open off: re-raise the error.
-                if config.fail_open:
-                    logger.error(
-                        "AgentPulse SDK error (fail-open): %s", exc, exc_info=True,
-                    )
-                    return await func(*args, **kwargs)
+                _fail_open(exc, config)
+                return await func(*args, **kwargs)
+
+            # Step 5: your function, called exactly once and outside any SDK try block. If it
+            # raises, that is your error and not an SDK error: the failed run is recorded as an
+            # ERROR span and the same exception goes on to the caller. The finally block puts the
+            # previous context back whether it worked or not.
+            try:
+                result = await func(*args, **kwargs)
+            except Exception as exc:
+                _record_error(span, exc, start, state, transport, config, privacy, capture_state)
                 raise
+            finally:
+                _pop_context(token)
+
+            # Steps 6-8: the SDK's own work after the call, fail-open again. The function has
+            # already run, so an error here is logged (or raised when fail_open is off) and the
+            # function is never called a second time.
+            try:
+                _record_success(span, result, start, state, transport, config, privacy, capture_state)
+            except Exception as exc:
+                _fail_open(exc, config)
+            return result
 
         # Version for normal functions. Same steps as the async one above, without await.
         @functools.wraps(func)
@@ -180,32 +163,25 @@ def create_monitor_decorator(
             try:
                 span = _build_pre_span(state, _agent_id, _agent_role, span_kind, event_type, config)
                 start = time.perf_counter()
-
                 # See the async wrapper: this is what parents nested spans.
                 token = _push_child_context(span.span_id)
-                try:
-                    result = func(*args, **kwargs)
-                finally:
-                    _pop_context(token)
-
-                duration_ms = (time.perf_counter() - start) * 1000
-                _finalize_span(span, result, duration_ms, state, config, privacy, capture_state)
-
-                transport.enqueue(span)
-
-                if isinstance(result, dict):
-                    result["__agentpulse_trace_id"] = span.trace_id
-                    result["__agentpulse_parent_span_id"] = span.span_id
-
-                return result
-
             except Exception as exc:
-                if config.fail_open:
-                    logger.error(
-                        "AgentPulse SDK error (fail-open): %s", exc, exc_info=True,
-                    )
-                    return func(*args, **kwargs)
+                _fail_open(exc, config)
+                return func(*args, **kwargs)
+
+            try:
+                result = func(*args, **kwargs)
+            except Exception as exc:
+                _record_error(span, exc, start, state, transport, config, privacy, capture_state)
                 raise
+            finally:
+                _pop_context(token)
+
+            try:
+                _record_success(span, result, start, state, transport, config, privacy, capture_state)
+            except Exception as exc:
+                _fail_open(exc, config)
+            return result
 
         # Hand back the wrapper that matches your function: async def gets async_wrapper, anything
         # else gets sync_wrapper.
@@ -214,6 +190,68 @@ def create_monitor_decorator(
         return sync_wrapper
 
     return decorator
+
+
+# One rule for errors inside the SDK's own code: if fail_open is on, log the error and carry
+# on; if it is off, raise it. (integrations/llm.py has the same rule; it cannot be imported
+# here because that package imports client.py, which imports this file.)
+def _fail_open(exc: Exception, config: AgentPulseConfig) -> None:
+    if config.fail_open:
+        logger.error("AgentPulse SDK error (fail-open): %s", exc, exc_info=True)
+        return
+    raise exc
+
+
+def _record_success(
+    span: SpanPayload,
+    result: Any,
+    start: float,
+    state: dict,
+    transport: AsyncTransport,
+    config: AgentPulseConfig,
+    privacy: PrivacyFilter,
+    capture_state: bool,
+) -> None:
+    """Finish the span of a call that returned, queue it, and pass the trace on in the result."""
+    # Duration in milliseconds = (stop reading - start reading) * 1000. Then fill in end time,
+    # latency, hashes and (if the privacy settings allow) the text summaries, plus model and
+    # token counts taken from the result.
+    duration_ms = (time.perf_counter() - start) * 1000
+    _finalize_span(span, result, duration_ms, state, config, privacy, capture_state)
+
+    # Fire-and-forget: enqueue span without awaiting
+    transport.enqueue(span)
+
+    # Propagate trace context in state for downstream nodes: add two extra keys to the dict your
+    # function returned. ensure_context() in the next node reads them from its state, so the
+    # next span joins this trace with this span as its parent.
+    if isinstance(result, dict):
+        result["__agentpulse_trace_id"] = span.trace_id
+        result["__agentpulse_parent_span_id"] = span.span_id
+
+
+def _record_error(
+    span: SpanPayload,
+    exc: Exception,
+    start: float,
+    state: dict,
+    transport: AsyncTransport,
+    config: AgentPulseConfig,
+    privacy: PrivacyFilter,
+    capture_state: bool,
+) -> None:
+    """The failed call is still telemetry, and often the interesting kind."""
+    try:
+        # Same as a finished span, with no output, status ERROR and the error as "TypeName:
+        # message" (masked like any other text, then cut to 500 characters).
+        duration_ms = (time.perf_counter() - start) * 1000
+        _finalize_span(span, None, duration_ms, state, config, privacy, capture_state)
+        span.status = SpanStatus.ERROR
+        span.error_message = privacy.redact_text(f"{type(exc).__name__}: {exc}")[:500]
+        transport.enqueue(span)
+    # If recording itself fails: log it (fail_open on) or raise it (fail_open off).
+    except Exception as inner:
+        _fail_open(inner, config)
 
 
 def _push_child_context(span_id: str):

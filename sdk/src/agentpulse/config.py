@@ -144,9 +144,9 @@ class AgentPulseConfig:
     # Master switch. When False, @monitor and instrument_llm call your code directly and
     # record nothing. start_span()/end_span() and LangGraphAdapter do not check this switch.
     enabled: bool = True
-    # True: if the SDK itself hits an error, it is logged and your agent code carries on. With
-    # @monitor, an error raised by your own function counts too, so that function is called a
-    # second time (see decorators.py). False: the error is raised.
+    # True: if the SDK itself hits an error, it is logged and your agent code carries on. An
+    # error raised by your own function is not an SDK error: @monitor records it as an ERROR
+    # span and raises it again, with the function called only once. False: SDK errors are raised.
     fail_open: bool = True  # If True, SDK errors don't block the application
     # Share of calls to record, from 0.0 to 1.0. Each call is picked or skipped at random;
     # a skipped call is not recorded at all.

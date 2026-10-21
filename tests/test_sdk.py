@@ -11,9 +11,11 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "sdk", "src"))
 import pytest
 from agentpulse.config import AgentPulseConfig, CapturePolicy
 from agentpulse.context import TraceContext, ensure_context, set_current_context
+from agentpulse.decorators import create_monitor_decorator
 from agentpulse.privacy import PrivacyFilter
 from agentpulse.schemas.enums import EventType, SpanKind, SpanStatus
 from agentpulse.schemas.events import SpanPayload, IngestRequest
+from agentpulse.transport import AsyncTransport
 from agentpulse.utils import (
     generate_trace_id,
     generate_span_id,
@@ -240,3 +242,90 @@ class TestSchemas:
         req = IngestRequest(spans=[span])
         assert len(req.spans) == 1
         assert req.sdk_version == "0.1.0"
+
+
+# ─── @monitor Tests ───────────────────────────────────────────────────
+
+def _monitor(**config_kwargs):
+    """A decorator wired to a transport that is never started, so spans stay in its buffer."""
+    config = AgentPulseConfig(**config_kwargs)
+    transport = AsyncTransport(config)
+    decorator = create_monitor_decorator(
+        transport, config, PrivacyFilter(config.capture_policy), agent_id="node",
+    )
+    return decorator, transport
+
+
+class TestMonitorErrorPath:
+    """A failing user function is the user's error, not an SDK error: run it once, record it."""
+
+    def test_raising_sync_node_runs_once_and_records_an_error_span(self):
+        decorator, transport = _monitor()
+        calls = []
+
+        @decorator
+        def node(state):
+            calls.append(1)
+            raise ValueError("llm timeout")
+
+        with pytest.raises(ValueError, match="llm timeout"):
+            node({"q": "x"})
+
+        assert len(calls) == 1
+        assert len(transport._buffer) == 1
+        span = transport._buffer[0]
+        assert span.status == SpanStatus.ERROR
+        assert "ValueError: llm timeout" in span.error_message
+        assert span.latency_ms is not None
+
+    def test_raising_async_node_runs_once_and_records_an_error_span(self):
+        decorator, transport = _monitor()
+        calls = []
+
+        @decorator
+        async def node(state):
+            calls.append(1)
+            raise ValueError("llm timeout")
+
+        with pytest.raises(ValueError, match="llm timeout"):
+            asyncio.run(node({"q": "x"}))
+
+        assert len(calls) == 1
+        assert [s.status for s in transport._buffer] == [SpanStatus.ERROR]
+
+    def test_sdk_failure_after_a_good_call_does_not_run_the_node_again(self, monkeypatch):
+        import agentpulse.decorators as decorators
+
+        def broken(*args, **kwargs):
+            raise RuntimeError("sdk bug")
+
+        monkeypatch.setattr(decorators, "_finalize_span", broken)
+        decorator, transport = _monitor()
+        calls = []
+
+        @decorator
+        def node(state):
+            calls.append(1)
+            return {"ok": True}
+
+        assert node({}) == {"ok": True}
+        assert len(calls) == 1
+
+    def test_sdk_failure_is_raised_when_fail_open_is_off(self, monkeypatch):
+        import agentpulse.decorators as decorators
+
+        def broken(*args, **kwargs):
+            raise RuntimeError("sdk bug")
+
+        monkeypatch.setattr(decorators, "_finalize_span", broken)
+        decorator, _ = _monitor(fail_open=False)
+        calls = []
+
+        @decorator
+        def node(state):
+            calls.append(1)
+            return {}
+
+        with pytest.raises(RuntimeError, match="sdk bug"):
+            node({})
+        assert len(calls) == 1
