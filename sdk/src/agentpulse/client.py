@@ -18,10 +18,14 @@ Usage:
         capture_inputs=True,
     )
 
-    # Lifecycle
+    # Lifecycle (async code)
     await pulse.start()
     ...
     await pulse.shutdown()
+
+    # A plain script, Flask or Celery has no event loop. Then nothing needs to be called:
+    # the first @pulse.monitor / instrument_llm() starts the sender on a thread of its own,
+    # and the spans still waiting are sent when the program exits.
 """
 
 # What this file is for:
@@ -39,7 +43,9 @@ Usage:
 from __future__ import annotations
 
 import asyncio
+import atexit
 import logging
+import threading
 from typing import Any, Callable, Optional
 
 from agentpulse.config import AgentPulseConfig, CapturePolicy
@@ -112,9 +118,32 @@ class AgentPulse:
         self._privacy = PrivacyFilter(self._config.capture_policy)
         # Step 3: the transport is not running yet; start() (or _ensure_transport) starts it.
         self._started = False
+        # Only set while the transport runs on a thread of its own, with an event loop of its
+        # own (see _start_in_thread). _bg_lock keeps two threads from starting two of them.
+        self._bg_thread: Optional[threading.Thread] = None
+        self._bg_loop: Optional[asyncio.AbstractEventLoop] = None
+        self._bg_lock = threading.Lock()
 
     async def start(self) -> None:
         """Start the SDK transport. Call this before using the SDK."""
+        # Already running on its own thread (@monitor ran before any event loop existed):
+        # that one keeps going, and a second one here would send everything twice.
+        if self._bg_thread is not None:
+            return
+        self._forget_closed_loop()
+        await self._start_transport()
+
+    async def shutdown(self) -> None:
+        """Flush remaining spans and stop the transport."""
+        # On its own thread: stop it there. That waits for the final send, so it runs in a
+        # worker thread instead of blocking this event loop.
+        if self._bg_thread is not None:
+            await asyncio.get_running_loop().run_in_executor(None, self._stop_in_thread)
+            return
+        self._forget_closed_loop()
+        await self._stop_transport()
+
+    async def _start_transport(self) -> None:
         # Calling start() twice is harmless: the second call sees _started and does nothing.
         # transport.start() opens the HTTP session and launches the loop that sends spans.
         if not self._started:
@@ -122,8 +151,7 @@ class AgentPulse:
             self._started = True
             logger.info("AgentPulse SDK started (service=%s)", self._config.service_name)
 
-    async def shutdown(self) -> None:
-        """Flush remaining spans and stop the transport."""
+    async def _stop_transport(self) -> None:
         # transport.stop() sends the spans still waiting in the buffer, then closes the session.
         if self._started:
             await self._transport.stop()
@@ -264,8 +292,9 @@ class AgentPulse:
             delta = (span.end_time - span.start_time).total_seconds() * 1000
             span.latency_ms = round(delta, 2)
         # Step 3: hand the finished span to the transport. It is sent later in a batch, so this
-        # call does not wait for the network. Nothing here starts the transport: unless it is
-        # running (see start()), the span just waits in the buffer.
+        # call does not wait for the network. If the transport is not running yet, this starts
+        # it (see _ensure_transport), so a plain script needs no start() call.
+        self._ensure_transport()
         self._transport.enqueue(span)
 
     # Counters kept by the transport: spans buffered, sent, failed, written to the fallback
@@ -280,20 +309,74 @@ class AgentPulse:
         """The settings object this client was built with."""
         return self._config
 
+    def _forget_closed_loop(self) -> None:
+        """After asyncio.run(pulse.start()) the sender is gone with its loop: allow a new start."""
+        if self._started and self._transport.forget_closed_loop():
+            self._started = False
+
     def _ensure_transport(self) -> None:
         """Auto-start transport on first use if not manually started."""
-        if not self._started:
-            # start() is async, so it can only be scheduled when an event loop (asyncio's task
-            # runner) is already running. If one is, schedule start() there as a background task.
-            try:
-                loop = asyncio.get_running_loop()
-                loop.create_task(self.start())
-            # get_running_loop() raises RuntimeError when no loop is running. Then nothing here
-            # starts the transport, and nothing retries by itself (only another monitor() or
-            # instrument_llm() call made while a loop is running would try again). Spans pile up
-            # in the buffer (capped by max_buffered_spans in config.py; the oldest are dropped
-            # first) until you run `await pulse.start()`. The comment just below, saying the
-            # transport will start on the first async call, is out of date: nothing does that.
-            except RuntimeError:
-                # No running loop — transport will start on first async call
-                pass
+        # A disabled SDK records nothing, so it needs no sender.
+        if not self._config.enabled or self._bg_thread is not None:
+            return
+        self._forget_closed_loop()
+        if self._started:
+            return
+        # start() is async, so it can only be scheduled when an event loop (asyncio's task
+        # runner) is already running. If one is, schedule start() there as a background task.
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            # No running loop: a plain script, Flask, Celery. Nothing would ever send the spans,
+            # so give the transport a loop of its own on a thread.
+            self._start_in_thread()
+            return
+        loop.create_task(self.start())
+
+    def _start_in_thread(self) -> None:
+        """Run the transport on a daemon thread with its own event loop.
+
+        The thread does not keep the program alive; an atexit hook sends the spans still
+        waiting when the program ends. enqueue() works from any thread, so agent code does not
+        need to know about this one. A thread does not survive a fork, so with gunicorn
+        --preload or Celery's prefork pool, create the client (or call monitor()) after the
+        worker process has started.
+        """
+        with self._bg_lock:
+            if self._bg_thread is not None or self._started:
+                return
+            loop = asyncio.new_event_loop()
+            self._bg_loop = loop
+            self._transport.resolve_inline = True
+            self._bg_thread = threading.Thread(
+                target=self._run_loop, args=(loop,), name="agentpulse-transport", daemon=True,
+            )
+            self._bg_thread.start()
+            asyncio.run_coroutine_threadsafe(self._start_transport(), loop)
+            atexit.register(self._stop_in_thread)
+
+    @staticmethod
+    def _run_loop(loop: asyncio.AbstractEventLoop) -> None:
+        asyncio.set_event_loop(loop)
+        try:
+            loop.run_forever()
+        finally:
+            loop.close()
+
+    def _stop_in_thread(self) -> None:
+        """Send the spans still waiting, then stop the transport thread. Also the atexit hook."""
+        with self._bg_lock:
+            loop, thread = self._bg_loop, self._bg_thread
+            self._bg_loop = self._bg_thread = None
+        if loop is None or thread is None:
+            return
+        atexit.unregister(self._stop_in_thread)
+        try:
+            # The final send retries a few times; do not hold the program up for long if the
+            # backend is down.
+            asyncio.run_coroutine_threadsafe(self._stop_transport(), loop).result(timeout=10)
+        except Exception as exc:
+            logger.warning("AgentPulse transport did not stop cleanly: %s", exc)
+        loop.call_soon_threadsafe(loop.stop)
+        thread.join(timeout=5)
+        self._transport.resolve_inline = False

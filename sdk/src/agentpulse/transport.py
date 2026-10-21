@@ -27,6 +27,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import socket
 import time
 from pathlib import Path
 from typing import Optional
@@ -39,6 +40,20 @@ from agentpulse.schemas.events import IngestRequest, SpanPayload
 # Messages written with this logger carry the name "agentpulse.transport", so an application
 # can turn them up or down on their own.
 logger = logging.getLogger("agentpulse.transport")
+
+
+# aiohttp's resolver asks the event loop for getaddrinfo(), and the loop answers by handing
+# the lookup to an executor thread. While the interpreter is exiting that executor is already
+# shut down, so the last send of a script (the exit flush) could not look up a host name.
+# This object stands in for the loop with the same two methods and answers on the calling
+# thread instead. It is only used when the transport runs on a thread of its own, where
+# waiting for a lookup holds up nothing but the sender.
+class _InlineLoop:
+    async def getaddrinfo(self, *args, **kwargs):
+        return socket.getaddrinfo(*args, **kwargs)
+
+    async def getnameinfo(self, *args, **kwargs):
+        return socket.getnameinfo(*args, **kwargs)
 
 
 # The life of a span here: enqueue() puts it in the buffer, _flush() takes the whole buffer,
@@ -55,8 +70,9 @@ class AsyncTransport:
         # The aiohttp HTTP session. It keeps connections open and reuses them. It is None until
         # start() runs and again after stop().
         self._session: Optional[aiohttp.ClientSession] = None
-        # The background task that runs _flush_loop().
+        # The background task that runs _flush_loop(), and the event loop it runs on.
         self._flush_task: Optional[asyncio.Task] = None
+        self._loop: Optional[asyncio.AbstractEventLoop] = None
         # True from start() until stop().
         self._running = False
         # Lets only one _flush() at a time take spans out of the buffer.
@@ -69,6 +85,9 @@ class AsyncTransport:
         self._total_dropped = 0
         # True after the "buffer is full" warning was logged, so it is logged only once.
         self._warned_overflow = False
+        # Set by AgentPulse when this transport runs on a thread of its own: host names are
+        # then looked up on that thread (see _InlineLoop).
+        self.resolve_inline = False
 
     async def start(self) -> None:
         """Start the transport: create HTTP session and flush loop."""
@@ -77,17 +96,38 @@ class AsyncTransport:
             return
         # Step 1: open the HTTP session. timeout_seconds is the total time allowed for one
         # request. The headers (JSON content type, and the API key if set) go on every request.
+        connector = None
+        if self.resolve_inline:
+            connector = aiohttp.TCPConnector(resolver=aiohttp.ThreadedResolver(loop=_InlineLoop()))
         self._session = aiohttp.ClientSession(
             timeout=aiohttp.ClientTimeout(total=self._config.timeout_seconds),
             headers=self._build_headers(),
+            connector=connector,
         )
         self._running = True
         # Step 2: start the background loop. create_task() schedules it on the running event
         # loop (asyncio's task runner); this call does not wait for it.
+        self._loop = asyncio.get_running_loop()
         self._flush_task = asyncio.create_task(self._flush_loop())
         logger.info(
             "AgentPulse transport started → %s", self._config.endpoint,
         )
+
+    def forget_closed_loop(self) -> bool:
+        """Drop the sender if the event loop it was started on has been closed.
+
+        asyncio.run(pulse.start()) closes its loop when it returns. The session and the flush
+        task go down with it while _running stays True, so nothing would ever send again and
+        start() would think the transport is still running. Returns True if it dropped them,
+        so that start() can run again. The buffer is kept.
+        """
+        if not (self._running and self._loop is not None and self._loop.is_closed()):
+            return False
+        self._running = False
+        self._session = None
+        self._flush_task = None
+        self._loop = None
+        return True
 
     async def stop(self) -> None:
         """Stop the transport: flush remaining spans and close session."""
@@ -118,10 +158,10 @@ class AsyncTransport:
     def enqueue(self, span: SpanPayload) -> None:
         """Add a span to the send buffer. Non-blocking, and bounded.
 
-        The bound matters when the flush loop is not running -- `_ensure_transport`
-        returns quietly if there is no event loop to start it on, and then nothing
-        ever drains this. Without a ceiling the agent's own process grows until it
-        dies, which is the one thing this SDK promises not to do.
+        The bound matters when the flush loop is not running -- the client was never
+        started, or the backend is unreachable -- and nothing drains this. Without a
+        ceiling the agent's own process grows until it dies, which is the one thing
+        this SDK promises not to do.
 
         The oldest span goes first: if telemetry is backing up, the recent spans
         are the ones worth keeping. Dropping is counted and reported rather than
@@ -140,9 +180,8 @@ class AsyncTransport:
                 logger.warning(
                     "AgentPulse span buffer reached %d and is dropping the oldest "
                     "span per new one. The transport is not draining -- usually "
-                    "because it was never started (no running event loop when "
-                    "AgentPulse was constructed), or because the backend is "
-                    "unreachable. Telemetry is being lost; the agent is not "
+                    "because it was never started (call `await pulse.start()`), or "
+                    "because the backend is unreachable. Telemetry is being lost; the agent is not "
                     "affected. Reported once; see stats['total_dropped'] for the count.",
                     limit,
                 )
