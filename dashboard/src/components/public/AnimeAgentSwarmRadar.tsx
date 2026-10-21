@@ -347,9 +347,12 @@ export const AnimeAgentSwarmRadar: React.FC<AnimeAgentSwarmRadarProps> = ({
               <span className={`font-bold ${
                 palette === 'butter' ? 'text-amber-950' : palette === 'chalk' ? 'text-amber-800' : 'text-amber-300'
               }`}>
-                {/* Was 54.2 ms, which also contradicted the deck. Measured:
-                    27.8 MiniLM + 188.1 DeBERTa, both on every span. */}
-                <AnimeInteractiveCounter targetValue={215.9} decimals={1} duration={1200} suffix=" ms" />
+                {/* Was 54.2 ms, then 215.9 ms. 215.9 came from a 2026-08 ablation run
+                    that ablation_results.json no longer holds (the file now says 151.19
+                    on the PyTorch path), so the one figure used on this page is the
+                    median of the 30-case judge comparison: 202.94 ms
+                    (LLM_JUDGE_COMPARISON_REPORT.md). */}
+                <AnimeInteractiveCounter targetValue={203} duration={1200} suffix=" ms median" />
               </span>
             </div>
 
@@ -463,9 +466,9 @@ export const AnimeAgentSwarmRadar: React.FC<AnimeAgentSwarmRadarProps> = ({
               palette === 'butter' ? 'text-neutral-950' : palette === 'chalk' ? 'text-amber-800' : 'text-amber-300'
             }`}>
               {/* Was a counter animating to 16 "Swarms Active" -- a number
-                  nothing measured, on a card with no data source. 215.9 ms is
-                  the measured evaluator latency: 27.8 MiniLM + 188.1 DeBERTa. */}
-              215.9 ms
+                  nothing measured, on a card with no data source. 203 ms is the
+                  median evaluation time over 30 test cases, the same figure as above. */}
+              203 ms median
             </span>
           </div>
           <div>
@@ -474,7 +477,7 @@ export const AnimeAgentSwarmRadar: React.FC<AnimeAgentSwarmRadarProps> = ({
             }`}>Judge Token Cost</span>
             <span className={`font-bold ${
               palette === 'butter' ? 'text-emerald-950' : palette === 'chalk' ? 'text-emerald-700' : 'text-emerald-400'
-            }`}>$0.00 (100% CPU)</span>
+            }`}>$0.00 · CPU</span>
           </div>
         </div>
 

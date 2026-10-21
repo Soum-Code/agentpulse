@@ -148,7 +148,7 @@ export const LiveEvaluatorSandbox: React.FC<LiveEvaluatorSandboxProps> = ({ pale
             <span className={`text-xs font-mono font-semibold ${
               palette === 'butter' ? 'text-neutral-800' : palette === 'chalk' ? 'text-neutral-600' : 'text-neutral-300'
             }`}>
-              Zero-API · Local DeBERTa-v3 &amp; MiniLM ONNX
+              Zero-API · computed in your browser
             </span>
           </div>
           <h3 className={`text-2xl sm:text-3xl font-black mt-2 tracking-tight font-sans ${
@@ -159,7 +159,7 @@ export const LiveEvaluatorSandbox: React.FC<LiveEvaluatorSandboxProps> = ({ pale
           <p className={`text-xs sm:text-sm mt-1 max-w-2xl leading-relaxed ${
             palette === 'butter' ? 'text-neutral-800 font-medium' : palette === 'chalk' ? 'text-neutral-600' : 'text-neutral-300'
           }`}>
-            Type a premise and a claim to see how grounding risk is derived from contradiction and neutral probabilities. This panel is an illustration computed in your browser, not a call to the evaluator — the real DeBERTa pass runs on the server at 203&nbsp;ms median (30-case benchmark). Install the SDK to score your own traces in real-time.
+            Type a premise and a claim to see how grounding risk is derived from contradiction and neutral probabilities. This panel is an illustration computed in your browser, not a call to the evaluator — the real DeBERTa pass runs on the server at 203&nbsp;ms median (30-case benchmark, a small sample). Install the SDK to score your own traces.
           </p>
         </div>
 
@@ -255,12 +255,12 @@ export const LiveEvaluatorSandbox: React.FC<LiveEvaluatorSandboxProps> = ({ pale
               {isRunning ? (
                 <>
                   <RefreshCw className="w-4 h-4 animate-spin" />
-                  <span>Evaluating ONNX CPU...</span>
+                  <span>Computing...</span>
                 </>
               ) : (
                 <>
                   <Play className="w-4 h-4 fill-current" />
-                  <span>Run Local CPU Evaluation</span>
+                  <span>Run Illustration</span>
                 </>
               )}
             </button>
@@ -270,7 +270,7 @@ export const LiveEvaluatorSandbox: React.FC<LiveEvaluatorSandboxProps> = ({ pale
               <Cpu className={`w-3.5 h-3.5 mr-1 ${
                 palette === 'butter' ? 'text-neutral-950' : palette === 'chalk' ? 'text-emerald-700' : 'text-emerald-400'
               }`} />
-              ONNX Runtime on CPU
+              Keyword rules in the browser, not a model
             </span>
           </div>
         </div>
@@ -318,12 +318,12 @@ export const LiveEvaluatorSandbox: React.FC<LiveEvaluatorSandboxProps> = ({ pale
                     <h4 className={`text-sm font-mono font-bold ${
                       palette === 'butter' ? 'text-rose-950' : palette === 'chalk' ? 'text-rose-800' : 'text-red-300'
                     }`}>
-                      HALLUCINATION DETECTED
+                      HIGH GROUNDING RISK
                     </h4>
                     <p className={`text-xs font-sans mt-0.5 ${
                       palette === 'butter' ? 'text-neutral-900 font-medium' : palette === 'chalk' ? 'text-neutral-700' : 'text-neutral-300'
                     }`}>
-                      Output directly contradicts verified premise context. Escalated to DeBERTa-v3 cross-encoder.
+                      The claim contradicts the premise, so the contradiction probability is high and so is the risk. Illustration only.
                     </p>
                   </div>
                 </div>
@@ -342,12 +342,12 @@ export const LiveEvaluatorSandbox: React.FC<LiveEvaluatorSandboxProps> = ({ pale
                     <h4 className={`text-sm font-mono font-bold ${
                       palette === 'butter' ? 'text-emerald-950' : palette === 'chalk' ? 'text-emerald-800' : 'text-emerald-300'
                     }`}>
-                      FAITHFUL &amp; GROUNDED
+                      LOW GROUNDING RISK
                     </h4>
                     <p className={`text-xs font-sans mt-0.5 ${
                       palette === 'butter' ? 'text-neutral-900 font-medium' : palette === 'chalk' ? 'text-neutral-700' : 'text-neutral-300'
                     }`}>
-                      Response strictly entails retrieved premise context. Passed MiniLM cosine gate.
+                      The claim is consistent with the premise, so the contradiction probability is low and so is the risk. Illustration only.
                     </p>
                   </div>
                 </div>
@@ -420,7 +420,7 @@ export const LiveEvaluatorSandbox: React.FC<LiveEvaluatorSandboxProps> = ({ pale
               ? 'border-neutral-200 text-neutral-600'
               : 'border-white/10 text-neutral-400'
           }`}>
-            <span>Model: DeBERTa-v3-small (Local CPU)</span>
+            <span>Real evaluator: MiniLM + DeBERTa-v3-small on CPU</span>
             <span className={
               palette === 'butter' ? 'text-neutral-950 font-bold' : palette === 'chalk' ? 'text-emerald-700 font-semibold' : 'text-emerald-400'
             }>Zero External API Calls</span>
