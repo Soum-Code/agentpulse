@@ -5,7 +5,31 @@
 # AGENTPULSE_SITE_ADDRESS must be the hostname that resolves to this machine.
 # A certificate cannot be issued for a bare IP address, so a DNS name is
 # required — on Azure the free *.cloudapp.azure.com name is enough.
+#
+# Reads (GET, HEAD) are public. Every other method needs a password: nginx adds
+# the server's AGENTPULSE_API_KEY to every /v1/ request, so without this check
+# anyone on the internet could ingest, resolve alerts, mint keys and add dataset
+# cases. AGENTPULSE_WRITE_USER and AGENTPULSE_WRITE_HASH (the output of
+# `caddy hash-password`, never the password itself) reach Caddy from .env through
+# the compose file.
+#
+# Unset, they fall back to the placeholders below (the compose file does the same
+# for an empty value). The placeholder hash matches no password, so every write
+# is refused with 401, reads keep working and Caddy still starts: a missing value
+# must not take the whole site down. It has to stay valid base64, though; Caddy
+# refuses to start on anything else.
 {$AGENTPULSE_SITE_ADDRESS} {
 	encode gzip
+
+	@write {
+		not method GET HEAD
+		# Add a line here for a write that must stay public, for example the
+		# rate-limited chat: `not path /chat*`. Lines in this block are ANDed, so a
+		# request is checked for a password only if every one of them matches.
+	}
+	basic_auth @write bcrypt "AgentPulse writes" {
+		{$AGENTPULSE_WRITE_USER:writes-disabled} {$AGENTPULSE_WRITE_HASH:ZGlzYWJsZWQ=}
+	}
+
 	reverse_proxy dashboard:5173
 }
