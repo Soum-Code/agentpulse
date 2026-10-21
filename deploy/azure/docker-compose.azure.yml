@@ -27,6 +27,13 @@ services:
       - "443:443"
     environment:
       AGENTPULSE_SITE_ADDRESS: ${AGENTPULSE_SITE_ADDRESS:?set it to the public hostname, e.g. agentpulse.centralindia.cloudapp.azure.com}
+      # The password for every request except GET and HEAD (see the Caddyfile).
+      # Unlike the site address these do not refuse to start when unset: the site
+      # then serves reads only. The defaults repeat the Caddyfile's placeholders,
+      # because compose passes an unset variable as an empty string and Caddy
+      # applies its own default only to a variable that is not set at all.
+      AGENTPULSE_WRITE_USER: ${AGENTPULSE_WRITE_USER:-writes-disabled}
+      AGENTPULSE_WRITE_HASH: ${AGENTPULSE_WRITE_HASH:-ZGlzYWJsZWQ=}
     volumes:
       - ./deploy/azure/Caddyfile:/etc/caddy/Caddyfile:ro
       # Issued certificates live here. Deleting this volume makes Caddy request
