@@ -40,6 +40,14 @@ export interface ChatTurn {
   groundingEvaluationStage?: string | null;
 }
 
+export type PipelineAgent = 'retriever' | 'verifier' | 'answerer';
+
+/** One agent's reading from AgentPulse's /v1/drift. Null means not measured, never zero. */
+export interface AgentDriftReading {
+  windowDistance: number | null;
+  asi: number | null;
+}
+
 export interface RagSessionStats {
   turnsSent: number;
   spansSent: number;

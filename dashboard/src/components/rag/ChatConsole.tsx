@@ -25,25 +25,23 @@ interface ChatConsoleProps {
   onSendMessage: (message: string) => Promise<void>;
   onCancelInFlight: () => void;
   isInFlight: boolean;
-  activeStage?: 'retriever' | 'verifier' | 'answerer';
   inFlightElapsedSeconds: number;
   selectedTraceId?: string;
   onSelectTrace: (traceId: string) => void;
   sessionId: string;
   onResetSession: () => void;
-  isSimulatorMode: boolean;
-  onToggleSimulator: () => void;
-  onSimulateFailure: () => void;
   palette?: ColorPalette;
   isCalmMode?: boolean;
   chalkSurface?: ChalkSurfacePreset;
 }
 
+// Three the corpus covers (SQLite WAL, KB-429, DeBERTa) and one it does not, so the
+// grounding signal has something to separate. Titles are in demo/workflows/retrieval.py.
 const SAMPLE_PROMPTS = [
   'how does SQLite WAL improve concurrency?',
-  'how do checkpoints affect reader threads in WAL mode?',
-  'what happens during a crash before a commit record is flushed?',
-  'why does page splitting cause write amplification in B-Trees?',
+  'what should a client do after an HTTP 429 from the rate limiter?',
+  'what does DeBERTa change compared with BERT?',
+  'who won the 2022 football world cup?',
 ];
 
 function formatLatency(ms: number | null | undefined): string {
@@ -59,15 +57,11 @@ export const ChatConsole: React.FC<ChatConsoleProps> = ({
   onSendMessage,
   onCancelInFlight,
   isInFlight,
-  activeStage,
   inFlightElapsedSeconds,
   selectedTraceId,
   onSelectTrace,
   sessionId,
   onResetSession,
-  isSimulatorMode,
-  onToggleSimulator,
-  onSimulateFailure,
   palette = 'dark',
   isCalmMode = false,
   chalkSurface = 'classic-white',
@@ -136,17 +130,6 @@ export const ChatConsole: React.FC<ChatConsoleProps> = ({
           >
             New Session
           </button>
-          <button
-            onClick={onToggleSimulator}
-            className={`px-2 py-1 rounded text-[10px] font-medium border transition-colors ${
-              isSimulatorMode
-                ? `${theme.accentBg} ${theme.accentBorder} ${theme.accentText}`
-                : `${theme.cardBg} ${theme.cardBorder} ${theme.subtextColor} hover:${theme.textColor}`
-            }`}
-            title="Toggle between real :8100 backend and built-in simulator"
-          >
-            {isSimulatorMode ? '● SIMULATOR ACTIVE' : '○ LIVE BACKEND (:8100)'}
-          </button>
         </div>
       </div>
 
@@ -167,7 +150,7 @@ export const ChatConsole: React.FC<ChatConsoleProps> = ({
 
             <div className="w-full mt-6 text-left">
               <div className={`text-[10px] uppercase font-semibold ${theme.subtextColor} tracking-wider mb-2`}>
-                Sample Questions (SQLite WAL Corpus):
+                Sample Questions (the last is not in the corpus):
               </div>
               <div className="space-y-1.5">
                 {SAMPLE_PROMPTS.map((prompt, i) => (
@@ -183,16 +166,6 @@ export const ChatConsole: React.FC<ChatConsoleProps> = ({
               </div>
             </div>
 
-            <div className={`mt-6 pt-4 border-t ${theme.divider} w-full flex items-center justify-center gap-2`}>
-              <button
-                onClick={onSimulateFailure}
-                className="px-3 py-1.5 rounded bg-rose-950/40 border border-rose-500/30 text-rose-300 hover:bg-rose-900/40 text-[10px] transition-colors flex items-center gap-1.5"
-                title="Trigger a turn where the verifier aborts mid-flight to test partial-turn observability"
-              >
-                <AlertTriangle className="w-3 h-3" />
-                Test Partial Turn (Verifier Crash)
-              </button>
-            </div>
           </div>
         )}
 
@@ -268,7 +241,10 @@ export const ChatConsole: React.FC<ChatConsoleProps> = ({
                         {turn.errorMessage || resp?.error || 'Pipeline halted before completion'}
                       </div>
                       <div className="text-[10px] text-rose-400/80 mt-1.5">
-                        Completed {agents.length} of 3 agent stages before failure. This turn's spans remain visible in AgentPulse telemetry.
+                        Completed {agents.length} of 3 agent stages before failure.{' '}
+                        {turn.traceId
+                          ? "This turn's spans remain visible in AgentPulse telemetry."
+                          : 'The service returned no trace id, so there is nothing to look up in AgentPulse.'}
                       </div>
                     </div>
                   )}
@@ -482,49 +458,10 @@ export const ChatConsole: React.FC<ChatConsoleProps> = ({
             </div>
 
             <p className={`text-[11px] ${theme.subtextColor} leading-relaxed`}>
-              Turns take 30–120s across three sequential LLM calls. Watching live span emission to AgentPulse:
+              Three sequential LLM calls (retriever, verifier, answerer); a turn can take a minute or more.
+              The service reports no per-stage progress, so which stage is running is not shown. The
+              stages and the models that ran appear on the turn when it returns.
             </p>
-
-            {/* Three Stage Progress Row */}
-            <div className="grid grid-cols-3 gap-2 pt-1">
-              {[
-                { stage: 'retriever', model: 'mistralai/mistral-nemotron', label: '1. Retriever' },
-                { stage: 'verifier', model: 'google/gemma-4-31b-it', label: '2. Verifier' },
-                { stage: 'answerer', model: 'deepseek-ai/deepseek-v4-flash-0731', label: '3. Answerer' },
-              ].map(({ stage, model, label }) => {
-                const isCurrent = activeStage === stage;
-                const isDone =
-                  (stage === 'retriever' && (activeStage === 'verifier' || activeStage === 'answerer')) ||
-                  (stage === 'verifier' && activeStage === 'answerer');
-
-                return (
-                  <div
-                    key={stage}
-                    className={`p-2.5 rounded-lg border transition-all ${
-                      isCurrent
-                        ? `${theme.accentBg} ${theme.accentBorder} ${theme.accentText}`
-                        : isDone
-                        ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-300'
-                        : `${theme.codeBg} border-white/5 ${theme.subtextColor}`
-                    }`}
-                  >
-                    <div className="flex items-center justify-between text-[11px] font-semibold mb-1">
-                      <span>{label}</span>
-                      {isDone ? (
-                        <CheckCircle2 className="w-3 h-3 text-emerald-400" />
-                      ) : isCurrent ? (
-                        <span className={`text-[9px] px-1.5 py-0.2 rounded ${theme.accentBg} ${theme.accentText} animate-pulse`}>
-                          RUNNING
-                        </span>
-                      ) : (
-                        <span className={`text-[9px] ${theme.subtextColor}`}>QUEUED</span>
-                      )}
-                    </div>
-                    <div className={`text-[9px] font-mono truncate ${theme.subtextColor}`}>{model}</div>
-                  </div>
-                );
-              })}
-            </div>
           </div>
         )}
 
@@ -542,8 +479,8 @@ export const ChatConsole: React.FC<ChatConsoleProps> = ({
             onKeyDown={handleKeyDown}
             placeholder={
               isInFlight
-                ? 'Sequential turn in flight (30–120s)... AgentPulse is capturing spans.'
-                : 'Ask a question about SQLite WAL, MVCC, or crash recovery (Enter to send)...'
+                ? 'Turn in flight...'
+                : 'Ask a question the corpus covers, or one it does not (Enter to send)...'
             }
             disabled={isInFlight}
             className={`w-full pl-3 pr-24 py-2.5 rounded-lg ${theme.inputBg} border ${theme.inputBorder} ${theme.inputText} ${theme.inputPlaceholder} text-[12px] font-mono focus:outline-none resize-none disabled:opacity-50`}
