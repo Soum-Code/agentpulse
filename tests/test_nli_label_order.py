@@ -9,8 +9,8 @@ which is why disagreement scores never showed it.
 These tests use a fake model with a fake config, so they need no model download. The unusual
 order below matches neither the old guess nor the default model, so a hard-coded order fails.
 
-Rows written before the fix cannot be corrected in place, so the stored `model_version` is
-bumped to "v1.1" to tell them apart from the rows written after it (still "v1.0").
+The stored `model_version` is bumped to "v1.1" to tell the rows written after the fix from those
+written before it (still "v1.0"). `python -m app.rescore_cli` scores the old rows again.
 """
 
 from __future__ import annotations

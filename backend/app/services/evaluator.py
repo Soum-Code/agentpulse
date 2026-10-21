@@ -72,6 +72,8 @@ class EvaluationResult:
     # grounding.py). Rows stored as v1.0 have entailment_prob and neutral_prob swapped, and
     # with them grounding_score, overall_risk_score, the risk label and the alerts fired
     # from them. Nothing filters by this field; it only tells the two kinds of rows apart.
+    # `python -m app.rescore_cli` scores v1.0 rows again from the stored span text (a dry run
+    # unless given --apply), after which they carry v1.1 and config_version v1.1.
     model_version: str = "v1.1"
     # v1.1 = overall_risk_score averages only grounding and the tool-claim score of spans
     # that had a claim to check (v1.0 also averaged in disagreement at weight 0.20 and a
