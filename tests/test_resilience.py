@@ -329,6 +329,38 @@ class TestTransportStop:
         assert "span000000000007" in (tmp_path / "fallback.jsonl").read_text()
 
 
+class TestTransportRetries:
+    def _run(self, backend, tmp_path, statuses):
+        backend.statuses = list(statuses)
+        config = AgentPulseConfig(
+            endpoint=backend.url, flush_interval_ms=20, max_retries=3,
+            fallback_file=str(tmp_path / "fallback.jsonl"),
+        )
+        transport = AsyncTransport(config)
+
+        async def main():
+            await transport.start()
+            transport.enqueue(_span(3))
+            await transport.stop()
+
+        asyncio.run(main())
+        return transport
+
+    def test_a_502_from_a_restarting_backend_is_retried(self, backend, tmp_path):
+        """Caddy answers 502/503 for a few seconds during a deploy; one retry later it works."""
+        transport = self._run(backend, tmp_path, [502])
+
+        assert backend.span_ids() == ["span000000000003"]
+        assert transport.stats["total_sent"] == 1
+        assert transport.stats["total_fallback"] == 0
+
+    def test_a_client_error_is_not_retried(self, backend, tmp_path):
+        transport = self._run(backend, tmp_path, [400, 202])
+
+        assert backend.span_ids() == []          # the 202 behind the 400 was never asked for
+        assert transport.stats["total_fallback"] == 1
+
+
 class TestTransportResilience:
     def test_local_fallback_write(self):
         with tempfile.TemporaryDirectory() as tmpdir:
