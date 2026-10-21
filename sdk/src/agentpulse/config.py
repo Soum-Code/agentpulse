@@ -51,12 +51,18 @@ class CapturePolicy:
         r"\b\d{3}[-.]?\d{3}[-.]?\d{4}\b",  # Phone
         # US Social Security number shape: 3 digits, dash, 2 digits, dash, 4 digits.
         r"\b\d{3}-\d{2}-\d{4}\b",  # SSN
-        # Secrets: one of the words sk-, api_key, token, secret, password or bearer (any letter
-        # case), then ":" or "=", then the value up to the next space. So "password: abc" is
-        # masked. NOT masked: "password is abc" (no ":" or "=" after the word), a bare key such
-        # as "sk-abc123", and "Authorization: Bearer abc123" (the word must be followed by
-        # ":" or "=").
-        r"(?i)(sk-|api[_-]?key|token|secret|password|bearer)\s*[:=]\s*\S+",  # Secrets
+        # Secrets, in three patterns.
+        # 1. One of the words api_key, token, secret or password (any letter case), then an
+        # optional quote (the closing quote of a JSON key), ":" or "=", then the value: a quoted
+        # text (up to its closing quote, so "my pass phrase" goes whole) or else everything up to
+        # the next space. So "password: abc", password=abc and "password": "abc" are all masked.
+        # NOT masked: "password is abc" (no ":" or "=" after the word).
+        r"(?i)(api[_-]?key|token|secret|password)[\"']?\s*[:=]\s*(?:\"[^\"]*\"|'[^']*'|\S+)",  # Secrets
+        # 2. A bare key that starts with sk- (OpenAI style) and is at least 16 more characters.
+        r"\bsk-[A-Za-z0-9_-]{16,}",  # sk- keys
+        # 3. The word bearer and then a token of at least 8 characters, as in
+        # "Authorization: Bearer eyJ...". Shorter words such as "bearer of" are left alone.
+        r"(?i)\bbearer\s+[A-Za-z0-9._~+/=-]{8,}",  # Bearer tokens
     ])
     # Key names whose values PrivacyFilter.filter_dict() replaces with [FILTERED] (compared
     # in lower case). No code in the SDK calls filter_dict() yet; only the tests do.
