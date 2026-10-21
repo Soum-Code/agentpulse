@@ -199,3 +199,24 @@ class TestAuthenticationFlow:
     def test_minting_a_key_requires_a_key(self, client):
         """The endpoint that issues credentials cannot itself be open."""
         assert client.post("/v1/keys", json={"owner_id": "anyone"}).status_code == 401
+
+    def test_only_the_environment_key_can_manage_keys(self, client):
+        """The caller picks owner_id, so an issued key could mint, list and revoke
+        every owner's keys -- including a fresh key for itself, which would survive
+        its own revocation. Key management is therefore the environment key's job."""
+        owner = self._owner()
+        created = self._issue(client, owner)
+        issued = {"X-API-Key": created["key"]}
+
+        assert client.post(
+            "/v1/keys", json={"owner_id": owner}, headers=issued
+        ).status_code == 401
+        assert client.get(f"/v1/keys?owner_id={owner}", headers=issued).status_code == 401
+        assert client.delete(
+            f"/v1/keys/{created['id']}?owner_id={owner}", headers=issued
+        ).status_code == 401
+
+        # The issued key still works everywhere else, and the environment key still
+        # manages keys.
+        assert client.get("/v1/metrics", headers=issued).status_code == 200
+        assert client.get(f"/v1/keys?owner_id={owner}", headers=self.ENV).status_code == 200

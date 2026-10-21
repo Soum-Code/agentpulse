@@ -83,9 +83,12 @@ class APIKeyMiddleware(BaseHTTPMiddleware):
         # So `authenticated` is True when either (a) a key was sent and it equals the
         # key from settings, or (b) local dev mode is on and this is a GET. The
         # compare_digest call takes the same time wherever the two texts differ, so
-        # the response time does not leak how much of a guessed key was right.
+        # the response time does not leak how much of a guessed key was right. It gets
+        # bytes because it raises TypeError on a str with a non-ASCII character, and
+        # Starlette decodes header bytes as latin-1, so any byte of 0x80 or more would
+        # otherwise answer 500 on every path.
         request.state.authenticated = (
-            (bool(presented) and hmac.compare_digest(presented, settings.api_key))
+            (bool(presented) and hmac.compare_digest(presented.encode(), settings.api_key.encode()))
             or (settings.local_dev_mode and request.method == "GET")
         )
 
@@ -103,14 +106,19 @@ class APIKeyMiddleware(BaseHTTPMiddleware):
         # Step 4: everything else needs a valid key. Checks run cheapest first:
         #   (a) no key at all -> 401;
         #   (b) key equals the key from settings -> allowed, no database needed;
-        #   (c) otherwise look it up among the keys issued through /v1/keys (at most
+        #   (c) /v1/keys is for the key from settings only: the caller picks owner_id,
+        #       so an issued key there could mint, list and revoke every owner's keys
+        #       -> 401 without a lookup;
+        #   (d) otherwise look it up among the keys issued through /v1/keys (at most
         #       one database query) -> allowed and marked authenticated if found;
-        #   (d) anything else -> 401. All the 401 answers use the same text.
+        #   (e) anything else -> 401. All the 401 answers use the same text.
         # Require API key for mutating requests, or all requests when local_dev_mode is False
         if not presented:
             return JSONResponse(status_code=401, content={"detail": "Invalid or missing API key"})
         if request.state.authenticated:
             return await call_next(request)
+        if path.startswith("/v1/keys"):
+            return JSONResponse(status_code=401, content={"detail": "Invalid or missing API key"})
         if await _is_valid_issued_key(presented):
             request.state.authenticated = True
             return await call_next(request)
