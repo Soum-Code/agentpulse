@@ -105,8 +105,9 @@ git clone https://github.com/Soum-Code/agentpulse.git ~/agentpulse
 cd ~/agentpulse
 
 cp .env.example .env
-# Set AGENTPULSE_API_KEY and VITE_API_KEY to the same generated value —
-# `openssl rand -hex 24` — and never leave the placeholder on a public host.
+# Set AGENTPULSE_API_KEY to a generated value — `openssl rand -hex 24` — and never leave
+# the placeholder on a public host. There is no VITE_API_KEY: the key must not be built
+# into the dashboard's JavaScript; nginx adds it to /v1 requests at runtime.
 # Set AGENTPULSE_SITE_ADDRESS to the DNS name created above.
 # Set AGENTPULSE_WRITE_USER and AGENTPULSE_WRITE_HASH: see "Password for writes".
 # Leave VITE_API_URL empty: see the note in .env.example.
