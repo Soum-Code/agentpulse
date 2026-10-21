@@ -147,20 +147,16 @@ class AsyncTransport:
                     limit,
                 )
 
-        # Step 3: add the new span at the end.
+        # Step 3: add the new span at the end. That is all: sending is left to _flush_loop,
+        # which wakes every flush_interval_ms. enqueue() can be called from any thread (a sync
+        # node run by asyncio.to_thread or by LangGraph's executor, a Flask worker), where
+        # there is no event loop to start a send on, so it must not touch asyncio. list.append
+        # is safe across threads.
         self._buffer.append(span)
-        # Step 4: send early. Here "full" means batch_size spans are waiting (10 by default),
-        # not the max_buffered_spans cap above. create_task() starts _flush() in the background
-        # without waiting for it. This only happens while the transport is running; before
-        # start() (or after stop()) spans just wait in the buffer.
-        # Flush immediately if buffer is full
-        if len(self._buffer) >= self._config.batch_size:
-            if self._running:
-                asyncio.create_task(self._flush())
 
     # Runs in the background from start() to stop(). Every flush_interval_ms milliseconds
-    # (100 by default) it sends whatever is waiting, so a quiet period does not leave spans
-    # sitting in the buffer. The loop ends when _running turns False or the task is cancelled.
+    # (100 by default) it sends whatever is waiting. This is the only thing that sends while
+    # the transport runs. The loop ends when _running turns False or the task is cancelled.
     async def _flush_loop(self) -> None:
         """Periodically flush buffered spans."""
         interval = self._config.flush_interval_ms / 1000.0
@@ -171,14 +167,16 @@ class AsyncTransport:
 
     async def _flush(self) -> None:
         """Send all buffered spans to the backend."""
-        # Step 1: under the lock, copy every waiting span into `batch` and empty the buffer.
-        # The lock is let go before the network call below, so a flush that is waiting for the
-        # network does not stop a second flush from taking the spans that arrive meanwhile.
+        # Step 1: under the lock, take every waiting span into `batch` and leave a new empty
+        # list behind. Swapping the two lists in one step means a span that another thread
+        # enqueues at the same moment lands either in `batch` or in the new buffer, never in
+        # the gap between a copy and a clear. The lock is let go before the network call below,
+        # so a flush that is waiting for the network does not stop a second flush from taking
+        # the spans that arrive meanwhile.
         async with self._lock:
             if not self._buffer:
                 return
-            batch = self._buffer.copy()
-            self._buffer.clear()
+            batch, self._buffer = self._buffer, []
 
         # Step 2: wrap the batch in the request body. sdk_version is written here as "0.1.0".
         request = IngestRequest(
