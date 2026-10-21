@@ -3,6 +3,8 @@
 import asyncio
 import json
 import os
+import subprocess
+import sys
 import tempfile
 import threading
 import time
@@ -128,6 +130,145 @@ class TestTransportThreads:
 
         assert len(calls) == 5
         assert len(backend.span_ids()) == 5
+
+
+class TestClientWithoutARunningLoop:
+    """A plain script, Flask or Celery has no event loop, so nothing used to start the transport."""
+
+    def test_sync_monitor_sends_its_spans_from_a_thread(self, backend):
+        from agentpulse import AgentPulse
+
+        pulse = AgentPulse(endpoint=backend.url, flush_interval_ms=20)
+
+        @pulse.monitor(agent_id="sync_node")
+        def node(state):
+            return {"ok": True}
+
+        try:
+            node({})
+            node({})
+            assert len(backend.wait_for_spans(2)) == 2
+        finally:
+            pulse._stop_in_thread()
+
+    def test_langgraph_adapter_and_manual_spans_are_sent_too(self, backend):
+        from agentpulse import AgentPulse
+        from agentpulse.integrations.langgraph import LangGraphAdapter
+
+        pulse = AgentPulse(endpoint=backend.url, flush_interval_ms=20)
+        adapter = LangGraphAdapter(pulse)
+        try:
+            adapter.end_agent(adapter.start_agent("planner", input_state={"q": 1}), {"a": 1})
+            pulse.end_span(pulse.start_span("manual"))
+            assert len(backend.wait_for_spans(2)) == 2
+        finally:
+            pulse._stop_in_thread()
+
+    def test_stopping_flushes_what_is_still_waiting(self, backend):
+        from agentpulse import AgentPulse
+
+        # Slow flush loop: the spans below are still in the buffer when the stop comes.
+        pulse = AgentPulse(endpoint=backend.url, flush_interval_ms=60_000)
+
+        @pulse.monitor(agent_id="sync_node")
+        def node(state):
+            return {}
+
+        for _ in range(3):
+            node({})
+        pulse._stop_in_thread()
+
+        assert len(backend.span_ids()) == 3
+        assert pulse._bg_thread is None
+
+    def test_disabled_sdk_starts_no_thread(self):
+        from agentpulse import AgentPulse
+
+        pulse = AgentPulse(enabled=False)
+        pulse.monitor(agent_id="x")
+        assert pulse._bg_thread is None
+
+    @pytest.mark.parametrize("host", ["127.0.0.1", "localhost"])
+    def test_spans_are_flushed_at_interpreter_exit(self, backend, host):
+        """The real thing: a script that ends right after its last call, with no shutdown().
+
+        With a host name the last send has to look the name up while the interpreter is
+        exiting, when no executor thread can be started any more.
+        """
+        url = backend.url.replace("127.0.0.1", host)
+        script = "\n".join([
+            "from agentpulse import AgentPulse",
+            f"pulse = AgentPulse(endpoint={url!r}, flush_interval_ms=60000)",
+            "@pulse.monitor(agent_id='script_node')",
+            "def node(state):",
+            "    return {}",
+            "node({}); node({})",
+        ])
+        env = {**os.environ, "PYTHONPATH": os.pathsep.join(sys.path)}
+        subprocess.run([sys.executable, "-c", script], check=True, env=env, timeout=60)
+
+        assert len(backend.span_ids()) == 2
+
+    def test_start_and_shutdown_inside_a_loop_still_work_after_a_thread_start(self, backend):
+        """@monitor runs at import time (no loop), asyncio.run(main()) comes later."""
+        from agentpulse import AgentPulse
+
+        pulse = AgentPulse(endpoint=backend.url, flush_interval_ms=20)
+
+        @pulse.monitor(agent_id="async_node")
+        async def node(state):
+            return {}
+
+        assert pulse._bg_thread is not None
+
+        async def main():
+            await pulse.start()           # the transport already runs; this must not start a second one
+            await node({})
+            await node({})
+            await pulse.shutdown()        # stops it on its own thread and flushes
+
+        asyncio.run(main())
+
+        assert len(backend.span_ids()) == 2
+        assert pulse._bg_thread is None
+
+    @pytest.mark.filterwarnings("ignore::ResourceWarning")  # the session the closed loop left
+    def test_a_loop_that_asyncio_run_closed_is_replaced(self, backend):
+        """asyncio.run(pulse.start()) leaves the sender on a closed loop; use afterwards must still work."""
+        from agentpulse import AgentPulse
+
+        pulse = AgentPulse(endpoint=backend.url, flush_interval_ms=20)
+        asyncio.run(pulse.start())
+
+        @pulse.monitor(agent_id="sync_node")
+        def node(state):
+            return {}
+
+        try:
+            node({})
+            assert len(backend.wait_for_spans(1)) == 1
+        finally:
+            pulse._stop_in_thread()
+
+    def test_start_and_shutdown_in_one_loop_use_no_thread(self, backend):
+        from agentpulse import AgentPulse
+
+        pulse = AgentPulse(endpoint=backend.url, flush_interval_ms=20)
+
+        async def main():
+            await pulse.start()
+
+            @pulse.monitor(agent_id="async_node")
+            async def node(state):
+                return {}
+
+            await node({})
+            await pulse.shutdown()
+
+        asyncio.run(main())
+
+        assert pulse._bg_thread is None
+        assert len(backend.span_ids()) == 1
 
 
 class TestTransportResilience:

@@ -76,6 +76,9 @@ class LangGraphAdapter(BaseIntegration):
     def __init__(self, pulse: AgentPulse) -> None:
         self.pulse = pulse
         self._active_spans: dict[str, dict] = {}
+        # The adapter queues spans straight into the transport, so start it here if nobody has
+        # (a script with no event loop would otherwise never send them).
+        pulse._ensure_transport()
 
     # Opens a span for one agent step. In: the agent id, an optional role and pipeline id,
     # the state the node received, and an optional parent span id. Out: the new span id.
