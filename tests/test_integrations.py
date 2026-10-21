@@ -22,6 +22,15 @@ class MockStateGraph:
 
 
 @pytest.fixture
+def fresh_context():
+    """No current trace context before the test, and none left behind after it."""
+    from agentpulse.context import _current_context
+    token = _current_context.set(None)
+    yield
+    _current_context.reset(token)
+
+
+@pytest.fixture
 def pulse_client():
     config = AgentPulseConfig(service_name="test_service", enabled=False)
     return AgentPulse(config=config)
@@ -59,6 +68,34 @@ class TestLangGraphIntegration:
         assert span_id not in adapter._active_spans
         assert len(pulse_client._transport._buffer) == 1
         assert pulse_client._transport._buffer[0].tool_name == "search_api"
+
+    def test_independent_runs_get_separate_traces_and_leave_no_context(self, pulse_client, fresh_context):
+        from agentpulse.context import get_current_context
+        adapter = LangGraphAdapter(pulse_client)
+
+        for _ in range(2):
+            span_id = adapter.start_agent("planner", input_state={"q": 1})
+            adapter.end_agent(span_id, output_state={"a": 1})
+
+        first, second = pulse_client._transport._buffer
+        assert first.trace_id != second.trace_id
+        assert get_current_context() is None
+
+    def test_tool_and_nested_agent_join_the_enclosing_agents_trace(self, pulse_client, fresh_context):
+        from agentpulse.context import get_current_context
+        adapter = LangGraphAdapter(pulse_client)
+
+        outer = adapter.start_agent("planner", input_state={})
+        tool = adapter.start_tool("search")
+        adapter.end_tool(tool, result={"hits": 1})
+        inner = adapter.start_agent("writer", input_state={})
+        adapter.end_agent(inner)
+        adapter.end_agent(outer)
+
+        tool_span, inner_span, outer_span = pulse_client._transport._buffer
+        assert tool_span.trace_id == inner_span.trace_id == outer_span.trace_id
+        assert inner_span.parent_span_id == outer_span.span_id
+        assert get_current_context() is None
 
     def test_instrument_node_sync(self, pulse_client):
         adapter = LangGraphAdapter(pulse_client)

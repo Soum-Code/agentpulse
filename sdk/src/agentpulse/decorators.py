@@ -44,7 +44,6 @@ from agentpulse.config import AgentPulseConfig
 from agentpulse.context import (
     TraceContext,
     ensure_context,
-    get_current_context,
     reset_current_context,
     set_current_context,
 )
@@ -115,14 +114,14 @@ def create_monitor_decorator(
                 # Create the span (trace id, span id, parent, start time) before your function
                 # runs, then start the stopwatch. time.perf_counter() is a clock for measuring
                 # durations: the gap between two readings is the time that passed.
-                span = _build_pre_span(state, _agent_id, _agent_role, span_kind, event_type, config)
+                span, ctx = _build_pre_span(state, _agent_id, _agent_role, span_kind, event_type, config)
                 start = time.perf_counter()
                 # Run your function while this span is the "current parent", so spans made
                 # inside it become its children. Anything instrumented inside it -- an LLM call
                 # wrapped by integrations.llm, a nested monitored function -- then hangs off this
                 # node instead of becoming its sibling, which is what makes the trace a tree
                 # rather than a flat list.
-                token = _push_child_context(span.span_id)
+                token = _push_child_context(ctx, span.span_id)
             except Exception as exc:
                 _fail_open(exc, config)
                 return await func(*args, **kwargs)
@@ -161,10 +160,10 @@ def create_monitor_decorator(
             state = args[0] if args and isinstance(args[0], dict) else {}
 
             try:
-                span = _build_pre_span(state, _agent_id, _agent_role, span_kind, event_type, config)
+                span, ctx = _build_pre_span(state, _agent_id, _agent_role, span_kind, event_type, config)
                 start = time.perf_counter()
                 # See the async wrapper: this is what parents nested spans.
-                token = _push_child_context(span.span_id)
+                token = _push_child_context(ctx, span.span_id)
             except Exception as exc:
                 _fail_open(exc, config)
                 return func(*args, **kwargs)
@@ -254,24 +253,19 @@ def _record_error(
         _fail_open(inner, config)
 
 
-def _push_child_context(span_id: str):
+def _push_child_context(ctx: TraceContext, span_id: str):
     """Make `span_id` the parent for anything instrumented inside this call.
 
-    Returns a token for `_pop_context`, or None if there was no context to
-    descend from -- in which case there is nothing to restore either.
+    `ctx` is the context the span was built from. ctx.child(span_id) is the same trace, with
+    span_id as the parent for new spans. The token that comes back is what `_pop_context`
+    needs to put the previous context back.
     """
-    ctx = get_current_context()
-    if ctx is None:
-        return None
-    # ctx.child(span_id) = same trace, but with span_id as the parent for new spans. The token
-    # that comes back is what _pop_context() needs to undo this.
     return set_current_context(ctx.child(span_id))
 
 
 def _pop_context(token) -> None:
-    """Undo _push_child_context. A token of None means nothing was pushed, so do nothing."""
-    if token is not None:
-        reset_current_context(token)
+    """Undo _push_child_context."""
+    reset_current_context(token)
 
 
 def _build_pre_span(
@@ -281,15 +275,15 @@ def _build_pre_span(
     span_kind: SpanKind,
     event_type: EventType,
     config: AgentPulseConfig,
-) -> SpanPayload:
-    """Create the initial span payload before execution."""
+) -> tuple[SpanPayload, TraceContext]:
+    """Create the initial span payload before execution, and the context it belongs to."""
     # Step 1: find the trace to join (from the state, from the current context, or a new one).
     ctx = ensure_context(state, pipeline_id=config.pipeline_id)
     # Step 2: a new span id. Step 3 (below): the span starts with the current time and status
     # SUCCESS; the rest is filled in after the function has run.
     span_id = ctx.create_child_span_id()
 
-    return SpanPayload(
+    span = SpanPayload(
         trace_id=ctx.trace_id,
         span_id=span_id,
         parent_span_id=ctx.parent_span_id,
@@ -301,6 +295,7 @@ def _build_pre_span(
         start_time=utc_now(),
         status=SpanStatus.SUCCESS,
     )
+    return span, ctx
 
 
 def _finalize_span(
