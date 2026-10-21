@@ -5,8 +5,8 @@ Coordinates: grounding → tool-claim → disagreement → drift → risk aggreg
 
 # ---- What this file is for ---------------------------------------------------
 # This is the scoring pipeline. For ONE span it runs every check (grounding, tool
-# claims, disagreement between agents, drift), merges the grounding, tool-claim and
-# disagreement scores into a single risk number between 0 and 1 (drift is reported
+# claims, disagreement between agents, drift), merges the grounding and tool-claim scores
+# into a single risk number between 0 and 1 (disagreement and drift are reported
 # separately), gives that number a label (low, medium or high), and asks the alert engine
 # which alert rules fire. The answer is a plain object, EvaluationResult.
 # This file does not read or write the database.
@@ -73,7 +73,11 @@ class EvaluationResult:
     # with them grounding_score, overall_risk_score, the risk label and the alerts fired
     # from them. Nothing filters by this field; it only tells the two kinds of rows apart.
     model_version: str = "v1.1"
-    config_version: str = "v1.0"
+    # v1.1 = overall_risk_score averages only grounding and the tool-claim score of spans
+    # that had a claim to check (v1.0 also averaged in disagreement at weight 0.20 and a
+    # no-claim tool check as 0.0), and a trace whose pairs were all gated as off-topic stores
+    # no disagreement_score instead of 0.0. Nothing filters by this field either.
+    config_version: str = "v1.1"
     threshold_version: str = "v1.0"
 
     # Triggered alerts
@@ -82,9 +86,9 @@ class EvaluationResult:
 
 # Calibrated prototype weights for composite risk
 # How much each signal counts in the risk average (_aggregate_risk). A bigger weight
-# means that signal pulls the average harder. Note: "semantic" (0.15) is never read.
-# _aggregate_risk only uses grounding, tool_claim and disagreement. Drift is not part of
-# the risk number at all; it is reported separately.
+# means that signal pulls the average harder. Note: "semantic" (0.15) and "disagreement"
+# (0.20) are never read. _aggregate_risk only uses grounding and tool_claim. Disagreement
+# and drift are not part of the risk number at all; they are reported separately.
 RISK_WEIGHTS = {
     "grounding": 0.40,
     "tool_claim": 0.25,
@@ -200,14 +204,15 @@ class EvaluationPipeline:
                 result.disagreement = max(
                     trace_res.flagged_pairs, key=lambda r: r.disagreement_score
                 )
-            elif trace_res:
+            elif trace_res and trace_res.pairs_evaluated > trace_res.pairs_gated_low_relevance:
                 # Nothing flagged: report the closest comparison made, so a
                 # clean check is still recorded rather than looking like the
                 # step was skipped entirely.
                 # This result is not a real pair, so source_agent_id is the upstream
                 # agent if one was given, otherwise the word "trace". The highest score of
-                # all comparisons (0.0 if every pair was off-topic) is stored as both
-                # disagreement_score and contradiction_prob.
+                # the pairs that were really compared is stored as both
+                # disagreement_score and contradiction_prob. When every pair was gated as
+                # off-topic nothing was compared, so no 0.0 ("aligned") is stored for it.
                 result.disagreement = DisagreementResult(
                     disagreement_score=trace_res.max_disagreement_score,
                     source_agent_id=upstream_agent_id or "trace",
@@ -305,13 +310,15 @@ class EvaluationPipeline:
             signals.append(result.grounding.grounding_score)
             weights.append(RISK_WEIGHTS["grounding"])
 
-        if result.tool_claim and result.tool_claim.tool_claim_score is not None:
+        # A tool-claim result with no claims scores 0.0 meaning "nothing was checked", not
+        # "checked and clean", so it only counts once at least one claim was extracted.
+        if result.tool_claim and result.tool_claim.total_claims > 0:
             signals.append(result.tool_claim.tool_claim_score)
             weights.append(RISK_WEIGHTS["tool_claim"])
 
-        if result.disagreement and result.disagreement.disagreement_score is not None:
-            signals.append(result.disagreement.disagreement_score)
-            weights.append(RISK_WEIGHTS["disagreement"])
+        # Disagreement is not averaged in: it measured at chance (AUC 0.457 without the
+        # planner) and its alert is withdrawn in alerting.py. The score is still stored
+        # and shown, it just does not move the risk number.
 
         # Step 2: no signal at all means there is no risk score to give.
         if not signals:
