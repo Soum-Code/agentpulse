@@ -103,13 +103,15 @@ Ablation configurations were evaluated with thresholds selected on the developme
 
 | Configuration | Precision | Recall | F1 | FPR | FNR | Latency (ms) |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: |
-| A: MiniLM embedding only | 0.733 | 0.846 | 0.786 | 0.235 | 0.154 | 27.8 |
-| B: DeBERTa NLI only | 0.929 | 1.000 | 0.963 | 0.059 | 0.000 | 188.1 |
-| C: MiniLM + DeBERTa cascade | 0.929 | 1.000 | 0.963 | 0.059 | 0.000 | 215.9 |
-| D: NLI + tool-claim validation | 0.929 | 1.000 | 0.963 | 0.059 | 0.000 | 188.1 |
-| E: NLI + inter-agent disagreement | 0.929 | 1.000 | 0.963 | 0.059 | 0.000 | 373.5 |
-| F: NLI + drift signal | 0.448 | 1.000 | 0.619 | 0.941 | 0.000 | 207.7 |
-| G: Full AgentPulse pipeline | 0.929 | 1.000 | 0.963 | 0.059 | 0.000 | 241.6 |
+| A: MiniLM embedding only | 0.733 | 0.846 | 0.786 | 0.235 | 0.154 | 19.10 |
+| B: DeBERTa NLI only | 0.929 | 1.000 | 0.963 | 0.059 | 0.000 | 132.09 |
+| C: MiniLM + DeBERTa cascade | 0.929 | 1.000 | 0.963 | 0.059 | 0.000 | 151.19 |
+| D: NLI + tool-claim validation | 0.929 | 1.000 | 0.963 | 0.059 | 0.000 | 132.13 |
+| E: NLI + inter-agent disagreement | 0.929 | 1.000 | 0.963 | 0.059 | 0.000 | 281.02 |
+| F: NLI + drift signal | 0.448 | 1.000 | 0.619 | 0.941 | 0.000 | 145.58 |
+| G: Full AgentPulse pipeline | 0.929 | 1.000 | 0.963 | 0.059 | 0.000 | 165.18 |
+
+Latency is the per-case mean in milliseconds from the 2026-09-18 run of `experiments/ablation.py` (`experiments/results/ablation_results.json`), on the PyTorch path (`load_models(use_onnx=False)`), one run, CPU only. For A to F it is the sum of the per-case timings of the signals each configuration uses, so C is A plus B by construction (19.10 + 132.09 = 151.19); G is timed separately by running the full `EvaluationPipeline` over the 30 cases. The 2026-08-23 run of the same script recorded 27.8 / 188.1 / 215.9 / 188.1 / 373.5 / 207.7 / 241.6 ms for A to G with identical accuracy; the cause of the difference was not identified, so the two runs together show how far a single latency figure here can move.
 
 Configuration E produces metrics identical to Config B on this dataset: it collapses to B because the dataset's evaluation cases are single-agent records, so the only pair available to the disagreement engine is the same evidence-to-claim comparison NLI already makes. F scores below the plain NLI-only baseline because the drift detector's cold-start centroid, computed over case-file order rather than real temporal traffic, flags most of the non-failure test cases — this is not a subtle effect: F's false positive rate is 0.941. This limitation is analyzed in `THRESHOLD_ANALYSIS.md`. G (the full pipeline) now ties with B/C/D/E after the grounding-score recalibration described in Section 3 — an earlier version of this table showed G at F1=0.703/FPR=0.647 before that fix, since G's `overall_risk_score` incorporates `grounding_score` while A-F use `contradiction_prob` directly.
 

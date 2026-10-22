@@ -343,18 +343,15 @@ A(note(
 A(Spacer(1, 5 * mm)); A(H1("7. The evaluation cascade"))
 A(P(
     "Grounding asks whether an agent's output is supported by the evidence it "
-    "was given. It runs in two stages so that the expensive model is only used "
-    "where the cheap one is uncertain."))
+    "was given. It runs in two stages, and both run on every span."))
 A(code("""
   span (input_summary, output_summary)
         |
         v
-  Stage 1 - MiniLM-L6-v2 embeddings, cosine similarity   ~27.8 ms
-        |
-        +--  cosine > 0.85  -->  accept as grounded, stop
-        |
-        v  otherwise escalate
-  Stage 2 - DeBERTa-v3-small cross-encoder NLI           ~188 ms
+  Stage 1 - MiniLM-L6-v2 embeddings, cosine similarity   ~19 ms
+        |   (no threshold: Stage 2 always runs)
+        v
+  Stage 2 - DeBERTa-v3-small cross-encoder NLI           ~132 ms
         |
         +--> entailment / contradiction / neutral
              -> grounding_risk in [0, 1]
@@ -373,9 +370,9 @@ A(Spacer(1, 5 * mm)); A(H1("8. Measured results"))
 A(P("Ablation on dataset v1.0_test, 30 held-out cases."))
 A(table([
     ["Configuration", "Precision", "Recall", "F1", "Latency"],
-    ["MiniLM gate only", "0.733", "0.846", "0.786", "27.8 ms"],
-    ["DeBERTa NLI only", "0.929", "1.000", "0.963", "188.1 ms"],
-    ["Cascade (shipped)", "0.929", "1.000", "0.963", "215.9 ms"],
+    ["MiniLM gate only", "0.733", "0.846", "0.786", "19.1 ms"],
+    ["DeBERTa NLI only", "0.929", "1.000", "0.963", "132.1 ms"],
+    ["Cascade (shipped)", "0.929", "1.000", "0.963", "151.2 ms"],
     ["Full system (all signals)", "0.929", "1.000", "0.963", "-"],
 ], [46 * mm, 24 * mm, 22 * mm, 20 * mm, 24 * mm], mono_cols=(1, 2, 3, 4)))
 A(Spacer(1, 2 * mm))
@@ -385,11 +382,12 @@ A(P(
     "0.059, false negative rate 0.000."))
 A(note(
     "Read this table honestly. On this benchmark the cascade is no more "
-    "accurate than DeBERTa alone, and is 28 ms slower, because nearly every "
-    "case escalates past the gate. The cascade earns its place only on traffic "
-    "where most spans clear the 0.85 threshold and skip Stage 2 entirely; a "
-    "30-case adversarial set is the worst case for it. The honest claim is "
-    "that the cascade buys throughput on easy traffic, not accuracy."))
+    "accurate than DeBERTa alone, and is about 19 ms slower, because MiniLM "
+    "runs on every span: there is no threshold between the stages, so it saves "
+    "no time on any traffic. The latencies are per-case means from one run on "
+    "2026-09-18 (PyTorch path); the 2026-08-23 run of the same script gave "
+    "27.8, 188.1 and 215.9 ms. The similarity is kept because the drift "
+    "signal uses it."))
 A(Spacer(1, 2 * mm))
 A(P(
     "Two further findings from the same run are worth stating plainly: adding "
@@ -601,9 +599,10 @@ A(table([
 ], [40 * mm, 26 * mm], mono_cols=(1,)))
 A(Spacer(1, 3 * mm))
 A(P(
-    "Evaluation latency observed live: p50 253 ms, p95 497 ms per span, which "
-    "is consistent with the 215.9 ms benchmark plus queue and persistence "
-    "overhead."))
+    "Evaluation latency with one worker on ONNX NLI (throughput_benchmark.json, "
+    "1,000 spans, 2026-08-27): p50 254 ms, p95 417 ms per span, job start to "
+    "job end. The 151.19 ms ablation figure is a different measurement "
+    "(PyTorch path, the two grounding models only)."))
 A(H2("A worked drift detection"))
 A(P(
     "To confirm the sustained-drift path end to end, a fresh agent was driven "

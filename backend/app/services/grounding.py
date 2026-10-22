@@ -9,12 +9,17 @@ This is worth stating plainly because an earlier version of this docstring
 described Stage 2 as running "only when Stage 1 is ambiguous", and the two
 threshold constants below still read like gates. They are not, and never were
 in this code: `evaluate_grounding` has no branch that skips the NLI call. The
-measurements agree — `experiments/results/ablation_results.json` records MiniLM
-alone at 27.83 ms, DeBERTa alone at 188.07 ms and the shipped configuration at
-215.9 ms, which is their sum rather than a weighted mix.
+ablation's latency column cannot show this either way, because
+`experiments/ablation.py` reports a configuration's latency as the sum of the
+per-case timings of the signals it uses, so the cascade row is MiniLM plus
+DeBERTa by construction. The 2026-09-18 run in
+`experiments/results/ablation_results.json` (PyTorch path, one run) has MiniLM
+alone at 19.1 ms, DeBERTa alone at 132.09 ms and the shipped configuration at
+151.19 ms. The 2026-08-23 run of the same script recorded 27.83, 188.07 and
+215.9 ms; the cause of that difference was not identified.
 
 So the design is: run both, prefer NLI, fall back to similarity only when the
-NLI model failed to load. Stage 1 therefore costs ~28 ms on every evaluation
+NLI model failed to load. Stage 1 therefore costs ~19 ms on every evaluation
 instead of saving anything. That is a real trade and it is made knowingly: the
 similarity is used by the drift signal and is useful context on the result, and
 gating on it would change the scores every calibration figure in this project
@@ -249,8 +254,9 @@ def compute_nli_grounding(
         # cut at MAX_NLI_TOKENS.
         # Tokenize once without truncation purely to learn the true length,
         # then again with it. The second pass costs well under a millisecond
-        # against ~188 ms of inference, which is a cheap price for knowing
-        # whether the model actually saw the evidence it was asked about.
+        # against ~132 ms of PyTorch inference (ablation_results.json, 2026-09-18),
+        # which is a cheap price for knowing whether the model actually saw the
+        # evidence it was asked about.
         # verbose=False: this pass is *meant* to exceed the limit, and the
         # tokenizer's own warning ("will result in indexing errors") is both
         # noisy and wrong here -- the inference pass below truncates properly.
