@@ -6,7 +6,7 @@
  *    always from this shared riskTone(score), never a per-component palette.
  *
  * Every score the evaluator produces runs from 0.0 (safe) to 1.0 (risky), so low is
- * good. grounding_score is contradiction_prob + 0.5 * neutral_prob and
+ * good. grounding_score is contradiction_prob + 0.3 * neutral_prob and
  * overall_risk_score is a weighted average of such scores (backend/app/services/
  * grounding.py and evaluator.py). The cut-offs below are the backend's own labels:
  * - > 0.70: Rose (high_risk / Unsupported)

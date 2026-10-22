@@ -214,7 +214,7 @@ export const PublicExperience: React.FC<PublicExperienceProps> = ({ onEnterProdu
       metric: '203ms Median',
       metricLabel: 'Local CPU, 30 test cases',
       diagramTitle: 'NLI Contradiction Cross-Encoder',
-      features: ['Premise vs hypothesis contradiction scoring', 'Calibrated formula: contradiction + 0.5 * neutral', 'Complete causal trace lineage and discrepancy pinpointing']
+      features: ['Premise vs hypothesis contradiction scoring', 'Calibrated formula: contradiction + 0.3 * neutral', 'Complete causal trace lineage and discrepancy pinpointing']
     },
     {
       label: 'ACT & CURATE',
