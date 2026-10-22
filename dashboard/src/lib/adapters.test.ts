@@ -252,6 +252,31 @@ describe('toTrace', () => {
     expect(toTrace(t, [], [alert({ alert_type: 'GROUNDING_FAILURE' })]).driftDetected).toBe(false);
   });
 
+  it('leaves drift and alerts unknown for a trace that is only a list entry', () => {
+    // GET /v1/traces carries no alerts. Passing none must not read as "no drift, no alerts".
+    const t = { trace_id: 't1', service_name: 'svc', start_time: '2026-09-14T10:00:00' } as TraceListItem;
+    const entry = toTrace(t);
+    expect(entry.alerts).toBeUndefined();
+    expect(entry.driftDetected).toBeUndefined();
+    expect(toTrace(t, [], []).alerts).toEqual([]);
+  });
+
+  it('keeps the alerts the trace detail lists', () => {
+    const t = { trace_id: 't1', service_name: 'svc', start_time: '2026-09-14T10:00:00' } as TraceListItem;
+    const [mapped] = toTrace(t, [], [alert({ id: 9, alert_type: 'GROUNDING_FAILURE', span_id: null })]).alerts!;
+    expect(mapped).toEqual({
+      id: 9,
+      alertType: 'GROUNDING_FAILURE',
+      severity: 'HIGH',
+      message: 'Grounding failure for agent',
+      agentId: 'researcher',
+      spanId: undefined,
+      acknowledged: false,
+      resolved: false,
+      createdAt: '2026-09-14T10:00:00',
+    });
+  });
+
   it('leaves the grounding score absent when the trace has no risk score', () => {
     const t = { trace_id: 't1', service_name: 'svc', start_time: '2026-09-14T10:00:00' } as TraceListItem;
     expect(toTrace(t, [], []).groundingScore).toBeUndefined();
