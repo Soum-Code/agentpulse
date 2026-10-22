@@ -36,7 +36,26 @@ import {
 } from 'lucide-react';
 import { Trace, Span, EvaluatorResult, ChronologicalSortOrder } from '../../types';
 import { parseDateTimeToMs } from '../../utils/dateUtils';
-import { riskTextClasses } from '../../lib/riskTone';
+import type { GroundingVerdict } from '../../lib/api';
+import { riskTextClasses, verdictBadgeClasses, verdictLabel, verdictTooltip } from '../../lib/riskTone';
+
+/** What the NLI model concluded about a span's output, next to its risk score. It is not a
+ *  risk: 'Unverifiable' (the evidence neither supports nor contradicts the output) is
+ *  neutral on purpose, not amber or rose. Renders nothing when there is no verdict. */
+const VerdictBadge: React.FC<{ verdict?: GroundingVerdict | null }> = ({ verdict }) => {
+  const label = verdictLabel(verdict);
+  if (!label) return null;
+  const tip = verdictTooltip(verdict);
+  return (
+    <span
+      title={tip ?? undefined}
+      className={`px-2 py-0.5 rounded border text-[11px] font-semibold cursor-help ${verdictBadgeClasses(verdict)}`}
+    >
+      {label}
+      <span className="sr-only">. {tip}</span>
+    </span>
+  );
+};
 
 interface TracesViewProps {
   traces: Trace[];
@@ -121,6 +140,7 @@ export const TracesView: React.FC<TracesViewProps> = ({
 
   const currentTrace = selectedTrace || paginatedTraces[0] || filteredTraces[0] || traces[0];
   const currentSpan = selectedSpan || currentTrace?.spans[0];
+  const groundingResult = currentSpan?.evaluatorResults?.find(r => r.name === 'Grounding');
 
   // Helper to find initial priority span (warning or error first)
   const getFlaggedOrFirstSpan = (trace: Trace): Span | undefined => {
@@ -1421,6 +1441,7 @@ export const TracesView: React.FC<TracesViewProps> = ({
                               {evalResult.passed ? 'PASSED' : 'DISCREPANCY FLAGGED'}
                             </span>
                             <span className="font-semibold text-white">{evalResult.name}</span>
+                            <VerdictBadge verdict={evalResult.verdict} />
                           </div>
                           <span className="text-neutral-400">
                             Score: <strong className="text-white">{evalResult.score.toFixed(2)}</strong> (thresh: {evalResult.threshold})
@@ -1466,6 +1487,19 @@ export const TracesView: React.FC<TracesViewProps> = ({
 
                 {/* Solid Scrolling Body */}
                 <div className="p-6 space-y-6 font-mono text-xs">
+                  {/* Grounding: the risk score and, beside it, what the NLI model concluded */}
+                  {groundingResult?.verdict && (
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+                      <span className="text-neutral-400 uppercase tracking-wider text-[11px]">
+                        Grounding
+                      </span>
+                      <span className={`font-semibold tabular-nums ${riskTextClasses(groundingResult.score)}`}>
+                        Risk {groundingResult.score.toFixed(2)}
+                      </span>
+                      <VerdictBadge verdict={groundingResult.verdict} />
+                    </div>
+                  )}
+
                   {/* Prompt & Completion */}
                   {currentSpan.prompt && (
                     <div className="space-y-2">
