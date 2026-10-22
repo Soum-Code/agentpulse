@@ -150,7 +150,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               <span className="text-emerald-400 text-[10px]">~1.1 GB cached</span>
             </div>
             <p className="text-neutral-400 font-sans text-[11px]">
-              Classifies premise–hypothesis entailment, neutral, and contradiction probabilities. Calibrated formula: <code className="text-neutral-200">contradiction + 0.5 * neutral</code>.
+              Classifies premise–hypothesis entailment, neutral, and contradiction probabilities. Calibrated formula: <code className="text-neutral-200">contradiction + 0.3 * neutral</code>.
             </p>
           </div>
 

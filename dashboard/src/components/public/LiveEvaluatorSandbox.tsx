@@ -114,7 +114,7 @@ export const LiveEvaluatorSandbox: React.FC<LiveEvaluatorSandboxProps> = ({ pale
     }, 280);
   };
 
-  const groundingRisk = results.contradiction + 0.5 * results.neutral;
+  const groundingRisk = results.contradiction + 0.3 * results.neutral;
   const isHallucination = groundingRisk > 0.45;
 
   return (

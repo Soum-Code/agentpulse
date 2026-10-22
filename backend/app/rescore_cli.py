@@ -1,14 +1,18 @@
-"""Re-score evaluation rows that were written before the NLI label-order and risk fixes.
+"""Re-score every evaluation row that was not written by the current scoring code.
 
     python -m app.rescore_cli                         # dry run: report only, writes nothing
     python -m app.rescore_cli --csv /tmp/rescore.csv  # dry run, plus every old -> new value in a file
     python -m app.rescore_cli --apply                 # write the new values, in one transaction
 
-Rows stored with model_version "v1.0" were scored before two fixes: the NLI model's labels were
+A row is picked up when its model_version is not the current one (EvaluationResult's default in
+services/evaluator.py). Rows at "v1.0" were scored before two fixes: the NLI model's labels were
 read in the wrong order (entailment and neutral swapped, so grounding_score was wrong), and
-overall_risk_score averaged in a tool check that had no claim to check (see the comments on
-EvaluationResult in services/evaluator.py). The text those rows were scored from is still in the
-spans table, so each row is scored again by the same functions the worker calls.
+overall_risk_score averaged in a tool check that had no claim to check. Rows at "v1.1" have the
+right labels but the old neutral weight of 0.5; the current "v1.2" uses 0.3 (see the comments on
+EvaluationResult in services/evaluator.py and on NEUTRAL_RISK_WEIGHT in services/grounding.py).
+The text those rows were scored from is still in the spans table, so each row is scored again by
+the same functions the worker calls. A row already at the current version is left alone, so a
+second run finds nothing.
 
 Like retention_cli this is a separate entry point that an operator runs on purpose and reads the
 output of, and it starts as a dry run. Unlike the API container it needs the models, which only
@@ -16,9 +20,10 @@ the worker loads, so run it in the worker:  docker compose exec -T worker python
 """
 
 # WHAT THIS FILE IS FOR
-# A command-line program that fixes old evaluation rows in place. For each row at model_version
-# "v1.0" it recomputes grounding, the tool-claim result, overall_risk_score and the label, keeps
-# the stored disagreement_score, and stamps the current model_version and config_version. It also
+# A command-line program that fixes old evaluation rows in place. For each row whose model_version
+# is not the current one it recomputes grounding, the tool-claim result, overall_risk_score and the
+# label, keeps the stored disagreement_score, and stamps the current model_version and
+# config_version. Each write is guarded by the model_version that was read for that row. It also
 # recomputes the two numbers that are built from those scores (agent_records.avg_risk_score and
 # traces.overall_risk_score), and lists the alerts whose triggering score is now different. It
 # never changes alerts, drift_records or baselines.
@@ -59,11 +64,10 @@ from app.services.tool_claim import ToolCallRecord, evaluate_tool_claims, extrac
 
 logger = logging.getLogger("agentpulse.rescore.cli")
 
-# The rows this program picks up, and only these. After a row is rescored it carries the current
-# version, so a second run finds nothing: that is what makes --apply safe to repeat.
-STALE_MODEL_VERSION = "v1.0"
-
-# The version labels the worker stamps on a new row (EvaluationResult's defaults).
+# The version labels the worker stamps on a new row (EvaluationResult's defaults). The rows this
+# program picks up are those whose model_version differs from CURRENT.model_version. After a row is
+# rescored it carries the current version, so a second run finds nothing: that is what makes
+# --apply safe to repeat.
 CURRENT = EvaluationResult()
 
 # Every column of an evaluation row that this program can write, in the order the CSV shows them.
@@ -178,12 +182,13 @@ def rescore_row(ev: Evaluation, span: Optional[Span], pipeline: EvaluationPipeli
 
 
 async def load_stale(session_factory) -> list[tuple[Evaluation, Optional[Span]]]:
-    """Every row at STALE_MODEL_VERSION with its span, oldest first. The session is closed on return."""
+    """Every row not at the current model_version with its span, oldest first. The session is
+    closed on return."""
     async with session_factory() as session:
         rows = await session.execute(
             select(Evaluation, Span)
             .join(Span, Span.span_id == Evaluation.span_id, isouter=True)
-            .where(Evaluation.model_version == STALE_MODEL_VERSION)
+            .where(Evaluation.model_version != CURRENT.model_version)
             .order_by(Evaluation.id)
         )
         return [(ev, span) for ev, span in rows.all()]
@@ -282,12 +287,14 @@ async def apply_rescore(session_factory, changes: list[RowChange]) -> dict[str, 
     async with session_factory() as session:
         written = []
         for change in changes:
-            # The model_version test is also the guard against a second copy of this program: a
-            # row somebody else already rescored no longer matches, and is not written twice.
+            # The model_version test is also the guard against a second copy of this program: it
+            # is the version this row had when it was read, so a row somebody else has rescored
+            # since (or whose version changed in any other way) no longer matches and is not
+            # written twice.
             result = await session.execute(
                 update(Evaluation)
                 .where(Evaluation.id == change.evaluation_id,
-                       Evaluation.model_version == STALE_MODEL_VERSION)
+                       Evaluation.model_version == change.old["model_version"])
                 .values(**change.new)
             )
             if result.rowcount:
@@ -345,10 +352,12 @@ def summarize(changes: list[RowChange], skipped: list[tuple[int, str]]) -> dict[
     label_moves = Counter(
         (c.old["label"], c.new["label"]) for c in changes if differs(c.old["label"], c.new["label"])
     )
+    versions_read = Counter(c.old["model_version"] for c in changes)
     return {
-        "rows_at_stale_version": len(changes) + len(skipped),
+        "rows_not_current": len(changes) + len(skipped),
         "rows_rescored": len(changes),
         "rows_skipped": len(skipped),
+        "versions_read": dict(sorted(versions_read.items())),
         "score_or_label_changes": sum(c.changed(SCORE_FIELDS) for c in changes),
         "only_probabilities_or_audit_columns": sum(
             c.changed(VALUE_FIELDS) and not c.changed(SCORE_FIELDS) for c in changes
@@ -398,8 +407,10 @@ def format_report(
         "APPLIED: the values below were written." if applied
         else "DRY RUN: nothing was written. Re-run with --apply to write.",
         "",
-        f"Rows at model_version '{STALE_MODEL_VERSION}': {summary['rows_at_stale_version']}"
+        f"Rows not at model_version '{CURRENT.model_version}': {summary['rows_not_current']}"
         f"  (rescored {summary['rows_rescored']}, skipped {summary['rows_skipped']})",
+        "  rescored rows, by the model_version they had: "
+        + (", ".join(f"{v}: {n}" for v, n in summary["versions_read"].items()) or "-"),
         f"  score or label changes:                  {summary['score_or_label_changes']}",
         f"  only NLI probabilities / audit columns:  {summary['only_probabilities_or_audit_columns']}",
         f"  risk label changes:                      {summary['label_changes']}",
@@ -447,8 +458,12 @@ def format_report(
         else:
             fires = "still above" if a["now"] is not None and a["now"] > a["threshold"] else "no longer above"
             lines.append(head + f"{a['field']} {_pair(a['was'], a['now'])}, {fires} threshold {a['threshold']}")
+    if applied and derived["rows_written"] < len(changes):
+        lines += ["", f"NOT WRITTEN: {len(changes) - derived['rows_written']} row(s) changed model_version "
+                  "after they were read (another run, or the worker). They are left as that run "
+                  "wrote them; run again to pick up any that are still not current."]
     if skipped:
-        lines += ["", f"SKIPPED, left at '{STALE_MODEL_VERSION}' (fix the cause and run again): {len(skipped)}"]
+        lines += ["", f"SKIPPED, left at their stored model_version (fix the cause and run again): {len(skipped)}"]
         lines += [f"  evaluation {eid}: {reason}" for eid, reason in skipped]
     return "\n".join(lines)
 
@@ -484,7 +499,7 @@ async def _amain(apply: bool, csv_path: Optional[str]) -> int:
 
     stale = await load_stale(get_session)
     if not stale:
-        print(f"No evaluation rows at model_version '{STALE_MODEL_VERSION}'. Nothing to do.")
+        print(f"No evaluation rows with a model_version other than '{CURRENT.model_version}'. Nothing to do.")
         return 0
 
     # The same load as the worker. Without the NLI model evaluate_grounding falls back to a
@@ -507,7 +522,7 @@ async def _amain(apply: bool, csv_path: Optional[str]) -> int:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Re-score evaluation rows written before the NLI label-order fix"
+        description="Re-score evaluation rows whose model_version is not the current one"
     )
     parser.add_argument(
         "--apply", action="store_true",
