@@ -23,8 +23,8 @@ evaluation worker, and the dashboard. Spaces expose a single port, so the API
 serves the built SPA and the worker runs beside it.
 
 Two models load on first boot, both CPU-only through ONNX Runtime:
-`all-MiniLM-L6-v2` for the Stage 1 cosine gate and `nli-deberta-v3-small` for
-the Stage 2 cross-encoder. Expect a minute or two before the evaluator reports
+`all-MiniLM-L6-v2` for the Stage 1 cosine similarity and `nli-deberta-v3-small` for
+the Stage 2 cross-encoder; both run on every span. Expect a minute or two before the evaluator reports
 ready.
 
 ## Try it
@@ -59,8 +59,10 @@ so this Space runs without it. Do not point a private pipeline at it.
 - Grounding is benchmarked at **F1 0.963** on a thirty-case held-out split.
   Thirty cases shows the pipeline works at a chosen operating point; it does not
   show generalisation.
-- The cascade is **no more accurate than DeBERTa alone** on that set, and 28 ms
-  slower. It buys throughput on traffic that clears the Stage 1 gate, not accuracy.
+- The cascade is **no more accurate than DeBERTa alone** on that set, and about
+  19 ms slower per case (151.19 against 132.09 ms, PyTorch path, one run on
+  2026-09-18). MiniLM runs on every span and does not gate DeBERTa, so it saves no
+  time either; its similarity feeds the drift signal.
 - Disagreement and tool-claim are **experimental**. Tool-claim needs the count
   narrated in prose next to the noun; harnesses emitting structured `tool_call`
   fields are not covered.

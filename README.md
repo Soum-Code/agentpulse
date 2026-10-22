@@ -159,15 +159,26 @@ you are running from: a stale editable install made `test_e2e_langgraph.py` and
 happily reported green over the reduced suite. `pytest tests/ --collect-only -q`
 should end in 260.
 
-Current benchmark results (`benchmarks/benchmark_results.json`, CPU-only):
+Benchmark results from `benchmarks/run_benchmarks.py`, one run on 2026-08-18
+(`benchmarks/benchmark_results.json`; Windows 11, 16 logical cores, CPU only,
+PyTorch inference, not the ONNX backend the worker uses):
 
-| Measurement | P50 | P95 |
-| :--- | :---: | :---: |
-| SDK in-memory enqueue capacity | 5,396,829 spans/sec (synthetic buffer throughput, not network throughput) | — |
-| SDK decorator overhead | 0.005 ms | — |
-| MiniLM embedding inference | 15.1 ms | 18.5 ms |
-| DeBERTa NLI inference | 88.5 ms | 140.5 ms |
-| Full evaluator (both models) | 122.3 ms | 172.2 ms |
+| Measurement | P50 | P95 | Samples |
+| :--- | :---: | :---: | :---: |
+| SDK in-memory enqueue capacity | 5,396,829 spans/sec (synthetic buffer throughput, not network throughput) | — | 50,000 appends |
+| SDK decorator overhead | 0.005 ms | — | 2,000 calls |
+| MiniLM embedding inference | 15.1 ms | 18.5 ms | 100 |
+| DeBERTa NLI inference | 88.5 ms | 140.5 ms | 50 |
+| Full evaluator (both models) | 122.3 ms | 172.2 ms | 9 |
+
+The full-evaluator row is one pass of `EvaluationPipeline.evaluate_span` over the 9
+cases in that script's own dataset, so its P95 is an interpolation between the two
+slowest runs, and the disagreement step ran for only one of the nine. A larger run
+on the same PyTorch path, the 30-case ablation of 2026-09-18
+(`experiments/results/ablation_results.json`), measured 151.19 ms per case for the two
+grounding models together and 165.18 ms for the full pipeline; the 2026-08-23 run of
+that script had measured 215.9 ms for the former. Treat any single latency figure here
+as a measurement of one run on one machine, not a constant.
 
 ## Docker deployment
 
