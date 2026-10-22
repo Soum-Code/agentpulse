@@ -227,8 +227,9 @@ pytest tests/test_durable_queue.py -q
 # Delete data past the retention window
 python -m app.retention_cli
 
-# Score evaluation rows from before the NLI label-order fix again (needs the models, so in
-# Docker run it in the worker). Dry run first; it writes nothing without --apply
+# Score evaluation rows again that an older version of the scoring code wrote (every row whose
+# model_version is not the current one; needs the models, so in Docker run it in the worker).
+# Dry run first; it writes nothing without --apply
 python -m app.rescore_cli --csv rescore.csv
 python -m app.rescore_cli --apply
 

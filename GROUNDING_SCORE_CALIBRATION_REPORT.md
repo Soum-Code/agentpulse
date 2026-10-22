@@ -1,5 +1,7 @@
 # Grounding-Score Formula Calibration
 
+> **Note, 2026-10-22: the weight chosen here was set on swapped labels and has been re-measured.** This calibration ran while `compute_nli_grounding` had the NLI model's `entailment` and `neutral` outputs swapped, so the "neutral" it describes was the model's entailment class and the `w = 0.5` default, the F1 / FPR figures below and the self-comparison demonstration do not describe the real neutral class. `GROUNDING_RECALIBRATION_2026-10.md` re-measured the weight on the corrected labels; `NEUTRAL_RISK_WEIGHT` is **0.3** since `model_version` `v1.2`, with the 0.7 / 0.4 cut-offs unchanged. This document is kept below as it was written.
+
 **Date:** 2026-08-23 17:52:22 UTC
 
 ## Problem

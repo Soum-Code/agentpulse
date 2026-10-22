@@ -239,15 +239,15 @@ The SPA polls REST and also holds a WebSocket at `/v1/ws/live`.
 
 **Question:** does the output follow from the input?
 
-The input text becomes the NLI **premise**, the output text the **hypothesis**. DeBERTa returns three probabilities. Label order in this model is `contradiction=0, neutral=1, entailment=2`.
+The input text becomes the NLI **premise**, the output text the **hypothesis**. DeBERTa returns three probabilities. Label order in this model is `contradiction=0, entailment=1, neutral=2`; the code reads it from the model's own config rather than assuming it.
 
 ```python
-grounding_score = contradiction_prob + 0.5 * neutral_prob
+grounding_score = contradiction_prob + 0.3 * neutral_prob
 ```
 
-The `0.5` is `NEUTRAL_RISK_WEIGHT` and it is the most carefully justified constant in the codebase. The obvious formula, `1 - entailment_prob`, scores neutral exactly as harshly as contradiction. DeBERTa classifies verbatim and near-verbatim pairs as *neutral* far more often than *entailment* — those pairs are out of distribution for a model trained on real NLI data — so the obvious formula made well-supported claims read as near-maximum risk. Weighting neutral at half of contradiction moved held-out F1 from 0.703 to 0.963 and the false positive rate from 0.647 to 0.059.
+The `0.3` is `NEUTRAL_RISK_WEIGHT`: a result the evidence neither supports nor contradicts counts as 0.3 of a contradiction, so a purely neutral output scores 0.3 and stays `low_risk` (the cut-offs are 0.4 and 0.7). It is a design choice, not a fit. It was 0.5 until `model_version` `v1.2`; that value had been chosen while `entailment` and `neutral` were swapped in the code, so the reasoning behind it (that DeBERTa calls verbatim pairs "neutral") was inverted — it calls them entailment. `GROUNDING_RECALIBRATION_2026-10.md` re-measured the weight on the corrected labels: the weight does not change how well scores rank failures above supported cases (AUROC 0.996 on the held-out pool for every weight from 0.0 to 0.8), only where the medium line falls. At the 0.4 cut-off 0.5 flagged 7 of 17 supported test cases as medium (false-positive rate 0.412) against 1 of 17 (0.059) for 0.3, and 0.3 is the largest weight that keeps both production cut-offs at dev F1 1.0. The `0.7` and `0.4` cut-offs are unchanged, and high-risk alerts do not depend on the weight in this range.
 
-`0.5` was chosen as a principled default, not fitted — the dev split was too small to discriminate between candidate weights. Say that plainly if asked.
+What was not measured: the repository has no labelled "plausible but unsupported" data (one such case, `val_17`), so the weight's value for *detecting* a neutral-only fabrication is unknown; at 0.3 such an output reads as `low_risk`. Say that plainly if asked. Rows stored as `model_version` `v1.0` (swapped labels) or `v1.1` (weight 0.5) can be re-scored with `python -m app.rescore_cli`.
 
 Score runs 0.0 (grounded) → 1.0 (ungrounded).
 

@@ -163,7 +163,8 @@ class Evaluation(SQLModel, table=True):
 
     # Individual signal scores (0.0 = safe, 1.0 = risky)
     # grounding_score: is the output supported by the evidence? With the NLI model it
-    # is contradiction_prob + 0.5 * neutral_prob (see services/grounding.py).
+    # is contradiction_prob + 0.3 * neutral_prob since model_version v1.2 (0.5 in v1.0 and
+    # v1.1; see NEUTRAL_RISK_WEIGHT in services/grounding.py).
     grounding_score: Optional[float] = None
     # Not written by any code in backend/app, so it stays empty.
     contradiction_score: Optional[float] = None

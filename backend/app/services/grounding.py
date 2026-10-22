@@ -162,27 +162,31 @@ STAGE1_SAFE_THRESHOLD = 0.85
 # it and that provenance comment points at nothing.
 STAGE1_RISK_THRESHOLD = 0.40
 
-# In short: a neutral answer counts as half a contradiction in the risk score. By the
-# formula below: a fully "contradiction" result scores 1.0, a fully "neutral" one 0.5 and
-# a fully "entailment" one 0.0.
+# In short: a neutral answer counts as 0.3 of a contradiction in the risk score. By the
+# formula below: a fully "contradiction" result scores 1.0, a fully "neutral" one 0.3 and
+# a fully "entailment" one 0.0. A purely neutral result therefore stays under the 0.4
+# "medium" cut-off and is labelled low_risk.
 # grounding_score = contradiction_prob + NEUTRAL_RISK_WEIGHT * neutral_prob.
-# DeBERTa NLI classifies verbatim/near-verbatim premise-hypothesis pairs as
-# "neutral" far more often than "entailment" (out-of-distribution for a model
-# trained on genuine NLI pairs), so scoring neutral the same as contradiction
-# (the old grounding_score = 1 - entailment_prob, i.e. weight 1.0) makes
-# well-supported claims read as near-maximum risk. 0.5 is a principled default
-# (neutral counts as half as risky as contradiction) rather than a value fitted
-# to data -- the dev split was too small/clear-cut to discriminate between
-# candidate weights. See GROUNDING_SCORE_CALIBRATION_REPORT.md for the full
-# sweep, the self-comparison demonstration, and the held-out test-split
-# improvement this produced (F1 0.703 -> 0.963, FPR 0.647 -> 0.059).
 #
-# NOT RE-CHECKED: everything above was observed and measured while compute_nli_grounding
-# had entailment and neutral swapped (see _nli_label_index). The "neutral" those
-# observations describe was really the model's entailment class, so the claim about
-# verbatim pairs, the 0.5 weight and the figures quoted are unverified for the real
-# neutral class. The value is unchanged here; whether to re-fit it is left to the owner.
-NEUTRAL_RISK_WEIGHT = 0.5
+# History: the weight was 0.5, chosen in GROUNDING_SCORE_CALIBRATION_REPORT.md while
+# compute_nli_grounding had entailment and neutral swapped (see _nli_label_index). The
+# "neutral" that report measured was really the model's entailment class, so its reasoning
+# and figures do not describe the real neutral class. GROUNDING_RECALIBRATION_2026-10.md
+# re-measured the weight on the corrected labels and it is 0.3 since that report:
+#   - the weight does not change the ranking (AUROC 0.996 on the held-out pool for every
+#     weight from 0.0 to 0.8), only where the medium line falls;
+#   - at the 0.4 cut-off, 0.5 flags supported held-out cases (false-positive rate 0.412 on
+#     the test split) where 0.3 flags almost none (0.059; exact McNemar p = 0.0078 on the
+#     held-out pool). 0.3 is the largest weight that keeps both production cut-offs at
+#     dev F1 1.0 and a purely neutral output under 0.4;
+#   - the cut-offs are unchanged: 0.7 (high) and 0.4 (medium), see _classify_risk in
+#     services/evaluator.py. High-risk alerts do not depend on the weight in this range.
+#
+# What this does NOT show: no labelled "plausible but unsupported" data exists (the
+# repository has one such case, val_17), so the weight's value for DETECTING a neutral-only
+# fabrication was not measured, only its cost in false mediums. At 0.3 such an output scores
+# 0.3 and reads as low_risk. Any non-zero weight is a design choice, not a fit.
+NEUTRAL_RISK_WEIGHT = 0.3
 
 # In short: the longest input, in tokens, that the NLI model can read. Anything longer is
 # cut off. A token is a small piece of a word.
