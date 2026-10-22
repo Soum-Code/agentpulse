@@ -30,8 +30,8 @@ def generate_charts():
     # Chart 1: Reasoning Strategy Tradeoffs
     fig, ax1 = plt.subplots(figsize=(6.2, 2.0), dpi=300)
     strategies = ['Direct (Zero-Shot)', 'Chain-of-Thought (CoT)', 'Atom of Thoughts (AoT)']
-    risk = [0.251, 0.127, 0.270]
-    tokens_in = [32.6, 64.6, 341.9]
+    risk = [0.424, 0.283, 0.233]
+    tokens_in = [53.1, 88.1, 543.4]
     
     x = np.arange(len(strategies))
     width = 0.32
@@ -41,7 +41,7 @@ def generate_charts():
 
     rects1 = ax1.bar(x - width/2, risk, width, label='Grounding Risk (Lower = Better)', color=color_risk, edgecolor='#1E40AF', alpha=0.9)
     ax1.set_ylabel('Grounding Risk (0 - 1.0)', color='#0F172A', fontweight='bold', fontsize=7.5)
-    ax1.set_ylim(0, 0.35)
+    ax1.set_ylim(0, 0.65)
     ax1.tick_params(axis='y', labelcolor='#0F172A', labelsize=7)
     ax1.set_xticks(x)
     ax1.set_xticklabels(strategies, fontsize=7.5, fontweight='bold')
@@ -50,7 +50,7 @@ def generate_charts():
     ax2 = ax1.twinx()
     rects2 = ax2.bar(x + width/2, tokens_in, width, label='Input Tokens (Cost)', color=color_tokens, edgecolor='#B45309', alpha=0.9)
     ax2.set_ylabel('Mean Input Tokens', color='#0F172A', fontweight='bold', fontsize=7.5)
-    ax2.set_ylim(0, 420)
+    ax2.set_ylim(0, 850)
     ax2.tick_params(axis='y', labelcolor='#0F172A', labelsize=7)
 
     for rect in rects1:
@@ -64,8 +64,8 @@ def generate_charts():
 
     lines1, labels1 = ax1.get_legend_handles_labels()
     lines2, labels2 = ax2.get_legend_handles_labels()
-    ax1.legend(lines1 + lines2, labels1 + labels2, loc='upper left', fontsize=7, framealpha=0.92)
-    plt.title('Reasoning Strategy Benchmark on Qwen 2.5 7B Instruct (v1.0_test)', fontsize=8.5, fontweight='bold', pad=6)
+    ax1.legend(lines1 + lines2, labels1 + labels2, loc='upper center', ncol=2, fontsize=7, framealpha=0.92)
+    plt.title('Reasoning Strategy Benchmark on Qwen3-8B Q4_K_M, CPU (v1.0_test, 30 cases x 5 runs)', fontsize=8.5, fontweight='bold', pad=6)
     
     p1 = os.path.join(CHARTS_DIR, "chart_reasoning.png")
     plt.savefig(p1, bbox_inches='tight')
@@ -302,7 +302,7 @@ def build_pdf(filename="PROJECT_REPORT.pdf"):
     meta_data = [
         [
             Paragraph("<b>Category:</b> Industry-Trend AI Engineering", meta_style),
-            Paragraph("<b>Primary Benchmark:</b> Qwen/Qwen2.5-7B-Instruct", meta_style),
+            Paragraph("<b>Primary Benchmark:</b> Qwen/Qwen3-8B-GGUF:Q4_K_M", meta_style),
             Paragraph("<b>Evaluation Cascade:</b> all-MiniLM-L6-v2 + DeBERTa-v3-small", meta_style)
         ],
         [
@@ -360,8 +360,8 @@ def build_pdf(filename="PROJECT_REPORT.pdf"):
 
     arch_points = [
         [
-            Paragraph("<b>• Fail-Open Async SDK:</b> Non-blocking memory buffer with node wrapper overhead of <b>0.005 ms (P50)</b> and throughput > 5.3M spans/sec.", body_style),
-            Paragraph("<b>• Deterministic Tool Validator:</b> RegEx entity extraction matching counts/names vs actual tool logs in <b>0.22 ms</b>.", body_style)
+            Paragraph("<b>• Fail-Open Async SDK:</b> Non-blocking memory buffer with node wrapper overhead of <b>0.005 ms (P50)</b> and a synthetic in-memory enqueue loop of 5.4M spans/sec (not network throughput).", body_style),
+            Paragraph("<b>• Deterministic Tool Validator:</b> RegEx entity extraction matching counts/names vs actual tool logs in <b>0.07 ms</b> (mean over 19 benchmark cases).", body_style)
         ],
         [
             Paragraph("<b>• Two-Stage Evaluation Cascade:</b> <code>all-MiniLM-L6-v2</code> (~13 ms) + <code>nli-deberta-v3-small</code> (~70 ms) running locally with 0 API cost.", body_style),
@@ -390,23 +390,23 @@ def build_pdf(filename="PROJECT_REPORT.pdf"):
         body_style
     ))
     
-    story.append(Paragraph("<b>13-Layer Latency Profile Breakdown (25 Repeated Runs, 16-Core CPU):</b>", h2_style))
+    story.append(Paragraph("<b>13-Layer Latency Profile Breakdown (25 Repeated Runs, 16-Core CPU, run of 2026-08-18; layers 8, 9 and 13 are not measurements):</b>", h2_style))
 
     latency_rows = [
         [Paragraph("Layer Index & Description", table_cell_header), Paragraph("Mean", table_cell_header), Paragraph("P50", table_cell_header), Paragraph("P95", table_cell_header), Paragraph("Std Dev", table_cell_header), Paragraph("Measurement Scope", table_cell_header)],
         [Paragraph("1. Prompt Preparation", table_cell), Paragraph("0.001 ms", table_cell), Paragraph("0.001 ms", table_cell), Paragraph("0.001 ms", table_cell), Paragraph("0.000 ms", table_cell), Paragraph("Template string formatting", table_cell)],
-        [Paragraph("2. Model Inference Dispatch", table_cell), Paragraph("0.011 ms", table_cell), Paragraph("0.008 ms", table_cell), Paragraph("0.019 ms", table_cell), Paragraph("0.010 ms", table_cell), Paragraph("LLM client wrapper dispatch", table_cell)],
-        [Paragraph("3. Token Generation Telemetry", table_cell), Paragraph("0.003 ms", table_cell), Paragraph("0.003 ms", table_cell), Paragraph("0.006 ms", table_cell), Paragraph("0.002 ms", table_cell), Paragraph("Stream tracking overhead", table_cell)],
-        [Paragraph("<b>4. Agent Node Execution</b>", table_cell_bold), Paragraph("<b>0.001 ms</b>", table_cell_bold), Paragraph("<b>0.001 ms</b>", table_cell_bold), Paragraph("<b>0.001 ms</b>", table_cell_bold), Paragraph("0.000 ms", table_cell), Paragraph("<b>SDK @pulse.monitor wrapper</b>", table_cell_bold)],
-        [Paragraph("5. Local Tool Execution", table_cell), Paragraph("0.003 ms", table_cell), Paragraph("0.003 ms", table_cell), Paragraph("0.006 ms", table_cell), Paragraph("0.001 ms", table_cell), Paragraph("Deterministic tool dispatch", table_cell)],
+        [Paragraph("2. Model Inference Dispatch", table_cell), Paragraph("0.011 ms", table_cell), Paragraph("0.008 ms", table_cell), Paragraph("0.019 ms", table_cell), Paragraph("0.010 ms", table_cell), Paragraph("Canned-text adapter call, model weights not loaded", table_cell)],
+        [Paragraph("3. Token Generation Telemetry", table_cell), Paragraph("0.003 ms", table_cell), Paragraph("0.003 ms", table_cell), Paragraph("0.006 ms", table_cell), Paragraph("0.002 ms", table_cell), Paragraph("Same call, as the adapter reports it (a time, not tok/s)", table_cell)],
+        [Paragraph("<b>4. Agent Node Execution</b>", table_cell_bold), Paragraph("<b>0.001 ms</b>", table_cell_bold), Paragraph("<b>0.001 ms</b>", table_cell_bold), Paragraph("<b>0.001 ms</b>", table_cell_bold), Paragraph("0.000 ms", table_cell), Paragraph("<b>Stand-in (builds a dict); SDK wrapper not called</b>", table_cell_bold)],
+        [Paragraph("5. Local Tool Execution", table_cell), Paragraph("0.003 ms", table_cell), Paragraph("0.003 ms", table_cell), Paragraph("0.006 ms", table_cell), Paragraph("0.001 ms", table_cell), Paragraph("Stand-in (builds a list of 10 dicts); no tool run", table_cell)],
         [Paragraph("6. Local Vector Retrieval", table_cell), Paragraph("15.36 ms", table_cell), Paragraph("10.68 ms", table_cell), Paragraph("12.19 ms", table_cell), Paragraph("24.29 ms", table_cell), Paragraph("SentenceTransformer top-k search", table_cell)],
         [Paragraph("7. SDK In-Memory Enqueue", table_cell), Paragraph("0.025 ms", table_cell), Paragraph("0.016 ms", table_cell), Paragraph("0.032 ms", table_cell), Paragraph("0.037 ms", table_cell), Paragraph("Thread-safe deque append", table_cell)],
-        [Paragraph("8. HTTP Ingestion Overhead", table_cell), Paragraph("0.981 ms", table_cell), Paragraph("0.981 ms", table_cell), Paragraph("1.108 ms", table_cell), Paragraph("0.084 ms", table_cell), Paragraph("FastAPI JSON serialization", table_cell)],
-        [Paragraph("9. Evaluation Worker Dispatch", table_cell), Paragraph("0.149 ms", table_cell), Paragraph("0.152 ms", table_cell), Paragraph("0.169 ms", table_cell), Paragraph("0.014 ms", table_cell), Paragraph("Async background dispatch", table_cell)],
+        [Paragraph("8. HTTP Ingestion Overhead", table_cell), Paragraph("n/m", table_cell), Paragraph("n/m", table_cell), Paragraph("n/m", table_cell), Paragraph("n/m", table_cell), Paragraph("Random number in the script; no HTTP request sent", table_cell)],
+        [Paragraph("9. Evaluation Worker Dispatch", table_cell), Paragraph("n/m", table_cell), Paragraph("n/m", table_cell), Paragraph("n/m", table_cell), Paragraph("n/m", table_cell), Paragraph("Random number in the script; nothing dispatched", table_cell)],
         [Paragraph("<b>10. MiniLM Embedding Inference</b>", table_cell_bold), Paragraph("<b>13.33 ms</b>", table_cell_bold), Paragraph("<b>12.81 ms</b>", table_cell_bold), Paragraph("<b>14.95 ms</b>", table_cell_bold), Paragraph("1.483 ms", table_cell), Paragraph("<b>Stage 1 bi-encoder triage</b>", table_cell_bold)],
         [Paragraph("<b>11. DeBERTa NLI Cross-Encoder</b>", table_cell_bold), Paragraph("<b>70.82 ms</b>", table_cell_bold), Paragraph("<b>66.92 ms</b>", table_cell_bold), Paragraph("<b>71.88 ms</b>", table_cell_bold), Paragraph("21.46 ms", table_cell), Paragraph("<b>Stage 2 contradiction verification</b>", table_cell_bold)],
         [Paragraph("<b>12. Full Evaluation Cascade</b>", table_cell_bold), Paragraph("<b>90.81 ms</b>", table_cell_bold), Paragraph("<b>90.96 ms</b>", table_cell_bold), Paragraph("<b>97.79 ms</b>", table_cell_bold), Paragraph("4.339 ms", table_cell), Paragraph("<b>Total Stage 1 + Stage 2 + Tool</b>", table_cell_bold)],
-        [Paragraph("<b>13. Entire Multi-Agent DAG</b>", table_cell_bold), Paragraph("106.20 ms", table_cell_bold), Paragraph("106.20 ms", table_cell_bold), Paragraph("106.20 ms", table_cell_bold), Paragraph("0.000 ms", table_cell), Paragraph("End-to-end multi-node execution", table_cell)]
+        [Paragraph("<b>13. Entire Multi-Agent DAG</b>", table_cell_bold), Paragraph("n/m", table_cell_bold), Paragraph("n/m", table_cell_bold), Paragraph("n/m", table_cell_bold), Paragraph("n/m", table_cell), Paragraph("Computed from layers 2, 6 and 12, not timed", table_cell)]
     ]
     lat_table = Table(latency_rows, colWidths=[126, 48, 48, 48, 50, 220])
     lat_table.setStyle(TableStyle([
@@ -423,7 +423,7 @@ def build_pdf(filename="PROJECT_REPORT.pdf"):
 
     story.append(Paragraph("4. Reasoning Strategy Evaluation: Direct vs. CoT vs. AoT", h1_style))
     story.append(Paragraph(
-        "Evaluated on <b>Qwen/Qwen2.5-7B-Instruct</b> across <code>v1.0_test</code> (300 total executions across 5 seeds per case):",
+        "Evaluated on <b>Qwen/Qwen3-8B-GGUF:Q4_K_M</b> (llama.cpp, CPU only) across <code>v1.0_test</code> (30 cases x 5 runs per strategy, run of 2026-08-23, <code>experiments/results/reasoning_strategy_results.json</code>). Latency is the mean per strategy execution; risk differences between strategies are inconclusive:",
         body_style
     ))
 
@@ -434,9 +434,9 @@ def build_pdf(filename="PROJECT_REPORT.pdf"):
 
     rs_rows = [
         [Paragraph("Reasoning Strategy", table_cell_header), Paragraph("Latency (ms)", table_cell_header), Paragraph("Tokens In", table_cell_header), Paragraph("Tokens Out", table_cell_header), Paragraph("Mean Risk", table_cell_header), Paragraph("Contradiction Rate", table_cell_header), Paragraph("Empirical Conclusion", table_cell_header)],
-        [Paragraph("<b>DIRECT (Zero-Shot)</b>", table_cell), Paragraph("0.04 ms", table_cell), Paragraph("32.6", table_cell), Paragraph("11.5", table_cell), Paragraph("0.251", table_cell), Paragraph("0.150", table_cell), Paragraph("Fastest token execution; moderate risk.", table_cell)],
-        [Paragraph("<b>COT (Chain-of-Thought)</b>", table_cell_bold), Paragraph("0.05 ms", table_cell), Paragraph("64.6", table_cell), Paragraph("12.4", table_cell), Paragraph("<b>0.127</b>", table_cell_bold), Paragraph("<b>0.150</b>", table_cell_bold), Paragraph("<b>Optimal: lowest grounding risk & high cost efficiency.</b>", table_cell_bold)],
-        [Paragraph("<b>AOT (Atom of Thoughts)</b>", table_cell), Paragraph("0.15 ms", table_cell), Paragraph("341.9", table_cell), Paragraph("87.8", table_cell), Paragraph("0.270", table_cell), Paragraph("0.350", table_cell), Paragraph("~10x token consumption without accuracy gain.", table_cell)]
+        [Paragraph("<b>DIRECT (Zero-Shot)</b>", table_cell), Paragraph("11,564 ms", table_cell), Paragraph("53.1", table_cell), Paragraph("37.5", table_cell), Paragraph("0.424", table_cell), Paragraph("0.133", table_cell), Paragraph("Fastest and cheapest; highest mean risk, but within noise.", table_cell)],
+        [Paragraph("<b>COT (Chain-of-Thought)</b>", table_cell), Paragraph("45,423 ms", table_cell), Paragraph("88.1", table_cell), Paragraph("186.4", table_cell), Paragraph("0.283", table_cell), Paragraph("0.127", table_cell), Paragraph("Middle on latency and tokens; no risk advantage shown.", table_cell)],
+        [Paragraph("<b>AOT (Atom of Thoughts)</b>", table_cell), Paragraph("85,215 ms", table_cell), Paragraph("543.4", table_cell), Paragraph("319.7", table_cell), Paragraph("0.233", table_cell), Paragraph("0.000", table_cell), Paragraph("Slowest; ~8.5x DIRECT output tokens; zero contradictions in 150 runs.", table_cell)]
     ]
     rs_table = Table(rs_rows, colWidths=[105, 52, 45, 45, 48, 65, 180])
     rs_table.setStyle(TableStyle([
@@ -589,11 +589,11 @@ def build_pdf(filename="PROJECT_REPORT.pdf"):
 
     viva_qa = [
         [Paragraph("<b>Q1: What exactly did your latency timers measure?</b><br/>"
-                   "<b>Defense:</b> We isolated 13 architectural layers (<code>experiments/latency_profiler.py</code>). String templating took &lt;0.002 ms, SDK node wrapping took 0.001 ms (P50), local MiniLM forward pass took 12.8 ms (P50), and DeBERTa NLI took 66.9 ms (P50). We distinguish between in-memory queue append (0.016 ms) and neural model inference.", callout_style)],
+                   "<b>Defense:</b> We profiled 13 layers (<code>experiments/latency_profiler.py</code>); layers 8, 9 and 13 are not measurements (two random numbers and a sum, marked n/m) and layers 4 and 5 time small stand-ins. String templating took &lt;0.002 ms, the SDK decorator added 0.005 ms (P50, 2,000 calls, <code>benchmarks/run_benchmarks.py</code>), local MiniLM forward pass took 12.8 ms (P50), and DeBERTa NLI took 66.9 ms (P50). We distinguish between in-memory queue append (0.016 ms) and neural model inference.", callout_style)],
         [Paragraph("<b>Q2: Why did Baseline D (Raw NLI) achieve high recall?</b><br/>"
-                   "<b>Defense:</b> Baseline D runs heavy DeBERTa cross-encoder inference indiscriminately on every span. AgentPulse matches 100% recall (0.000 FNR) while adding deterministic tool mismatch detection (0.22 ms) and 4-signal drift tracking without requiring external API dependencies.", callout_style)],
+                   "<b>Defense:</b> Baseline D runs heavy DeBERTa cross-encoder inference indiscriminately on every span. AgentPulse matches 100% recall (0.000 FNR) while adding deterministic tool mismatch detection (0.07 ms) and 4-signal drift tracking without requiring external API dependencies.", callout_style)],
         [Paragraph("<b>Q3: Does Atom of Thoughts (AoT) actually improve factual grounding?</b><br/>"
-                   "<b>Defense:</b> In our empirical evaluation on Qwen 2.5 7B, AoT consumed ~10x more tokens (341.9 in / 87.8 out vs 32.6 in / 11.5 out for Direct), but had higher grounding risk (0.270) than Chain-of-Thought (0.127). Standard CoT was empirically superior for factual grounding.", callout_style)],
+                   "<b>Defense:</b> Not shown. On Qwen3-8B Q4_K_M (30 cases x 5 runs), AoT produced about 8.5x DIRECT's output tokens (319.7 vs 37.5) and took 85.2 s per execution against 11.6 s. It had the lowest mean grounding risk (0.233, against 0.283 for CoT and 0.424 for DIRECT) and no contradictions in 150 runs, but the spread between strategy means (0.191) is smaller than the within-strategy standard deviation (0.377), so the risk ordering is inconclusive. The zero-contradiction result is the part the data supports.", callout_style)],
         [Paragraph("<b>Q4: How does AgentPulse prevent false alerts on benign phrasing shifts?</b><br/>"
                    "<b>Defense:</b> Evaluated across negative controls (<code>experiments/drift_scenarios.py</code>). Legitimate paraphrasings produced centroid shifts &lt;= 0.15, well below the calibrated alert threshold of 0.30, resulting in <b>0 false drift alerts</b>.", callout_style)]
     ]

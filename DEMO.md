@@ -168,8 +168,9 @@ The four scenarios are `clean`, `hallucination`, `tool_mismatch` and `drift`.
 ## 5. The numbers — 90 seconds
 
 > Grounding F1 is **0.963** with a false positive rate of **0.059**, on a
-> held-out split. Latency is **215.9 ms** — 27.8 for MiniLM plus 188.1 for
-> DeBERTa. Both run on every span.
+> held-out split. Latency is **151.19 ms** per case — 19.1 for MiniLM plus
+> 132.1 for DeBERTa, measured on the PyTorch path in one run. Both run on every
+> span.
 
 If anyone calls it a cascade, correct it. Volunteering this lands better than
 being caught by it:
@@ -177,8 +178,15 @@ being caught by it:
 > People assume it is a gated cascade. It is not. There is no threshold between
 > the stages.
 >
-> And you can prove that without reading the code: 215.9 is exactly 27.8 plus
-> 188.1. A gate that ever fired would put the number somewhere between the two.
+> Do not offer the latency as the proof. The ablation adds the two timings
+> together by construction, so a gated design would show the same sum. The proof
+> is the code: `evaluate_grounding` calls MiniLM, then DeBERTa, with no branch
+> between them.
+
+If someone has seen 215.9 ms in an older deck: that is the same script on its
+2026-08-23 run, with identical accuracy. The 2026-09-18 re-run gave 151.19 and
+the cause of the difference was not identified, so say the figure moves by
+about 30% between runs rather than defending either one.
 
 ---
 

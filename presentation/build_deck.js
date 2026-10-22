@@ -202,7 +202,7 @@ function stat(s, x, y, w, value, label, color, sub) {
   s.addText('Cosine similarity between the claim and its retrieved context. Cheap enough to run on every span.', {
     x: M + 0.35, y: 2.52, w: 5, h: 0.75, fontFace: B, fontSize: 12.5, color: '5A6478', margin: 0,
   });
-  s.addText('27.8 ms', {
+  s.addText('19.1 ms', {
     x: M + 0.35, y: 3.4, w: 3, h: 0.6, fontFace: H, fontSize: 30, bold: true,
     color: DARKTEXT, margin: 0,
   });
@@ -215,7 +215,7 @@ function stat(s, x, y, w, value, label, color, sub) {
   s.addText('Cross-encoder entailment, run only when the fast gate is not confident. Catches the subtle contradictions.', {
     x: 7.25, y: 2.52, w: 5, h: 0.75, fontFace: B, fontSize: 12.5, color: '5A6478', margin: 0,
   });
-  s.addText('215.9 ms', {
+  s.addText('151.19 ms', {
     x: 7.25, y: 3.4, w: 3, h: 0.6, fontFace: H, fontSize: 30, bold: true,
     color: DARKTEXT, margin: 0,
   });
