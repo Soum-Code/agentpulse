@@ -13,6 +13,7 @@ import {
   ChalkSurfacePreset
 } from './types';
 import { useTelemetry } from './lib/useTelemetry';
+import { summarizeDrift } from './lib/overviewStats';
 import { api } from './lib/api';
 
 import { PublicExperience } from './components/public/PublicExperience';
@@ -613,7 +614,7 @@ export default function App() {
         onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
         onOpenShortcutsModal={() => setIsShortcutsHelpOpen(true)}
         incidentCount={incidents.length}
-        driftWarningCount={agents.filter(a => a.driftStatus !== 'normal').length}
+        driftWarningCount={summarizeDrift(agents).drifting}
       />
 
       <CommandPalette
