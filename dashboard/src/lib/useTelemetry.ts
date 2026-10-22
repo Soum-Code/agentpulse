@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { api } from './api';
+import { loadFullTrace } from './traceDetail';
 import {
   DriftEntry,
   toAgents,
@@ -9,7 +10,6 @@ import {
   toDriftProfiles,
   toExperiments,
   toIncidents,
-  toSpans,
   toTrace,
 } from './adapters';
 import type { Agent, Dataset, DriftProfile, Experiment, Incident, Trace } from '../types';
@@ -83,8 +83,7 @@ export function useTelemetry(): TelemetryState {
         const hydrated = await Promise.all(
           listed.slice(0, HYDRATE_LIMIT).map(async (shallow, i) => {
             try {
-              const full = await api.getTrace(shallow.id);
-              return toTrace(full.trace, toSpans(full.spans ?? [], shallow.id), full.alerts ?? []);
+              return await loadFullTrace(shallow);
             } catch {
               return listed[i];
             }

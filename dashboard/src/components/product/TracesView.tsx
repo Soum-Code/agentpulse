@@ -50,7 +50,8 @@ import {
   copyTraceIdToClipboard,
   copyTraceLogBodyToClipboard,
 } from '../../utils/traceExport';
-import { isTypingTarget } from '../../utils/keyboard';
+import { isTypingTarget, isChordFollowUp } from '../../utils/keyboard';
+import { loadFullTrace, loadFullTraces } from '../../lib/traceDetail';
 import type { GroundingVerdict } from '../../lib/api';
 import { riskTextClasses, verdictBadgeClasses, verdictLabel, verdictTooltip } from '../../lib/riskTone';
 
@@ -123,6 +124,7 @@ export const TracesView: React.FC<TracesViewProps> = ({
   const [expandedSpanIds, setExpandedSpanIds] = useState<Set<string>>(new Set());
 
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const lastGPressRef = useRef(0);
   const traceItemRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const traceListContainerRef = useRef<HTMLDivElement>(null);
   const detailsRef = useRef<HTMLDivElement>(null);
@@ -132,7 +134,8 @@ export const TracesView: React.FC<TracesViewProps> = ({
   const filteredTraces = useMemo(() => {
     const list = traces.filter(t => {
       if (filterAgentId && t.agentId !== filterAgentId) return false;
-      if (statusFilter !== 'all' && t.status !== statusFilter) return false;
+      // The chip says 'success'; a trace's status for that is 'ok'
+      if (statusFilter !== 'all' && t.status !== (statusFilter === 'success' ? 'ok' : statusFilter)) return false;
       if (searchQuery.trim() === '') return true;
       const q = searchQuery.toLowerCase().trim();
       return (
@@ -201,15 +204,20 @@ export const TracesView: React.FC<TracesViewProps> = ({
     });
     setExpandedSpanIds(allSpanIds);
 
-    // If switching to a new trace, auto-select the highest priority discrepancy span (error or warning) if present
-    if (prevTraceIdRef.current !== currentTrace.id) {
+    // A trace shown only because nothing is selected is still a list entry, and App loads the
+    // detail of the selected trace: select it so the detail gets loaded
+    if (!selectedTrace && currentTrace.alerts === undefined) onSelectTrace(currentTrace);
+
+    // If switching to a new trace, auto-select the highest priority discrepancy span (error or warning) if present.
+    // A trace whose spans are still loading waits: this runs again when they arrive.
+    if (prevTraceIdRef.current !== currentTrace.id && currentTrace.spans.length > 0) {
       prevTraceIdRef.current = currentTrace.id;
       const initialSpan = getFlaggedOrFirstSpan(currentTrace);
       if (initialSpan && (!selectedSpan || selectedSpan.traceId !== currentTrace.id)) {
         onSelectSpan(initialSpan);
       }
     }
-  }, [currentTrace?.id]);
+  }, [currentTrace?.id, currentTrace?.spans.length]);
 
   // Auto-scroll listener to detect if user is at bottom of trace list
   const handleTraceListScroll = () => {
@@ -349,6 +357,20 @@ export const TracesView: React.FC<TracesViewProps> = ({
       // If user is currently typing in an input, do not capture single-letter navigation keys
       if (isInputActive) return;
 
+      // App.tsx owns "G then a letter" navigation (G E is Experiments, G C the context panel),
+      // so the letter after a G is not a Traces shortcut.
+      if (e.key.toLowerCase() === 'g') {
+        lastGPressRef.current = Date.now();
+        return;
+      }
+      if (isChordFollowUp(lastGPressRef.current, Date.now())) {
+        lastGPressRef.current = 0;
+        return;
+      }
+
+      // An open dialog (the shortcuts sheet) has the keyboard; do not export or copy behind it
+      if (document.querySelector('[aria-modal="true"]')) return;
+
       // N or PageDown: Next page of traces
       if ((e.key.toLowerCase() === 'n' || e.key === 'PageDown') && !e.metaKey && !e.ctrlKey) {
         e.preventDefault();
@@ -471,15 +493,35 @@ export const TracesView: React.FC<TracesViewProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [filteredTraces, currentTrace, currentSpan, selectedSpan, searchQuery, safePage, totalPages]);
 
-  // A short message for the one thing that can go wrong with these shortcuts: the browser said no
+  // A short message for what can go wrong with these shortcuts: the browser or the API said no
   const showNotice = (message: string) => {
     setNotice(message);
     setTimeout(() => setNotice(prev => (prev === message ? null : prev)), 3000);
   };
 
-  const handleDownloadCSV = () => {
+  // Only the newest traces arrive with their spans. A trace further down the list is just a list
+  // entry, so an export or a copy loads its detail first and never writes out an empty shell.
+  const withFullTrace = async (trace: Trace, action: (full: Trace) => void | Promise<void>) => {
+    let full: Trace;
+    try {
+      full = await loadFullTrace(trace);
+    } catch (err) {
+      showNotice(`Could not load trace ${trace.id} from the API${err instanceof Error ? `: ${err.message}` : ''}`);
+      return;
+    }
+    await action(full);
+  };
+
+  const handleDownloadCSV = async () => {
     if (filteredTraces.length === 0) return;
-    if (downloadTracesAsCsv(filteredTraces)) {
+    let full: Trace[];
+    try {
+      full = await loadFullTraces(filteredTraces);
+    } catch (err) {
+      showNotice(`CSV export failed: could not load every trace from the API${err instanceof Error ? ` (${err.message})` : ''}`);
+      return;
+    }
+    if (downloadTracesAsCsv(full)) {
       setDownloadSuccess(true);
       setTimeout(() => setDownloadSuccess(false), 2000);
     } else {
@@ -487,14 +529,15 @@ export const TracesView: React.FC<TracesViewProps> = ({
     }
   };
 
-  const handleExportTraceJson = (trace: Trace) => {
-    if (downloadTraceAsJson(trace)) {
-      setJsonExportedTraceId(trace.id);
-      setTimeout(() => setJsonExportedTraceId(prev => (prev === trace.id ? null : prev)), 2000);
-    } else {
-      showNotice('JSON export failed: the browser did not start the download.');
-    }
-  };
+  const handleExportTraceJson = (trace: Trace) =>
+    withFullTrace(trace, (full) => {
+      if (downloadTraceAsJson(full)) {
+        setJsonExportedTraceId(trace.id);
+        setTimeout(() => setJsonExportedTraceId(prev => (prev === trace.id ? null : prev)), 2000);
+      } else {
+        showNotice('JSON export failed: the browser did not start the download.');
+      }
+    });
 
   const handleCopyTraceId = async (trace: Trace) => {
     if (await copyTraceIdToClipboard(trace.id)) {
@@ -505,14 +548,15 @@ export const TracesView: React.FC<TracesViewProps> = ({
     }
   };
 
-  const handleCopyTraceLog = async (trace: Trace) => {
-    if (await copyTraceLogBodyToClipboard(trace)) {
-      setCopiedLogTraceId(trace.id);
-      setTimeout(() => setCopiedLogTraceId(prev => (prev === trace.id ? null : prev)), 2000);
-    } else {
-      showNotice('Copy failed: the browser blocked clipboard access.');
-    }
-  };
+  const handleCopyTraceLog = (trace: Trace) =>
+    withFullTrace(trace, async (full) => {
+      if (await copyTraceLogBodyToClipboard(full)) {
+        setCopiedLogTraceId(trace.id);
+        setTimeout(() => setCopiedLogTraceId(prev => (prev === trace.id ? null : prev)), 2000);
+      } else {
+        showNotice('Copy failed: the browser blocked clipboard access.');
+      }
+    });
 
   return (
     <div className="space-y-6 pb-28">
@@ -714,6 +758,7 @@ export const TracesView: React.FC<TracesViewProps> = ({
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Filter traces by Trace ID, Agent Name, Status (Press '/' to focus)..."
+            aria-label="Filter traces"
             className="w-full surface-solid bg-[#08090b] border border-[#191b22] rounded-lg pl-9 pr-9 py-2 text-xs font-mono text-neutral-100 placeholder-neutral-500 focus:outline-none focus:border-white/30 transition-colors"
           />
           {searchQuery && (
@@ -806,6 +851,7 @@ export const TracesView: React.FC<TracesViewProps> = ({
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search traces by ID, tag, or input..."
+                aria-label="Search traces"
                 className="w-full surface-solid bg-[#08090b] border border-[#191b22] rounded-lg pl-9 pr-3 py-2 text-xs font-mono text-neutral-200 placeholder-neutral-500 focus:outline-none focus:border-white/20 transition-colors"
               />
             </div>
@@ -1003,7 +1049,7 @@ export const TracesView: React.FC<TracesViewProps> = ({
                         <div className="flex items-center justify-between text-[11px] font-mono text-neutral-400 pt-2 border-t border-white/[0.06]">
                           <span className="truncate max-w-[120px] text-neutral-300">{trace.agentName.split(' ')[0]}</span>
                           <span>{trace.durationMs}ms</span>
-                          <span>{trace.totalTokens}t</span>
+                          <span>{trace.totalTokens != null ? `${trace.totalTokens}t` : '—'}</span>
                         </div>
                       </motion.div>
                     );
