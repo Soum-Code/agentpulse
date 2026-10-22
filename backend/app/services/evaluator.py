@@ -68,13 +68,20 @@ class EvaluationResult:
     # grounding.py runs both of its models on every span; the first does not gate the second.
     evaluator_name: str = "deberta_minilm_cascade"
     model_name: str = "cross-encoder/nli-deberta-v3-small"
-    # v1.1 = the NLI output order is read from the model config (see _nli_label_index in
-    # grounding.py). Rows stored as v1.0 have entailment_prob and neutral_prob swapped, and
-    # with them grounding_score, overall_risk_score, the risk label and the alerts fired
-    # from them. Nothing filters by this field; it only tells the two kinds of rows apart.
-    # `python -m app.rescore_cli` scores v1.0 rows again from the stored span text (a dry run
-    # unless given --apply), after which they carry v1.1 and config_version v1.1.
-    model_version: str = "v1.1"
+    # The three versions of a stored row:
+    #   v1.0 = the NLI output order was guessed, so entailment_prob and neutral_prob are
+    #          swapped (and with them grounding_score, overall_risk_score, the risk label and
+    #          the alerts fired from them); neutral weight 0.5 in the grounding formula; the
+    #          old risk averaging (config_version v1.0).
+    #   v1.1 = the NLI output order is read from the model config (see _nli_label_index in
+    #          grounding.py); neutral weight still 0.5; the new averaging (config_version v1.1).
+    #   v1.2 = as v1.1 but NEUTRAL_RISK_WEIGHT is 0.3 (GROUNDING_RECALIBRATION_2026-10.md).
+    #          The averaging did not change, so config_version stays v1.1.
+    # The pipeline does not filter by this field. `python -m app.rescore_cli` does: it scores
+    # every row whose model_version is not the one below again from the stored span text (a
+    # dry run unless given --apply), after which the row carries this version. Change this
+    # default whenever the grounding or risk formula changes, so those rows are found.
+    model_version: str = "v1.2"
     # v1.1 = overall_risk_score averages only grounding and the tool-claim score of spans
     # that had a claim to check (v1.0 also averaged in disagreement at weight 0.20 and a
     # no-claim tool check as 0.0), and a trace whose pairs were all gated as off-topic stores

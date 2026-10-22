@@ -9,8 +9,9 @@ which is why disagreement scores never showed it.
 These tests use a fake model with a fake config, so they need no model download. The unusual
 order below matches neither the old guess nor the default model, so a hard-coded order fails.
 
-The stored `model_version` is bumped to "v1.1" to tell the rows written after the fix from those
-written before it (still "v1.0"). `python -m app.rescore_cli` scores the old rows again.
+The stored `model_version` was bumped to "v1.1" to tell the rows written after the fix from those
+written before it (still "v1.0"), and to "v1.2" when NEUTRAL_RISK_WEIGHT went from 0.5 to 0.3.
+`python -m app.rescore_cli` scores every row that is not at the current version again.
 """
 
 from __future__ import annotations
@@ -85,7 +86,7 @@ def test_a_model_with_unrecognised_labels_is_refused():
         grounding._read_nli_label_index(model)
 
 
-def test_a_persisted_evaluation_row_carries_the_new_model_version(monkeypatch):
+def test_a_persisted_evaluation_row_carries_the_current_model_version(monkeypatch):
     """persist_results copies the evaluator's model_version into the row.
 
     A fake session stands in for the database: with no overall_risk_score the function only
@@ -115,4 +116,4 @@ def test_a_persisted_evaluation_row_carries_the_new_model_version(monkeypatch):
 
     assert written is True
     (row,) = [r for r in added if isinstance(r, Evaluation)]
-    assert row.model_version == "v1.1"
+    assert row.model_version == "v1.2"
