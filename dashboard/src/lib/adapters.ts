@@ -24,6 +24,7 @@ import type {
   SpanStatus,
   Trace,
 } from '../types';
+import { verdictLabel, verdictTooltip } from './riskTone';
 
 export interface DriftEntry {
   agent_id: string;
@@ -96,6 +97,12 @@ function evaluatorResults(span: SpanDetail): EvaluatorResult[] | undefined {
   if (!e) return undefined;
   const out: EvaluatorResult[] = [];
   if (e.grounding_score != null) {
+    const engine =
+      e.evaluation_stage === 'stage2' ? 'DeBERTa-v3 NLI cross-encoder' : 'MiniLM cosine gate';
+    // The verdict is what the NLI model concluded, next to the risk score and not part of
+    // it: a neutral-only output scores about 0.3 (low risk) and is 'unverifiable'. It is
+    // absent for the similarity-only fallback, so the reason then names only the engine.
+    const verdict = e.grounding_verdict ?? undefined;
     out.push({
       id: `${span.span_id}-grounding`,
       name: 'Grounding',
@@ -103,10 +110,10 @@ function evaluatorResults(span: SpanDetail): EvaluatorResult[] | undefined {
       threshold: 0.7,
       passed: e.grounding_score <= 0.7,
       maturity: 'BETA',
-      reason:
-        e.evaluation_stage === 'stage2'
-          ? 'DeBERTa-v3 NLI cross-encoder'
-          : 'MiniLM cosine gate',
+      reason: verdict
+        ? `${engine}. Verdict: ${verdictLabel(verdict)}. ${verdictTooltip(verdict)}`
+        : engine,
+      verdict,
     });
   }
   if (e.tool_claim_score != null) {

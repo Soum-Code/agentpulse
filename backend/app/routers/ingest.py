@@ -40,6 +40,8 @@ from app.models import (
     Span,
     Trace,
 )
+# nli_breakdown = the NLI probabilities and the grounding verdict of one stored evaluation.
+from app.services.grounding import nli_breakdown
 # enqueue_job adds one evaluation job (one row in a database table) for a span.
 from app.services.job_queue import enqueue_job
 # COUNTERS = in-memory counters (spans accepted, failed, duplicate...) that /v1/platform shows.
@@ -646,6 +648,9 @@ async def simulate_result(trace_id: str):
             "tool_claim_score": e.tool_claim_score if e else None,
             "disagreement_score": e.disagreement_score if e else None,
             "overall_risk_score": e.overall_risk_score if e else None,
+            # The NLI probabilities and the verdict ("contradicted" | "unverifiable" |
+            # "supported"), or None for a span that is unscored or not a real NLI result.
+            **nli_breakdown(e),
             "window_centroid_distance": window_distance.get(s.span_id),
         })
 

@@ -143,8 +143,20 @@ export interface SpanDetail {
     overall_risk_score: number | null;
     label: string | null;
     evaluation_stage: string | null;
+    // The NLI model's three probabilities and the class that won. Optional because
+    // a backend older than this change does not send them; null when the row is not
+    // a real NLI result (similarity-only fallback, skipped, or a v1.0 row).
+    entailment_prob?: number | null;
+    contradiction_prob?: number | null;
+    neutral_prob?: number | null;
+    grounding_verdict?: GroundingVerdict | null;
   } | null;
 }
+
+/** What the NLI model concluded about an output. This is NOT a risk score:
+ *  'unverifiable' means the evidence neither supports nor contradicts the output,
+ *  which grounding_score (contradiction + 0.3 * neutral) rates low. */
+export type GroundingVerdict = 'contradicted' | 'unverifiable' | 'supported';
 
 export interface Agent {
   agent_id: string;
