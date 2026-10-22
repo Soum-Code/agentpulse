@@ -10,7 +10,7 @@
 #
 # HOW IT FITS IN
 # Imported as `from app.config import settings` by main.py, database.py,
-# middleware.py, worker.py, retention_cli.py and a few routers and services.
+# middleware.py, worker.py, retention_cli.py, rescore_cli.py and a few routers and services.
 # This file imports nothing from the rest of the app.
 
 from __future__ import annotations
