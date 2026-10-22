@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Bot, AlertTriangle, TrendingDown, Activity, ArrowRight, Clock, ShieldCheck, Zap, Copy, Check, ChevronRight, Layers, Cpu, Shield, Gauge } from 'lucide-react';
 import { Agent, Trace, Incident, DriftProfile, Span } from '../../types';
 import { triggerCardEntranceAnimation } from '../../utils/liquidHoverAnime';
+import { summarizeDrift, breakDownIncidents } from '../../lib/overviewStats';
 
 interface OverviewViewProps {
   agents: Agent[];
@@ -49,8 +50,11 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
   const avgLatency = latencies.length
     ? Math.round(latencies.reduce((acc, v) => acc + v, 0) / latencies.length)
     : null;
-  const criticalIncidents = incidents.filter(i => i.severity === 'critical').length;
-  const driftingAgents = agents.filter(a => a.driftStatus !== 'normal').length;
+  // Only an agent beyond the drift threshold is drifting. One with no baseline yet has an
+  // undefined driftStatus, and counting it here made every fresh agent a "flagged swarm".
+  const { drifting: driftingAgents, noBaseline: agentsWithoutBaseline, maxDrift } = summarizeDrift(agents);
+  const incidentCounts = breakDownIncidents(incidents);
+  const criticalIncidents = incidentCounts.activeCritical;
 
   useEffect(() => {
     triggerCardEntranceAnimation();
@@ -98,12 +102,13 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
 
       {/* Top Section: System Pulse & Aggregate Density Metrics */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* KPI 1: 24h Trace Volume */}
+        {/* KPI 1: Spans Ingested. This was titled "24h Trace Volume", but the value is each agent's
+            lifetime span count (total_spans): no 24-hour window, and spans rather than traces. */}
         <div className="ios-liquid-card ios-liquid-card-interactive border-glow-subtle rounded-2xl p-5 relative overflow-hidden group tactile-press anime-tab-card">
           <div className="absolute inset-x-0 top-0 h-[1.5px] apple-liquid-specular pointer-events-none" />
           <div className="flex items-center justify-between text-neutral-400 text-xs mb-3">
             <span className="font-sans font-medium tracking-wider text-[11px] text-neutral-400 uppercase liquid-card-label">
-              24h Trace Volume
+              Spans Ingested
             </span>
             <div className="p-1.5 rounded-lg bg-white/[0.06] border border-white/[0.12] text-neutral-200">
               <Activity className="w-3.5 h-3.5 text-emerald-400 phosphor-emerald" />
@@ -112,11 +117,15 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
           <div className="text-3xl sm:text-4xl font-mono tabular-nums font-medium text-white tracking-tight leading-none drop-shadow-xs liquid-card-metric">
             {totalTraces.toLocaleString()}
           </div>
-          <div className="text-xs font-mono tabular-nums text-neutral-300 mt-3.5 flex items-center space-x-2 pt-2.5 border-t border-white/[0.08]">
-            <span className="px-2 py-0.5 rounded-md bg-emerald-500/20 border border-emerald-500/35 text-emerald-300 font-medium text-[10px] uppercase tracking-wider tabular-nums phosphor-emerald">
-              +14.2%
+          {/* This chip used to read "+14.2% vs nominal baseline". There is no baseline
+              for trace volume anywhere in the system, so the 14.2 was typed in. It now
+              says how many agents the total is summed over. */}
+          <div className="text-[11px] font-mono tabular-nums text-neutral-300 mt-3.5 flex items-center space-x-2 pt-2.5 border-t border-white/[0.08]">
+            <span className="text-neutral-400 font-sans liquid-card-label">
+              summed over{' '}
+              <span className="text-neutral-200 font-mono tabular-nums font-medium">{agents.length}</span>{' '}
+              {agents.length === 1 ? 'agent' : 'agents'}
             </span>
-            <span className="text-neutral-400 font-sans text-[11px] liquid-card-label">vs nominal baseline</span>
           </div>
         </div>
 
@@ -167,12 +176,22 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
             </div>
           </div>
           <div className="text-3xl sm:text-4xl font-mono tabular-nums font-medium text-white tracking-tight leading-none flex items-baseline space-x-2 drop-shadow-xs liquid-card-metric">
-            <span>{incidents.length}</span>
+            <span>{incidentCounts.active}</span>
             <span className="text-xs font-sans text-rose-300/90 font-medium">({criticalIncidents} critical)</span>
           </div>
           <div className="text-xs font-mono tabular-nums text-rose-300/90 mt-3.5 flex items-center space-x-1.5 font-medium pt-2.5 border-t border-rose-500/25">
-            <span className="w-1.5 h-1.5 rounded-full bg-rose-400 phosphor-rose animate-pulse shadow-[0_0_8px_rgba(244,63,94,0.8)]" />
-            <span className="text-[11px] font-sans text-rose-200/80">Schema drift &amp; OCR alerts active</span>
+            {/* This line used to say "Schema drift & OCR alerts active". The alerting
+                service has no schema or OCR detector. It now counts the alerts by state. */}
+            <span
+              className={`w-1.5 h-1.5 rounded-full bg-rose-400 ${
+                incidentCounts.open > 0 ? 'phosphor-rose animate-pulse shadow-[0_0_8px_rgba(244,63,94,0.8)]' : 'opacity-40'
+              }`}
+            />
+            <span className="text-[11px] font-sans text-rose-200/80">
+              {incidents.length === 0
+                ? 'No alerts recorded'
+                : `${incidentCounts.open} open · ${incidentCounts.investigating} investigating · ${incidentCounts.resolved} resolved`}
+            </span>
           </div>
         </div>
 
@@ -196,11 +215,33 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
           </div>
           <div className="text-3xl sm:text-4xl font-mono tabular-nums font-medium text-white tracking-tight leading-none flex items-baseline space-x-2 drop-shadow-xs liquid-card-metric">
             <span>{driftingAgents}</span>
-            <span className="text-xs font-sans text-amber-300/90 font-medium">flagged swarms</span>
+            <span className="text-xs font-sans text-amber-300/90 font-medium">
+              {driftingAgents === 1 ? 'agent drifting' : 'agents drifting'}
+            </span>
           </div>
-          <div className="text-xs font-mono tabular-nums text-amber-300/90 mt-3.5 font-medium pt-2.5 border-t border-amber-500/25 flex items-center justify-between">
-            <span className="text-[11px] font-sans text-neutral-400 liquid-card-label">Max divergence:</span>
-            <span className="font-mono tabular-nums font-medium text-[10px] bg-amber-500/20 px-2 py-0.5 rounded border border-amber-500/40 uppercase tracking-wider phosphor-amber">0.88 Δ (Cluster #3)</span>
+          <div className="text-xs font-mono tabular-nums text-amber-300/90 mt-3.5 font-medium pt-2.5 border-t border-amber-500/25 space-y-1.5">
+            <div className="flex items-center justify-between gap-2">
+              <span
+                className="text-[11px] font-sans text-neutral-400 liquid-card-label"
+                title="Largest window centroid distance among the drifting agents, the metric the drift alert fires on"
+              >
+                Max divergence:
+              </span>
+              {/* This badge used to read "0.88 Δ (Cluster #3)". The service computes no clusters
+                  and the number was typed in. It is now the largest window centroid distance of
+                  the agents that are drifting, or a dash when none is. */}
+              <span
+                title={maxDrift ? `${maxDrift.agentId}: window centroid distance ${maxDrift.distance.toFixed(3)}` : 'No agent is drifting'}
+                className="font-mono tabular-nums font-medium text-[10px] bg-amber-500/20 px-2 py-0.5 rounded border border-amber-500/40 tracking-wider phosphor-amber truncate max-w-[11rem]"
+              >
+                {maxDrift ? `${maxDrift.distance.toFixed(2)} Δ (${maxDrift.agentId})` : '—'}
+              </span>
+            </div>
+            {agentsWithoutBaseline > 0 && (
+              <div className="text-[11px] font-sans text-neutral-400 liquid-card-label">
+                {agentsWithoutBaseline} of {agents.length} {agents.length === 1 ? 'agent has' : 'agents have'} no baseline yet
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -303,30 +344,37 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
                     <div className="min-w-0">
                       <div className="text-sm font-sans font-medium text-white truncate flex items-center space-x-2 tracking-tight liquid-card-title">
                         <span className="group-hover:text-emerald-300 transition-colors">{agent.name}</span>
-                        {agent.driftStatus !== 'normal' && (
+                        {agent.driftStatus === 'drift' && (
                           <span className="w-2 h-2 rounded-full bg-amber-400 shadow-[0_0_8px_rgba(245,158,11,0.8)] animate-pulse" />
                         )}
                       </div>
                       <div className="text-xs font-sans text-neutral-400 flex items-center space-x-2 mt-1 liquid-card-label">
-                        <span className="text-neutral-200 font-mono text-[10px] font-medium px-2 py-0.5 rounded bg-white/[0.08] border border-white/[0.12] uppercase tracking-wider">
-                          {agent.framework}
-                        </span>
-                        <span className="text-neutral-600">·</span>
-                        <span className="text-neutral-300 font-mono text-[11px]">{agent.model}</span>
-                        <span className="text-neutral-600">·</span>
-                        <span className="text-neutral-400 font-mono text-[11px]">{agent.version}</span>
+                        {/* framework, model and version have no source in the AgentPulse schema, so
+                            they are usually absent: show what exists and no empty chip between dots. */}
+                        {agent.framework && (
+                          <span className="text-neutral-200 font-mono text-[10px] font-medium px-2 py-0.5 rounded bg-white/[0.08] border border-white/[0.12] uppercase tracking-wider">
+                            {agent.framework}
+                          </span>
+                        )}
+                        {agent.framework && (agent.model || agent.version) && <span className="text-neutral-600">·</span>}
+                        {agent.model && <span className="text-neutral-300 font-mono text-[11px]">{agent.model}</span>}
+                        {agent.model && agent.version && <span className="text-neutral-600">·</span>}
+                        {agent.version && <span className="text-neutral-400 font-mono text-[11px]">{agent.version}</span>}
+                        {!agent.framework && !agent.model && !agent.version && (
+                          <span className="text-neutral-500 font-mono text-[11px]">{agent.description || 'no framework, model or version recorded'}</span>
+                        )}
                       </div>
                     </div>
                   </div>
 
                   <div className="flex items-center justify-between sm:justify-end space-x-5 shrink-0 text-right font-mono text-xs pt-2.5 sm:pt-0 border-t sm:border-t-0 border-white/[0.08]">
                     <div>
-                      <div className="text-sm font-mono tabular-nums text-neutral-100 font-medium tracking-tight liquid-card-metric">{agent.latencyAvgMs}ms</div>
+                      <div className="text-sm font-mono tabular-nums text-neutral-100 font-medium tracking-tight liquid-card-metric">{agent.latencyAvgMs != null ? `${Math.round(agent.latencyAvgMs)}ms` : '—'}</div>
                       <div className="text-[10px] font-sans text-neutral-400 uppercase tracking-widest font-normal mt-0.5 liquid-card-label">avg latency</div>
                     </div>
                     <div>
                       <div className={`text-sm font-mono tabular-nums font-medium tracking-tight liquid-card-metric ${agent.successRate < 90 ? 'text-rose-400/90' : 'text-emerald-400/90'}`}>
-                        {agent.successRate}%
+                        {agent.successRate != null ? `${Number(agent.successRate.toFixed(1))}%` : '—'}
                       </div>
                       <div className="text-[10px] font-sans text-neutral-400 uppercase tracking-widest font-normal mt-0.5 liquid-card-label">success rate</div>
                     </div>
