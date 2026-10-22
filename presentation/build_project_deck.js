@@ -244,7 +244,7 @@ function arrow(s, x1, y1, x2, y2, label) {
   box(s, XS[2], BY, BW, BH, 'Durable queue',
     '120 s lease, 3 attempts,\nthen dead_letter');
   box(s, XS[3], BY, BW, BH, 'Evaluation worker',
-    'MiniLM + DeBERTa\n215.9 ms, ~1.15 GB resident');
+    'MiniLM + DeBERTa\n151.19 ms, ~1.15 GB resident');
 
   const MID = BY + BH / 2;
   arrow(s, XS[0] + BW, MID, XS[1], MID, 'spans');
@@ -425,19 +425,19 @@ client.chat.completions.create(       # recorded, scored, unchanged
   code(s,
 `  span (input_summary, output_summary)
         |
-        +--> MiniLM-L6-v2 embeddings, cosine similarity      27.8 ms
+        +--> MiniLM-L6-v2 embeddings, cosine similarity      19.1 ms
         |      (also feeds the drift signal)
         |
-        +--> DeBERTa-v3-small cross-encoder NLI             188.1 ms
+        +--> DeBERTa-v3-small cross-encoder NLI             132.1 ms
                |
                +--> entailment / contradiction / neutral
                     -> grounding_risk in [0, 1]
                                                    ---------------
-                                        shipped:    215.9 ms = sum`,
+                                        shipped:   151.19 ms = sum`,
     { h: 3.4, fontSize: 12 });
   bullets(s, [
     'Not a gated cascade. There is no threshold between the stages: the NLI result is the score whenever the model is loaded.',
-    'The ablation proves it without reading the code - 215.9 ms is exactly 27.8 + 188.1. A gate that ever fired would land between them.',
+    'The code proves it, not the ablation: evaluate_grounding has no branch between the two calls. The latency column is a sum by construction, so it shows nothing either way.',
     'MiniLM alone is the fallback for when the NLI model fails to load, not a short-circuit.',
     'Both run on local CPU through ONNX Runtime, with a PyTorch fallback. No prompt text leaves the host.',
   ], { y: 5.2, h: 1.6, fontSize: 12.5 });
@@ -448,18 +448,18 @@ client.chat.completions.create(       # recorded, scored, unchanged
   const s = slide('Ablation on the held-out test split', 'Measured results');
   table(s, [
     ['Configuration', 'Precision', 'Recall', 'F1', 'Latency'],
-    ['MiniLM gate only', '0.733', '0.846', '0.786', '27.8 ms'],
-    ['DeBERTa NLI only', '0.929', '1.000', '0.963', '188.1 ms'],
-    ['Cascade (shipped)', '0.929', '1.000', '0.963', '215.9 ms'],
+    ['MiniLM gate only', '0.733', '0.846', '0.786', '19.1 ms'],
+    ['DeBERTa NLI only', '0.929', '1.000', '0.963', '132.1 ms'],
+    ['Cascade (shipped)', '0.929', '1.000', '0.963', '151.2 ms'],
   ], { colW: [4.0, 2.0, 2.0, 1.9, 1.99], fontSize: 13, y: 1.75 });
   s.addText(
     'Dataset v1.0_test, 30 cases.  13 TP · 1 FP · 0 FN · 16 TN.  FPR 0.059, FNR 0.000.',
     { x: M, y: 3.5, w: W - 2 * M, h: 0.3, fontSize: 12.5, color: MUTED },
   );
   callout(s,
-    'Read honestly: on this benchmark the cascade is no more accurate than DeBERTa alone and is 28 ms slower, ' +
-    'because nearly every adversarial case escalates past the gate. The cascade buys throughput on easy traffic, ' +
-    'not accuracy. Adding disagreement changed nothing; adding drift cut precision to 0.448.',
+    'Read honestly: on this benchmark the cascade is no more accurate than DeBERTa alone and is about 19 ms slower, ' +
+    'because MiniLM runs on every span. It buys no throughput and no accuracy here; its similarity feeds the drift signal. ' +
+    'Adding disagreement changed nothing; adding drift cut precision to 0.448.',
     { y: 4.05, h: 1.35 });
   s.addText(
     'Thirty cases establishes that the pipeline works at a chosen operating point. It does not establish generalisation.',
@@ -578,7 +578,7 @@ after 14 shifted spans
     ['Dashboard build', 'passes'],
     ['Dashboard typecheck', 'clean, strict off'],
     ['Grounding F1 (v1.0_test)', '0.963'],
-    ['Evaluator latency (ablation)', '215.9 ms'],
+    ['Evaluator latency (ablation, 2026-09-18)', '151.19 ms'],
   ], { colW: [3.6, 2.4], w: 6.0, fontSize: 12.5, rowH: 0.3 });
   table(s, [
     ['Deployed instance', 'Value'],

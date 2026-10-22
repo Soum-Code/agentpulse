@@ -146,8 +146,8 @@ F.append(block(
 F.append(block(
     4, "The evaluator cascade", "~1 min 45 s",
     "A cheap gate in front of an expensive judge, and the ablation that justifies it.",
-    ["Stage 1 is MiniLM cosine similarity at 27.8 ms. Stage 2 is a DeBERTa-v3 cross-encoder, only on the uncertain cases.",
-     "End-to-end the cascade measures 215.9 ms. Be precise about this: 27.8 ms is the gate, not the pipeline.",
+    ["Stage 1 is MiniLM cosine similarity at 19.1 ms. Stage 2 is a DeBERTa-v3 cross-encoder, only on the uncertain cases.",
+     "End-to-end the two models measure 151.19 ms per case (PyTorch path, ablation run of 2026-09-18; the 2026-08-23 run of the same script gave 215.9 ms). Be precise about this: 19.1 ms is MiniLM alone, not the pipeline.",
      "On the chart: the cascade matches DeBERTa alone at F1 0.963 while being cheaper on the common case. That is the justification.",
      "Point at configuration F deliberately. Adding the old drift signal made the classifier worse, 0.619. That result was published rather than dropped, and the next slide but one explains why it was wrong."],
     "Thresholds were selected on the dev split and applied unchanged to the held-out test split."))
@@ -259,7 +259,7 @@ F += rule(4, 10)
 F.append(Paragraph("Numbers worth having ready", S_H2))
 rows = [
     ["Grounding cascade F1", "0.963", "held-out v1.0_test, Config C"],
-    ["MiniLM only / DeBERTa only / shipped", "27.8 / 188.1 / 215.9 ms", "ablation_results.json"],
+    ["MiniLM only / DeBERTa only / shipped", "19.1 / 132.1 / 151.2 ms", "ablation_results.json, 2026-09-18"],
     ["Drift false alarms", "91.7% to 1.5%", "before and after the rebuild"],
     ["Drift detection / AUC", "0.9192 / 0.991", "111 held-out tasks"],
     ["Drift coverage", "24.5%", "always quote with the accuracy"],
