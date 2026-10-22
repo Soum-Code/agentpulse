@@ -12,7 +12,7 @@ Uses async SQLite with WAL mode for concurrent read/write support.
 #
 # HOW IT FITS IN
 # main.py calls init_db at startup and close_db at shutdown. Routers, services,
-# worker.py and retention_cli.py call get_session() whenever they need the database.
+# worker.py, retention_cli.py and rescore_cli.py call get_session() whenever they need the database.
 # The table classes come from models.py and the database address from config.py.
 
 from __future__ import annotations
