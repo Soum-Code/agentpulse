@@ -117,7 +117,7 @@ export const AgentsView: React.FC<AgentsViewProps> = ({
                 </div>
 
                 <div className="mt-2.5 pt-2.5 border-t border-white/[0.06] flex items-center justify-between text-[11px] font-mono text-neutral-400">
-                  <span className="text-neutral-300 font-medium">{agent.totalTraces24h.toLocaleString()} traces/24h</span>
+                  <span className="text-neutral-300 font-medium">{agent.totalTraces24h.toLocaleString()} spans ingested</span>
                   <span className="text-neutral-300 font-medium">{agent.latencyAvgMs}ms avg</span>
                   <span className={agent.successRate < 90 ? 'text-rose-400 font-bold' : 'text-emerald-400 font-bold'}>
                     {agent.successRate}% OK

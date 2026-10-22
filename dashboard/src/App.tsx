@@ -13,7 +13,7 @@ import {
   ChalkSurfacePreset
 } from './types';
 import { useTelemetry } from './lib/useTelemetry';
-import { summarizeDrift } from './lib/overviewStats';
+import { summarizeDrift, breakDownIncidents } from './lib/overviewStats';
 import { api } from './lib/api';
 
 import { PublicExperience } from './components/public/PublicExperience';
@@ -613,7 +613,7 @@ export default function App() {
         onSelectTab={setProductTab}
         onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
         onOpenShortcutsModal={() => setIsShortcutsHelpOpen(true)}
-        incidentCount={incidents.length}
+        incidentCount={breakDownIncidents(incidents).active}
         driftWarningCount={summarizeDrift(agents).drifting}
       />
 

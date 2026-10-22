@@ -42,15 +42,24 @@ export interface IncidentBreakdown {
   open: number;
   investigating: number;
   resolved: number;
+  /** Not yet resolved: open plus investigating. This is what "active" means. */
+  active: number;
+  /** Not yet resolved and critical. */
+  activeCritical: number;
 }
 
 /** Alerts by state: open, acknowledged ('investigating'), and resolved. */
 export function breakDownIncidents(incidents: Incident[]): IncidentBreakdown {
-  const out: IncidentBreakdown = { open: 0, investigating: 0, resolved: 0 };
+  const out: IncidentBreakdown = { open: 0, investigating: 0, resolved: 0, active: 0, activeCritical: 0 };
   for (const incident of incidents) {
-    if (incident.status === 'resolved') out.resolved += 1;
-    else if (incident.status === 'investigating') out.investigating += 1;
+    if (incident.status === 'resolved') {
+      out.resolved += 1;
+      continue;
+    }
+    if (incident.status === 'investigating') out.investigating += 1;
     else out.open += 1;
+    out.active += 1;
+    if (incident.severity === 'critical') out.activeCritical += 1;
   }
   return out;
 }
