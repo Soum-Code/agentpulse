@@ -57,8 +57,7 @@ const mockTrace: Trace = {
   groundingScore: 0.31,
 };
 
-// What the live API gives for a trace with no cost, no tokens, no tags and no score yet. The adapter
-// leaves totalTokens undefined although the Trace type calls it required, so the fixture does the same.
+// What the live API gives for a trace with no cost, no tokens, no tags and no score yet
 const sparseTrace: Trace = {
   id: 'tr-sparse',
   agentId: 'agent-null',
@@ -66,7 +65,6 @@ const sparseTrace: Trace = {
   rootSpanId: 'span-0',
   status: 'ok',
   durationMs: 50,
-  totalTokens: undefined,
   timestamp: '2026-10-19T12:00:00',
   inputPreview: 'Hello',
   outputPreview: 'World',
@@ -155,6 +153,7 @@ describe('formatTraceForExport', () => {
     expect(trace.tags).toBeNull();
     expect(trace.errorSummary).toBeNull();
     expect(trace.driftDetected).toBeNull();
+    expect(trace.alerts).toBeNull();
     expect(trace.groundingScore).toBeNull();
     expect(trace.evaluatorResults).toEqual([]);
     // No span reported tokens, so the sums are unknown rather than 0.
@@ -218,6 +217,25 @@ describe('formatTraceForExport', () => {
     expect(trace.spans[0].evaluatorResults?.[0].verdict).toBe('unverifiable');
     // A span whose evaluator did not pass counts as flagged even though its status is ok
     expect(trace.analysis.discrepantSpansCount).toBe(1);
+  });
+
+  it('tells a trace with no alerts from one whose alerts were never loaded', () => {
+    expect(formatTraceForExport({ ...sparseTrace, alerts: [] }).trace.alerts).toEqual([]);
+    expect(formatTraceForExport(sparseTrace).trace.alerts).toBeNull();
+  });
+
+  it('exports the alerts of a loaded trace as they are', () => {
+    const alert = {
+      id: 7,
+      alertType: 'GROUNDING_FAILURE',
+      severity: 'critical',
+      message: "Grounding failure for agent 'analyst'",
+      agentId: 'analyst',
+      acknowledged: false,
+      resolved: false,
+      createdAt: '2026-10-21T08:38:38.710000',
+    };
+    expect(formatTraceForExport({ ...sparseTrace, alerts: [alert] }).trace.alerts).toEqual([alert]);
   });
 
   it('handles traces with zero spans gracefully', () => {
@@ -290,6 +308,7 @@ describe('formatTracesAsCsv', () => {
     expect(header).toContain('Trace ID');
     expect(header).toContain('Risk Score (0 safe, 1 risky)');
     expect(header).toContain('Evaluators Summary');
+    expect(header).toHaveLength(22);
   });
 
   it('puts the real fields in the right columns', () => {
@@ -319,7 +338,7 @@ describe('formatTracesAsCsv', () => {
     const row = parseLine(rowLine);
     const cell = (name: string) => row[header.indexOf(name)];
 
-    for (const name of ['Session ID', 'Total Tokens', 'Prompt Tokens', 'Completion Tokens', 'Cost', 'Risk Score (0 safe, 1 risky)', 'Drift Detected', 'Error Summary', 'Tags', 'Evaluators Summary']) {
+    for (const name of ['Session ID', 'Total Tokens', 'Prompt Tokens', 'Completion Tokens', 'Cost', 'Risk Score (0 safe, 1 risky)', 'Drift Detected', 'Alerts', 'Error Summary', 'Tags', 'Evaluators Summary']) {
       expect(cell(name)).toBe('');
     }
     expect(cell('Span Count')).toBe('1');
@@ -330,6 +349,20 @@ describe('formatTracesAsCsv', () => {
     const header = parseLine(headerLine);
     const summary = parseLine(rowLine)[header.indexOf('Evaluators Summary')];
     expect(summary).toBe('Analyst / Grounding: 0.3 (pass, unverifiable); Analyst / Tool Claim: 1 (fail)');
+  });
+
+  it('lists the alerts of a trace by type and severity', () => {
+    const alerted: Trace = {
+      ...sparseTrace,
+      alerts: [
+        { id: 1, alertType: 'DRIFT_DETECTED', severity: 'warning', message: 'm', acknowledged: false, resolved: false, createdAt: 'x' },
+        { id: 2, alertType: 'GROUNDING_FAILURE', severity: 'critical', message: 'm', acknowledged: false, resolved: false, createdAt: 'x' },
+      ],
+    };
+    const [headerLine, rowLine] = formatTracesAsCsv([alerted]).split('\n');
+    expect(parseLine(rowLine)[parseLine(headerLine).indexOf('Alerts')]).toBe(
+      'DRIFT_DETECTED (warning); GROUNDING_FAILURE (critical)'
+    );
   });
 
   it('does not let a trace input run as a spreadsheet formula', () => {

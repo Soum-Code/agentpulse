@@ -5,7 +5,7 @@
  * count that could not be measured is null, not 0: an export that says 0 tokens for a span
  * that never reported tokens is indistinguishable from a measured zero.
  */
-import type { Span, Trace } from '../types';
+import type { Span, Trace, TraceAlert } from '../types';
 import type { GroundingVerdict } from '../lib/api';
 
 export const TRACE_EXPORT_SCHEMA = 'agentpulse.trace.v1';
@@ -45,6 +45,8 @@ export interface TraceExportPayload {
     tags: string[] | null;
     errorSummary: string | null;
     driftDetected: boolean | null;
+    /** The alerts raised on this trace; null when the trace detail was not loaded, [] when it has none. */
+    alerts: TraceAlert[] | null;
     /** The trace's overall_risk_score, null until the evaluator has scored it. */
     groundingScore: number | null;
     groundingScoreScale: string;
@@ -138,6 +140,7 @@ export function formatTraceForExport(trace: Trace): TraceExportPayload {
       tags: trace.tags ?? null,
       errorSummary: trace.errorSummary ?? null,
       driftDetected: trace.driftDetected ?? null,
+      alerts: trace.alerts ?? null,
       groundingScore: trace.groundingScore ?? null,
       groundingScoreScale: 'risk: 0 is safe, 1 is risky',
       evaluatorResults: collectEvaluatorResults(spans),
@@ -183,6 +186,7 @@ const CSV_HEADERS = [
   'Drift Detected',
   'Span Count',
   'Flagged Spans',
+  'Alerts',
   'Input Preview',
   'Output Preview',
   'Error Summary',
@@ -205,6 +209,9 @@ export function csvCell(value: CsvValue): string {
   const text = /^[=+\-@\t\r]/.test(value) ? `'${value}` : value;
   return `"${text.replace(/"/g, '""')}"`;
 }
+
+const alertsSummary = (alerts: TraceAlert[] | undefined): string =>
+  (alerts ?? []).map((a) => `${a.alertType} (${a.severity})`).join('; ');
 
 const evaluatorsSummary = (results: ExportedEvaluatorResult[]): string =>
   results
@@ -233,6 +240,7 @@ export function formatTracesAsCsv(traces: Trace[]): string {
       t.driftDetected,
       spans.length,
       spans.filter(isFlaggedSpan).length,
+      alertsSummary(t.alerts),
       t.inputPreview,
       t.outputPreview,
       t.errorSummary,

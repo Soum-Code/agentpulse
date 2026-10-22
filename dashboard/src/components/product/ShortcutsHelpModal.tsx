@@ -119,6 +119,9 @@ export const ShortcutsHelpModal: React.FC<ShortcutsHelpModalProps> = ({
       {/* Modal Card */}
       <div
         ref={modalRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Keyboard shortcuts"
         className="relative w-full max-w-2xl ios-liquid-card border-glow-subtle rounded-2xl p-6 shadow-2xl text-white font-mono overflow-hidden z-10 opacity-0"
       >
         {/* Top Specular Accent */}

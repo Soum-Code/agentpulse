@@ -14,6 +14,8 @@ import {
 } from './types';
 import { useTelemetry } from './lib/useTelemetry';
 import { api } from './lib/api';
+import { CHORD_WINDOW_MS } from './utils/keyboard';
+import { loadFullTrace } from './lib/traceDetail';
 
 import { PublicExperience } from './components/public/PublicExperience';
 import { LiquidBackgroundCanvas } from './components/public/LiquidBackgroundCanvas';
@@ -60,6 +62,21 @@ export default function App() {
   const [selectedTrace, setSelectedTrace] = useState<Trace | undefined>(undefined);
   const [selectedSpan, setSelectedSpan] = useState<Span | undefined>(undefined);
   const [selectedIncident, setSelectedIncident] = useState<Incident | undefined>(undefined);
+
+  // Only the newest traces arrive with their spans (useTelemetry). Selecting an older one picks up a
+  // list entry with no spans, scores or alerts, so load its detail and swap it in.
+  useEffect(() => {
+    if (!selectedTrace || selectedTrace.alerts !== undefined) return;
+    let cancelled = false;
+    loadFullTrace(selectedTrace)
+      .then((full) => {
+        if (!cancelled) setSelectedTrace((current) => (current?.id === full.id ? full : current));
+      })
+      .catch((err) => console.warn(`Could not load trace ${selectedTrace.id}:`, err));
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedTrace]);
 
   // Active Context Side-Panel open & pinned states
   const [isContextPanelOpen, setIsContextPanelOpen] = useState(true);
@@ -175,7 +192,7 @@ export default function App() {
         clearTimeout(chordTimer);
         chordTimer = setTimeout(() => {
           chordKey = null;
-        }, 1200);
+        }, CHORD_WINDOW_MS);
         return;
       }
 

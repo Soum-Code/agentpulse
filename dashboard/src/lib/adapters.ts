@@ -23,6 +23,7 @@ import type {
   SpanType,
   SpanStatus,
   Trace,
+  TraceAlert,
 } from '../types';
 import { verdictLabel, verdictTooltip } from './riskTone';
 
@@ -170,10 +171,26 @@ export function toSpans(spans: SpanDetail[], traceId: string): Span[] {
   });
 }
 
+function toTraceAlert(a: AlertItem): TraceAlert {
+  return {
+    id: a.id,
+    alertType: a.alert_type,
+    severity: a.severity,
+    message: a.message,
+    agentId: a.agent_id ?? undefined,
+    spanId: a.span_id ?? undefined,
+    acknowledged: a.acknowledged,
+    resolved: a.resolved,
+    createdAt: a.created_at,
+  };
+}
+
+/** Pass `alerts` only when the trace detail was loaded. Without it the trace is a list entry:
+ *  its alerts and drift flag are unknown, not empty and not false. */
 export function toTrace(
   t: TraceListItem,
   spans: Span[] = [],
-  alerts: AlertItem[] = [],
+  alerts?: AlertItem[],
 ): Trace {
   const duration =
     t.end_time && t.start_time
@@ -195,7 +212,8 @@ export function toTrace(
     inputPreview: spans[0]?.prompt ?? '',
     outputPreview: spans[spans.length - 1]?.completion ?? '',
     spans,
-    driftDetected: alerts.some((a) => a.alert_type === 'DRIFT_DETECTED'),
+    driftDetected: alerts ? alerts.some((a) => a.alert_type === 'DRIFT_DETECTED') : undefined,
+    alerts: alerts?.map(toTraceAlert),
     groundingScore: t.overall_risk_score ?? undefined,
     // sessionId, cost and tags have no backend source.
   };
