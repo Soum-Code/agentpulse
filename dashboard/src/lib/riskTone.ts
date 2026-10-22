@@ -16,7 +16,14 @@
  *
  * An earlier version read the number as support (>= 0.80 was "Supported"), which
  * painted ungrounded answers green and grounded ones red.
+ *
+ * The grounding verdict (verdictLabel and friends, at the end of this file) is a second,
+ * separate reading and not a risk: it names the class the NLI model chose. An output the
+ * evidence neither supports nor contradicts ("unverifiable") scores about 0.3 and reads
+ * Supported above, so it gets its own neutral tone rather than amber or rose.
  */
+
+import type { GroundingVerdict } from './api';
 
 export type RiskTone = 'emerald' | 'amber' | 'rose' | 'muted';
 
@@ -78,5 +85,48 @@ export function riskDotClasses(score: number | null | undefined): string {
     case 'muted':
     default:
       return 'bg-neutral-500';
+  }
+}
+
+/** What the NLI model concluded, as a short badge label. Null when there is no verdict
+ *  (the row is not a real NLI result), in which case nothing should be shown. */
+export function verdictLabel(verdict: GroundingVerdict | null | undefined): string | null {
+  switch (verdict) {
+    case 'contradicted':
+      return 'Contradicted';
+    case 'unverifiable':
+      return 'Unverifiable';
+    case 'supported':
+      return 'Supported';
+    default:
+      return null;
+  }
+}
+
+/** One line for the badge's tooltip. For 'unverifiable' it says why this is not a risk. */
+export function verdictTooltip(verdict: GroundingVerdict | null | undefined): string | null {
+  switch (verdict) {
+    case 'contradicted':
+      return 'The evidence contradicts this output.';
+    case 'unverifiable':
+      return 'The evidence neither supports nor contradicts this output, so it could not be checked.';
+    case 'supported':
+      return 'The evidence supports this output.';
+    default:
+      return null;
+  }
+}
+
+/** Contradicted is rose and supported is emerald, as in riskBadgeClasses. Unverifiable is
+ *  neutral on purpose: nothing was shown to be wrong, only that nothing could be checked. */
+export function verdictBadgeClasses(verdict: GroundingVerdict | null | undefined): string {
+  switch (verdict) {
+    case 'contradicted':
+      return 'bg-rose-950/60 text-rose-300 border-rose-500/40';
+    case 'supported':
+      return 'bg-emerald-950/60 text-emerald-300 border-emerald-500/40';
+    case 'unverifiable':
+    default:
+      return 'bg-neutral-800/60 text-neutral-300 border-neutral-500/50 border-dashed';
   }
 }
