@@ -15,10 +15,10 @@ const agent = (id: string, driftStatus?: Agent['driftStatus'], driftScore?: numb
   lastActive: '2026-10-21T08:44:42',
 });
 
-const incident = (id: string, status: Incident['status']): Incident => ({
+const incident = (id: string, status: Incident['status'], severity: Incident['severity'] = 'warning'): Incident => ({
   id,
   title: 'DRIFT DETECTED',
-  severity: 'warning',
+  severity,
   agentId: 'a',
   agentName: 'a',
   traceId: 't',
@@ -78,10 +78,25 @@ describe('breakDownIncidents', () => {
       incident('3', 'investigating'),
       incident('4', 'resolved'),
     ];
-    expect(breakDownIncidents(incidents)).toEqual({ open: 2, investigating: 1, resolved: 1 });
+    expect(breakDownIncidents(incidents)).toMatchObject({ open: 2, investigating: 1, resolved: 1 });
+  });
+
+  it('counts as active only what is not resolved', () => {
+    // The card used to count every alert, resolved ones included, under "Active Incidents".
+    const incidents = [
+      incident('1', 'open', 'critical'),
+      incident('2', 'investigating', 'critical'),
+      incident('3', 'resolved', 'critical'),
+      incident('4', 'resolved', 'warning'),
+      incident('5', 'open', 'warning'),
+    ];
+    const counts = breakDownIncidents(incidents);
+    expect(counts.active).toBe(3);
+    expect(counts.activeCritical).toBe(2);
+    expect(counts.resolved).toBe(2);
   });
 
   it('is all zero when there are no alerts', () => {
-    expect(breakDownIncidents([])).toEqual({ open: 0, investigating: 0, resolved: 0 });
+    expect(breakDownIncidents([])).toEqual({ open: 0, investigating: 0, resolved: 0, active: 0, activeCritical: 0 });
   });
 });
