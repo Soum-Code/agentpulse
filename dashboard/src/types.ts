@@ -124,6 +124,19 @@ export interface Span {
   };
 }
 
+/** An alert raised on a trace, as GET /v1/traces/{id} lists it. */
+export interface TraceAlert {
+  id: number;
+  alertType: string;
+  severity: string;
+  message: string;
+  agentId?: string;
+  spanId?: string;
+  acknowledged: boolean;
+  resolved: boolean;
+  createdAt: string;
+}
+
 export interface Trace {
   id: string;
   agentId: string;
@@ -132,7 +145,8 @@ export interface Trace {
   rootSpanId: string;
   status: 'ok' | 'warning' | 'error';
   durationMs: number;
-  totalTokens: number;
+  // Undefined when no span reported tokens. adapters.ts leaves it unset, so it is optional here.
+  totalTokens?: number;
   cost?: number;
   timestamp: string;
   inputPreview: string;
@@ -141,6 +155,10 @@ export interface Trace {
   tags?: string[];
   errorSummary?: string;
   driftDetected?: boolean;
+  // Set once the trace detail has been loaded, and then it is the full list, possibly empty.
+  // Undefined means only the list entry is known, so spans is empty because it was not
+  // fetched and not because the trace has none.
+  alerts?: TraceAlert[];
   // The trace's overall_risk_score: 0 is safe, 1 is risky, despite the name.
   groundingScore?: number;
 }
