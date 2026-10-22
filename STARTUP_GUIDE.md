@@ -351,9 +351,11 @@ resets the 12-sample half and detection is delayed again.
 /v1/health/evaluator   200   workers_alive: 1
 /v1/platform           200   state: healthy, queue depth 0
 
-Evaluation latency     p50 ~253 ms, p95 ~497 ms per span
+Evaluation latency     p50 ~254 ms, p95 ~417 ms per span
 Dashboard              engine readiness HEALTHY, agent roster populated
 ```
+
+The latency line is the one-worker, ONNX figure from `experiments/results/throughput_benchmark.json` (1,000 spans, 2026-08-27, 16 logical cores, job start to job end per span). Yours depends on your hardware and on how many workers share it: with eight workers on that machine the p50 was 539 ms.
 
 If `/v1/platform` reports `failing` with
 `no evaluation worker is alive`, that is the system telling the truth: start

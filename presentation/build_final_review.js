@@ -207,16 +207,16 @@ function tag(s, text, x, y) {
   card(s, M, 3.65, 5.85, 2.9, 'FFFFFF');
   s.addText('The evaluator cascade', { x: M + 0.35, y: 3.85, w: 5.2, h: 0.32, fontFace: B, fontSize: 14, bold: true, color: DARKTEXT, margin: 0 });
   s.addText([
-    { text: 'Stage 1 - MiniLM-L6-v2 cosine gate, 27.8 ms. Fast-accepts the confident cases.', options: { bullet: true, breakLine: true } },
+    { text: 'Stage 1 - MiniLM-L6-v2 cosine gate, 19.1 ms.', options: { bullet: true, breakLine: true } },
     { text: 'Stage 2 - DeBERTa-v3 cross-encoder NLI, run only when the gate is uncertain.', options: { bullet: true, breakLine: true } },
     { text: 'Deterministic tool-claim regex and per-agent drift run alongside.', options: { bullet: true, breakLine: true } },
-    { text: 'End-to-end cascade: 215.9 ms mean per span.', options: { bullet: true } },
+    { text: 'End-to-end cascade: 151.19 ms mean per case (ablation, PyTorch path, 2026-09-18).', options: { bullet: true } },
   ], { x: M + 0.35, y: 4.25, w: 5.2, h: 2.1, fontFace: B, fontSize: 11.5, color: MUTED, paraSpaceAfter: 6, margin: 0 });
 
   card(s, 6.9, 3.65, 5.7, 2.9, 'FFFFFF');
   s.addText('Design justification', { x: 7.25, y: 3.85, w: 5.05, h: 0.32, fontFace: B, fontSize: 14, bold: true, color: DARKTEXT, margin: 0 });
   s.addText([
-    { text: 'Why a cascade and not NLI alone: the gate handles the common case at a seventh of the cost, and the ablation shows no F1 loss.', options: { bullet: true, breakLine: true } },
+    { text: 'Why both models: the ablation shows MiniLM alone loses F1 (0.786 against 0.963), and adding it to DeBERTa costs about 19 ms per case and gains no F1.', options: { bullet: true, breakLine: true } },
     { text: 'Why CPU and not GPU: removes the cost argument for sampling, and keeps deployment self-hosted with no data egress.', options: { bullet: true, breakLine: true } },
     { text: 'Why a queue and not inline evaluation: inline evaluation forces sampling at scale, which defeats the objective.', options: { bullet: true } },
   ], { x: 7.25, y: 4.25, w: 5.05, h: 2.1, fontFace: B, fontSize: 11.5, color: MUTED, paraSpaceAfter: 6, margin: 0 });

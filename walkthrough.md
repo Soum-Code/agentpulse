@@ -27,7 +27,7 @@ Then open `http://localhost:5173`.
 - Replaced "zero latency" language with measured overhead figures (0.005 ms P50 for the SDK decorator).
 - Defined a 3-class NLI grounding taxonomy: `GROUNDING_CONTRADICTION`, `INSUFFICIENT_SUPPORT`, `UNSUPPORTED_CLAIM`.
 - Separated baseline concepts explicitly: reference baseline, current window, live smoothed signal. Added cold-start protection, `freeze_baseline()`, and `reset_baseline()`.
-- Measured real CPU inference latency: MiniLM P50 = 15.13 ms (P95 = 18.50 ms), DeBERTa NLI P50 = 88.51 ms (P95 = 140.48 ms), full cascade P50 = 122.33 ms (P95 = 172.17 ms).
+- Measured real CPU inference latency: MiniLM P50 = 15.13 ms (P95 = 18.50 ms), DeBERTa NLI P50 = 88.51 ms (P95 = 140.48 ms), full cascade P50 = 122.33 ms (P95 = 172.17 ms). From one run of `benchmarks/run_benchmarks.py` on 2026-08-18 (PyTorch path); the MiniLM, DeBERTa and cascade figures come from 100, 50 and 9 samples, so the cascade P95 is close to its slowest run. A later 30-case run measured 151.19 ms per case (see `README.md`).
 
 ## 4. Running the tests
 
