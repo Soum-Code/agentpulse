@@ -208,6 +208,40 @@ describe('toSpans', () => {
     expect(s.evaluatorResults?.[0].name).toBe('Grounding');
     expect(s.evaluatorResults?.[0].passed).toBe(false);
   });
+
+  it('puts the NLI verdict on the grounding card without changing its score or pass flag', () => {
+    // A neutral-only output scores about 0.3: low risk, so it passes, and it is unverifiable.
+    const [s] = toSpans(
+      [
+        span({
+          evaluation: {
+            grounding_score: 0.305,
+            evaluation_stage: 'stage2',
+            grounding_verdict: 'unverifiable',
+          },
+        } as never),
+      ],
+      't1',
+    );
+    const grounding = s.evaluatorResults?.[0];
+    expect(grounding?.verdict).toBe('unverifiable');
+    expect(grounding?.score).toBe(0.305);
+    expect(grounding?.passed).toBe(true);
+    expect(grounding?.reason).toContain('Verdict: Unverifiable');
+    expect(grounding?.reason).toContain('neither supports nor contradicts');
+  });
+
+  it('names only the engine when the backend sent no verdict', () => {
+    // The similarity-only fallback, a skipped row and a backend older than this field.
+    for (const evaluation of [
+      { grounding_score: 0.3, evaluation_stage: 'stage1', grounding_verdict: null },
+      { grounding_score: 0.3, evaluation_stage: 'stage2' },
+    ]) {
+      const [s] = toSpans([span({ evaluation } as never)], 't1');
+      expect(s.evaluatorResults?.[0].verdict).toBeUndefined();
+      expect(s.evaluatorResults?.[0].reason).not.toContain('Verdict');
+    }
+  });
 });
 
 describe('toTrace', () => {

@@ -50,6 +50,7 @@ Design decisions:
 from __future__ import annotations
 
 import logging
+import math
 # time.perf_counter is a precise stopwatch, used to measure latency in milliseconds.
 import time
 from dataclasses import dataclass
@@ -404,6 +405,78 @@ def evaluate_grounding(
 
     # Neither model gave a result, so there is no score.
     return None
+
+
+# Read-side verdict (not part of scoring)
+
+# In short: one word for what the NLI model concluded, so a neutral result is not read as "fine".
+# grounding_score = contradiction_prob + 0.3 * neutral_prob puts a neutral-only output at 0.3,
+# which reads low_risk, the same as a supported one. That is the weight's design (see
+# NEUTRAL_RISK_WEIGHT) and this function does not touch it. It only names the NLI class that won:
+#   "contradicted" = the evidence contradicts the output;
+#   "unverifiable" = the evidence neither supports nor contradicts it, so it could not be checked
+#                    (this is NOT a risk score: nothing was shown to be wrong);
+#   "supported"    = the evidence supports the output.
+# It reads the three stored probabilities, so it needs no new column, no re-score and no version bump.
+# Ties go to the riskier class (contradicted, then unverifiable, then supported): the order of the
+# tuple below is the tie-break. Returns None when a probability is missing or not a number.
+def grounding_verdict(
+    entailment_prob: Optional[float],
+    contradiction_prob: Optional[float],
+    neutral_prob: Optional[float],
+) -> Optional[str]:
+    """The NLI class with the highest probability, as "contradicted" | "unverifiable" | "supported"."""
+    if entailment_prob is None or contradiction_prob is None or neutral_prob is None:
+        return None
+    if not all(math.isfinite(p) for p in (entailment_prob, contradiction_prob, neutral_prob)):
+        return None
+    ranked = (
+        ("contradicted", contradiction_prob),
+        ("unverifiable", neutral_prob),
+        ("supported", entailment_prob),
+    )
+    best = max(prob for _, prob in ranked)
+    # ranked is ordered riskiest first, so the first class holding the maximum wins a tie.
+    return next(name for name, prob in ranked if prob == best)
+
+
+# In short: the four NLI fields the read API adds to a span's evaluation, from one stored row.
+# Used by routers/__init__.py (GET /v1/traces/{id}) and routers/ingest.py (GET /v1/simulate/{id}).
+# `evaluation` is an Evaluation row, or None for a span not scored yet (typed Any so this
+# module does not import the models).
+# The probabilities are shown, and the verdict is given, only for a real NLI result:
+#   - evaluation_stage "stage1" is the similarity-only fallback. Its three *_prob columns are
+#     rough numbers worked out from the similarity (see evaluate_grounding), not NLI output, and
+#     they do not sum to 1; "skipped" rows have no grounding result at all;
+#   - model_version "v1.0" rows have entailment_prob and neutral_prob swapped (see
+#     _nli_label_index), so a verdict from them would call a supported output unverifiable.
+# For those rows all four fields are None.
+def nli_breakdown(evaluation: Any) -> dict[str, Any]:
+    """entailment_prob, contradiction_prob, neutral_prob and grounding_verdict for one stored row.
+
+    `evaluation` may be None (a span the worker has not scored yet): all four are then None too.
+    """
+    if (
+        evaluation is None
+        or evaluation.evaluation_stage != "stage2"
+        or evaluation.model_version == "v1.0"
+    ):
+        return {
+            "entailment_prob": None,
+            "contradiction_prob": None,
+            "neutral_prob": None,
+            "grounding_verdict": None,
+        }
+    return {
+        "entailment_prob": evaluation.entailment_prob,
+        "contradiction_prob": evaluation.contradiction_prob,
+        "neutral_prob": evaluation.neutral_prob,
+        "grounding_verdict": grounding_verdict(
+            evaluation.entailment_prob,
+            evaluation.contradiction_prob,
+            evaluation.neutral_prob,
+        ),
+    }
 
 
 # Model Loading

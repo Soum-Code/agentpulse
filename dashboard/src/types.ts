@@ -9,6 +9,8 @@
  * from a measured one. Marking them required makes the compiler demand the
  * invention -- and a component that then reads them crashes the console.
  */
+import type { GroundingVerdict } from './lib/api';
+
 export type DesignMode = 'rag' | 'public' | 'product';
 export type ColorPalette = 'butter' | 'dark' | 'chalk';
 export type ChalkSurfacePreset = 'classic-white' | 'sepia-slate' | 'emerald-graphite' | 'custom';
@@ -84,6 +86,8 @@ export interface EvaluatorResult {
   passed: boolean;
   maturity: 'GA' | 'BETA' | 'EXPERIMENTAL';
   reason: string;
+  /** Grounding only: what the NLI model concluded. Not a risk score; see riskTone.ts. */
+  verdict?: GroundingVerdict;
   evidenceQuote?: string;
   claimsCount?: number;
   groundedRatio?: number;

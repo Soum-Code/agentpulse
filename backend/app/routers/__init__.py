@@ -38,6 +38,8 @@ from app.models import (
     Span,
     Trace,
 )
+# nli_breakdown = the NLI probabilities and the grounding verdict of one stored evaluation.
+from app.services.grounding import nli_breakdown
 
 
 # Traces Router
@@ -192,6 +194,12 @@ async def get_trace(trace_id: str):
                     # evaluation_stage: "stage2" = the NLI model made the grounding score
                     # (NLI = a model that says if one sentence follows from another),
                     # "stage1" = similarity-only fallback, "skipped" = no grounding result.
+                    # entailment_prob, contradiction_prob, neutral_prob: the NLI model's
+                    # three probabilities. grounding_verdict: the one that is highest, as
+                    # "contradicted" | "unverifiable" | "supported". It is not a risk score:
+                    # "unverifiable" means the evidence neither supports nor contradicts the
+                    # output, which grounding_score (contradiction + 0.3 * neutral) rates low.
+                    # All four are None unless the row is a real NLI result (nli_breakdown).
                     "evaluation": (
                         {
                             "grounding_score": evaluations[s.span_id].grounding_score,
@@ -199,6 +207,7 @@ async def get_trace(trace_id: str):
                             "overall_risk_score": evaluations[s.span_id].overall_risk_score,
                             "label": evaluations[s.span_id].label,
                             "evaluation_stage": evaluations[s.span_id].evaluation_stage,
+                            **nli_breakdown(evaluations[s.span_id]),
                         }
                         if s.span_id in evaluations
                         else None
