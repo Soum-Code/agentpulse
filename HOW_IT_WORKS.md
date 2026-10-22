@@ -435,15 +435,17 @@ if result:
 
 There is no branch between the two calls. **Both models run on every span.**
 
-The ablation data proves it independently, without reading the code at all — from `experiments/results/ablation_results.json`:
+The ablation's latency column does **not** prove it, and an earlier version of this section said it did. From `experiments/results/ablation_results.json` (run of 2026-09-18, PyTorch path via `load_models(use_onnx=False)`, one run):
 
 | Configuration | Latency |
 | :--- | ---: |
-| A — MiniLM only | 27.83 ms |
-| B — DeBERTa only | 188.07 ms |
-| C — shipped | **215.90 ms** |
+| A — MiniLM only | 19.10 ms |
+| B — DeBERTa only | 132.09 ms |
+| C — shipped | **151.19 ms** |
 
-215.90 is 27.83 + 188.07. A gated cascade would land somewhere *between* 27.83 and 215.90, weighted by how often the gate fired. Landing exactly on the sum means it never fired.
+151.19 is 19.10 + 132.09, but that identity holds by construction. `experiments/ablation.py` times MiniLM and DeBERTa on every case and reports a configuration's latency as the sum of the timings of the signals that configuration uses (`score_config`), so a gated design would be reported as the same sum. What shows that no gate exists is the code above: `evaluate_grounding()` has no branch between the two calls.
+
+The figures also moved between runs. The 2026-08-23 run of the same script recorded 27.83 / 188.07 / 215.90 ms. Both runs use the PyTorch path and every accuracy figure is identical; commit `9cd0819` recorded the latency change as unattributed. Each is a single run, so the gap of about 30% is the honest measure of how much these numbers can move.
 
 **The docstrings now say this, and the behaviour is unchanged on purpose.** Adding the gate would alter the score of every span whose similarity clears the threshold, which would leave `THRESHOLD_ANALYSIS.md`, `GROUNDING_SCORE_CALIBRATION_REPORT.md` and `LLM_JUDGE_COMPARISON_REPORT.md` describing a system that no longer runs. If the gate is ever wanted it is a measured experiment, not an edit.
 
@@ -452,7 +454,7 @@ The two constants were kept rather than deleted:
 - `STAGE1_SAFE_THRESHOLD` is genuinely read, in one place — the fallback branch that runs when the NLI model failed to load, where it decides whether a similarity-only result is labelled `entailment` or `neutral`.
 - `STAGE1_RISK_THRESHOLD` is read nowhere. It stays because `disagreement.py` documents its `RELEVANCE_FLOOR` as reusing this value; delete the constant and that provenance comment points at nothing.
 
-So the honest description of the design: run both models, prefer NLI, degrade to similarity-only if NLI is unavailable. Stage 1 costs ~28 ms on every evaluation rather than saving anything — a real trade, made knowingly, since the similarity is also what the drift signal consumes.
+So the honest description of the design: run both models, prefer NLI, degrade to similarity-only if NLI is unavailable. Stage 1 costs ~19 ms on every evaluation (PyTorch path, 2026-09-18 run) rather than saving anything — a real trade, made knowingly, since the similarity is also what the drift signal consumes.
 
 ### 10.2 Liveness and readiness probes — fixed
 

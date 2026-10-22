@@ -161,7 +161,7 @@ F.append(block(
     "The reason full coverage is affordable is that evaluation was taken off the request path.",
     ["Trace the five stages once, left to right, quickly.",
      "Then spend the time on the right-hand box - the panel will ask 'why this over alternatives' and those are the three answers.",
-     "Why a cascade: the gate handles the common case at a seventh of the cost with no F1 loss, which the ablation proves.",
+     "Why both models: MiniLM alone loses F1 (0.786 against 0.963); adding it to DeBERTa costs about 19 ms per case and gains no F1.",
      "Why CPU: removes the cost argument for sampling and keeps deployment self-hosted with no data egress.",
      "Why a queue: inline evaluation forces sampling at scale, which defeats the objective."],
     "The strongest justification is the last one - it ties the architecture back to the thesis."))
@@ -308,7 +308,7 @@ F.append(Paragraph("Numbers to have ready", S_H2))
 rows = [
     ["Grounding F1", "0.963", "held-out v1.0_test, Config C"],
     ["Precision / recall / FPR", "0.929 / 1.000 / 0.059", "same run"],
-    ["MiniLM only / DeBERTa only / shipped", "27.8 / 188.1 / 215.9 ms", "ablation_results.json"],
+    ["MiniLM only / DeBERTa only / shipped", "19.1 / 132.1 / 151.2 ms", "ablation_results.json, 2026-09-18"],
     ["Best baseline (D, no drift)", "F1 0.941", "full system 0.842 - see slide 7"],
     ["Drift false alarms", "91.7% to 1.5%", "before and after rebuild"],
     ["Drift detection / AUC", "0.9192 / 0.991", "111 held-out tasks"],

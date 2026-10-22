@@ -27,6 +27,9 @@ Outputs:
 # stand-in (building a dict or a list). Layers 8 and 9 are random numbers, and layer 13 is
 # computed from the means of other layers. Layers 2 and 3 time the LLM adapter, which here
 # gives canned text (see the note at those layers).
+# So in the saved experiments/results/latency_profiles.json (last run 2026-08-18), the entries
+# for layers 8, 9 and 13 are not measurements and should not be quoted. The ones that time
+# real code are layers 6, 7, 10, 11 and 12.
 #
 # How it fits in: run by hand (python experiments/latency_profiler.py); no other file imports
 # it. It calls the backend's grounding, evaluator, drift and alerting code, the SDK client,

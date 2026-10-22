@@ -63,7 +63,7 @@ That is it. No prompts, no API keys, no bills, no waiting three seconds per chec
 | **Worker** | Does the actual judging | Slow and heavy, must not block anything |
 | **Dashboard** | Shows you the result | Reads only |
 
-The split matters. Judging takes about 200 milliseconds and needs a gigabyte of memory. If that happened inside your agent's request, your agent would be 200 ms slower on every step. Instead the API says "got it" in a few milliseconds and the worker catches up in the background.
+The split matters. Judging takes about 200 milliseconds and needs a gigabyte of memory. If that happened inside your agent's request, your agent would be 200 ms slower on every step. Instead the API says "got it" and the worker catches up in the background. The one measurement of that reply is the benchmark's submit loop, which sent 200 five-span requests one after another in 9.26 seconds (about 46 ms each, timed from the client, with a worker already running on the same machine; `experiments/results/throughput_benchmark.json`, 2026-08-27). The API's own time has not been measured separately.
 
 ## 4. Follow one span all the way through
 
