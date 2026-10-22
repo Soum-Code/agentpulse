@@ -10,7 +10,7 @@
 
 ## READ FIRST (2026-10-21): Section 29 is the current state
 
-Since the banner below was written, 18 PRs (#69 to #86) merged, the first automatic deploy ran, a leaked API key was closed and rotated, and writes on the public site got a password. **Read Section 29 before anything else:** it lists what is live, what is still open, and the traps hit on the way. The banner below is still correct about 2026-10-13 and about how `main` was overwritten; where it says something is open, check 29.5.
+Since the banner below was written, 21 PRs (#69 to #89) merged, the first automatic deploy ran, a leaked API key was closed and rotated, and writes on the public site got a password. **Read Section 29 before anything else:** it lists what is live, what is still open, and the traps hit on the way. The banner below is still correct about 2026-10-13 and about how `main` was overwritten; where it says something is open, check 29.5.
 
 ## READ FIRST — the repository is not what the rest of this file describes (checked 2026-10-13)
 
@@ -3782,9 +3782,38 @@ A read-only review of the Python code (backend, SDK, demo, adapters, reasoning; 
 
 **29.10.6 Running now, and what is next (this replaces 29.9).**
 - **Running:** a session re-measures grounding on the corrected labels (the weight `NEUTRAL_RISK_WEIGHT` = 0.5, the 0.7 and 0.4 cut-offs, the ablation, the threshold analysis). It must only measure and write a report and new result files; it must not change a constant or touch `backend/**`, because changing them changes live scores and needs another re-score.
-1. Read that report, decide whether to keep 0.5, change it or add an "unverifiable" band, and only then change the constants and re-score again (the tool exists and is idempotent per version: bump `model_version` or `config_version` first).
+1. Read that report, decide whether to keep 0.5, change it or add an "unverifiable" band, and only then change the constants and re-score again (the tool exists and is idempotent per version: bump `model_version` or `config_version` first). **[2026-10-22: done. The report was read, the weight is 0.3 and the rows were re-scored; see 29.11.]**
 2. The public chat: real embeddings in `demo/chatbot/app.py`, a per-IP rate limit, an input length limit, a daily cap, a kill switch, per-stage progress, the exception line in the Caddyfile `@write` block, a new NVIDIA key, and a memory plan for the VM (previous paragraph).
 3. A read-only review of the dashboard (about 20.8k lines) and of the tests, scripts, experiments and benchmarks, which the Python review never covered.
 4. UI work from AI Studio under 29.6, one or two features at a time, each returning as a branch and a pull request.
 5. The owner's three small tasks, still open: test the write password once in the browser (Telemetry Lab "Run scenario", user `soum`); restrict the Firebase web key in the Google Cloud console; rotate the NVIDIA key that was pasted into a chat. Also: a deploy-only SSH key instead of the personal one.
 6. The follow-ups in 29.10.3 and 29.10.4.
+
+### 29.11 Update, 2026-10-22 (about 06:15 UTC): the grounding weight is 0.3 and the live rows are re-scored
+
+**What merged since 29.10** (all with green checks, diff read first):
+
+| PR | What it changed | Merge commit |
+|---|---|---|
+| #88 | `GROUNDING_RECALIBRATION_2026-10.md`: grounding re-measured on the corrected NLI labels. Adds three scripts (`experiments/grounding_recalibration_{signals,analysis,compounding}.py`) and their outputs `experiments/results/grounding_recalibration_2026-10-22_*`. Measurement only: no file under `backend/` or `dashboard/` changed, so it did not deploy | 59c5dc4 |
+| #89 | `NEUTRAL_RISK_WEIGHT` 0.5 to 0.3 in `backend/app/services/grounding.py`; `model_version` v1.1 to v1.2 in `evaluator.py` (`config_version` stays v1.1, the averaging did not change); `rescore_cli` now selects every row whose `model_version` is not the current one (it was hard-wired to v1.0) and guards each UPDATE with `WHERE model_version == <the version it read>`; `tests/test_grounding_weight.py` added; the docs and four dashboard files (text and one comment) that quoted 0.5 corrected | 2dbba54 |
+
+**29.11.1 What the re-measurement found** (full detail and every figure's script in `GROUNDING_RECALIBRATION_2026-10.md`, section 0 is the bottom line):
+- The 0.5 weight rested on an inverted premise. DeBERTa calls identical text *entailment*, not neutral; what 0.5 discounted was entailment. The swapped view reproduces the published numbers exactly (88 of 88 calibration rows, ablation Config G, the LLM-judge NLI score for all 30 test cases, the compounding experiment), so the old-versus-new comparison is a re-labelling, not a model guess.
+- The weight does not change ranking: AUROC is 1.000 on the 30-case test split for every weight from 0.0 to 1.0, and 0.996 on the 47-case held-out pool for 0.0 to 0.8. It does decide the medium band: at the 0.4 line, weights 0.0 to 0.3 give test F1 0.963 and false-positive rate 0.059; **0.5 gives F1 0.788 and FPR 0.412**. High-risk alerts (above 0.7) do not depend on the weight up to 0.6.
+- The 81 low-to-medium moves of 29.10.1 were not evidence of risk. In the labelled data a neutral-dominant case is a failure 1 time in 17; 35 of 50 correct answers from five real LLMs are neutral-dominant, and 82% of them scored above 0.4 at weight 0.5 against 24% at 0.3. The live premise is a short prompt (median 25.5 tokens for premise plus claim), so "not entailed" is true of almost any answer.
+- What the bug did to published results: anything that used `contradiction_prob` alone is unchanged (the headline F1 0.963 / FPR 0.059 of ablation Configs B to E). What changes: Config G (0.963 / 0.059 to 0.897 / 0.176), the LLM-judge comparison's NLI side (0.963 to 0.897), the calibration report's two rows, and the compounding-error experiment. Section 5 of the report lists the sentences elsewhere that still quote an out-of-date number; they were listed there, not all edited.
+- Data caveats the report states and that still stand: 68 unique labelled cases, `test_01` to `test_05` are copies of `dev_01` to `dev_05` (so 5 of 30 test cases are not held out), the only neutral failure in the data is one case (`val_17`), so the data can show what a neutral weight costs but not what it buys. Any non-zero weight is a design choice, not a fit.
+
+**29.11.2 The decision, made by the leader (the owner delegated it).** Weight 0.3; keep the 0.7 and 0.4 cut-offs (the data does not argue for moving them, and nothing validates them either). 0.3 is the largest weight at which a purely neutral output stays under the 0.4 line with headroom. It was chosen on dev and confirmed on val and test, not tuned on test. **The cost, said plainly:** a neutral-only fabrication, such as the analyst's Kubernetes sentence in Section 24, now scores 0.3 and is `low_risk`, the same as a benign neutral answer; at 0.5 it was `medium`. An "unverifiable" status, shown separately from the risk score, is the right answer to that and is not built yet (29.11.4).
+
+**29.11.3 The second re-score on the live database** (2026-10-22 06:08 UTC, after the #89 deploy finished at 06:06; run 39730731918, backend started 06:05:37). Same procedure as 29.10.1: fresh backup `~/backups/agentpulse-pre-rescore2-20261022-060813.db` (integrity check ok), worker stopped under a restart trap (2461 MB available), dry run first, applied only because the dry run read exactly 117 rows, 0 skipped and a largest `contradiction_prob` change of 0.0000. The dry run said 116 score or label changes and 82 label changes (78 medium to low, 4 high to medium); it was applied in one transaction, and a second run said "Nothing to do". Result: all 117 evaluation rows are now `model_version` v1.2 / `config_version` v1.1; labels **90 low, 7 medium, 19 high, 1 none**, which is exactly what section 3.6 of the report predicted (90 / 7 / 19 against the earlier 12 / 81 / 23). The 9 alerts and the 117 drift records are untouched. The worker is `running` and `/v1/health` is `healthy` (`workers_alive` 1, NLI backend `onnx`). The audit file with every old and new value is `~/rescore-out/rescore-applied2-20261022-060813.csv` on the VM. New spans are scored at 0.3 and stamped v1.2 from the deploy onward.
+
+**29.11.4 What is open because of this.**
+- **Not measured:** ASI and `quality_drift` are built from the grounding score, so the weight change moves them; their effect was not measured. The 9 alerts were raised under the old scoring and were not re-evaluated.
+- **"Unverifiable" status** (the report's recommendation, 96 of 116 live rows would carry it): needs a backend field and a dashboard badge. Without it, neutral-only fabrications look like safe answers.
+- **A human-labelled set** of a few hundred (evidence, answer) pairs in three classes (supported, unsupported but plausible, contradicted) from real RAG outputs, with neutral cases oversampled, is what a defensible weight would need.
+- **Stale sentences** listed in section 5 of the report that quote 0.5, the swapped-label story or the old Config G numbers: not all edited. `THRESHOLD_ANALYSIS.md` is generated by `ablation.py` and will regenerate with the new numbers if that script is run again.
+- Item 1 of 29.10.6 is done; items 2 to 6 stand.
+
+**29.11.5 Limits.** Weekly usage on the owner's Pro plan was 88% at about 05:40 UTC (it resets on 2026-10-25 at 04:00 UTC) and the five-hour window 66%. The leader keeps at most two sessions at once and runs routine steps on auto. If the week runs out the plan in 29.10.5 (cloud sessions, no secrets, nothing that needs the VM or the model cache) applies.
