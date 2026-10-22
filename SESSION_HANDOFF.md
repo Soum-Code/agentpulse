@@ -10,7 +10,7 @@
 
 ## READ FIRST (2026-10-21): Section 29 is the current state
 
-Since the banner below was written, 13 PRs (#69 to #81) merged, the first automatic deploy ran, a leaked API key was closed and rotated, and writes on the public site got a password. **Read Section 29 before anything else:** it lists what is live, what is still open, and the traps hit on the way. The banner below is still correct about 2026-10-13 and about how `main` was overwritten; where it says something is open, check 29.5.
+Since the banner below was written, 18 PRs (#69 to #86) merged, the first automatic deploy ran, a leaked API key was closed and rotated, and writes on the public site got a password. **Read Section 29 before anything else:** it lists what is live, what is still open, and the traps hit on the way. The banner below is still correct about 2026-10-13 and about how `main` was overwritten; where it says something is open, check 29.5.
 
 ## READ FIRST — the repository is not what the rest of this file describes (checked 2026-10-13)
 
@@ -876,7 +876,7 @@ corrected; listed here because the same failure mode will recur:
 | "SOC2 / HIPAA Ready", "Full compliance" | No audit, no certification. Regulated claims with zero backing |
 | "OSS Apache 2.0" (twice) | There is no LICENSE file in the repository |
 | "SQLite WAL / PostgreSQL queue" | No Postgres driver, no Postgres code path |
-| "evaluated on CPU in ~27.8ms" | 27.8ms is Config A, the embedding gate alone. Full cascade is 215.9ms |
+| "evaluated on CPU in ~27.8ms" | 27.8ms is Config A, the embedding gate alone. Full cascade is 215.9ms [2026-10-22: stale. The current ablation (2026-09-18) has MiniLM 19.1, DeBERTa 132.09, cascade 151.19 ms; see 29.10.2] |
 | Whitepaper citing `gpu_vs_cpu_benchmark_results.json` | That file does not exist |
 | Whitepaper: `baseline_comparison_results.json` "vs GPT-4o judge and Prometheus 2" | It compares three non-LLM baselines using qwen-7b |
 | "Restores baseline centroids across restarts without loss" | See 16.3 — it was a partial restore |
@@ -1312,9 +1312,9 @@ The ablation data proves it without reading any code:
 | :--- | ---: |
 | MiniLM only | 27.83 ms |
 | DeBERTa only | 188.07 ms |
-| shipped | **215.90 ms** |
+| shipped | **215.90 ms** [2026-10-22: the 2026-08-23 run; now 151.19, see 29.10.2] |
 
-215.90 is their sum. A gate that ever fired would land between them.
+215.90 is their sum. A gate that ever fired would land between them. [2026-10-22: the sum identity holds by construction and never proved the absence of a gate; now 19.10 / 132.09 / 151.19, see 29.10.2]
 
 **The documentation moved; the behaviour did not.** Adding the gate would change
 the score of every span whose similarity clears the threshold, leaving
@@ -2163,7 +2163,7 @@ Numbers with nothing behind them, two of which contradicted the deck outright:
 
 | shown | measured |
 | :--- | :--- |
-| `54.2 ms` | 215.9 ms |
+| `54.2 ms` | 215.9 ms [2026-10-22: 215.9 is the 2026-08-23 run, see 29.10.2] |
 | `99.98%` | F1 0.963 |
 | `14,280 spans/s` | no measured throughput exists |
 | `16 Swarms Active` | hardcoded -- the same defect as the "4 active swarms" fixed in `AgentsView` during 19.x |
@@ -2172,11 +2172,11 @@ Replaced with what is true, and the badge now reads `ILLUSTRATION`.
 
 **A smaller one, worth recording because it is the opposite mistake.** The hero
 read `< 4.2ms Ingestion`. `experiments/results/latency_profiles.json` measured
-`8_http_ingestion_overhead` at mean 0.981 ms, p99 1.124. So 4.2 was not false --
+`8_http_ingestion_overhead` at mean 0.981 ms, p99 1.124. So 4.2 was not false -- [2026-10-22: layer 8 is `0.85 + rand*0.3`, a random number and not a measurement; see 29.10.2]
 1.124 is under 4.2 -- but it came from nowhere and understated the result about
 fourfold. The page also disagreed with itself: two places further down already
 read "Sub-1.2ms Fanout". Somebody had the right number and the hero kept an
-older one. Now `< 1.2ms`.
+older one. Now `< 1.2ms`. [2026-10-22: unsupported, see 29.10.2]
 
 **What found it is the part to carry forward.** Not a grep, not the typecheck,
 not 260 tests, not a bundle scan -- all of those were green while this was
@@ -2618,7 +2618,7 @@ production signal it stands for scored zero across 1,328 live evaluations.**
 Recorded in the limitations, in the template in `ablation.py` rather than the
 generated file, per the regeneration trap in item 6.
 
-Latency did move, 188.1ms to 132-135ms on Config B across three runs, so it is
+Latency did move, 188.1ms to 132-135ms on Config B across three runs, so it is [2026-10-22: only 188.07 and 132.09 exist in git; see 29.10.2]
 not noise. It is also **not the ONNX fix**: the study calls
 `load_models(use_onnx=False)` and has always measured the PyTorch path. The
 cause is unattributed. Recorded as a measurement, not an improvement.
@@ -3558,7 +3558,7 @@ Errors of reasoning in earlier sections, found while checking them:
 - **AUC 0.457 holds.** Re-scored by hand with the planner's questions excluded: 0.4570 (accept n=40, refuse n=50); the live configuration gives 0.9792. *By hand. The independent audit could not repeat it (it needs the NLI models), so it is by hand only.*
 - **25.3's 0 of 9 is partly by construction, and its mechanism conflicts with Section 11.** The removal regex deletes the only digit-count phrase in each output, so 0 of 9 follows; the informative cases are the six outputs with prose left. Section 11 says the zero extractions on 8,353 external spans come from agents not narrating tool use at all, which the digits-versus-words explanation does not establish. *Finder; read from the stored outputs.*
 - **25.1's "0.948–0.984" covers four of five anchors**; the fifth has disagreement spread 0.0006, narrower than its drift spread of 0.084. *Finder; not repeated.*
-- **24.5's "bit-identical" compares against the second of two files dated 2026-08-23.** Config B latencies by file: 300.48 ms (`e83b783`), 188.07 (`73b533f`), 132.09 (`9cd0819`, the re-run), and 188.07 on `main` (the 73b533f file, restored by `e31fb58`). *Finder.*
+- **24.5's "bit-identical" compares against the second of two files dated 2026-08-23.** Config B latencies by file: 300.48 ms (`e83b783`), 188.07 (`73b533f`), 132.09 (`9cd0819`, the re-run), and 188.07 on `main` (the 73b533f file, restored by `e31fb58`). *Finder.* [2026-10-22: see 29.10.2]
 - **The 75 s timeout is per attempt; the model set printed in 26.2/27.1 is the first smoke turn (27.1).** *By hand.*
 - **Section 4/5/6 and the header chain**, corrected inline: private → public, `launch.json`, Docker, the test count (226 on 2026-09-15, 237 on 09-16, 260 on 09-17, 269 at `7f78b3f`; the "269" in 20.5 is a typo for 237), the DB path, `.env`, the branch/PR question, items 3, 7, 8 and 9, and "What is actually next". The header's "Updated" chain omits Sections 19–23 and 25 and is not in date order.
 
@@ -3706,7 +3706,7 @@ Each was merged as a merge commit after its diff was read and its checks were gr
 
 ### 29.4 The data on the live site
 
-At the deploy the database held 117 evaluation rows (116 `stage2`, 1 `skipped`), all `model_version` v1.0 and `config_version` v1.0, so their grounding scores used the swapped NLI labels and their risk used the old averaging. Spans scored after the deploy are v1.1. Do not compare v1.0 and v1.1 rows. A re-score tool that defaults to a dry run is being built by a separate session; until it has been reviewed and applied, the dashboard shows the old rows with the old numbers. Drift distances and ASI come from embeddings and are not affected by the label fix.
+At the deploy the database held 117 evaluation rows (116 `stage2`, 1 `skipped`), all `model_version` v1.0 and `config_version` v1.0, so their grounding scores used the swapped NLI labels and their risk used the old averaging. Spans scored after the deploy are v1.1. Do not compare v1.0 and v1.1 rows. A re-score tool that defaults to a dry run is being built by a separate session; until it has been reviewed and applied, the dashboard shows the old rows with the old numbers. **[2026-10-22: applied at 04:50 UTC, all 117 rows are now v1.1; see 29.10.1.]** Drift distances and ASI come from embeddings and are not affected by the label fix.
 
 ### 29.5 The 28.9 open decisions, one by one
 
@@ -3736,11 +3736,55 @@ A read-only review of the Python code (backend, SDK, demo, adapters, reasoning; 
 - A merge to `main` that touches the paths in 29.2 deploys. The account's usage limits (a five-hour and a weekly window) cap how many sessions can run at once; read the usage before starting several.
 - In PowerShell `<` does not redirect and `clip < file` fails; say which shell a command is for.
 
-### 29.9 What is next
+### 29.9 What is next [superseded by 29.10.6]
 
 1. Review the re-score PR, then run it on the VM with `--apply` after a fresh backup, and check the dashboard.
-2. Audit the landing page's numbers (91.7% to 6.8%, 203 ms median, under 1.2 ms ingestion) against the project's reports; remove or qualify any that cannot be traced.
+2. Audit the landing page's numbers against the project's reports. [2026-10-22: done in #84 and #86, see 29.10; the figure "under 1.2 ms ingestion" that this line first quoted was itself unsupported.]
 3. Re-measure grounding on correct labels: `NEUTRAL_RISK_WEIGHT` (0.5) and the 0.7 and 0.4 cut-offs were set or measured on swapped labels. Re-run the experiments that depend on them and say so in the report.
 4. The public chat: real embeddings in `demo/chatbot/app.py`, a per-IP rate limit, an input length limit, a daily cap, a kill switch, per-stage progress, a new NVIDIA key, a check that the 4 GB VM holds the API, the worker and the chat service, and the exception line in the Caddyfile.
 5. A read-only review of the dashboard and the tests, in the same style as 29.7.
 6. UI work from AI Studio under 29.6: error boundaries, a real drift view, a card per signal with its measured limit, evaluator health, claim next to evidence, visible write failures.
+
+### 29.10 Update, 2026-10-22 (about 05:30 UTC)
+
+**How the leader works now.** The owner told the leader to work on auto. Routine steps are done without asking: reading and merging a pull request whose checks are all green, checking a deploy, read-only checks on the VM, starting the next planned package. Entering or exposing credentials, spending money, deleting data and anything not already planned still wait for the owner.
+
+**What merged since 29.1** (all with green checks; a change under `backend/**` or `dashboard/**` deploys by itself):
+
+| PR | What it changed | Merge commit |
+|---|---|---|
+| #82 | This Section 29 | 03edf13 |
+| #83 | `python -m app.rescore_cli`: scores the evaluation rows still at `model_version` v1.0 again from the text stored in their spans. A dry run unless given `--apply`; selects and updates only rows at v1.0 in one transaction; aborts if the models are not all loaded; reports and skips a row it cannot score; never writes alerts, drift records or baselines | 9c4be34 |
+| #84 | Landing page and Settings: 31 numbers or claims with no source, or a source that says something else, replaced (29.10.2). The Settings headline is now the live `evaluation_timing` median from `GET /v1/platform` with its sample size, an em dash when the API returns nothing | 75c1b90 |
+| #85 | Settings stops claiming saves, syncs and thresholds that do not exist: no Save button (no field has a write path), no "synced", sliders nothing read are gone, the ingestion key is shown only if it has the shape the API issues (`ap_live_<12 hex>_<urlsafe>`, checked against `backend/app/services/api_keys.py`), text density controls are inert and say so | 8219c90 |
+| #86 | Docs, decks and the `grounding.py` docstring: stale, random and unsourced latency figures corrected (27 files, a table of 36 changes in the PR). The docstring change is comment-only but sits under `backend/**`, so it deployed | 663cc40 |
+
+**29.10.1 The re-score was applied on the live database** (2026-10-22 04:50 UTC). Fresh backup `~/backups/agentpulse-pre-rescore-20261022-045047.db`. Free memory was only 1395 MB and the command peaks near 1.4 GB beside the worker's 1.15 GB, so the worker was stopped for the run (the queue is durable; a trap starts it again, and it was `healthy` about a minute later) and the command ran with `docker compose run --rm -T --no-deps worker python -m app.rescore_cli`. The live dry run matched the dry run on the copy exactly (117 rows, 0 skipped, 116 changed, 89 risk labels changed: 81 low to medium, 4 low to high, 4 medium to high), so it was applied in one transaction. A second run said "Nothing to do". Now all 117 evaluation rows are v1.1 / v1.1 (labels: 81 medium, 23 high, 12 low, 1 none); the 9 alerts and the 117 drift records are untouched; `agent_records.avg_risk_score` and `traces.overall_risk_score` were rebuilt for the agents and traces whose risk moved. The audit file with every old and new value is `~/rescore-out/rescore-applied-20261022-045047.csv` on the VM. Two facts worth keeping: for all 116 NLI rows the new `entailment_prob` and `neutral_prob` are exactly the old `neutral_prob` and `entailment_prob` and `contradiction_prob` is unchanged, which confirms the #69 diagnosis on real data; and the worker log says `nli=onnx embedding=pytorch`. **Reading the result:** most old "low risk" rows are now "medium" because the NLI model calls an output that the evidence does not entail "neutral", which scores 0.5; the 0.5 weight and the 0.7 and 0.4 cut-offs were chosen on swapped labels, so do not read those 81 moves as real regressions before the re-measurement in 29.10.3.
+
+**29.10.2 The leader's own audit was wrong in two places, and what is true.** The first version of the landing-page audit trusted the docs and did not open the producing files. Checked in the files since: (1) there is no measured ingestion latency anywhere in this repository: layer 8 of `experiments/results/latency_profiles.json` is `0.85 + rand*0.3` (`experiments/latency_profiler.py`, "Nothing is measured in this loop"), layer 9 likewise, layer 13 is a sum; so `0.981 ms`, `< 1.2ms`, `< 4.2ms` and "Sub-1.2ms Fanout" have no measurement behind them. Only layer 7 (SDK enqueue, p99 0.205 ms, real code, no network) and layer 12 are timed. (2) 215.9 ms (MiniLM 27.83 plus DeBERTa 188.07) is the 2026-08-23 ablation run; `experiments/results/ablation_results.json` on main is the 2026-09-18 re-run on the PyTorch path: MiniLM 19.1, DeBERTa 132.09, cascade 151.19 ms. Because each configuration's latency is the sum of its signals' timings, "215.9 is exactly 27.8 plus 188.1, so no gate ever fired" never proved anything; the code is the proof. Solid and kept: 203 ms median (258 mean) over 30 cases against a Qwen3-8B Q4 judge at 3,170 ms median (`llm_judge_comparison.json`: 202.94 and 3170.39); 3.88 spans/s for one worker and 12.93 for eight (`throughput_benchmark.json`, ONNX, a 16-thread dev machine, not the VM); the Azure VM at $24.67 a month (`deploy/azure/README.md`); the API at 80 MB. README's 122.3 / 172.2 ms is `benchmarks/benchmark_results.json`, `evaluator_pipeline_cascade` p50 / p95 over 9 cases (2026-08-18, PyTorch). `STARTUP_GUIDE.md`'s 254 / 417 ms is the one-worker burst in `throughput_benchmark.json` (253.8 / 417.3). 89.45 ms appears in no data file, only as a fixed string in `experiments/run_experiment.py`. **Rule: before quoting a performance number, open the script that produced it and the file on main.** The earlier text of 29.9 item 2 ("under 1.2 ms ingestion") repeated the unsupported figure; it is superseded here.
+
+**29.10.3 Earlier sections that quote figures now known to be stale or unsupported.** Each of these lines carries a dated note pointing here; the text itself was left as the record of what was believed.
+
+| Line | Quotes | Now |
+|---|---|---|
+| 879 | "Full cascade is 215.9ms", "27.8ms is Config A" | 151.19 and 19.1 (2026-09-18 run) |
+| 1313 to 1317 (19.3) | 27.83 / 188.07 / 215.90 and "215.90 is their sum, a gate that ever fired would land between them" | current 19.10 / 132.09 / 151.19; the sum identity holds by construction |
+| 2166 | `54.2 ms` against 215.9 ms | 215.9 is the 2026-08-23 run |
+| 2175 to 2182 | the "4.2 ms was not false, 0.981 mean, now `< 1.2ms`" story | rests on layer 8, a random number |
+| 2621 | "188.1ms to 132-135ms across three runs" | only 188.07 and 132.09 exist in git (`HANDOFF_AUDIT_2026-10-10.md` already says so) |
+| 3561 | Config B latencies by file | same |
+
+`HANDOFF_AUDIT_2026-10-10.md` quotes 188.07 and 215.9 about thirty times as dated audit findings; it was left alone. Found by the docs correction and not fixed: `presentation/AgentPulse_Final_Review.pptx` (not `_v2`) still carries 215.9 and 27.8 and can no longer be rebuilt from its script (delete or regenerate); `generate_pdf.py` still says "92 / 92 Passed" (the suite is far larger) and its baseline table and chart date from before the grounding-score fix; `benchmarks/run_benchmarks.py` regenerates `BENCHMARK_REPORT.md` from a template and would overwrite the rows the docs correction edited.
+
+**29.10.4 What the public pages say now.** The landing page shows one latency: the 203 ms median, always with "30 test cases" or "a small sample". The ingestion claim is "SDK enqueue p99 0.2 ms, real SDK call, no network", with the note that the API's own HTTP time has not been measured on its own. "ONNX Runtime" is said only about the NLI model (the embedding model always runs on PyTorch). The Eiffel Tower walkthrough is labelled a hand-written illustration, the keyword evaluator sandbox says it is keyword rules in the browser, the cost calculator prints its assumptions ($0.0038 per judged span from 1,200 input and 80 output tokens at $2.50 and $10 per million) and uses the real $24.67 VM, and "100% deterministic" became "same weights, same score". Still unfixed, listed in the #85 description: `App.tsx` never wires the text density setting; `firebase.ts` still fabricates `ap_live_<document id>` for a project without a key and `ProjectSelectorModal` prints it; `ProductHeader` says "Default Project" when none is selected; `public/ConnectModal.tsx` ships a made-up key and endpoint in the snippet it offers to copy; when the API is unreachable `App.tsx` hides every tab except the Telemetry Lab, so Settings cannot be opened; the "High Contrast Obsidian" badge is wrong under the Butter and Chalk palettes.
+
+**29.10.5 Limits, and the plan if the weekly limit runs out.** Usage on the owner's Pro plan was 85% of the weekly window at about 05:00 UTC on 2026-10-22 (it resets on 2026-10-25 at 04:00 UTC) and a five-hour window about 43%. A session costs about 1 to 3 percent of the week, so no more than two run at once. If the week runs out the owner's plan is to run Claude in the cloud. A hosted "Default" cloud environment exists and can run `Soum-Code/agentpulse`. A cloud session starts from the pushed repository: it has none of the local files (the copy of the live database, the 1.2 GB model cache) and must not be given the VM key or any other secret, so it suits reviews, docs, dashboard work and code changes that CI can check, not VM operations or experiments that need the cached models. Not verified: whether cloud sessions draw on the same plan limit. Also keep in mind: the 4 GB VM has only about 1.4 GB free beside the worker, so a second process that loads the models (the planned public chat service, a re-score, an experiment) does not fit without stopping the worker, adding swap or a larger VM.
+
+**29.10.6 Running now, and what is next (this replaces 29.9).**
+- **Running:** a session re-measures grounding on the corrected labels (the weight `NEUTRAL_RISK_WEIGHT` = 0.5, the 0.7 and 0.4 cut-offs, the ablation, the threshold analysis). It must only measure and write a report and new result files; it must not change a constant or touch `backend/**`, because changing them changes live scores and needs another re-score.
+1. Read that report, decide whether to keep 0.5, change it or add an "unverifiable" band, and only then change the constants and re-score again (the tool exists and is idempotent per version: bump `model_version` or `config_version` first).
+2. The public chat: real embeddings in `demo/chatbot/app.py`, a per-IP rate limit, an input length limit, a daily cap, a kill switch, per-stage progress, the exception line in the Caddyfile `@write` block, a new NVIDIA key, and a memory plan for the VM (previous paragraph).
+3. A read-only review of the dashboard (about 20.8k lines) and of the tests, scripts, experiments and benchmarks, which the Python review never covered.
+4. UI work from AI Studio under 29.6, one or two features at a time, each returning as a branch and a pull request.
+5. The owner's three small tasks, still open: test the write password once in the browser (Telemetry Lab "Run scenario", user `soum`); restrict the Firebase web key in the Google Cloud console; rotate the NVIDIA key that was pasted into a chat. Also: a deploy-only SSH key instead of the personal one.
+6. The follow-ups in 29.10.3 and 29.10.4.
