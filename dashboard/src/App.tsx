@@ -13,6 +13,7 @@ import {
   ChalkSurfacePreset
 } from './types';
 import { useTelemetry } from './lib/useTelemetry';
+import { summarizeDrift, breakDownIncidents } from './lib/overviewStats';
 import { api } from './lib/api';
 import { CHORD_WINDOW_MS } from './utils/keyboard';
 import { loadFullTrace } from './lib/traceDetail';
@@ -629,8 +630,8 @@ export default function App() {
         onSelectTab={setProductTab}
         onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
         onOpenShortcutsModal={() => setIsShortcutsHelpOpen(true)}
-        incidentCount={incidents.length}
-        driftWarningCount={agents.filter(a => a.driftStatus !== 'normal').length}
+        incidentCount={breakDownIncidents(incidents).active}
+        driftWarningCount={summarizeDrift(agents).drifting}
       />
 
       <CommandPalette
