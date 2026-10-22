@@ -206,8 +206,32 @@ export const ShortcutsHelpModal: React.FC<ShortcutsHelpModalProps> = ({
               </div>
 
               <div className="shortcut-row-item flex items-center justify-between p-2 rounded-lg bg-white/[0.03] border border-white/[0.06]">
+                <span className="text-neutral-300">Copy selected trace ID</span>
+                <kbd className="px-2 py-0.5 rounded bg-black/60 border border-white/20 text-white font-bold text-[11px]">Y</kbd>
+              </div>
+
+              <div className="shortcut-row-item flex items-center justify-between p-2 rounded-lg bg-white/[0.03] border border-white/[0.06]">
+                <span className="text-neutral-300">Copy full trace log body (JSON)</span>
+                <div className="flex items-center space-x-1">
+                  <kbd className="px-1.5 py-0.5 rounded bg-black/60 border border-white/20 text-white font-bold text-[10px]">Shift</kbd>
+                  <span className="text-neutral-500 text-xs">+</span>
+                  <kbd className="px-2 py-0.5 rounded bg-black/60 border border-white/20 text-white font-bold text-[11px]">Y</kbd>
+                </div>
+              </div>
+
+              <div className="shortcut-row-item flex items-center justify-between p-2 rounded-lg bg-white/[0.03] border border-white/[0.06]">
                 <span className="text-neutral-300">Curate span to dataset</span>
                 <kbd className="px-2 py-0.5 rounded bg-black/60 border border-white/20 text-white font-bold text-[11px]">C</kbd>
+              </div>
+
+              <div className="shortcut-row-item flex items-center justify-between p-2 rounded-lg bg-white/[0.03] border border-white/[0.06]">
+                <span className="text-neutral-300">Export selected trace (JSON)</span>
+                <kbd className="px-2 py-0.5 rounded bg-black/60 border border-white/20 text-white font-bold text-[11px]">X</kbd>
+              </div>
+
+              <div className="shortcut-row-item flex items-center justify-between p-2 rounded-lg bg-white/[0.03] border border-white/[0.06]">
+                <span className="text-neutral-300">Export filtered traces (CSV)</span>
+                <kbd className="px-2 py-0.5 rounded bg-black/60 border border-white/20 text-white font-bold text-[11px]">E</kbd>
               </div>
 
               <div className="shortcut-row-item flex items-center justify-between p-2 rounded-lg bg-white/[0.03] border border-white/[0.06]">

@@ -24,7 +24,9 @@ import {
   Copy,
   Check,
   Bot,
+  ClipboardCopy,
   Download,
+  FileJson,
   FileSpreadsheet,
   Filter,
   X,
@@ -35,7 +37,20 @@ import {
   Zap
 } from 'lucide-react';
 import { Trace, Span, EvaluatorResult, ChronologicalSortOrder } from '../../types';
-import { parseDateTimeToMs } from '../../utils/dateUtils';
+import {
+  parseDateTimeToMs,
+  getTimeDisplayInfo,
+  formatTimeForMode,
+  formatTimeTooltip,
+  type TimeFormatMode,
+} from '../../utils/dateUtils';
+import {
+  downloadTraceAsJson,
+  downloadTracesAsCsv,
+  copyTraceIdToClipboard,
+  copyTraceLogBodyToClipboard,
+} from '../../utils/traceExport';
+import { isTypingTarget } from '../../utils/keyboard';
 import type { GroundingVerdict } from '../../lib/api';
 import { riskTextClasses, verdictBadgeClasses, verdictLabel, verdictTooltip } from '../../lib/riskTone';
 
@@ -84,10 +99,21 @@ export const TracesView: React.FC<TracesViewProps> = ({
   const [sortOrder, setSortOrder] = useState<ChronologicalSortOrder>('reverse-chronological');
   const [copiedTraceId, setCopiedTraceId] = useState<string | null>(null);
   const [curatedSuccess, setCuratedSuccess] = useState(false);
+  const [copiedLogTraceId, setCopiedLogTraceId] = useState<string | null>(null);
   const [downloadSuccess, setDownloadSuccess] = useState(false);
+  const [jsonExportedTraceId, setJsonExportedTraceId] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [isDetailsFlash, setIsDetailsFlash] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const PAGE_SIZE = 8;
+
+  // How trace times are written, and the clock the relative form is measured against
+  const [timeFormatMode, setTimeFormatMode] = useState<TimeFormatMode>('relative');
+  const [nowMs, setNowMs] = useState(() => Date.now());
+  useEffect(() => {
+    const timer = setInterval(() => setNowMs(Date.now()), 5000);
+    return () => clearInterval(timer);
+  }, []);
 
   // Auto-scroll state for trace list stream
   const [isAutoScrollEnabled, setIsAutoScrollEnabled] = useState(true);
@@ -141,6 +167,10 @@ export const TracesView: React.FC<TracesViewProps> = ({
   const currentTrace = selectedTrace || paginatedTraces[0] || filteredTraces[0] || traces[0];
   const currentSpan = selectedSpan || currentTrace?.spans[0];
   const groundingResult = currentSpan?.evaluatorResults?.find(r => r.name === 'Grounding');
+  const selectedTraceTime = useMemo(
+    () => (currentTrace ? getTimeDisplayInfo(currentTrace.timestamp, nowMs) : null),
+    [currentTrace?.timestamp, nowMs]
+  );
 
   // Helper to find initial priority span (warning or error first)
   const getFlaggedOrFirstSpan = (trace: Trace): Span | undefined => {
@@ -297,11 +327,7 @@ export const TracesView: React.FC<TracesViewProps> = ({
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const activeEl = document.activeElement;
-      const isInputActive =
-        activeEl &&
-        (activeEl.tagName === 'INPUT' ||
-          activeEl.tagName === 'TEXTAREA' ||
-          (activeEl as HTMLElement).isContentEditable);
+      const isInputActive = isTypingTarget(activeEl);
 
       // Search hotkey: '/' focuses search input if not already typing
       if (e.key === '/' && !isInputActive) {
@@ -416,10 +442,28 @@ export const TracesView: React.FC<TracesViewProps> = ({
         handleCurate();
       }
 
-      // E: Export CSV
-      if (e.key.toLowerCase() === 'e' && !e.metaKey && !e.ctrlKey) {
+      // E: Export the filtered traces as CSV
+      if (e.key.toLowerCase() === 'e' && !e.metaKey && !e.ctrlKey && !e.altKey) {
         e.preventDefault();
-        handleDownloadCSV();
+        if (!e.repeat) handleDownloadCSV();
+      }
+
+      // X: Export the selected trace as JSON
+      if (e.key.toLowerCase() === 'x' && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        e.preventDefault();
+        if (!e.repeat && currentTrace) handleExportTraceJson(currentTrace);
+      }
+
+      // Y: Copy the selected trace ID. Shift+Y: copy the whole trace as JSON.
+      if (e.key.toLowerCase() === 'y' && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        e.preventDefault();
+        if (!e.repeat && currentTrace) {
+          if (e.shiftKey) {
+            handleCopyTraceLog(currentTrace);
+          } else {
+            handleCopyTraceId(currentTrace);
+          }
+        }
       }
     };
 
@@ -427,79 +471,47 @@ export const TracesView: React.FC<TracesViewProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [filteredTraces, currentTrace, currentSpan, selectedSpan, searchQuery, safePage, totalPages]);
 
+  // A short message for the one thing that can go wrong with these shortcuts: the browser said no
+  const showNotice = (message: string) => {
+    setNotice(message);
+    setTimeout(() => setNotice(prev => (prev === message ? null : prev)), 3000);
+  };
+
   const handleDownloadCSV = () => {
     if (filteredTraces.length === 0) return;
+    if (downloadTracesAsCsv(filteredTraces)) {
+      setDownloadSuccess(true);
+      setTimeout(() => setDownloadSuccess(false), 2000);
+    } else {
+      showNotice('CSV export failed: the browser did not start the download.');
+    }
+  };
 
-    const headers = [
-      'Trace ID',
-      'Agent ID',
-      'Agent Name',
-      'Timestamp',
-      'Status',
-      'Duration (ms)',
-      'Total Tokens',
-      'Prompt Tokens',
-      'Completion Tokens',
-      'Span Count',
-      'Input Preview',
-      'Tags',
-      'Evaluators Summary',
-      'Spans Hierarchy'
-    ];
+  const handleExportTraceJson = (trace: Trace) => {
+    if (downloadTraceAsJson(trace)) {
+      setJsonExportedTraceId(trace.id);
+      setTimeout(() => setJsonExportedTraceId(prev => (prev === trace.id ? null : prev)), 2000);
+    } else {
+      showNotice('JSON export failed: the browser did not start the download.');
+    }
+  };
 
-    const escapeCSV = (val: string | number | undefined | null) => {
-      if (val === undefined || val === null) return '""';
-      const str = String(val);
-      if (str.includes(',') || str.includes('"') || str.includes('\n') || str.includes('\r')) {
-        return `"${str.replace(/"/g, '""')}"`;
-      }
-      return `"${str}"`;
-    };
+  const handleCopyTraceId = async (trace: Trace) => {
+    if (await copyTraceIdToClipboard(trace.id)) {
+      setCopiedTraceId(trace.id);
+      setTimeout(() => setCopiedTraceId(prev => (prev === trace.id ? null : prev)), 2000);
+    } else {
+      showNotice('Copy failed: the browser blocked clipboard access.');
+    }
+  };
 
-    const rows = filteredTraces.map(t => {
-      const evaluatorsSummary = t.evaluators
-        ? t.evaluators.map(e => `${e.name}: ${e.score} (${e.status})`).join('; ')
-        : '';
-      const tagsSummary = t.tags ? t.tags.join('; ') : '';
-      const spansSummary = t.spans
-        ? t.spans.map(s => `${s.name} [${s.type}, ${s.durationMs}ms, ${s.status}]`).join(' -> ')
-        : '';
-
-      const promptTokens = t.spans?.reduce((acc, s) => acc + (s.tokens?.prompt || 0), 0) || 0;
-      const completionTokens = t.spans?.reduce((acc, s) => acc + (s.tokens?.completion || 0), 0) || 0;
-
-      return [
-        escapeCSV(t.id),
-        escapeCSV(t.agentId),
-        escapeCSV(t.agentName),
-        escapeCSV(t.timestamp),
-        escapeCSV(t.status),
-        escapeCSV(t.durationMs),
-        escapeCSV(t.totalTokens),
-        escapeCSV(promptTokens),
-        escapeCSV(completionTokens),
-        escapeCSV(t.spans?.length || 0),
-        escapeCSV(t.inputPreview),
-        escapeCSV(tagsSummary),
-        escapeCSV(evaluatorsSummary),
-        escapeCSV(spansSummary)
-      ].join(',');
-    });
-
-    const csvContent = [headers.join(','), ...rows].join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.setAttribute('href', url);
-    const dateStr = new Date().toISOString().slice(0, 10);
-    link.setAttribute('download', `agent-traces-export-${dateStr}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-
-    setDownloadSuccess(true);
-    setTimeout(() => setDownloadSuccess(false), 2000);
+  const handleCopyTraceLog = async (trace: Trace) => {
+    if (await copyTraceLogBodyToClipboard(trace)) {
+      setCopiedLogTraceId(trace.id);
+      setTimeout(() => setCopiedLogTraceId(prev => (prev === trace.id ? null : prev)), 2000);
+    } else {
+      showNotice('Copy failed: the browser blocked clipboard access.');
+    }
   };
 
   return (
@@ -558,6 +570,38 @@ export const TracesView: React.FC<TracesViewProps> = ({
               </>
             )}
           </button>
+
+          <button
+            onClick={() => currentTrace && handleExportTraceJson(currentTrace)}
+            disabled={!currentTrace}
+            title={currentTrace ? `Export trace ${currentTrace.id} as JSON (Press X)` : 'Select a trace to export it as JSON (or press X)'}
+            className={`flex items-center space-x-1.5 px-3 py-1.5 text-xs font-mono rounded-lg border transition-all duration-200 ${
+              currentTrace && jsonExportedTraceId === currentTrace.id
+                ? 'bg-emerald-950/60 border-emerald-500/50 text-emerald-300 shadow-sm'
+                : 'bg-[#101116] border-white/[0.1] text-neutral-300 hover:text-white hover:bg-[#181920] hover:border-white/20'
+            } disabled:opacity-40 disabled:cursor-not-allowed`}
+          >
+            {currentTrace && jsonExportedTraceId === currentTrace.id ? (
+              <>
+                <Check className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Exported JSON</span>
+              </>
+            ) : (
+              <>
+                <FileJson className="w-3.5 h-3.5 text-neutral-400" />
+                <span>Export JSON</span>
+                <kbd className="text-[10px] text-neutral-400 bg-white/[0.06] border border-white/[0.08] px-1 py-0.2 rounded ml-0.5">
+                  X
+                </kbd>
+              </>
+            )}
+          </button>
+
+          {notice && (
+            <span role="status" className="px-2.5 py-1.5 text-xs font-mono rounded-lg border bg-rose-950/40 border-rose-900/60 text-rose-300">
+              {notice}
+            </span>
+          )}
 
           {/* View Perspective Switcher with Sliding layoutId Pill */}
           <div className="flex items-center space-x-1 bg-[#101116] border border-white/[0.08] p-1 rounded-xl relative">
@@ -630,6 +674,18 @@ export const TracesView: React.FC<TracesViewProps> = ({
           <span className="hidden md:flex items-center space-x-1">
             <kbd className="px-1.5 py-0.5 rounded keycap-bevel text-white font-bold text-[10px]">C</kbd>
             <span className="text-neutral-300 ml-1">curate</span>
+          </span>
+          <span className="hidden lg:flex items-center space-x-1">
+            <kbd className="px-1.5 py-0.5 rounded keycap-bevel text-white font-bold text-[10px]">X</kbd>
+            <span className="text-neutral-500">/</span>
+            <kbd className="px-1.5 py-0.5 rounded keycap-bevel text-white font-bold text-[10px]">E</kbd>
+            <span className="text-neutral-300 ml-1">export JSON / CSV</span>
+          </span>
+          <span className="hidden lg:flex items-center space-x-1">
+            <kbd className="px-1.5 py-0.5 rounded keycap-bevel text-white font-bold text-[10px]">Y</kbd>
+            <span className="text-neutral-500">/</span>
+            <kbd className="px-1.5 py-0.5 rounded keycap-bevel text-white font-bold text-[10px]">⇧Y</kbd>
+            <span className="text-neutral-300 ml-1">copy ID / log</span>
           </span>
           <span className="hidden lg:flex items-center space-x-1">
             <kbd className="px-1.5 py-0.5 rounded keycap-bevel text-white font-bold text-[10px]">/</kbd>
@@ -789,6 +845,14 @@ export const TracesView: React.FC<TracesViewProps> = ({
 
             <div className="flex items-center space-x-2">
               <button
+                onClick={() => setTimeFormatMode(prev => prev === 'relative' ? 'absolute' : prev === 'absolute' ? 'dual' : 'relative')}
+                title={`Times shown as: ${timeFormatMode}. Click to switch between how long ago, the clock time, and both.`}
+                className="text-[10px] text-neutral-400 hover:text-neutral-200 flex items-center space-x-1 px-1.5 py-0.5 rounded bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.06] transition-colors"
+              >
+                <Clock className="w-2.5 h-2.5 text-neutral-400" />
+                <span>{timeFormatMode === 'relative' ? 'Time ago' : timeFormatMode === 'absolute' ? 'Clock time' : 'Both'}</span>
+              </button>
+              <button
                 onClick={() => setSortOrder(prev => prev === 'reverse-chronological' ? 'chronological' : 'reverse-chronological')}
                 title={`Sort order: ${sortOrder}. Click to toggle.`}
                 className="text-[10px] text-neutral-400 hover:text-neutral-200 flex items-center space-x-1 px-1.5 py-0.5 rounded bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.06] transition-colors"
@@ -824,6 +888,7 @@ export const TracesView: React.FC<TracesViewProps> = ({
                   paginatedTraces.map((trace) => {
                     const isSelected = currentTrace?.id === trace.id;
                     const hasDiscrepancy = trace.status === 'error' || trace.status === 'warning';
+                    const timeInfo = getTimeDisplayInfo(trace.timestamp, nowMs);
 
                     return (
                       <motion.div
@@ -869,8 +934,8 @@ export const TracesView: React.FC<TracesViewProps> = ({
                         {isSelected && (
                           <div className="absolute inset-x-0 top-0 h-[1.5px] apple-liquid-specular pointer-events-none" />
                         )}
-                        <div className="flex items-center justify-between text-xs font-mono mb-1">
-                          <span className="font-bold text-white flex items-center space-x-1.5">
+                        <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 text-xs font-mono mb-1">
+                          <span className="font-bold text-white flex flex-wrap items-center gap-x-1.5 gap-y-1 min-w-0">
                             <span
                               className={`w-2 h-2 rounded-full ${
                                 trace.status === 'error'
@@ -880,13 +945,11 @@ export const TracesView: React.FC<TracesViewProps> = ({
                                   : 'bg-neutral-300'
                               }`}
                             />
-                            <span>{trace.id}</span>
+                            <span className="break-all">{trace.id}</span>
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                navigator.clipboard.writeText(trace.id);
-                                setCopiedTraceId(trace.id);
-                                setTimeout(() => setCopiedTraceId(prev => (prev === trace.id ? null : prev)), 2000);
+                                handleCopyTraceId(trace);
                               }}
                               className={`px-1 py-0.2 rounded text-[9px] font-mono flex items-center space-x-0.5 transition-all border shrink-0 ${
                                 copiedTraceId === trace.id
@@ -927,7 +990,9 @@ export const TracesView: React.FC<TracesViewProps> = ({
                                 <span>Active</span>
                               </span>
                             )}
-                            <span className="text-neutral-500">{trace.timestamp.split(' ')[1]}</span>
+                            <span className="text-neutral-500" title={formatTimeTooltip(timeInfo)}>
+                              {formatTimeForMode(timeInfo, timeFormatMode)}
+                            </span>
                           </div>
                         </div>
 
@@ -1056,25 +1121,34 @@ export const TracesView: React.FC<TracesViewProps> = ({
               <div className="absolute inset-x-0 top-0 h-[1.5px] apple-liquid-specular pointer-events-none" />
               <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-white/[0.08] gap-3">
                 <div>
-                  <div className="text-[10px] font-mono uppercase tracking-wider text-neutral-400 flex items-center space-x-2">
-                    <span>SELECTED TRACE · {currentTrace.sessionId}</span>
+                  <div className="text-[10px] font-mono uppercase tracking-wider text-neutral-400 flex flex-wrap items-center gap-x-2">
+                    <span>SELECTED TRACE{currentTrace.sessionId ? ` · ${currentTrace.sessionId}` : ''}</span>
+                    {selectedTraceTime && (
+                      <>
+                        <span className="text-neutral-600">·</span>
+                        <time
+                          dateTime={selectedTraceTime.isoString || undefined}
+                          title={formatTimeTooltip(selectedTraceTime)}
+                          className="normal-case"
+                        >
+                          {selectedTraceTime.relative}
+                          {selectedTraceTime.timestampMs > 0 && ` (${selectedTraceTime.formattedTime})`}
+                        </time>
+                      </>
+                    )}
                   </div>
                   <div className="flex items-center space-x-2 mt-0.5">
                     <h3 className="text-sm font-semibold text-white font-mono">
                       {currentTrace.id} &nbsp;·&nbsp; {currentTrace.agentName}
                     </h3>
                     <button
-                      onClick={() => {
-                        navigator.clipboard.writeText(currentTrace.id);
-                        setCopiedTraceId(currentTrace.id);
-                        setTimeout(() => setCopiedTraceId(prev => (prev === currentTrace.id ? null : prev)), 2000);
-                      }}
+                      onClick={() => handleCopyTraceId(currentTrace)}
                       className={`px-2 py-0.5 rounded text-[10px] font-mono flex items-center space-x-1 transition-all border shrink-0 ${
                         copiedTraceId === currentTrace.id
                           ? 'bg-emerald-500/25 border-emerald-400 text-emerald-300'
                           : 'bg-white/[0.06] border-white/[0.12] text-neutral-300 hover:text-white hover:bg-white/[0.14]'
                       }`}
-                      title="Copy Trace ID"
+                      title="Copy Trace ID (Press Y)"
                       aria-label={`Copy Trace ID ${currentTrace.id}`}
                     >
                       {copiedTraceId === currentTrace.id ? (
@@ -1086,6 +1160,28 @@ export const TracesView: React.FC<TracesViewProps> = ({
                         <>
                           <Copy className="w-2.5 h-2.5" />
                           <span className="text-[9px]">Copy ID</span>
+                        </>
+                      )}
+                    </button>
+                    <button
+                      onClick={() => handleCopyTraceLog(currentTrace)}
+                      className={`px-2 py-0.5 rounded text-[10px] font-mono flex items-center space-x-1 transition-all border shrink-0 ${
+                        copiedLogTraceId === currentTrace.id
+                          ? 'bg-emerald-500/25 border-emerald-400 text-emerald-300'
+                          : 'bg-white/[0.06] border-white/[0.12] text-neutral-300 hover:text-white hover:bg-white/[0.14]'
+                      }`}
+                      title="Copy the whole trace as JSON (Press Shift+Y)"
+                      aria-label={`Copy the full log of trace ${currentTrace.id} as JSON`}
+                    >
+                      {copiedLogTraceId === currentTrace.id ? (
+                        <>
+                          <Check className="w-2.5 h-2.5 text-emerald-300" />
+                          <span className="text-[9px] text-emerald-300">Copied</span>
+                        </>
+                      ) : (
+                        <>
+                          <ClipboardCopy className="w-2.5 h-2.5" />
+                          <span className="text-[9px]">Copy log</span>
                         </>
                       )}
                     </button>
