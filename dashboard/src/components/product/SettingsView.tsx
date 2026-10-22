@@ -26,6 +26,7 @@ import {
 import { TextDensity, TelemetryProject } from '../../types';
 import { api, PlatformHealth } from '../../lib/api';
 import { liveEvaluationTiming } from '../../lib/evalTiming';
+import { ingestionKeyView } from '../../lib/ingestionKey';
 import { User as FirebaseUser } from 'firebase/auth';
 
 interface SettingsViewProps {
@@ -49,13 +50,16 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   onOpenProjectSelector,
   onOpenAuth
 }) => {
-  const effectiveApiKey = activeProject?.apiKey || 'ap_live_948f10283c79a8e0192df';
-  const [apiKey, setApiKey] = useState(effectiveApiKey);
-  const [copied, setCopied] = useState(false);
-  const [groundingThreshold, setGroundingThreshold] = useState(0.85);
-  const [driftSensitivity, setDriftSensitivity] = useState(0.45);
-  const [slackWebhook, setSlackWebhook] = useState('https://hooks.slack.com/services/T00/B00/XXXXX');
-  const [saved, setSaved] = useState(false);
+  // Read from the active project on every render, so switching project while this
+  // page is open shows that project's key. Only a key shaped like one the API
+  // issues is shown; see ingestionKeyView.
+  const keyView = ingestionKeyView(activeProject);
+  const [copyState, setCopyState] = useState<'idle' | 'copied' | 'failed'>('idle');
+
+  // Nothing on this page is written anywhere: the appearance controls live in the
+  // parent's memory, and the alert thresholds and webhook are server settings the
+  // API has no route to change. That is why there is no Save button.
+  const densityWired = onChangeTextDensity !== undefined;
 
   // Live evaluation timing from this instance's own /v1/platform report. Read once
   // when the page opens; the Performance tab is the one that polls.
@@ -71,15 +75,18 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   }, []);
   const evalTiming = liveEvaluationTiming(platform, platformFailed);
 
+  // "Copied" is shown only after the browser confirms the write.
   const handleCopyKey = () => {
-    navigator.clipboard.writeText(apiKey);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  const handleSave = () => {
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    if (!keyView.key) return;
+    const done = (state: 'copied' | 'failed') => {
+      setCopyState(state);
+      setTimeout(() => setCopyState('idle'), 2000);
+    };
+    try {
+      navigator.clipboard.writeText(keyView.key).then(() => done('copied'), () => done('failed'));
+    } catch {
+      done('failed');
+    }
   };
 
   return (
@@ -92,7 +99,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             <span>System Settings & Environment Calibration</span>
           </h2>
           <p className="text-neutral-400 mt-1">
-            Configure investigation atmospheres, collector keys, local evaluator thresholds, and notification webhooks
+            Console appearance, the active project and its ingestion key, and where alert thresholds and webhooks are set
           </p>
         </div>
 
@@ -227,7 +234,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 </span>
               </div>
               <p className="text-neutral-400 text-[11px] mt-0.5 font-sans">
-                Ultra-low-contrast, soft monochromatic grayscale palette engineered for long-duration investigation sessions
+                Switches the console to a muted slate background and text colour
               </p>
             </div>
           </div>
@@ -273,7 +280,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               {!isCalmMode && <CheckCircle2 className="w-4 h-4 text-emerald-400" />}
             </div>
             <p className="text-[11px] font-sans text-neutral-300 leading-relaxed">
-              Vivid phosphor emeralds, high-contrast laser accents, and specular specular beams. Ideal for fast diagnostic scans.
+              The console&rsquo;s normal background and text colours, set by the palette.
             </p>
             <div className="flex items-center space-x-1.5 pt-1">
               <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)]" />
@@ -299,7 +306,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               {isCalmMode && <CheckCircle2 className="w-4 h-4 text-neutral-300" />}
             </div>
             <p className="text-[11px] font-sans text-neutral-400 leading-relaxed">
-              Subdued monochromatic zinc & titanium tones, dampened luminance, and minimal specular glare for reduced retinal fatigue.
+              A dark slate background with slate-grey text.
             </p>
             <div className="flex items-center space-x-1.5 pt-1">
               <span className="w-2 h-2 rounded-full bg-neutral-400" />
@@ -314,13 +321,18 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         <div className="bg-white/[0.03] border border-white/[0.08] rounded-xl p-3 flex items-start space-x-2.5 text-[11px] font-sans text-neutral-300">
           <Eye className="w-4 h-4 text-neutral-400 shrink-0 mt-0.5" />
           <div className="leading-relaxed">
-            <span className="text-neutral-200 font-medium">Investigation Ergonomics:</span> Calm Mode dynamically dampens background brightness, shifts high-saturation warning indicators to soft-tone grayscale borders, and softens the liquid glass reflections to keep multi-hour trace waterfall analysis effortless.
+            <span className="text-neutral-200 font-medium">Not saved:</span> this choice is held in the page&rsquo;s memory. Reloading resets it, and other tabs or devices do not follow it.
           </div>
         </div>
       </div>
 
-      {/* Text Density & Typography Scale Slider */}
-      <div className="ios-liquid-card border-glow-subtle rounded-2xl p-6 space-y-5 relative overflow-hidden">
+      {/* Text Density & Typography Scale Slider. `inert` locks every control inside
+          while the parent supplies no handler: App.tsx passes none and nothing in
+          the console applies the .density-* classes, so the buttons would do nothing. */}
+      <div
+        inert={!densityWired}
+        className={`ios-liquid-card border-glow-subtle rounded-2xl p-6 space-y-5 relative overflow-hidden ${densityWired ? '' : 'opacity-70'}`}
+      >
         <div className="absolute inset-x-0 top-0 h-[1.5px] apple-liquid-specular pointer-events-none" />
 
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-white/[0.08]">
@@ -343,9 +355,15 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   {textDensity === 'compact' ? 'Active: Compact Scale (0.88x)' : 'Active: Comfortable Scale (1.0x)'}
                 </span>
               </div>
-              <p className="text-neutral-400 text-[11px] mt-0.5 font-sans">
-                Adjust typography scales and vertical padding across the app for enhanced telemetry density or spacious reading
-              </p>
+              {densityWired ? (
+                <p className="text-neutral-400 text-[11px] mt-0.5 font-sans">
+                  Scales console text and row padding
+                </p>
+              ) : (
+                <p className="text-amber-300 text-[11px] mt-0.5 font-sans">
+                  Not applied yet: the console does not read this setting, so these controls are locked.
+                </p>
+              )}
             </div>
           </div>
 
@@ -469,7 +487,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   <span>Selected</span>
                 </span>
               ) : (
-                <span className="text-[10px] text-neutral-500 font-mono">Click to toggle</span>
+                <span className="text-[10px] text-neutral-500 font-mono">{densityWired ? 'Click to toggle' : 'Locked'}</span>
               )}
             </div>
 
@@ -518,7 +536,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   <span>Selected</span>
                 </span>
               ) : (
-                <span className="text-[10px] text-neutral-500 font-mono">Click to toggle</span>
+                <span className="text-[10px] text-neutral-500 font-mono">{densityWired ? 'Click to toggle' : 'Locked'}</span>
               )}
             </div>
 
@@ -548,18 +566,20 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         <div className="bg-white/[0.03] border border-white/[0.08] rounded-xl p-3 flex items-start space-x-2.5 text-[11px] font-sans text-neutral-300">
           <AlignJustify className="w-4 h-4 text-neutral-400 shrink-0 mt-0.5" />
           <div className="leading-relaxed">
-            <span className="text-neutral-200 font-medium">Instant Application:</span> Changing the text density slider recalibrates font sizes, line heights, and table padding throughout the application immediately—including the Overview matrix, Traces waterfall, Incident logs, and Context Inspector.
+            <span className="text-neutral-200 font-medium">Not saved:</span> {densityWired
+              ? 'this choice is held in the page’s memory. Reloading resets it, and other tabs or devices do not follow it.'
+              : 'nothing applies a density yet, so the previews above are illustrations only.'}
           </div>
         </div>
       </div>
 
-      {/* Active Project & Firestore Cloud Storage */}
+      {/* Active project, account and ingestion key */}
       <div className="ios-liquid-card border-glow-subtle rounded-2xl p-6 space-y-4 relative overflow-hidden">
         <div className="absolute inset-x-0 top-0 h-[1.5px] apple-liquid-specular pointer-events-none" />
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-white/[0.08]">
           <div className="flex items-center space-x-2 text-white font-semibold text-xs uppercase">
             <Layers className="w-4 h-4 text-amber-400" />
-            <span>Active Project & Firebase Telemetry Cloud</span>
+            <span>Active Project & Account</span>
           </div>
           <div className="flex items-center space-x-2">
             {onOpenProjectSelector && (
@@ -583,21 +603,25 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-mono">
           <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.08]">
-            <span className="text-[10px] uppercase text-neutral-400 block mb-0.5">Active Telemetry Project</span>
-            <div className="text-white font-bold flex items-center space-x-2">
-              <span>{activeProject ? activeProject.name : 'Default Agent Project'}</span>
-              <span className="px-2 py-0.5 rounded text-[9px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 uppercase">
-                {activeProject ? activeProject.environment : 'Production'}
-              </span>
-            </div>
+            <span className="text-[10px] uppercase text-neutral-400 block mb-0.5">Active Project</span>
+            {activeProject ? (
+              <div className="text-white font-bold flex items-center space-x-2">
+                <span>{activeProject.name}</span>
+                <span className="px-2 py-0.5 rounded text-[9px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 uppercase">
+                  {activeProject.environment}
+                </span>
+              </div>
+            ) : (
+              <div className="text-neutral-400 font-bold">— <span className="font-normal">no project selected</span></div>
+            )}
           </div>
 
           <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.08]">
-            <span className="text-[10px] uppercase text-neutral-400 block mb-0.5">Firebase User State</span>
+            <span className="text-[10px] uppercase text-neutral-400 block mb-0.5">Account</span>
             <div className="text-white font-bold flex items-center space-x-1.5">
               <span className={`w-2 h-2 rounded-full ${currentUser ? 'bg-emerald-400' : 'bg-neutral-500'}`} />
               <span className="truncate">
-                {currentUser ? (currentUser.displayName || currentUser.email || 'Guest Explorer') : 'Unauthenticated (Local Cache)'}
+                {currentUser ? (currentUser.displayName || currentUser.email || 'Guest Explorer') : 'Not signed in'}
               </span>
             </div>
           </div>
@@ -605,127 +629,116 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
         <div>
           <label className="block text-[10px] uppercase text-neutral-400 mb-1 font-semibold">
-            Active Project Ingestion API Key (ap_live_*)
+            Active Project Ingestion API Key
           </label>
           <div className="flex items-center space-x-2">
             <input
               type="text"
               readOnly
-              value={apiKey}
+              value={keyView.key ?? '—'}
+              aria-label="Active project ingestion API key"
               className="w-full bg-white/[0.04] border border-white/[0.12] rounded-lg px-3 py-2 text-neutral-200 focus:outline-none font-mono"
             />
             <button
               onClick={handleCopyKey}
-              className="px-3 py-2 bg-white/[0.08] hover:bg-white/[0.16] border border-white/[0.14] text-neutral-200 rounded-lg flex items-center space-x-1 shrink-0 transition-colors"
+              disabled={!keyView.key}
+              className="px-3 py-2 bg-white/[0.08] hover:bg-white/[0.16] border border-white/[0.14] text-neutral-200 rounded-lg flex items-center space-x-1 shrink-0 transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white/[0.08]"
             >
-              {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-              <span>{copied ? 'Copied' : 'Copy'}</span>
+              {copyState === 'copied' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+              <span>{copyState === 'copied' ? 'Copied' : copyState === 'failed' ? 'Copy failed' : 'Copy'}</span>
             </button>
           </div>
           <p className="text-[11px] text-neutral-400 font-sans mt-1.5">
-            Pass this collector key in HTTP headers (<code className="text-amber-300">X-AgentPulse-Key</code>) or SDK config to direct spans into this Firestore project.
+            {keyView.key ? (
+              <>
+                Send it in the <code className="text-amber-300">X-API-Key</code> header when posting spans to <code className="text-amber-300">/v1/ingest</code>. It authenticates the request; this version of the API does not separate spans by project.
+              </>
+            ) : (
+              keyView.reason
+            )}
           </p>
         </div>
 
-        <div className="p-3 rounded-xl bg-amber-400/5 border border-amber-400/20 flex items-start space-x-2.5 text-[11px] font-sans text-neutral-300">
+        <div className="p-3 rounded-xl bg-amber-400/5 border border-amber-400/20 flex items-start space-x-2.5 text-[11px] font-sans text-neutral-200">
           <Shield className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
           <div>
-            <span className="text-amber-300 font-medium">Firestore Isolation:</span> Documents are strictly isolated via Firebase Security Rules (<code className="text-neutral-200">request.auth.uid == resource.data.ownerId</code>). Spans and project datasets are automatically synchronized across all your browser tabs and devices.
+            <span className="text-amber-300 font-medium">Where this is stored:</span> Firestore holds your sign-in profile and this project list (name, environment, key). Spans and evaluations are stored by the AgentPulse API, not in Firestore. The Firestore security rules are not in this repository, so this page cannot confirm how access is restricted.
           </div>
         </div>
       </div>
 
-      {/* Evaluator Thresholds */}
-      <div className="ios-liquid-card border-glow-subtle rounded-2xl p-6 space-y-5 relative overflow-hidden">
+      {/* Alert thresholds. Read-only: they are server environment variables and the
+          API has no route to change them. Defaults are from backend/app/config.py
+          (hallucination_threshold = 0.7, drift_threshold = 0.3); /v1/platform does
+          not report the live values, so these are labelled as defaults. */}
+      <div className="ios-liquid-card border-glow-subtle rounded-2xl p-6 space-y-4 relative overflow-hidden">
         <div className="absolute inset-x-0 top-0 h-[1.5px] apple-liquid-specular pointer-events-none" />
         <div className="flex items-center space-x-2 text-white font-semibold text-xs uppercase">
           <Sliders className="w-4 h-4 text-emerald-400" />
-          <span>Online Evaluator Sensitivity</span>
+          <span>Alert Thresholds (set on the server)</span>
         </div>
 
         <div className="space-y-4">
           <div>
             <div className="flex justify-between mb-1.5">
-              <span className="text-neutral-300">Schema Grounding Minimum Threshold:</span>
-              <span className="text-white font-bold">{groundingThreshold.toFixed(2)}</span>
+              <span className="text-neutral-300">Grounding failure: alert when grounding risk is above</span>
+              <span className="text-white font-bold">0.70 <span className="text-neutral-400 font-normal">default</span></span>
             </div>
-            <input
-              type="range"
-              min="0.5"
-              max="1.0"
-              step="0.05"
-              value={groundingThreshold}
-              onChange={(e) => setGroundingThreshold(parseFloat(e.target.value))}
-              className="w-full accent-emerald-400 bg-black/50 rounded cursor-pointer"
-            />
-            <p className="text-[11px] text-neutral-400 mt-1">
-              Traces scoring below this threshold will automatically raise a schema discrepancy warning.
+            <p className="text-[11px] text-neutral-400">
+              Grounding is a risk: 0.0 is supported and 1.0 is unsupported, so a higher score is worse and a span raises <code className="text-neutral-200">GROUNDING_FAILURE</code> above this value. Server setting <code className="text-neutral-200">AGENTPULSE_HALLUCINATION_THRESHOLD</code>; the same value gates <code className="text-neutral-200">HIGH_HALLUCINATION_RISK</code> on overall risk.
             </p>
           </div>
 
           <div>
             <div className="flex justify-between mb-1.5">
-              <span className="text-neutral-300">Behavioral Drift Alarm Level:</span>
-              <span className="text-white font-bold">{driftSensitivity.toFixed(2)} Δ</span>
+              <span className="text-neutral-300">Behavioural drift: alert when window centroid distance is above</span>
+              <span className="text-white font-bold">0.30 <span className="text-neutral-400 font-normal">default</span></span>
             </div>
-            <input
-              type="range"
-              min="0.1"
-              max="0.9"
-              step="0.05"
-              value={driftSensitivity}
-              onChange={(e) => setDriftSensitivity(parseFloat(e.target.value))}
-              className="w-full accent-emerald-400 bg-black/50 rounded cursor-pointer"
-            />
-            <p className="text-[11px] text-neutral-400 mt-1">
-              Cluster divergence delta exceeding this value will trigger an incident alert.
+            <p className="text-[11px] text-neutral-400">
+              Raises <code className="text-neutral-200">DRIFT_DETECTED</code>. Server setting <code className="text-neutral-200">AGENTPULSE_DRIFT_THRESHOLD</code>.
             </p>
           </div>
         </div>
+
+        <p className="text-[11px] text-neutral-400 border-t border-white/[0.08] pt-3">
+          Not saved here: these are environment variables on the AgentPulse server, read when it starts. The API does not report their live values, so the numbers above are the code defaults and a deployment may differ. This page cannot change them.
+        </p>
       </div>
 
-      {/* Webhook Alerts */}
+      {/* Webhook alerts. Locked: the backend never sends one. */}
       <div className="ios-liquid-card border-glow-subtle rounded-2xl p-6 space-y-4 relative overflow-hidden">
         <div className="absolute inset-x-0 top-0 h-[1.5px] apple-liquid-specular pointer-events-none" />
         <div className="flex items-center space-x-2 text-white font-semibold text-xs uppercase">
           <Bell className="w-4 h-4 text-emerald-400" />
-          <span>Incident Webhooks</span>
+          <span>Incident Webhooks (not available)</span>
         </div>
 
         <div>
-          <label className="block text-[10px] uppercase text-neutral-400 mb-1 font-semibold">
+          <label htmlFor="incident-webhook-url" className="block text-[10px] uppercase text-neutral-400 mb-1 font-semibold">
             Slack / PagerDuty Alert URL
           </label>
           <input
+            id="incident-webhook-url"
             type="text"
-            value={slackWebhook}
-            onChange={(e) => setSlackWebhook(e.target.value)}
-            className="w-full bg-white/[0.04] border border-white/[0.12] rounded-lg px-3 py-2 text-neutral-200 focus:outline-none focus:border-white/30"
+            disabled
+            value=""
+            placeholder="Not available"
+            className="w-full bg-white/[0.04] border border-white/[0.12] rounded-lg px-3 py-2 text-neutral-200 placeholder:text-neutral-500 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
           />
+          <p className="text-[11px] text-neutral-400 font-sans mt-1.5">
+            Not saved: the backend has a webhook sender (<code className="text-neutral-200">AlertEngine.dispatch_webhook</code>) but no code calls it, so nothing is sent, even if <code className="text-neutral-200">AGENTPULSE_WEBHOOK_URL</code> is set on the server.
+          </p>
         </div>
       </div>
 
-      {/* Save action */}
-      <div className="flex items-center justify-between pt-2">
-        <div className="text-neutral-400 text-[11px] flex items-center space-x-2">
-          <span>
-            {isCalmMode ? 'Deep Zen theme' : 'Obsidian dark'} ·{' '}
-            <strong className={textDensity === 'compact' ? 'text-cyan-300' : 'text-emerald-300'}>
-              {textDensity === 'compact' ? 'Compact density (0.88x)' : 'Comfortable density (1.0x)'}
-            </strong>
-          </span>
-          <span className="text-neutral-600 hidden sm:inline">|</span>
-          <span className="text-neutral-500 hidden sm:inline">Preferences automatically synced</span>
-        </div>
-        <div className="flex items-center space-x-3">
-          {saved && <span className="text-emerald-400 font-medium">Settings saved successfully!</span>}
-          <button
-            onClick={handleSave}
-            className="px-6 py-2.5 bg-neutral-100 hover:bg-white text-neutral-950 text-xs font-semibold rounded-lg transition-colors shadow-sm active:scale-95"
-          >
-            Save Configuration
-          </button>
-        </div>
+      {/* Nothing on this page is written anywhere, so there is no Save button. */}
+      <div className="text-neutral-400 text-[11px] pt-2">
+        {isCalmMode ? 'Calm Mode on' : 'Calm Mode off'} ·{' '}
+        <strong className={textDensity === 'compact' ? 'text-cyan-300' : 'text-emerald-300'}>
+          {textDensity === 'compact' ? 'Compact density (0.88x)' : 'Comfortable density (1.0x)'}
+        </strong>
+        <span className="text-neutral-600"> | </span>
+        <span>Nothing on this page is saved: appearance lasts until you reload.</span>
       </div>
     </div>
   );
