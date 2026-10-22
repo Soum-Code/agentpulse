@@ -151,7 +151,7 @@ export const PublicExperience: React.FC<PublicExperienceProps> = ({ onEnterProdu
       code: 'client = pulse.instrument_llm(OpenAI())\n# Spans captured fire-and-forget in background thread',
       detail: 'Wraps your existing OpenAI/Anthropic client. Spans are posted asynchronously with zero execution blocking.',
       tokens: 0,
-      latency: '< 0.5ms SDK'
+      latency: '< 0.25 ms SDK'
     },
     {
       title: 'Agent Dispatches Contradiction',
@@ -164,14 +164,14 @@ export const PublicExperience: React.FC<PublicExperienceProps> = ({ onEnterProdu
       latency: '310ms'
     },
     {
-      title: 'Fast 202 Ingestion (No ML Weights)',
+      title: 'Non-blocking 202 Ingestion (No ML Weights)',
       actor: 'FastAPI /v1/ingest',
       type: 'tool',
       status: 'ok',
       code: 'POST /v1/ingest -> 202 Accepted\nINSERT INTO spans_queue (status="pending")',
       detail: 'API process stays ultra-lean (80MB RAM) without loading heavy ML weights. Spans leased durably in SQLite WAL queue.',
       tokens: 0,
-      latency: '1.1ms'
+      latency: '—'
     },
     {
       title: 'DeBERTa NLI Worker Evaluates',
@@ -179,7 +179,7 @@ export const PublicExperience: React.FC<PublicExperienceProps> = ({ onEnterProdu
       type: 'evaluator',
       status: 'error',
       code: 'DeBERTa-v3 NLI: contradiction_prob=0.9998\nGrounding Risk: 0.9999 -> [ALERT: GROUNDING_FAILURE]',
-      detail: 'Evaluated locally on CPU in 203ms median time. Never calls an external LLM. Zero API cost, zero judge token bills.',
+      detail: 'Evaluated locally on CPU; the benchmark median is 203 ms over 30 test cases. Never calls an external LLM, so there are no judge token bills.',
       tokens: 0,
       latency: '203ms CPU'
     }
@@ -189,30 +189,30 @@ export const PublicExperience: React.FC<PublicExperienceProps> = ({ onEnterProdu
     {
       label: 'OBSERVE',
       subtitle: 'Decoupled Low-Overhead Ingestion',
-      description: 'Capture every agent prompt, completion, tool parameter, and span asynchronously. API returns 202 Accepted in about a millisecond, staying lean at 80MB RAM.',
-      badge: 'Zero Overhead',
-      metric: '< 1.2ms Ingestion',
-      metricLabel: '202 Accepted',
+      description: 'Capture every agent prompt, completion, tool parameter, and span asynchronously. The API returns 202 Accepted without waiting for an evaluation, and stays at 80MB RAM.',
+      badge: 'Non-blocking',
+      metric: '0.2 ms SDK enqueue',
+      metricLabel: 'p99, real SDK call, no network',
       diagramTitle: 'Decoupled Span Stream',
       features: ['Native pulse.instrument_llm() & @pulse.monitor() decorators', 'Durable SQLite WAL queue leases for worker consumption', 'Zero ML weights in ingestion path — fits in 80MB RAM']
     },
     {
       label: 'UNDERSTAND',
       subtitle: 'Behavioral & Centroid Drift Detection',
-      description: 'Detect subtle semantic divergence using window_centroid_distance across rolling 20-sample baseline and 12-sample test windows. Drops false alarms from 91.7% to 6.8%.',
+      description: 'Detect semantic divergence using window_centroid_distance across rolling 20-sample baseline and 12-sample test windows. Offline diagnosis on real agent text: the first drift metric crossed the 0.30 threshold on 91.7% of 484 unchanged windows; the windowed metric crossed on 6.8% and caught 82.5% of injected content changes. This is not a live false-alarm rate.',
       badge: 'MiniLM-L6-v2',
       metric: '91.7% → 6.8%',
-      metricLabel: 'False Alarm Reduction',
+      metricLabel: 'False alarms on unchanged traffic (offline, 484 windows)',
       diagramTitle: 'Window Centroid Distance Matrix',
       features: ['MiniLM 384-dim dense vectors on local CPU', 'Evaluates once 32 spans are processed in rolling pool', 'Agent Stability Index (ASI 0-100) scoring']
     },
     {
       label: 'INVESTIGATE',
-      subtitle: 'Deterministic Failure Discrepancies',
+      subtitle: 'Failure Discrepancies',
       description: 'Traverse failure-first spans, inter-agent contradiction trees, and exact parameter differences without ever losing breadcrumb context.',
       badge: 'DeBERTa-v3',
       metric: '203ms Median',
-      metricLabel: 'Local CPU Inference',
+      metricLabel: 'Local CPU, 30 test cases',
       diagramTitle: 'NLI Contradiction Cross-Encoder',
       features: ['Premise vs hypothesis contradiction scoring', 'Calibrated formula: contradiction + 0.5 * neutral', 'Complete causal trace lineage and discrepancy pinpointing']
     },
@@ -653,7 +653,7 @@ async def researcher_node(state):
                   <span className="uppercase tracking-wider">The Moat: AgentPulse never calls an LLM</span>
                 </div>
                 <p className={`text-[11px] leading-relaxed font-sans ${palette === 'chalk' ? 'text-neutral-700' : 'text-neutral-300'}`}>
-                  Your models stay outside the system. Evaluations execute 100% locally on CPU via MiniLM (embeddings) &amp; DeBERTa (NLI contradiction). Zero LLM API keys, zero prompt judge bills, and 203ms median latency.
+                  Your models stay outside the system. Evaluations run locally on CPU via MiniLM (embeddings) &amp; DeBERTa (NLI contradiction). Zero LLM API keys and zero prompt judge bills. Median evaluation time was 203&nbsp;ms over 30 test cases.
                 </p>
               </div>
             </div>
@@ -695,19 +695,19 @@ async def researcher_node(state):
             >
               <div>
                 <span className={palette === 'butter' ? 'text-neutral-700 font-bold block' : palette === 'chalk' ? 'text-neutral-500 block' : 'text-neutral-500 block'}>
-                  Ingestion Latency
+                  SDK Enqueue (p99)
                 </span>
                 <span
                   className={`text-sm font-black mt-0.5 block ${
                     palette === 'butter' ? 'text-neutral-950' : palette === 'chalk' ? 'text-neutral-900' : 'text-neutral-100'
                   }`}
                 >
-                  &lt; <AnimeInteractiveCounter targetValue={1.2} decimals={1} suffix=" ms" />
+                  <AnimeInteractiveCounter targetValue={0.2} decimals={1} suffix=" ms" />
                 </span>
               </div>
               <div>
                 <span className={palette === 'butter' ? 'text-neutral-700 font-bold block' : palette === 'chalk' ? 'text-neutral-500 block' : 'text-neutral-500 block'}>
-                  Eval Latency (CPU)
+                  Eval Latency (CPU, 30 cases)
                 </span>
                 <span
                   className={`text-sm font-black mt-0.5 block ${
@@ -726,10 +726,19 @@ async def researcher_node(state):
                     palette === 'butter' ? 'text-neutral-950' : palette === 'chalk' ? 'text-neutral-900' : 'text-emerald-400'
                   }`}
                 >
-                  No LLM (100% CPU)
+                  No LLM · CPU
                 </span>
               </div>
             </div>
+            {/* SDK enqueue: latency_profiles.json layer 7_sdk_enqueue, p99 0.205 ms. The
+                HTTP ingestion layer in that file (8) is generated, not timed, so it is not
+                quoted. Eval: LLM_JUDGE_COMPARISON_REPORT.md, median 202.94 ms, 30 cases. */}
+            <p className={`text-[11px] leading-relaxed font-sans ${
+              palette === 'butter' ? 'text-neutral-800 font-medium' : palette === 'chalk' ? 'text-neutral-600' : 'text-neutral-400'
+            }`}>
+              SDK enqueue is a real SDK call timed over 25 runs, with no network. The API&rsquo;s own HTTP time has not been measured on its own.
+              Evaluation is the median of 30 test cases on one machine, a small sample.
+            </p>
           </div>
 
           {/* Right Column: Real-Time Multi-Agent Swarm Radar powered by Anime.js */}
@@ -809,7 +818,7 @@ async def researcher_node(state):
             >
               200 OK
             </code>
-            .
+            . The four stages below are a hand-written example, not a recorded run; their durations and drift value are illustrative.
           </p>
         </div>
 
@@ -835,7 +844,7 @@ async def researcher_node(state):
                 presets={[
                   { id: 'st1-hl', type: 'highlight', x: 2, y: 2, width: 35, color: '#facc15' },
                   { id: 'st1-ul', type: 'underline', x: 4, y: 84, width: 62, color: '#f59e0b' },
-                  { id: 'st1-note', type: 'note', text: '⚡ Sub-1.2ms Fanout', x: 26, y: 84, rotation: -2, color: '#b45309' }
+                  { id: 'st1-note', type: 'note', text: '⚡ Non-blocking', x: 26, y: 84, rotation: -2, color: '#b45309' }
                 ]}
               />
             )}
@@ -1243,7 +1252,7 @@ async def researcher_node(state):
                     ? 'bg-emerald-100 text-emerald-900 border border-emerald-300'
                     : 'bg-emerald-500/20 text-emerald-300'
                 }`}>
-                  LIVE ENGINE
+                  OFFLINE BENCHMARKS
                 </span>
               </div>
 
@@ -1255,9 +1264,9 @@ async def researcher_node(state):
                     ? 'bg-slate-50 border-slate-200 text-slate-900'
                     : 'bg-white/[0.04] border-white/[0.08] text-neutral-300'
                 }`}>
-                  <span className={palette === 'butter' ? 'font-bold' : palette === 'chalk' ? 'text-slate-700 font-medium' : 'text-neutral-300'}>Throughput Capacity</span>
+                  <span className={palette === 'butter' ? 'font-bold' : palette === 'chalk' ? 'text-slate-700 font-medium' : 'text-neutral-300'}>Evaluation rate, 1 worker</span>
                   <span className={`font-bold ${palette === 'chalk' ? 'text-emerald-700' : 'text-emerald-400'}`}>
-                    <AnimeInteractiveCounter targetValue={50000} duration={1600} suffix=" spans/sec" />
+                    <AnimeInteractiveCounter targetValue={3.9} decimals={1} duration={1600} suffix=" spans/sec" />
                   </span>
                 </div>
                 <div className={`p-3 rounded-xl flex items-center justify-between border ${
@@ -1278,7 +1287,7 @@ async def researcher_node(state):
                     : 'bg-white/[0.04] border-white/[0.08] text-neutral-300'
                 }`}>
                   <span className={palette === 'butter' ? 'font-bold' : palette === 'chalk' ? 'text-slate-700 font-medium' : 'text-neutral-300'}>Verification Model</span>
-                  <span className={`font-bold ${palette === 'butter' ? 'text-black font-black' : palette === 'chalk' ? 'text-slate-950' : 'text-neutral-100'}`}>Deterministic + LLM Judge</span>
+                  <span className={`font-bold ${palette === 'butter' ? 'text-black font-black' : palette === 'chalk' ? 'text-slate-950' : 'text-neutral-100'}`}>MiniLM + DeBERTa, no LLM</span>
                 </div>
               </div>
 
@@ -1286,7 +1295,7 @@ async def researcher_node(state):
                 palette === 'butter' ? 'text-neutral-800 font-semibold' : palette === 'chalk' ? 'text-slate-600' : 'text-neutral-400'
               }`}>
                 <span className={`w-2 h-2 rounded-full ${palette === 'chalk' ? 'bg-emerald-600' : 'bg-emerald-400'} animate-pulse`} />
-                <span>Hardware acceleration enabled via SIMD vector kernels</span>
+                <span>Rate: 1,000-span burst on a 16-thread dev machine (throughput_benchmark.json). Small samples; see each source.</span>
               </div>
             </div>
           </div>
@@ -1312,7 +1321,7 @@ async def researcher_node(state):
                 : 'badge-editorial text-neutral-300'
             }`}
           >
-            [ SECTION 04 · INTERACTIVE LIVE TRACE STORY ]
+            [ SECTION 04 · ILLUSTRATED TRACE STORY ]
           </span>
           <h2
             className={`text-3xl sm:text-5xl font-black tracking-tight leading-tight ${
@@ -1326,7 +1335,7 @@ async def researcher_node(state):
               palette === 'butter' ? 'text-neutral-800 font-medium' : palette === 'chalk' ? 'text-neutral-600' : 'text-neutral-400'
             }`}
           >
-            Follow the real trace: an agent is given the premise that the Eiffel Tower stands in Paris, but hallucinates that it is located in Berlin. Nothing crashes, HTTP returns 200 OK — until AgentPulse's local DeBERTa NLI cross-encoder detects the contradiction with 0.9998 probability in 203ms.
+            An illustration, written by hand &mdash; not a recorded run. An agent is given the premise that the Eiffel Tower stands in Paris, but answers that it is located in Berlin. Nothing crashes and HTTP returns 200 OK. In this example the local DeBERTa NLI classifier then scores the answer as a contradiction (the 0.9998 and 0.9999 below are example values). The 203&nbsp;ms in step 04 is the benchmark median over 30 test cases, not a timing from this example. For a real run, open the Telemetry Lab in the console: it sends injected-fault scenarios through the live system.
           </p>
         </div>
 
@@ -1408,7 +1417,7 @@ async def researcher_node(state):
                   Span Inspector · {storySteps[activeStoryStep].actor}
                 </span>
               </div>
-              <span className={palette === 'chalk' ? 'text-neutral-500' : 'text-neutral-400'}>Trace: tr-98410</span>
+              <span className={palette === 'chalk' ? 'text-neutral-500' : 'text-neutral-400'}>Example trace &middot; illustrative</span>
             </div>
 
             {/* Inspector Body */}
@@ -1446,10 +1455,11 @@ async def researcher_node(state):
                     className={`text-sm font-bold mt-0.5 block ${
                       activeStoryStep === 3
                         ? palette === 'chalk' ? 'text-rose-800' : 'text-rose-500'
-                        : palette === 'chalk' ? 'text-emerald-800' : 'text-emerald-500'
+                        : palette === 'chalk' ? 'text-neutral-500' : 'text-neutral-400'
                     }`}
                   >
-                    {activeStoryStep === 3 ? '0.9999 (REJECT)' : '0.0010 (NOMINAL)'}
+                    {/* Only the evaluator step carries a score; the others have none, so no number. */}
+                    {activeStoryStep === 3 ? '0.9999 (Unsupported)' : '—'}
                   </span>
                 </div>
               </div>
@@ -1945,7 +1955,7 @@ async def researcher_node(state):
       </section>
 
       {/* ========================================================================= */}
-      {/* ENTERPRISE ARCHITECTURE SPECIFICATION (DUCKDB + ONNX + CLICKHOUSE)        */}
+      {/* PIPELINE ARCHITECTURE (what runs today: EnterpriseArchDiagram.tsx)          */}
       {/* ========================================================================= */}
       <section className="py-12 px-6 sm:px-12 max-w-7xl mx-auto">
         <EnterpriseArchDiagram palette={palette} />
