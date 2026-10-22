@@ -1,0 +1,179 @@
+{
+ "script": "experiments/grounding_recalibration_compounding.py",
+ "base_premise": "The database query executed in 45ms and returned 3 verified customer profile records.",
+ "conditions": {
+  "condition_a_unmitigated_control": [
+   {
+    "node": "Node_A (Planner)",
+    "c_n_e": [
+     0.0023,
+     0.0112,
+     0.9865
+    ],
+    "published_risk": 0.495,
+    "published_label": "medium_risk",
+    "swapped_view_risk": 0.496,
+    "swapped_view_label": "medium_risk",
+    "corrected_risk": 0.008,
+    "corrected_label": "low_risk"
+   },
+   {
+    "node": "Node_B (Retriever - Fault Injected)",
+    "c_n_e": [
+     0.9997,
+     0.0003,
+     0.0
+    ],
+    "published_risk": 1.0,
+    "published_label": "high_risk",
+    "swapped_view_risk": 1.0,
+    "swapped_view_label": "high_risk",
+    "corrected_risk": 1.0,
+    "corrected_label": "high_risk"
+   },
+   {
+    "node": "Node_C (Verifier)",
+    "c_n_e": [
+     0.9923,
+     0.0077,
+     0.0
+    ],
+    "published_risk": 0.992,
+    "published_label": "high_risk",
+    "swapped_view_risk": 0.992,
+    "swapped_view_label": "high_risk",
+    "corrected_risk": 0.996,
+    "corrected_label": "high_risk"
+   },
+   {
+    "node": "Node_D (Analyst)",
+    "c_n_e": [
+     0.9923,
+     0.0077,
+     0.0
+    ],
+    "published_risk": 0.992,
+    "published_label": "high_risk",
+    "swapped_view_risk": 0.992,
+    "swapped_view_label": "high_risk",
+    "corrected_risk": 0.996,
+    "corrected_label": "high_risk"
+   },
+   {
+    "node": "Node_E (Writer)",
+    "c_n_e": [
+     0.9923,
+     0.0077,
+     0.0
+    ],
+    "published_risk": 0.992,
+    "published_label": "high_risk",
+    "swapped_view_risk": 0.992,
+    "swapped_view_label": "high_risk",
+    "corrected_risk": 0.996,
+    "corrected_label": "high_risk"
+   }
+  ],
+  "condition_b_active_intervention": [
+   {
+    "node": "Node_A (Planner)",
+    "c_n_e": [
+     0.0023,
+     0.0112,
+     0.9865
+    ],
+    "published_risk": 0.495,
+    "published_label": "medium_risk",
+    "swapped_view_risk": 0.496,
+    "swapped_view_label": "medium_risk",
+    "corrected_risk": 0.008,
+    "corrected_label": "low_risk"
+   },
+   {
+    "node": "Node_B (Retriever - Fault Injected)",
+    "c_n_e": [
+     0.9997,
+     0.0003,
+     0.0
+    ],
+    "published_risk": 1.0,
+    "published_label": "high_risk",
+    "swapped_view_risk": 1.0,
+    "swapped_view_label": "high_risk",
+    "corrected_risk": 1.0,
+    "corrected_label": "high_risk"
+   },
+   {
+    "node": "Node_C (Verifier)",
+    "c_n_e": [
+     0.0089,
+     0.9905,
+     0.0006
+    ],
+    "published_risk": 0.009,
+    "published_label": "low_risk",
+    "swapped_view_risk": 0.009,
+    "swapped_view_label": "low_risk",
+    "corrected_risk": 0.504,
+    "corrected_label": "medium_risk"
+   },
+   {
+    "node": "Node_D (Analyst)",
+    "c_n_e": [
+     0.0002,
+     0.9992,
+     0.0007
+    ],
+    "published_risk": 0.001,
+    "published_label": "low_risk",
+    "swapped_view_risk": 0.001,
+    "swapped_view_label": "low_risk",
+    "corrected_risk": 0.5,
+    "corrected_label": "medium_risk"
+   },
+   {
+    "node": "Node_E (Writer)",
+    "c_n_e": [
+     0.0002,
+     0.9992,
+     0.0007
+    ],
+    "published_risk": 0.001,
+    "published_label": "low_risk",
+    "swapped_view_risk": 0.001,
+    "swapped_view_label": "low_risk",
+    "corrected_risk": 0.5,
+    "corrected_label": "medium_risk"
+   }
+  ]
+ },
+ "max_abs_diff_swapped_view_vs_published_risk": 0.001,
+ "summaries_corrected": {
+  "condition_a": {
+   "fault_node_risk": 1.0,
+   "mean_downstream_risk": 0.996,
+   "max_downstream_risk": 0.996,
+   "downstream_high_risk_node_count": 3
+  },
+  "condition_b": {
+   "fault_node_risk": 1.0,
+   "mean_downstream_risk": 0.501,
+   "max_downstream_risk": 0.504,
+   "downstream_high_risk_node_count": 0
+  }
+ },
+ "summaries_published": {
+  "condition_a": {
+   "fault_node_risk": 1.0,
+   "mean_downstream_risk": 0.992,
+   "max_downstream_risk": 0.992,
+   "downstream_high_risk_node_count": 3
+  },
+  "condition_b": {
+   "fault_node_risk": 1.0,
+   "mean_downstream_risk": 0.004,
+   "max_downstream_risk": 0.009,
+   "downstream_high_risk_node_count": 0
+  }
+ }
+}
