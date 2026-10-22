@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Settings,
   ShieldCheck,
@@ -24,6 +24,8 @@ import {
   Shield
 } from 'lucide-react';
 import { TextDensity, TelemetryProject } from '../../types';
+import { api, PlatformHealth } from '../../lib/api';
+import { liveEvaluationTiming } from '../../lib/evalTiming';
 import { User as FirebaseUser } from 'firebase/auth';
 
 interface SettingsViewProps {
@@ -54,6 +56,20 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [driftSensitivity, setDriftSensitivity] = useState(0.45);
   const [slackWebhook, setSlackWebhook] = useState('https://hooks.slack.com/services/T00/B00/XXXXX');
   const [saved, setSaved] = useState(false);
+
+  // Live evaluation timing from this instance's own /v1/platform report. Read once
+  // when the page opens; the Performance tab is the one that polls.
+  const [platform, setPlatform] = useState<PlatformHealth | null>(null);
+  const [platformFailed, setPlatformFailed] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    api.getPlatformHealth().then(
+      (data) => { if (!cancelled) setPlatform(data); },
+      () => { if (!cancelled) setPlatformFailed(true); },
+    );
+    return () => { cancelled = true; };
+  }, []);
+  const evalTiming = liveEvaluationTiming(platform, platformFailed);
 
   const handleCopyKey = () => {
     navigator.clipboard.writeText(apiKey);
@@ -99,7 +115,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             </div>
             <div>
               <div className="text-white font-semibold text-xs uppercase tracking-wider flex items-center space-x-2">
-                <span>Evaluator Engine: 100% Local CPU Architecture</span>
+                <span>Evaluator Engine: Local CPU</span>
                 <span className="px-2 py-0.5 rounded text-[10px] font-mono uppercase tracking-wider font-semibold border bg-emerald-500/15 text-emerald-300 border-emerald-500/30">
                   No LLM Dependency
                 </span>
@@ -110,16 +126,21 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             </div>
           </div>
           <span className="px-2.5 py-1 rounded-lg bg-black/60 border border-white/[0.1] text-cyan-300 text-[11px] font-mono shrink-0">
-            203ms Median Latency · 0 Tokens
+            {evalTiming.value} · 0 generated tokens
           </span>
         </div>
+        {/* The headline is what this instance measures now. The offline figure is
+            LLM_JUDGE_COMPARISON_REPORT.md: median 202.94 ms, mean 257.53 ms, 30 cases. */}
+        <p className="text-neutral-400 text-[11px] font-sans">
+          {evalTiming.caption} Offline reference: median 203&nbsp;ms (mean 258&nbsp;ms) over 30 test cases, MiniLM and DeBERTa on CPU, a small sample.
+        </p>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 font-mono text-[11px]">
           <div className="p-3.5 rounded-xl bg-black/40 border border-white/[0.08] space-y-1.5">
             <div className="text-neutral-400 text-[10px] uppercase tracking-wider">Grounding & Contradiction Classifier</div>
             <div className="text-white font-semibold flex items-center justify-between">
               <span>cross-encoder/nli-deberta-v3-small</span>
-              <span className="text-emerald-400 text-[10px]">~1.1 GB CPU</span>
+              <span className="text-emerald-400 text-[10px]">~1.1 GB cached</span>
             </div>
             <p className="text-neutral-400 font-sans text-[11px]">
               Classifies premise–hypothesis entailment, neutral, and contradiction probabilities. Calibrated formula: <code className="text-neutral-200">contradiction + 0.5 * neutral</code>.
@@ -130,7 +151,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             <div className="text-neutral-400 text-[10px] uppercase tracking-wider">Embedding & Drift Engine</div>
             <div className="text-white font-semibold flex items-center justify-between">
               <span>sentence-transformers/all-MiniLM-L6-v2</span>
-              <span className="text-cyan-400 text-[10px]">88 MB CPU</span>
+              <span className="text-cyan-400 text-[10px]">88 MB cached</span>
             </div>
             <p className="text-neutral-400 font-sans text-[11px]">
               Transforms spans into 384-dimensional dense vectors to calculate <code className="text-neutral-200">window_centroid_distance</code> across rolling baseline pools.
@@ -162,9 +183,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               <span className="text-neutral-400 text-[10px] uppercase block">Evaluation Engine</span>
               <span className="text-white font-semibold block">DeBERTa-v3 NLI on CPU</span>
               <p className="text-[10px] text-neutral-400 font-sans">
-                Premise against hypothesis through ONNX Runtime, 215.9&thinsp;ms for the
-                shipped configuration. The model reads at most 512 tokens; a longer
-                premise is reported as truncated rather than scored silently.
+                Premise against hypothesis on CPU: ONNX Runtime when it loads, otherwise
+                PyTorch (the embedding model always runs on PyTorch). Timing is in the
+                header above. The model reads at most 512 tokens; a longer premise is
+                reported as truncated rather than scored silently.
               </p>
             </div>
             <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.06] space-y-1">
@@ -458,20 +480,20 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             {/* Miniature Visual Snippet in Compact Typography */}
             <div className="p-2.5 rounded-lg bg-black/60 border border-white/[0.08] space-y-1.5 font-mono text-[10px] leading-tight">
               <div className="text-[9px] text-neutral-500 uppercase tracking-wider flex justify-between">
-                <span>Dense Telemetry Preview</span>
-                <span className="text-cyan-400">+35% Row Capacity</span>
+                <span>Dense layout preview &middot; sample rows</span>
+                <span className="text-cyan-400">More rows per screen</span>
               </div>
               <div className="flex items-center justify-between text-neutral-200 border-b border-white/[0.06] pb-1">
                 <span>span:vector_search</span>
-                <span className="text-emerald-400">18ms · 94 tok</span>
+                <span className="text-neutral-500">— ms · — tok</span>
               </div>
               <div className="flex items-center justify-between text-neutral-200 border-b border-white/[0.06] pb-1">
                 <span>span:grounding_eval</span>
-                <span className="text-emerald-400">0.96 OK</span>
+                <span className="text-neutral-500">—</span>
               </div>
               <div className="flex items-center justify-between text-neutral-200">
                 <span>span:model_stream</span>
-                <span className="text-cyan-400">312ms · 540 tok</span>
+                <span className="text-neutral-500">— ms · — tok</span>
               </div>
             </div>
           </div>
@@ -507,16 +529,16 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             {/* Miniature Visual Snippet in Comfortable Typography */}
             <div className="p-2.5 rounded-lg bg-black/60 border border-white/[0.08] space-y-2 font-mono text-[11px] leading-normal">
               <div className="text-[9px] text-neutral-500 uppercase tracking-wider flex justify-between">
-                <span>Spacious Reading Preview</span>
+                <span>Spacious layout preview &middot; sample rows</span>
                 <span className="text-emerald-400">1.0x Baseline</span>
               </div>
               <div className="flex items-center justify-between text-neutral-200 border-b border-white/[0.06] pb-1">
                 <span>span:vector_search</span>
-                <span className="text-emerald-400">18ms · 94 tok</span>
+                <span className="text-neutral-500">— ms · — tok</span>
               </div>
               <div className="flex items-center justify-between text-neutral-200">
                 <span>span:grounding_eval</span>
-                <span className="text-emerald-400">0.96 OK</span>
+                <span className="text-neutral-500">—</span>
               </div>
             </div>
           </div>
