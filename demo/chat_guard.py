@@ -26,7 +26,7 @@ through a trusted proxy has the header ignored.
 
 # ABOUT THIS FILE
 # ---------------
-# Used by demo/chat_server.py, which calls Guard.check_pause(), check_message(), client_ip()
+# Used by demo/chat_server.py, which calls check_pause(), check_message(), client_ip()
 # and TurnLimiter.admit() before it spends anything on a turn. No FastAPI code here, so the
 # rules can be tested on their own: tests/test_chat_guard.py.
 
