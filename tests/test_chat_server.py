@@ -80,8 +80,12 @@ class StubClient:
         return [c["messages"][0]["content"] for c in self.calls]
 
 
+# In short: the real provider chain over a stub client. Pollinations ends every chain; its
+# 32 s spacing is real time here (the server's clock is not faked), so it is turned off, or
+# every test whose stub fails would sit out the spacing before Pollinations' retry.
 def _chain(stub, env=None):
     env = {"GROQ_API_KEY": GROQ_KEY} if env is None else env
+    env = {"CHAT_POLLINATIONS_MIN_INTERVAL_SECONDS": "0", **env}
     return ProviderChain.from_env(env, client_factory=lambda route, timeout: stub, hang_grace=0.2)
 
 
@@ -202,6 +206,8 @@ def test_retriever_is_not_told_to_use_the_extractors_phrasing(pulse):
     assert "in the form" not in retriever_prompt
 
 
+# What a visitor gets when providers refuse or fail: the answering provider named, or an
+# honest error with the stages that did finish.
 class TestFailover:
     def test_a_rate_limited_provider_hands_over_and_the_response_says_so(self, pulse, spans):
         stub = StubClient(fail=lambda n, kw: StatusError(429, retry_after=120) if kw["model"] == "openai/gpt-oss-20b" else None)
@@ -251,6 +257,7 @@ class TestFailover:
         assert len(stub.calls) == 1
 
 
+# Turns refused before anything is spent: a bad question, a per-IP limit, the site's day.
 class TestRefusals:
     def test_empty_and_oversize_messages_are_400_and_cost_nothing(self, pulse, spans):
         stub = StubClient()
@@ -288,6 +295,7 @@ class TestRefusals:
         assert client.get("/chat/health").json()["usage"]["turns_today"] == 1
 
 
+# Pausing and resuming a running service, for /chat, /chat/stream and /health alike.
 class TestKillSwitch:
     def test_the_flag_file_pauses_chat_and_health_without_a_restart(self, pulse, tmp_path):
         flag = tmp_path / "paused"
@@ -316,6 +324,7 @@ class TestKillSwitch:
         assert client.post("/chat", json={"message": "q"}).json()["code"] == "paused"
 
 
+# A cold start: "loading" until MiniLM is ready, and a clear state if it cannot load.
 class TestReadiness:
     def test_health_says_loading_until_the_embedding_model_is_ready(self, pulse):
         release = threading.Event()
@@ -353,25 +362,55 @@ class TestReadiness:
         with pytest.raises(RuntimeError):
             chat_server.load_retrieval()
 
-    def test_no_configured_provider_is_reported(self, pulse):
+    def test_without_any_key_the_keyless_provider_still_answers(self, pulse):
+        # CHAT_PROVIDERS names only Groq and no key is set: Pollinations is still the last
+        # route, so the chat is ready and answers rather than refusing.
         chain = _chain(StubClient(), {"CHAT_PROVIDERS": "groq"})
         client = _client(pulse, chain=chain)
+        assert client.get("/chat/health").json()["status"] == "ready"
+        body = client.post("/chat", json={"message": "q"}).json()
+        assert {a["provider"] for a in body["agents"]} == {"pollinations"}
+
+    def test_an_empty_chain_is_reported_not_crashed_on(self, pulse):
+        client = _client(pulse, chain=ProviderChain([]))
         assert client.get("/chat/health").json()["status"] == "failed"
         assert client.post("/chat", json={"message": "q"}).status_code == 503
 
 
-def test_health_lists_the_chain_without_keys(pulse):
-    chain = _chain(StubClient(), {"GROQ_API_KEY": GROQ_KEY, "CEREBRAS_API_KEY": CEREBRAS_KEY})
-    res = _client(pulse, chain=chain).get("/chat/health")
-    body = res.json()
-    assert res.status_code == 200 and body["status"] == "ready"
-    assert body["providers"] == ["groq", "cerebras", "pollinations"]
-    assert body["chain"][0] == {"provider": "groq", "model": "openai/gpt-oss-20b"}
-    assert body["agents"] == list(AGENTS)
-    assert GROQ_KEY not in res.text and CEREBRAS_KEY not in res.text
-    assert "base_url" not in res.text
+# What /health tells the owner and an uptime monitor: every provider, configured or not, its
+# last success and last failure (outcome and status only), and whether the chain is degraded.
+class TestHealthProviders:
+    def test_health_lists_every_provider_without_keys(self, pulse):
+        chain = _chain(StubClient(), {"GROQ_API_KEY": GROQ_KEY, "CEREBRAS_API_KEY": CEREBRAS_KEY})
+        res = _client(pulse, chain=chain).get("/chat/health")
+        body = res.json()
+        assert res.status_code == 200 and body["status"] == "ready"
+        assert body["degraded"] is False
+        by_name = {p["provider"]: p for p in body["providers"]}
+        assert list(by_name) == ["groq", "cerebras", "nvidia", "openrouter", "pollinations"]
+        assert [by_name[n]["configured"] for n in by_name] == [True, True, False, False, True]
+        assert body["chain"][0] == {"provider": "groq", "model": "openai/gpt-oss-20b"}
+        assert body["chain"][-1]["provider"] == "pollinations"
+        assert body["agents"] == list(AGENTS)
+        assert GROQ_KEY not in res.text and CEREBRAS_KEY not in res.text
+        assert "base_url" not in res.text
+
+    def test_a_failing_provider_shows_up_as_degraded_with_its_error_class(self, pulse):
+        stub = StubClient(fail=lambda n, kw: StatusError(401) if kw["model"] == "openai/gpt-oss-20b" else None)
+        client = _client(pulse, stub)
+        assert client.post("/chat", json={"message": "q"}).status_code == 200
+        body = client.get("/chat/health").json()
+        groq = next(p for p in body["providers"] if p["provider"] == "groq")
+        assert body["degraded"] is True
+        assert groq["last_error"]["outcome"] == "http_error"
+        assert groq["last_error"]["status"] == 401
+        assert groq["last_success"] is None
+        assert "SECRET-PROVIDER-BODY" not in json.dumps(body)
+        pollinations = next(p for p in body["providers"] if p["provider"] == "pollinations")
+        assert pollinations["last_success"] is not None
 
 
+# X-Forwarded-For counts only from a trusted proxy (Caddy); anyone else's is ignored.
 class TestForwardedFor:
     def test_behind_a_trusted_proxy_each_forwarded_client_has_its_own_limit(self, pulse):
         guard = GuardSettings(ip_per_minute=1, max_concurrent=5, trusted_proxies=parse_networks("172.16.0.0/12"))
@@ -389,6 +428,7 @@ class TestForwardedFor:
         assert [first.status_code, spoofed.status_code] == [200, 429]
 
 
+# The stream's shape: one event per stage, then exactly one done or error event.
 class TestStream:
     def test_the_stream_reports_each_stage_then_the_whole_turn(self, pulse):
         client = _client(pulse)

@@ -51,6 +51,8 @@ DEFAULT_PAUSE_MESSAGE = "The live chat is paused right now. Please come back lat
 _SESSION_ID = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
 
 
+# In short: a whole number from the environment, or the default when it is unset or not a
+# number. A typo in a limit must not stop the service from starting.
 def _env_int(env: dict[str, str], name: str, default: int) -> int:
     try:
         return int(env.get(name) or default)
@@ -58,11 +60,13 @@ def _env_int(env: dict[str, str], name: str, default: int) -> int:
         return default
 
 
+# In short: True only for an explicit yes (1, true, yes, on). Anything else, empty included,
+# is no, so the kill switch is off unless the owner turned it on on purpose.
 def _truthy(value: Optional[str]) -> bool:
     return (value or "").strip().lower() in ("1", "true", "yes", "on")
 
 
-# Parse "a, b/24, c" into networks. A single address becomes a /32 (or /128). An entry that
+# In short: parse "a, b/24, c" into networks. A single address becomes a /32 (or /128). An entry that
 # does not parse is a configuration mistake and raises, so it is caught at start-up rather
 # than silently trusting nothing (or everything).
 def parse_networks(value: Optional[str]) -> list[IPNetwork]:
@@ -74,13 +78,16 @@ def parse_networks(value: Optional[str]) -> list[IPNetwork]:
     return nets
 
 
-# The defaults suit the free tiers in chat_providers.py: at three LLM calls a turn, 300 turns
-# a day is 900 requests, under Groq's 1,000 a day for one model, and the chain moves on when
-# Groq's per-minute token limit is reached.
+# In short: every limit, with defaults sized for a handful of examiners trying the site at
+# once (5 questions a minute and 25 a day each) and a site-wide day that stays inside the free
+# quotas when the Groq and Cerebras keys are set. The arithmetic is in deploy/azure/README.md
+# ("Limits"): a turn is three calls and at most about 1,700 tokens, so 300 turns is about
+# 510K tokens and 900 requests a day, against Groq's 200K tokens and 1,000 requests and
+# Cerebras' 2M tokens (two models) a day.
 @dataclass
 class GuardSettings:
-    ip_per_minute: int = 3
-    ip_per_day: int = 30
+    ip_per_minute: int = 5
+    ip_per_day: int = 25
     daily_cap: int = 300
     max_concurrent: int = 2
     max_input_chars: int = 500
@@ -88,12 +95,14 @@ class GuardSettings:
     paused: bool = False
     pause_file: Optional[str] = None
 
+    # In short: the limits from the environment. CHAT_PAUSED is off unless it is set to 1,
+    # true, yes or on, so a forgotten or empty value never hides the demo.
     @classmethod
     def from_env(cls, env: Optional[dict[str, str]] = None) -> "GuardSettings":
         env = dict(os.environ) if env is None else env
         return cls(
-            ip_per_minute=_env_int(env, "CHAT_IP_TURNS_PER_MINUTE", 3),
-            ip_per_day=_env_int(env, "CHAT_IP_TURNS_PER_DAY", 30),
+            ip_per_minute=_env_int(env, "CHAT_IP_TURNS_PER_MINUTE", 5),
+            ip_per_day=_env_int(env, "CHAT_IP_TURNS_PER_DAY", 25),
             daily_cap=_env_int(env, "CHAT_DAILY_TURN_CAP", 300),
             max_concurrent=_env_int(env, "CHAT_MAX_CONCURRENT_TURNS", 2),
             max_input_chars=_env_int(env, "CHAT_MAX_INPUT_CHARS", 500),
@@ -112,6 +121,7 @@ class Refusal:
     message: str
     retry_after: Optional[int] = None
 
+    # In short: the refusal as the JSON body the page reads.
     def as_dict(self) -> dict:
         out = {"code": self.code, "error": self.message}
         if self.retry_after is not None:
@@ -119,9 +129,11 @@ class Refusal:
         return out
 
 
-# The pause message, or None when the chat is running. The file wins over the default text
-# when it holds any; it is read at most 300 characters, and a file that cannot be read still
-# counts as a pause (it exists, so the owner meant it).
+# In short: the kill switch. Returns the pause message, or None when the chat is running.
+# The file is looked at on every call, which is what lets the owner pause a running container
+# with `touch` and resume it with `rm`, without a restart. Its text, if any, replaces the
+# default message (at most 300 characters); a file that cannot be read still counts as a
+# pause, because it exists and the owner meant it.
 def pause_message(settings: GuardSettings) -> Optional[str]:
     if settings.pause_file and os.path.exists(settings.pause_file):
         try:
@@ -135,11 +147,14 @@ def pause_message(settings: GuardSettings) -> Optional[str]:
     return None
 
 
+# In short: the pause as a 503 refusal, or None when the chat is running.
 def check_pause(settings: GuardSettings) -> Optional[Refusal]:
     message = pause_message(settings)
     return Refusal(503, "paused", message) if message else None
 
 
+# In short: refuse an empty or blank question, and one longer than CHAT_MAX_INPUT_CHARS, with a
+# sentence that says which, before any model is asked.
 def check_message(message: str, settings: GuardSettings) -> Optional[Refusal]:
     if not message.strip():
         return Refusal(400, "empty_message", "Type a question first.")
@@ -153,10 +168,12 @@ def check_message(message: str, settings: GuardSettings) -> Optional[Refusal]:
     return None
 
 
+# In short: the caller's session id if it is a short plain token, otherwise a new one.
 def clean_session_id(value: Optional[str], make: Callable[[], str]) -> str:
     return value if value and _SESSION_ID.match(value) else make()
 
 
+# In short: text as an IP address, or None when it is not one.
 def _parse_ip(text: str) -> Optional[IPAddress]:
     try:
         return ipaddress.ip_address(text.strip())
@@ -164,11 +181,12 @@ def _parse_ip(text: str) -> Optional[IPAddress]:
         return None
 
 
+# In short: True when the address is inside one of the trusted proxy ranges.
 def _trusted(ip: IPAddress, trusted: list[IPNetwork]) -> bool:
     return any(ip in net for net in trusted)
 
 
-# The IP a turn is counted against. In: the TCP peer's address (None when unknown), the
+# In short: the IP a turn is counted against. In: the TCP peer's address (None when unknown), the
 # X-Forwarded-For header (None when absent) and the trusted proxies. Out: an address as text.
 def client_ip(peer: Optional[str], forwarded_for: Optional[str], trusted: list[IPNetwork]) -> str:
     peer_ip = _parse_ip(peer) if peer else None
@@ -190,14 +208,23 @@ def client_ip(peer: Optional[str], forwarded_for: Optional[str], trusted: list[I
     return str(nearest)
 
 
+# In short: the UTC date of a timestamp, the key the daily counters reset on.
 def _utc_day(now: float) -> str:
     return datetime.fromtimestamp(now, timezone.utc).strftime("%Y-%m-%d")
 
 
+# In short: seconds from a timestamp to the next 00:00 UTC, when the daily counters reset.
 def _seconds_to_utc_midnight(now: float) -> int:
     current = datetime.fromtimestamp(now, timezone.utc)
     midnight = (current + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
     return max(1, int((midnight - current).total_seconds()))
+
+
+# In short: when the daily limits reset, as a visitor reads it: "at 00:00 UTC, in 5 h 12 min".
+def _reset_text(seconds: int) -> str:
+    hours, minutes = divmod(max(1, (seconds + 59) // 60), 60)
+    left = f"{hours} h {minutes} min" if hours else f"{minutes} min"
+    return f"at 00:00 UTC, in {left}"
 
 
 class TurnLimiter:
@@ -218,32 +245,38 @@ class TurnLimiter:
         self._day_total = 0
         self.running = 0
 
+    # In short: on the first call of a new UTC day, start the daily counts again from zero.
     def _roll_day(self, now: float) -> None:
         day = _utc_day(now)
         if day != self._day:
             self._day, self._day_by_ip, self._day_total = day, {}, 0
 
+    # In short: the rate-limit check. Either record a turn for this IP and return None, or
+    # return why not. The site's day is checked first (it is the same answer for everyone),
+    # then this IP's day, its last minute, and the turns running right now.
     def admit(self, ip: str) -> Optional[Refusal]:
         s = self.settings
         now = self._clock()
         self._roll_day(now)
+        to_midnight = _seconds_to_utc_midnight(now)
 
         if self._day_total >= s.daily_cap:
             return Refusal(
                 429,
                 "daily_cap",
                 "The live chat has answered all the questions it can for today. "
-                "It starts again at 00:00 UTC.",
-                _seconds_to_utc_midnight(now),
+                f"It starts again {_reset_text(to_midnight)}.",
+                to_midnight,
             )
         if self._day_by_ip.get(ip, 0) >= s.ip_per_day:
             return Refusal(
                 429,
                 "rate_limited",
                 f"You have asked {s.ip_per_day} questions today, the most one visitor can. "
-                "It resets at 00:00 UTC.",
-                _seconds_to_utc_midnight(now),
+                f"It resets {_reset_text(to_midnight)}.",
+                to_midnight,
             )
+        # This IP's last minute: drop the turns older than 60 s, then count what is left.
         recent = self._minute.setdefault(ip, deque())
         while recent and recent[0] <= now - 60.0:
             recent.popleft()
@@ -272,10 +305,11 @@ class TurnLimiter:
             self._minute = {k: v for k, v in self._minute.items() if v and v[-1] > now - 60.0}
         return None
 
+    # In short: free the concurrency slot of a turn that has ended, however it ended.
     def finish(self) -> None:
         self.running = max(0, self.running - 1)
 
-    # What /health shows: today's count and cap. No IPs.
+    # In short: what /health shows: today's count and cap, and the turns running now. No IPs.
     def usage(self) -> dict:
         self._roll_day(self._clock())
         return {

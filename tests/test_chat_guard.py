@@ -34,6 +34,7 @@ def _noon():
     return datetime(2026, 10, 25, 12, 0, tzinfo=timezone.utc).timestamp()
 
 
+# Which IP a turn counts against: the TCP peer, unless that peer is a trusted proxy.
 class TestClientIp:
     def test_without_a_trusted_proxy_the_header_is_ignored(self):
         assert client_ip("203.0.113.9", "1.2.3.4", []) == "203.0.113.9"
@@ -62,6 +63,7 @@ class TestClientIp:
             parse_networks("172.16.0.0/12, nonsense")
 
 
+# The question itself: empty and oversize ones are refused; session ids are cleaned.
 class TestMessage:
     def test_empty_and_blank_are_refused(self):
         for text in ("", "   \n "):
@@ -82,6 +84,7 @@ class TestMessage:
         assert clean_session_id("a" * 65, make) == "sess_new"
 
 
+# The kill switch: the env flag and the flag file, which works without a restart.
 class TestPause:
     def test_running_by_default(self):
         assert check_pause(GuardSettings()) is None
@@ -102,6 +105,7 @@ class TestPause:
         assert check_pause(settings) is None
 
 
+# The per-IP minute and day, the site's day, and the turns running at once.
 class TestLimiter:
     def test_per_ip_per_minute(self):
         clock = Clock(_noon())
@@ -128,12 +132,14 @@ class TestLimiter:
         clock.t = datetime(2026, 10, 26, 0, 0, 1, tzinfo=timezone.utc).timestamp()
         assert limiter.admit("a") is None
 
-    def test_the_global_daily_cap_covers_every_visitor(self):
+    def test_the_global_daily_cap_covers_every_visitor_and_says_when_it_resets(self):
         clock = Clock(_noon())
         limiter = TurnLimiter(GuardSettings(daily_cap=3, max_concurrent=10), clock)
         assert [limiter.admit(ip) for ip in "abc"] == [None, None, None]
         refusal = limiter.admit("d")
         assert (refusal.status, refusal.code) == (429, "daily_cap")
+        assert "at 00:00 UTC, in 12 h 0 min" in refusal.message
+        assert refusal.retry_after == 12 * 3600
         assert limiter.usage() == {"turns_today": 3, "daily_cap": 3, "running": 3}
 
     def test_concurrent_turns_are_capped_and_freed_by_finish(self):
@@ -148,6 +154,16 @@ class TestLimiter:
         limiter.admit("a")
         assert limiter.admit("a").code == "busy"
         assert limiter.usage()["turns_today"] == 1
+
+
+# The defaults are sized for a handful of examiners, and the kill switch is off unless it is
+# turned on on purpose: an empty or "0" value must never hide the demo.
+def test_defaults_suit_a_few_examiners_and_leave_the_chat_on():
+    s = GuardSettings.from_env({})
+    assert (s.ip_per_minute, s.ip_per_day, s.daily_cap) == (5, 25, 300)
+    assert s.ip_per_minute >= 5 and s.ip_per_day >= 20
+    for value in ("", "0", "false", "no", "off"):
+        assert check_pause(GuardSettings.from_env({"CHAT_PAUSED": value})) is None
 
 
 def test_settings_come_from_the_environment():
