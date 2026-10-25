@@ -13,6 +13,13 @@
 # `caddy hash-password`, never the password itself) reach Caddy from .env through
 # the compose file.
 #
+# One write is public on purpose: /chat*, the live chat (the `chat` compose service,
+# demo/chat_server.py). It reaches that service and nothing else, and the service
+# limits it itself: turns per IP per minute and per day, a daily cap for the site,
+# a maximum question length and a kill switch (deploy/azure/README.md, "The live
+# chat"). If the chat container is not running, /chat* answers 502 and the rest of
+# the site is unaffected: Caddy looks the name up per request, not at start.
+#
 # Unset, they fall back to the placeholders below (the compose file does the same
 # for an empty value). The placeholder hash matches no password, so every write
 # is refused with 401, reads keep working and Caddy still starts: a missing value
@@ -23,13 +30,30 @@
 
 	@write {
 		not method GET HEAD
-		# Add a line here for a write that must stay public, for example the
-		# rate-limited chat: `not path /chat*`. Lines in this block are ANDed, so a
-		# request is checked for a password only if every one of them matches.
+		# A write that must stay public gets a line here. Lines in this block are
+		# ANDed, so a request is checked for a password only if every one of them
+		# matches. The chat's line uses the same matcher as its handle block below,
+		# so whatever skips the password goes to the chat service and only there.
+		not path /chat*
 	}
 	basic_auth @write bcrypt "AgentPulse writes" {
 		{$AGENTPULSE_WRITE_USER:writes-disabled} {$AGENTPULSE_WRITE_HASH:ZGlzYWJsZWQ=}
 	}
 
-	reverse_proxy dashboard:5173
+	# The live chat. A question is at most a few hundred characters, so a body over
+	# 16 KB is refused (413) before it reaches the service. flush_interval -1 passes
+	# each line of POST /chat/stream on as soon as it arrives, instead of buffering
+	# the stream until the turn is over.
+	handle /chat* {
+		request_body {
+			max_size 16KB
+		}
+		reverse_proxy chat:8100 {
+			flush_interval -1
+		}
+	}
+
+	handle {
+		reverse_proxy dashboard:5173
+	}
 }
