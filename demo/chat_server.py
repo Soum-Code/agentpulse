@@ -208,6 +208,8 @@ class _TurnStream(StreamingResponse):
         super().__init__(*args, **kwargs)
         self._release = release
 
+    # Starlette calls this to send the response; finally runs however it ends: finished,
+    # failed, or cut off by the visitor.
     async def __call__(self, scope: Any, receive: Any, send: Any) -> None:
         try:
             await super().__call__(scope, receive, send)
@@ -335,6 +337,8 @@ def create_app(
             content={"code": "internal", "error": "Something went wrong on the server.", "agents": []},
         )
 
+    # In short: whether a turn would run right now, and if not the sentence that says why.
+    # The kill switch comes first, so a paused chat says "paused" even while it is loading.
     def status_now() -> tuple[str, Optional[str]]:
         pause = check_pause(guard)
         if pause:
@@ -428,6 +432,7 @@ def create_app(
         started = time.monotonic()
         deadline = started + budget
 
+        # In short: milliseconds since the turn started, for total_ms and the logs.
         def elapsed_ms() -> int:
             return round((time.monotonic() - started) * 1000)
 
@@ -623,6 +628,8 @@ def create_app(
         if refused:
             return refused
 
+        # In short: the stream writer. Each event becomes one JSON line, sent as soon as it is
+        # produced. "status" is dropped: on a stream the HTTP status is already 200.
         async def lines() -> AsyncIterator[str]:
             async for event in run_turn(body.message, session_id):
                 event.pop("status", None)
