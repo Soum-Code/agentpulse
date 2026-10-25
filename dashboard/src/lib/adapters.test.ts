@@ -81,6 +81,19 @@ describe('toAgents', () => {
     expect(toAgents([agent({ error_rate: 0.25 })], [])[0].successRate).toBe(75);
   });
 
+  it('rounds the success rate to one decimal', () => {
+    // (1 - 0.1667) * 100 is 83.33000000000001 in floating point, and three views printed
+    // it raw. The API rounds error_rate to four decimals; one decimal of percent is enough.
+    expect(toAgents([agent({ error_rate: 0.1667 })], [])[0].successRate).toBe(83.3);
+    expect(toAgents([agent({ error_rate: 0.3333 })], [])[0].successRate).toBe(66.7);
+  });
+
+  it('leaves latency and role absent when the API has none', () => {
+    const [a] = toAgents([agent({ avg_latency_ms: null, agent_role: null })], []);
+    expect(a.latencyAvgMs).toBeUndefined();
+    expect(a.description).toBeUndefined();
+  });
+
   it('leaves drift absent until the backend has a window distance', () => {
     const [a] = toAgents([agent()], []);
     expect(a.driftScore).toBeUndefined();
@@ -163,6 +176,15 @@ describe('toIncidents', () => {
 });
 
 describe('toSpans', () => {
+  it('keeps an unrecorded latency apart from 0', () => {
+    // The drift scenario's spans carry no latency_ms, and the Traces view printed "0ms" for
+    // each. durationMs stays 0 for the waterfall layout; latencyMs is what gets printed.
+    const [none, some] = toSpans([span({ span_id: 'a', latency_ms: null }), span({ span_id: 'b', latency_ms: 12.5 })], 't1');
+    expect(none.latencyMs).toBeUndefined();
+    expect(none.durationMs).toBe(0);
+    expect(some.latencyMs).toBe(12.5);
+  });
+
   it('measures offsets from the earliest span, not from the first in the array', () => {
     // Regression: the waterfall rendered from array order, so a span that
     // started earlier but arrived later got a negative offset and was drawn
@@ -297,6 +319,15 @@ describe('toDriftProfiles', () => {
     ]);
     expect(p.driftReason).toMatch(/have not filled/i);
     expect(p.driftMagnitude).toBeUndefined();
+  });
+
+  it('does not invent a current-window size', () => {
+    // currentSampleCount was a hard-coded 0, shown as "Active Sample: 0". The API does not
+    // report how full the current window is, so it stays absent.
+    const [p] = toDriftProfiles([
+      { agent_id: 'researcher', current_asi: null, latest_centroid_distance: 0.1, latest_window_centroid_distance: 0.1 },
+    ]);
+    expect(p.currentSampleCount).toBeUndefined();
   });
 
   it('quotes the measured distance when it exceeds the threshold', () => {

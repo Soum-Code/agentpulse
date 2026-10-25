@@ -1,7 +1,21 @@
 import React, { useState } from 'react';
-import { Bot, Terminal, Activity, ArrowRight, ShieldCheck, Wrench, Search, ChevronRight } from 'lucide-react';
-import { Agent, Trace } from '../../types';
-import { AgentLatencySparkline } from './AgentLatencySparkline';
+import { Bot, ArrowRight, Wrench, Search, Gauge } from 'lucide-react';
+import { Agent } from '../../types';
+import { DRIFT_THRESHOLD } from '../../lib/adapters';
+import {
+  DASH,
+  DRIFT_BASELINE_OUTPUTS,
+  DRIFT_CURRENT_WINDOW_OUTPUTS,
+  distanceBarPct,
+  driftStatusLabel,
+  formatDistance,
+  formatLatencyMs,
+  formatSuccessRate,
+  isLowSuccess,
+  isOverDriftThreshold,
+  rosterSummary,
+} from '../../lib/agentFormat';
+import { formatRelativeTime } from '../../utils/dateUtils';
 
 interface AgentsViewProps {
   agents: Agent[];
@@ -11,6 +25,9 @@ interface AgentsViewProps {
   onNavigateToDrift: (agentId: string) => void;
 }
 
+/** The Agents tab: a roster of every agent the API has seen (left) and the selected agent's
+ *  measured figures (right). Every number here comes from GET /v1/agents and GET /v1/drift
+ *  through lib/adapters.ts; a missing one prints as an em dash. */
 export const AgentsView: React.FC<AgentsViewProps> = ({
   agents,
   selectedAgent,
@@ -38,10 +55,12 @@ export const AgentsView: React.FC<AgentsViewProps> = ({
         <div>
           <h2 className="text-lg font-mono font-semibold text-white uppercase tracking-wider flex items-center space-x-2">
             <Bot className="w-5 h-5 text-neutral-400" />
-            <span>Autonomous Agent Roster</span>
+            <span>Agent Roster</span>
           </h2>
+          {/* Counted from the loaded agents. It used to read "4 active swarms · LangGraph,
+              LangGraph & Custom Orchestrators" whatever the data said. */}
           <p className="text-xs font-mono text-neutral-400 mt-1">
-            4 active swarms &nbsp;·&nbsp; LangGraph, LangGraph & Custom Orchestrators &nbsp;·&nbsp; Real-time latency & drift monitoring
+            {rosterSummary(agents)}
           </p>
         </div>
 
@@ -51,7 +70,7 @@ export const AgentsView: React.FC<AgentsViewProps> = ({
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Filter agents by name, framework, or model..."
+            placeholder="Filter agents by name..."
             className="w-full bg-[#0d0e12] border border-white/[0.08] rounded-lg pl-9 pr-3 py-2 text-xs font-mono text-neutral-200 placeholder-neutral-500 focus:outline-none focus:border-white/20 transition-colors"
           />
         </div>
@@ -59,7 +78,7 @@ export const AgentsView: React.FC<AgentsViewProps> = ({
 
       {/* Main Split Layout: Agent List (Left) + Detailed Agent Inspector (Right) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* Left Column: Agent Cards with Recharts 60m Sparklines */}
+        {/* Left Column: one card per agent */}
         <div className="lg:col-span-5 space-y-3">
           {filteredAgents.map((agent) => {
             const isSelected = currentAgent?.id === agent.id;
@@ -90,37 +109,44 @@ export const AgentsView: React.FC<AgentsViewProps> = ({
                       <div className="text-xs font-bold text-white font-mono group-hover:text-emerald-300 transition-colors">
                         {agent.name}
                       </div>
+                      {/* Framework and model are shown only when they exist; they have no
+                          source in the span schema, so this is usually the agent's role. */}
                       <div className="text-[11px] font-mono text-neutral-400 mt-0.5 flex items-center space-x-2">
-                        <span className="text-neutral-200 font-semibold px-1.5 py-0.2 rounded bg-white/[0.06] border border-white/[0.1]">{agent.framework}</span>
-                        <span className="text-neutral-600">·</span>
-                        <span className="text-neutral-300">{agent.model}</span>
+                        {agent.framework && (
+                          <span className="text-neutral-200 font-semibold px-1.5 py-0.2 rounded bg-white/[0.06] border border-white/[0.1]">{agent.framework}</span>
+                        )}
+                        {agent.model && <span className="text-neutral-300">{agent.model}</span>}
+                        {!agent.framework && !agent.model && (
+                          <span className="text-neutral-500">{agent.description ? `role: ${agent.description}` : 'no role, framework or model recorded'}</span>
+                        )}
                       </div>
                     </div>
                   </div>
 
+                  {/* Drift badge. An agent with no baseline yet used to fall through to the
+                      rose "drift" styling with an empty label. */}
                   <span
                     className={`text-[10px] font-mono px-2 py-0.5 rounded border uppercase shadow-xs ${
-                      agent.driftStatus === 'normal'
-                        ? 'border-white/[0.12] text-neutral-300 bg-white/[0.06]'
+                      agent.driftStatus === 'drift'
+                        ? 'border-rose-500/40 text-rose-300 bg-rose-500/20 shadow-[0_0_12px_rgba(244,63,94,0.15)]'
                         : agent.driftStatus === 'deviation'
                         ? 'border-amber-500/40 text-amber-300 bg-amber-500/20 shadow-[0_0_12px_rgba(245,158,11,0.15)]'
-                        : 'border-rose-500/40 text-rose-300 bg-rose-500/20 shadow-[0_0_12px_rgba(244,63,94,0.15)]'
+                        : agent.driftStatus === 'normal'
+                        ? 'border-white/[0.12] text-neutral-300 bg-white/[0.06]'
+                        : 'border-dashed border-white/[0.14] text-neutral-500 bg-transparent'
                     }`}
                   >
-                    {agent.driftStatus}
+                    {driftStatusLabel(agent.driftStatus)}
                   </span>
                 </div>
 
-                {/* 60-Minute Recharts Sparkline */}
-                <div className="mt-3 pt-2.5 border-t border-white/[0.06]">
-                  <AgentLatencySparkline agent={agent} variant="compact" />
-                </div>
-
+                {/* The 60-minute latency sparkline that sat here was drawn from Math.random()
+                    (utils/latencyTelemetry.ts, now deleted): the API has no latency history. */}
                 <div className="mt-2.5 pt-2.5 border-t border-white/[0.06] flex items-center justify-between text-[11px] font-mono text-neutral-400">
                   <span className="text-neutral-300 font-medium">{agent.totalTraces24h.toLocaleString()} spans ingested</span>
-                  <span className="text-neutral-300 font-medium">{agent.latencyAvgMs}ms avg</span>
-                  <span className={agent.successRate < 90 ? 'text-rose-400 font-bold' : 'text-emerald-400 font-bold'}>
-                    {agent.successRate}% OK
+                  <span className="text-neutral-300 font-medium">{formatLatencyMs(agent.latencyAvgMs)} avg</span>
+                  <span className={isLowSuccess(agent.successRate) ? 'text-rose-400 font-bold' : 'text-emerald-400 font-bold'}>
+                    {formatSuccessRate(agent.successRate)} OK
                   </span>
                 </div>
               </div>
@@ -165,10 +191,11 @@ export const AgentsView: React.FC<AgentsViewProps> = ({
             <div className="p-6 space-y-6">
               <div>
                 <span className="text-xs font-mono text-neutral-400 uppercase tracking-wider block mb-1">
-                  Architecture & Responsibility
+                  Role
                 </span>
+                {/* agent_role is the only descriptive text the backend stores. */}
                 <p className="text-xs text-neutral-300 leading-relaxed font-mono">
-                  {currentAgent.description}
+                  {currentAgent.description ?? <span className="text-neutral-600">Not recorded &mdash; the SDK sent no agent_role for this agent</span>}
                 </p>
               </div>
 
@@ -176,11 +203,15 @@ export const AgentsView: React.FC<AgentsViewProps> = ({
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 font-mono text-xs">
                 <div className="p-3 rounded-xl ios-liquid-row border border-white/[0.12]">
                   <span className="text-neutral-400 block text-[10px]">FRAMEWORK</span>
-                  <span className="text-white font-bold mt-1 block">{currentAgent.framework}</span>
+                  <span className="text-white font-bold mt-1 block">
+                    {currentAgent.framework ?? <span className="text-neutral-600">&mdash;</span>}
+                  </span>
                 </div>
                 <div className="p-3 rounded-xl ios-liquid-row border border-white/[0.12]">
                   <span className="text-neutral-400 block text-[10px]">CORE MODEL</span>
-                  <span className="text-white font-bold mt-1 block">{currentAgent.model}</span>
+                  <span className="text-white font-bold mt-1 block">
+                    {currentAgent.model ?? <span className="text-neutral-600">&mdash;</span>}
+                  </span>
                 </div>
                 <div className="p-3 rounded-xl ios-liquid-row border border-white/[0.12]">
                   <span className="text-neutral-400 block text-[10px]">VERSION</span>
@@ -202,19 +233,51 @@ export const AgentsView: React.FC<AgentsViewProps> = ({
                 </div>
               </div>
 
-              {/* 60-Minute Detailed Latency Telemetry & Drift Analysis (Recharts) */}
+              {/* Measured figures. This replaces a "60-minute latency drift" chart, a "+140%"
+                  diagnosis and a "baseline SLA" that were generated in the browser: the API
+                  keeps one moving average per agent and no per-minute history to chart. */}
               <div>
-                <span className="text-xs font-mono text-neutral-400 uppercase tracking-wider block mb-2">
-                  Performance & Latency Drift Telemetry (Last 60 Minutes)
+                <span className="text-xs font-mono text-neutral-400 uppercase tracking-wider block mb-2 flex items-center space-x-1.5">
+                  <Gauge className="w-3.5 h-3.5 text-neutral-400" />
+                  <span>Measured figures</span>
                 </span>
-                <AgentLatencySparkline agent={currentAgent} variant="detailed" />
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 font-mono text-xs">
+                  <div className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.08]">
+                    <span className="text-neutral-400 block text-[10px] uppercase font-semibold">Latency (moving avg)</span>
+                    <span className="text-white font-bold text-sm mt-1 block">{formatLatencyMs(currentAgent.latencyAvgMs)}</span>
+                  </div>
+                  <div className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.08]">
+                    <span className="text-neutral-400 block text-[10px] uppercase font-semibold">Success rate</span>
+                    <span className={`font-bold text-sm mt-1 block ${isLowSuccess(currentAgent.successRate) ? 'text-rose-400' : 'text-white'}`}>
+                      {formatSuccessRate(currentAgent.successRate)}
+                    </span>
+                  </div>
+                  <div className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.08]">
+                    <span className="text-neutral-400 block text-[10px] uppercase font-semibold">Spans ingested</span>
+                    <span className="text-white font-bold text-sm mt-1 block">{currentAgent.totalTraces24h.toLocaleString()}</span>
+                  </div>
+                  <div className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.08]">
+                    <span className="text-neutral-400 block text-[10px] uppercase font-semibold">Last seen</span>
+                    {/* formatRelativeTime reads the backend's zone-less UTC time correctly and
+                        answers 'N/A' when it cannot; that becomes a dash here. */}
+                    <span className="text-white font-bold text-sm mt-1 block">
+                      {formatRelativeTime(currentAgent.lastActive).replace(/^N\/A$/, DASH)}
+                    </span>
+                  </div>
+                </div>
+                <p className="text-[11px] font-mono text-neutral-500 mt-2 leading-relaxed">
+                  Latency is a moving average kept per agent: each new span counts 5% and the old
+                  average 95%. No per-minute history is stored, so no latency chart is drawn.
+                  Success rate is the share of spans not reported as errors, over all spans.
+                </p>
               </div>
 
               {/* Tools Inventory */}
               <div>
                 <span className="text-xs font-mono text-neutral-400 uppercase tracking-wider block mb-2 flex items-center space-x-1.5">
                   <Wrench className="w-3.5 h-3.5 text-neutral-400" />
-                  <span>Bound Tool Handlers ({currentAgent.tools?.length ?? 0})</span>
+                  {/* A dash, not "(0)": the count is unknown, not zero. */}
+                  <span>Bound Tool Handlers ({currentAgent.tools?.length ?? DASH})</span>
                 </span>
                 <div className="flex flex-wrap gap-2">
                   {/* The backend records a tool name per span, not a roster per
@@ -237,34 +300,41 @@ export const AgentsView: React.FC<AgentsViewProps> = ({
                 </div>
               </div>
 
-              {/* Drift & Anomaly Assessment */}
+              {/* Drift: the window centroid distance, coloured against the 0.30 threshold the
+                  DRIFT_DETECTED alert uses (it used to be coloured at invented 0.2 / 0.5 cuts). */}
               <div className="p-4 rounded-xl ios-liquid-row border border-white/[0.12] space-y-2">
                 <div className="flex items-center justify-between text-xs font-mono">
-                  <span className="text-neutral-400">Drift Anomaly Index:</span>
+                  <span className="text-neutral-400">Window centroid distance (alert above {DRIFT_THRESHOLD.toFixed(2)}):</span>
                   <span
                     className={`font-semibold ${
-                      currentAgent.driftScore > 0.5
+                      currentAgent.driftScore == null
+                        ? 'text-neutral-500'
+                        : isOverDriftThreshold(currentAgent.driftScore)
                         ? 'text-rose-400'
-                        : currentAgent.driftScore > 0.2
-                        ? 'text-amber-400'
                         : 'text-emerald-400'
                     }`}
                   >
-                    {currentAgent.driftScore} Δ ({currentAgent.driftStatus})
+                    {formatDistance(currentAgent.driftScore)} ({driftStatusLabel(currentAgent.driftStatus)})
                   </span>
                 </div>
-                <div className="w-full h-1.5 bg-black/50 rounded-full overflow-hidden border border-white/[0.08]">
+                <div className="relative w-full h-1.5 bg-black/50 rounded-full overflow-hidden border border-white/[0.08]">
                   <div
                     className={`h-full rounded-full transition-all duration-500 ${
-                      currentAgent.driftScore > 0.5
+                      isOverDriftThreshold(currentAgent.driftScore)
                         ? 'bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.8)]'
-                        : currentAgent.driftScore > 0.2
-                        ? 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.8)]'
                         : 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]'
                     }`}
-                    style={{ width: `${Math.min(currentAgent.driftScore * 100, 100)}%` }}
+                    style={{ width: `${distanceBarPct(currentAgent.driftScore)}%` }}
                   />
+                  {/* Tick at the alert threshold. */}
+                  <div className="absolute top-0 bottom-0 w-px bg-white/40" style={{ left: `${DRIFT_THRESHOLD * 100}%` }} />
                 </div>
+                {currentAgent.driftScore == null && (
+                  <p className="text-[11px] font-mono text-neutral-500">
+                    No distance yet: it needs the agent&rsquo;s first {DRIFT_BASELINE_OUTPUTS} evaluated outputs as a
+                    baseline and its latest {DRIFT_CURRENT_WINDOW_OUTPUTS} as the current window.
+                  </p>
+                )}
               </div>
             </div>
           </div>
@@ -273,4 +343,3 @@ export const AgentsView: React.FC<AgentsViewProps> = ({
     </div>
   );
 };
-

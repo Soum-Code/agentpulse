@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { DASH, formatDistance, formatLatencyMs, formatSuccessRate, isLowSuccess } from '../../lib/agentFormat';
 import {
   Bot,
   Layers,
@@ -87,10 +88,13 @@ export const ActiveContextPanel: React.FC<ActiveContextPanelProps> = ({
       `=== AGENTPULSE INVESTIGATION CONTEXT ===`,
       `Timestamp: ${new Date().toISOString()}`,
       `Current View: ${currentTab.toUpperCase()}`,
-      effectiveAgentName ? `Agent: ${effectiveAgentName} (${effectiveAgentFramework || 'Autonomous Swarm'} - ${effectiveAgentModel || 'Default Model'})` : null,
+      // Unknown parts are left out rather than filled with 'Autonomous Swarm' / 'Default Model'.
+      effectiveAgentName ? `Agent: ${[effectiveAgentName, effectiveAgentFramework, effectiveAgentModel].filter(Boolean).join(' · ')}` : null,
       selectedIncident ? `Incident: [${selectedIncident.severity.toUpperCase()}] ${selectedIncident.id} - "${selectedIncident.title}"` : null,
-      selectedTrace ? `Trace: ${selectedTrace.id} | Duration: ${selectedTrace.durationMs}ms | Tokens: ${selectedTrace.totalTokens} | Status: ${selectedTrace.status.toUpperCase()} | Cost: $${selectedTrace.cost.toFixed(4)}` : null,
-      selectedSpan ? `Span: ${selectedSpan.id} (${selectedSpan.name}) | Type: ${selectedSpan.type} | Duration: ${selectedSpan.durationMs}ms` : null,
+      // Tokens and cost are optional on a trace (adapters.ts has no cost source); calling
+      // .toFixed on the missing cost threw, so the copy button failed whenever a trace was open.
+      selectedTrace ? `Trace: ${selectedTrace.id} | Duration: ${selectedTrace.durationMs}ms | Tokens: ${selectedTrace.totalTokens ?? DASH} | Status: ${selectedTrace.status.toUpperCase()} | Cost: ${selectedTrace.cost != null ? `$${selectedTrace.cost.toFixed(4)}` : DASH}` : null,
+      selectedSpan ? `Span: ${selectedSpan.id} (${selectedSpan.name}) | Type: ${selectedSpan.type} | Duration: ${formatLatencyMs(selectedSpan.latencyMs)}` : null,
       selectedSpan?.prompt ? `Span Prompt Preview: ${selectedSpan.prompt.slice(0, 180)}...` : null,
       selectedSpan?.completion ? `Span Completion Preview: ${selectedSpan.completion.slice(0, 180)}...` : null,
       selectedSpan?.evidence ? `Grounding Evidence: ${selectedSpan.evidence.explained}` : null
@@ -293,23 +297,26 @@ export const ActiveContextPanel: React.FC<ActiveContextPanelProps> = ({
                         <div className="text-[10px] font-sans text-neutral-400 uppercase tracking-widest liquid-card-label">
                           Avg Latency
                         </div>
+                        {/* Both values are optional from the API; a dash, never "NaNms". */}
                         <div className="text-neutral-200 font-mono tabular-nums font-medium liquid-card-metric">
-                          {selectedAgent.latencyAvgMs}ms
+                          {formatLatencyMs(selectedAgent.latencyAvgMs)}
                         </div>
                       </div>
                       <div>
                         <div className="text-[10px] font-sans text-neutral-400 uppercase tracking-widest liquid-card-label">
                           Success Rate
                         </div>
-                        <div className="text-emerald-400 font-mono tabular-nums font-medium liquid-card-metric">
-                          {selectedAgent.successRate}%
+                        <div className={`font-mono tabular-nums font-medium liquid-card-metric ${isLowSuccess(selectedAgent.successRate) ? 'text-rose-400' : 'text-emerald-400'}`}>
+                          {formatSuccessRate(selectedAgent.successRate)}
                         </div>
                       </div>
                     </div>
                   )}
 
                   {/* Drift Indicator if present */}
-                  {selectedAgent?.driftStatus !== 'normal' && selectedAgent?.driftScore && (
+                  {/* Only an agent over the drift threshold. This used to show for any status
+                      other than 'normal' and print the raw float. */}
+                  {selectedAgent?.driftStatus === 'drift' && selectedAgent.driftScore != null && (
                     <div className="pt-2 border-t border-white/[0.08] flex items-center justify-between text-[11px]">
                       <span className="text-amber-300/90 font-sans flex items-center space-x-1">
                         <TrendingDown className="w-3 h-3" />
@@ -319,7 +326,7 @@ export const ActiveContextPanel: React.FC<ActiveContextPanelProps> = ({
                         onClick={() => onSelectTab('drift')}
                         className="text-[10px] font-mono tabular-nums text-amber-300 font-bold bg-amber-500/20 px-1.5 py-0.5 rounded border border-amber-500/40 hover:bg-amber-500/30 transition-colors"
                       >
-                        {selectedAgent.driftScore} Δ
+                        {formatDistance(selectedAgent.driftScore)} Δ
                       </button>
                     </div>
                   )}
@@ -489,7 +496,8 @@ export const ActiveContextPanel: React.FC<ActiveContextPanelProps> = ({
                     <div className="text-[10px] font-mono tabular-nums text-neutral-400 flex items-center space-x-2">
                       <span>Offset: {selectedSpan.startOffsetMs}ms</span>
                       <span>·</span>
-                      <span className="text-neutral-200 font-bold">Span: {selectedSpan.durationMs}ms</span>
+                      {/* An unrecorded span latency prints as a dash, not "0ms". */}
+                      <span className="text-neutral-200 font-bold">Span: {formatLatencyMs(selectedSpan.latencyMs)}</span>
                     </div>
                   </div>
 
