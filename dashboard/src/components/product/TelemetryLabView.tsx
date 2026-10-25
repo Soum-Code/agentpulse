@@ -52,8 +52,10 @@ const SCENARIOS: Scenario[] = [
     fault: false,
     usesQuery: true,
     detail: 'Five agents, claims consistent with the retrieved sources.',
+    // 0.30, not 0.50: since PR #89 a neutral-only output scores 0.3 x neutral
+    // (NEUTRAL_RISK_WEIGHT, backend/app/services/grounding.py:190).
     fires:
-      'Nothing should fire. Grounding scores sit near 0.50, which is the model answering "neither supported nor contradicted"; only a score above 0.70 raises an alert.',
+      'Nothing should fire. Grounding scores sit near 0.30, which is the model answering "neither supported nor contradicted" (shown as Unverifiable); only a score above 0.70 raises an alert.',
     expected: [],
   },
   {
@@ -63,9 +65,12 @@ const SCENARIOS: Scenario[] = [
     usesQuery: true,
     detail:
       'The verifier reports a failure, the analyst asserts a claim the retrieved corpus does not support, and the writer repeats it.',
+    // Both alerts fire on the same two spans. A local run on 2026-10-25 (four scenarios, real
+    // models) stored GROUNDING_FAILURE and HIGH_HALLUCINATION_RISK for the verifier (0.971) and
+    // the analyst (0.999); the old text said HIGH_HALLUCINATION_RISK was not expected.
     fires:
-      'GROUNDING_FAILURE on the verifier and the analyst (grounding above 0.70). HIGH_HALLUCINATION_RISK is not expected: the overall risk of this run stays under its 0.70 threshold.',
-    expected: ['GROUNDING_FAILURE'],
+      'GROUNDING_FAILURE and HIGH_HALLUCINATION_RISK on the verifier and the analyst: their grounding scores are above 0.70, and so is their overall risk.',
+    expected: ['GROUNDING_FAILURE', 'HIGH_HALLUCINATION_RISK'],
   },
   {
     id: 'tool_mismatch',

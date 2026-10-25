@@ -209,22 +209,28 @@ export const PublicExperience: React.FC<PublicExperienceProps> = ({ onEnterProdu
     {
       label: 'INVESTIGATE',
       subtitle: 'Failure Discrepancies',
-      description: 'Traverse failure-first spans, inter-agent contradiction trees, and exact parameter differences without ever losing breadcrumb context.',
+      // Inter-agent contradiction is not offered: that alert is withdrawn (0 of 10 labelled
+      // contradictions found on real multi-agent traces, COMPETITIVE_POSITIONING.md 5.2).
+      description: 'Open the spans that failed first, with the score and NLI verdict each evaluator stored, without losing the trace they belong to.',
       badge: 'DeBERTa-v3',
       metric: '203ms Median',
       metricLabel: 'Local CPU, 30 test cases',
       diagramTitle: 'NLI Contradiction Cross-Encoder',
-      features: ['Premise vs hypothesis contradiction scoring', 'Calibrated formula: contradiction + 0.3 * neutral', 'Complete causal trace lineage and discrepancy pinpointing']
+      // 0.3 is a design choice, not a fit (GROUNDING_RECALIBRATION_2026-10.md), so it is not
+      // called "calibrated"; and the waterfall shows parent links, not causes.
+      features: ['Premise vs hypothesis contradiction scoring', 'Formula: contradiction + 0.3 × neutral (0.3 is a design choice)', 'Span waterfall with parent links and per-span scores']
     },
     {
       label: 'ACT & CURATE',
       subtitle: 'Production → Dataset → Experiment',
-      description: 'Instantly isolate anomalous spans into curated regression datasets, run candidate prompt/model experiments, and deploy hardened guardrails.',
+      // What exists: span-to-dataset curation (POST /v1/datasets/{name}/cases) and a list of
+      // experiment result files. There is no A/B matrix and no automated guardrail.
+      description: 'Add a failing span to a dataset as a test case from the Traces view, and read the offline experiment results beside it. Fixing the agent stays your job.',
       badge: 'Regression Shield',
       metric: '1-Click Dataset',
       metricLabel: 'Curated Regressions',
       diagramTitle: 'Golden Evaluation Benchmark',
-      features: ['One-click production trace to test suite curation', 'Candidate prompt & model A/B evaluation matrix', 'Automated guardrail re-anchoring rules']
+      features: ['One-key span-to-dataset curation in the Traces view', 'Experiment result files listed in the console', 'No automated guardrails: AgentPulse observes, it does not change the agent']
     }
   ];
 
@@ -337,7 +343,9 @@ async def researcher_node(state):
                 : 'border-white/[0.12] text-neutral-400'
             }`}
           >
-            v2.4 research baseline
+            {/* The real version: sdk/pyproject.toml and the API both say 0.1.0, and the
+                only release tag is v0.1.0. "v2.4" had no source. */}
+            v0.1.0 research prototype
           </span>
         </div>
 
@@ -1495,14 +1503,17 @@ async def researcher_node(state):
                 palette === 'butter' ? 'text-neutral-950' : palette === 'chalk' ? 'text-neutral-950' : 'text-white'
               }`}
             >
-              From Normal to Deviation to Drift
+              {/* There is no "deviation" level in the detector: one distance, one threshold. */}
+              From Baseline to Drift
             </h2>
             <p
               className={`text-sm mt-3 leading-relaxed ${
                 palette === 'butter' ? 'text-neutral-800 font-medium' : palette === 'chalk' ? 'text-neutral-600' : 'text-neutral-400'
               }`}
             >
-              Track multi-dimensional behavioral drift across embedding clusters, tool parameter signatures, and output structures before catastrophic failures hit users.
+              {/* The old line claimed drift across "embedding clusters, tool parameter signatures, and
+                  output structures"; the alert reads one embedding distance (services/drift.py). */}
+              AgentPulse compares the mean embedding of an agent&rsquo;s latest 12 outputs with the mean of its first 20 and raises DRIFT_DETECTED when they are more than 0.30 apart. Offline it caught most content changes, but it says nothing until both windows are full.
             </p>
           </div>
 
@@ -1523,7 +1534,7 @@ async def researcher_node(state):
                   : 'text-neutral-400 hover:text-white'
               }`}
             >
-              Spatial 3D Trajectory
+              Schematic
             </button>
             <button
               onClick={() => setActiveDriftView('analytical')}
@@ -1537,7 +1548,7 @@ async def researcher_node(state):
                   : 'text-neutral-400 hover:text-white'
               }`}
             >
-              Analytical Breakdown
+              Measured (offline)
             </button>
           </div>
         </div>
@@ -1605,7 +1616,8 @@ async def researcher_node(state):
               <div className="absolute right-[16%] top-[20%] w-48 h-48 rounded-full bg-rose-500/15 border-2 border-rose-500/40 flex items-center justify-center animate-pulse">
                 <div className="text-center">
                   <span className="text-[11px] font-mono text-rose-300 font-bold block">Critical Drift Frontier</span>
-                  <span className="text-[9px] font-mono text-rose-400/90">Cluster #3 Divergence</span>
+                  {/* "Cluster #3" had no source: the detector has no clusters. */}
+                  <span className="text-[9px] font-mono text-rose-400/90">current window, schematic</span>
                 </div>
                 <div className="absolute w-3 h-3 rounded-full bg-rose-400" style={{ left: '32%', top: '32%' }} />
                 <div className="absolute w-3 h-3 rounded-full bg-rose-400" style={{ left: '58%', top: '42%' }} />
@@ -1616,15 +1628,19 @@ async def researcher_node(state):
             <div className={`mt-6 flex flex-wrap items-center justify-between text-xs font-mono pt-4 border-t gap-4 ${palette === 'chalk' ? 'border-neutral-200 text-neutral-700' : 'border-white/[0.1] text-neutral-300'}`}>
               <span className={`font-semibold flex items-center space-x-2 ${palette === 'chalk' ? 'text-emerald-800' : 'text-emerald-600 dark:text-emerald-400'}`}>
                 <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block" />
-                <span>Nominal Trajectory (Cosine Sim &gt; 0.94)</span>
+                {/* The rule from the code, replacing "Cosine Sim > 0.94" and "12% Parameter Spread
+                    (Schema v2 migration)", which had no source: baseline = first 20 outputs
+                    (drift.py min_samples_for_alert), window = latest 12 (mean_window),
+                    alert above 0.30 (config.py drift_threshold). */}
+                <span>Baseline: mean of the agent&rsquo;s first 20 outputs</span>
               </span>
               <span className={`font-semibold flex items-center space-x-2 ${palette === 'chalk' ? 'text-amber-800' : 'text-amber-600 dark:text-amber-400'}`}>
                 <span className="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block" />
-                <span>12% Parameter Spread (Schema v2 migration)</span>
+                <span>Current window: mean of its latest 12 outputs</span>
               </span>
               <span className={`font-bold flex items-center space-x-2 ${palette === 'chalk' ? 'text-rose-800' : 'text-rose-600 dark:text-rose-400'}`}>
                 <span className="w-2.5 h-2.5 rounded-full bg-rose-500 inline-block animate-ping" />
-                <span>Detected Failure Frontier (Prompt Drift)</span>
+                <span>DRIFT_DETECTED above a cosine distance of 0.30</span>
               </span>
             </div>
           </div>
@@ -1648,14 +1664,17 @@ async def researcher_node(state):
                   showPresetAnnotations={chalkAnnotationsActive}
                   presets={[
                     { id: 'pd-ul', type: 'underline', x: 4, y: 46, width: 44, color: '#f59e0b' },
-                    { id: 'pd-note', type: 'note', text: 'Schema v2 diff', x: 30, y: 84, rotation: -2, color: '#b45309' }
+                    { id: 'pd-note', type: 'note', text: 'The rule', x: 30, y: 84, rotation: -2, color: '#b45309' }
                   ]}
                 />
               )}
-              <div className={`text-xs font-mono mb-2 font-semibold ${palette === 'chalk' ? 'text-neutral-500' : 'text-neutral-400'}`}>PARAMETER DRIFT</div>
-              <div className="text-4xl font-mono font-black text-amber-500 dark:text-amber-400">0.74 Δ</div>
+              {/* These three cards showed 0.74 Δ, 0.84 Δ, 74.8% and "142 recent executions",
+                  none of which any file in the repo produces. Each now shows the rule or an
+                  offline measurement with its source. */}
+              <div className={`text-xs font-mono mb-2 font-semibold ${palette === 'chalk' ? 'text-neutral-500' : 'text-neutral-400'}`}>ALERT RULE</div>
+              <div className="text-4xl font-mono font-black text-amber-500 dark:text-amber-400">&gt; 0.30</div>
               <p className={`text-xs mt-3 leading-relaxed font-mono ${palette === 'chalk' ? 'text-neutral-600' : 'text-neutral-300'}`}>
-                Tool call arguments are generating non-standard partition clauses compared to baseline runs.
+                DRIFT_DETECTED fires when the cosine distance between the mean embedding of an agent&rsquo;s first 20 outputs and of its latest 12 passes 0.30 (backend/app/config.py, services/drift.py).
               </p>
             </div>
 
@@ -1677,14 +1696,16 @@ async def researcher_node(state):
                   showPresetAnnotations={chalkAnnotationsActive}
                   presets={[
                     { id: 'sd-circle', type: 'circle', x: 42, y: 38, width: 44, height: 30, color: '#fb7185', rotation: 2 },
-                    { id: 'sd-note', type: 'note', text: 'Critical anomaly!', x: 26, y: 84, rotation: 1.5, color: '#be123c' }
+                    { id: 'sd-note', type: 'note', text: 'Held-out, offline', x: 26, y: 84, rotation: 1.5, color: '#be123c' }
                   ]}
                 />
               )}
-              <div className={`text-xs font-mono mb-2 font-semibold ${palette === 'chalk' ? 'text-neutral-500' : 'text-neutral-400'}`}>SEMANTIC EMBEDDING DRIFT</div>
-              <div className="text-4xl font-mono font-black text-rose-500 dark:text-rose-400">0.84 Δ</div>
+              {/* DRIFT_REAL_TEXT_DIAGNOSIS_REPORT.md 11.3, held-out column, measured once:
+                  false alarms 0.0152, detection 0.9192. */}
+              <div className={`text-xs font-mono mb-2 font-semibold ${palette === 'chalk' ? 'text-neutral-500' : 'text-neutral-400'}`}>FALSE ALARMS, HELD-OUT</div>
+              <div className="text-4xl font-mono font-black text-rose-500 dark:text-rose-400">1.5%</div>
               <p className={`text-xs mt-3 leading-relaxed font-mono ${palette === 'chalk' ? 'text-neutral-600' : 'text-neutral-300'}`}>
-                Response vectors migrated into an outlier cluster following warehouse schema migration.
+                Offline, on a held-out split of an external real-trace corpus, measured once: 1.5% false alarms on unchanged sessions long enough to report, and 91.9% of content changes caught. Not a live rate.
               </p>
             </div>
 
@@ -1706,14 +1727,15 @@ async def researcher_node(state):
                   showPresetAnnotations={chalkAnnotationsActive}
                   presets={[
                     { id: 'ea-hl', type: 'highlight', x: 2, y: 36, width: 40, color: '#4ade80' },
-                    { id: 'ea-note', type: 'note', text: '✓ 142 flagged runs', x: 26, y: 84, rotation: -1.5, color: '#047857' }
+                    { id: 'ea-note', type: 'note', text: 'Silent most of the time', x: 26, y: 84, rotation: -1.5, color: '#047857' }
                   ]}
                 />
               )}
-              <div className={`text-xs font-mono mb-2 font-semibold ${palette === 'chalk' ? 'text-neutral-500' : 'text-neutral-400'}`}>EVALUATOR AGREEMENT</div>
-              <div className={`text-4xl font-mono font-black ${palette === 'chalk' ? 'text-neutral-950' : 'text-neutral-100'}`}>74.8%</div>
+              {/* Same report, 11.3 (control coverage 0.2454) and 11.5. */}
+              <div className={`text-xs font-mono mb-2 font-semibold ${palette === 'chalk' ? 'text-neutral-500' : 'text-neutral-400'}`}>COVERAGE, HELD-OUT</div>
+              <div className={`text-4xl font-mono font-black ${palette === 'chalk' ? 'text-neutral-950' : 'text-neutral-100'}`}>24.5%</div>
               <p className={`text-xs mt-3 leading-relaxed font-mono ${palette === 'chalk' ? 'text-neutral-600' : 'text-neutral-300'}`}>
-                Online evaluations flagged 142 recent executions requiring supervisor review or re-anchoring.
+                Only 24.5% of held-out sessions were long enough to fill both windows. The rest get no distance and raise no alert: when the detector speaks it is accurate, but it is often silent.
               </p>
             </div>
           </div>
@@ -1753,7 +1775,9 @@ async def researcher_node(state):
               palette === 'butter' ? 'text-neutral-800 font-medium' : palette === 'chalk' ? 'text-neutral-600' : 'text-neutral-400'
             }`}
           >
-            AgentPulse never presents an opaque, ungrounded number. Every evaluation is backed by exact quotes, deterministic measurements, and verifiable causal explanations.
+            {/* The old sentence promised "verifiable causal explanations" for every evaluation; the
+                alerting service produces no root cause. This says what is stored. */}
+            Each evaluation stores the NLI probabilities its score was computed from, the verdict, and the alert message naming the rule that fired. The three cards below are a hand-written illustration, not a recorded run.
           </p>
         </div>
 
@@ -1781,7 +1805,10 @@ async def researcher_node(state):
             </div>
             <h3 className={`text-lg font-bold mb-2 ${palette === 'dark' ? 'text-white' : 'text-neutral-950'}`}>Observed Reality</h3>
             <p className={`text-xs font-mono leading-relaxed mb-4 ${palette === 'butter' ? 'text-neutral-800 font-medium' : palette === 'chalk' ? 'text-neutral-700' : 'text-neutral-300'}`}>
-              Exact spans, generated prompt tokens, and tool invocations recorded without redaction or loss.
+              {/* Not "without redaction or loss": the SDK redacts before sending, and input and
+                  output capture are both off by default (sdk/src/agentpulse/config.py
+                  capture_inputs / capture_outputs = False); captured text is truncated. */}
+              Spans as the SDK sent them: agent, timing, tokens and tool name always; prompt and output text only when capture is switched on, truncated, with emails, phone numbers, SSNs and secrets redacted before sending.
             </p>
             <div className={`p-3.5 rounded-xl font-mono text-[11px] shadow-inner ${
               palette === 'butter'
@@ -1817,7 +1844,8 @@ async def researcher_node(state):
             </div>
             <h3 className={`text-lg font-bold mb-2 ${palette === 'dark' ? 'text-white' : 'text-neutral-950'}`}>Measured Delta</h3>
             <p className={`text-xs font-mono leading-relaxed mb-4 ${palette === 'butter' ? 'text-neutral-800 font-medium' : palette === 'chalk' ? 'text-neutral-700' : 'text-neutral-300'}`}>
-              Deterministic calculation against catalog metadata, AST parser, or rule constraints.
+              {/* There is no catalog, AST parser or rule engine; these are the three signals. */}
+              Scores from two local models: DeBERTa NLI probabilities for grounding and a MiniLM embedding distance for drift. The tool-claim check compares digit counts with the tool&rsquo;s result count.
             </p>
             <div className={`p-3.5 rounded-xl font-mono text-[11px] shadow-inner ${
               palette === 'butter'
@@ -1826,7 +1854,8 @@ async def researcher_node(state):
                 ? 'bg-neutral-100 border border-neutral-300 text-neutral-800'
                 : 'bg-black/35 backdrop-blur-xl border border-white/12 text-neutral-200'
             }`}>
-              "Warehouse catalog confirmed column is `tier_identifier_code`. Discrepancy: 0.89"
+              {/* "Discrepancy: 0.89" removed: an invented figure in a hand-written example. */}
+              "Warehouse catalog confirmed column is `tier_identifier_code`."
             </div>
           </div>
 
@@ -1851,9 +1880,9 @@ async def researcher_node(state):
             }`}>
               03
             </div>
-            <h3 className={`text-lg font-bold mb-2 ${palette === 'dark' ? 'text-white' : 'text-neutral-950'}`}>Causal Explanation</h3>
+            <h3 className={`text-lg font-bold mb-2 ${palette === 'dark' ? 'text-white' : 'text-neutral-950'}`}>Explanation, by a person</h3>
             <p className={`text-xs font-mono leading-relaxed mb-4 ${palette === 'butter' ? 'text-neutral-800 font-medium' : palette === 'chalk' ? 'text-neutral-700' : 'text-neutral-300'}`}>
-              Actionable root cause explanation with remediation steps and golden dataset integration.
+              A person reads the stored scores and the alert, finds the cause, and can save the span to a dataset as a test case.
             </p>
             <div className={`p-3.5 rounded-xl font-mono text-[11px] shadow-inner ${
               palette === 'butter'
@@ -1900,7 +1929,7 @@ async def researcher_node(state):
               palette === 'butter' ? 'text-neutral-800 font-medium' : palette === 'chalk' ? 'text-neutral-700' : 'text-neutral-400'
             }`}
           >
-            Seamlessly bridge production telemetry with evaluation datasets and offline candidate model experiments (Langfuse &amp; Braintrust model).
+            Save a failing span to a dataset from the Traces view, and keep offline experiment results beside it. Re-testing and deploying a fix happen outside AgentPulse.
           </p>
         </div>
 
@@ -1910,8 +1939,10 @@ async def researcher_node(state):
             { step: '01', title: 'Production Trace', desc: 'Capture anomaly in live swarm', tag: 'Custom Ingestion' },
             { step: '02', title: '1-Click Curate', desc: 'Isolate failing span to dataset', tag: 'Data Slicing' },
             { step: '03', title: 'Golden Dataset', desc: 'Maintain versioned benchmarks', tag: 'Ground Truth' },
-            { step: '04', title: 'Run Experiment', desc: 'Test prompt/model candidates', tag: 'Eval Matrix' },
-            { step: '05', title: 'Deploy Fix', desc: 'Deploy hardened agent & monitor', tag: 'Zero Regression' }
+            // Steps 04-05 run outside AgentPulse; the old tags "Eval Matrix" and "Zero Regression"
+            // named a feature and a result that nothing provides or measures.
+            { step: '04', title: 'Run Experiment', desc: 'Test prompt/model candidates', tag: 'Outside AgentPulse' },
+            { step: '05', title: 'Deploy Fix', desc: 'Deploy the fixed agent & keep monitoring', tag: 'Outside AgentPulse' }
           ].map((item) => (
             <div
               key={item.step}
@@ -2194,7 +2225,7 @@ async def researcher_node(state):
                   BETA
                 </span>
               </div>
-              <div className={`col-span-5 ${palette === 'butter' ? 'text-neutral-800 font-medium' : palette === 'chalk' ? 'text-neutral-700' : 'text-neutral-400'}`}>Exact AST &amp; JSON Schema reflection validation</div>
+              <div className={`col-span-5 ${palette === 'butter' ? 'text-neutral-800 font-medium' : palette === 'chalk' ? 'text-neutral-700' : 'text-neutral-400'}`}>DeBERTa-v3-small NLI of the evidence against the output: contradiction + 0.3 &times; neutral</div>
             </div>
 
             <div className={`grid grid-cols-12 px-6 py-4 items-center transition-colors ${palette === 'butter' ? 'hover:bg-amber-50' : palette === 'chalk' ? 'hover:bg-neutral-50' : 'hover:bg-white/[0.02]'}`}>
@@ -2226,7 +2257,7 @@ async def researcher_node(state):
                   EXPERIMENTAL
                 </span>
               </div>
-              <div className={`col-span-5 ${palette === 'butter' ? 'text-neutral-800 font-medium' : palette === 'chalk' ? 'text-neutral-700' : 'text-neutral-400'}`}>Natural language assertion vs tool exit status check</div>
+              <div className={`col-span-5 ${palette === 'butter' ? 'text-neutral-800 font-medium' : palette === 'chalk' ? 'text-neutral-700' : 'text-neutral-400'}`}>Regex for digit counts in the output against the tool&rsquo;s recorded result count; F1 0.000 on real agent traces (TOOL_CLAIM_EXTERNAL_TEST_REPORT.md, section 10)</div>
             </div>
 
             <div className={`grid grid-cols-12 px-6 py-4 items-center transition-colors ${palette === 'butter' ? 'hover:bg-amber-50' : palette === 'chalk' ? 'hover:bg-neutral-50' : 'hover:bg-white/[0.02]'}`}>

@@ -36,8 +36,9 @@ export interface DriftEntry {
   baseline_size?: number;
 }
 
-// Matches AGENTPULSE_DRIFT_THRESHOLD in backend/app/config.py.
-const DRIFT_THRESHOLD = 0.3;
+// Matches AGENTPULSE_DRIFT_THRESHOLD in backend/app/config.py. Exported so the Agents and
+// Drift views colour and explain a distance against the same number the alert uses.
+export const DRIFT_THRESHOLD = 0.3;
 
 function agentStatus(agent: ApiAgent, drift?: DriftEntry): AgentStatus {
   const window = drift?.latest_window_centroid_distance;
@@ -61,8 +62,10 @@ export function toAgents(apiAgents: ApiAgent[], drift: DriftEntry[]): Agent[] {
       description: a.agent_role ?? undefined,
       status: agentStatus(a, d),
       latencyAvgMs: a.avg_latency_ms ?? undefined,
-      // Percentage: the roster compares this against 90 and appends '%'.
-      successRate: (1 - a.error_rate) * 100,
+      // Percentage: the roster compares this against 90 and appends '%'. Rounded to one
+      // decimal here, because (1 - 0.1667) * 100 is 83.33000000000001 in floating point and
+      // three views printed it raw.
+      successRate: Math.round((1 - a.error_rate) * 1000) / 10,
       lastActive: a.last_seen,
       // Lifetime span count, not a 24h trace window; the card is labelled
       // 'Spans Ingested' to match what this actually is.
@@ -156,7 +159,10 @@ export function toSpans(spans: SpanDetail[], traceId: string): Span[] {
       type: spanType(s),
       status: spanStatus(s),
       startOffsetMs: Number.isFinite(start) ? start - t0 : 0,
+      // durationMs stays a number because the waterfall lays bars out with it; latencyMs keeps
+      // "not recorded" apart from 0 so the views print a dash instead of "0ms".
       durationMs: s.latency_ms ?? 0,
+      latencyMs: s.latency_ms ?? undefined,
       agentLane: s.agent_id,
       model: s.model ?? undefined,
       prompt: s.input_summary ?? undefined,
@@ -248,7 +254,8 @@ export function toDriftProfiles(drift: DriftEntry[]): DriftProfile[] {
     semanticDrift: d.latest_centroid_distance ?? undefined,
     toolCallDrift: d.latest_tool_drift ?? undefined,
     baselineSampleCount: d.baseline_size ?? 0,
-    currentSampleCount: 0,
+    // currentSampleCount is left absent: the API does not report how full the current
+    // window is (it used to be a hard-coded 0, printed as "Active Sample: 0").
     // The backend exposes distances, not the embedding coordinates a
     // scatter plot would need.
     points: [],
