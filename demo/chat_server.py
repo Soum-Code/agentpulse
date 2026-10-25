@@ -53,7 +53,9 @@ Usage:
 
 Environment (see chat_providers.py and chat_guard.py for theirs):
 
-    CHAT_TURN_BUDGET_SECONDS      the most one turn may take, all agents together. Default 100
+    CHAT_TURN_BUDGET_SECONDS      the most one turn may take, all agents together. Default 120:
+                                  a turn answered by Pollinations alone takes about 90 s
+                                  (three replies, 32 s apart)
     CHAT_MAX_TOKENS_<AGENT>       the answer's token limit, AGENT in RETRIEVER, VERIFIER,
                                   ANSWERER. Defaults 200, 250, 500; on the gpt-oss models it
                                   includes their (low) reasoning
@@ -174,6 +176,7 @@ class AgentFailure(RuntimeError):
         self.cause = cause
 
 
+# In short: a number from the environment, or the default when it is unset or not a number.
 def _env_float(env: dict[str, str], name: str, default: float) -> float:
     try:
         return float(env.get(name) or default)
@@ -181,28 +184,24 @@ def _env_float(env: dict[str, str], name: str, default: float) -> float:
         return default
 
 
-# What the visitor reads when an agent's step fails, by the chain's reason. Never the
-# provider's own error text.
+# In short: what the visitor reads when an agent's step fails, by the chain's reason: one short
+# sentence and a code the page switches on. Never the provider's own error text.
 def _failure(exc: AgentFailure, budget: float) -> tuple[int, str, str]:
     if exc.cause.out_of_time:
         return 504, "budget_exceeded", (
-            f"The {exc.agent} step ran out of time; a turn may take at most {budget:.0f} s. "
-            "The steps that finished are shown."
+            f"The {exc.agent} step ran out of time (a turn may take at most {budget:.0f} s). "
+            "Try again in a minute."
         )
     if exc.cause.all_rate_limited:
-        return 503, "providers_busy", (
-            f"Every model provider is at its free-tier limit, so the {exc.agent} step could not "
-            "run. Try again in a minute."
-        )
+        return 503, "providers_busy", "All model providers are busy right now. Try again in a minute."
     return 502, "provider_failed", (
-        f"No model provider answered the {exc.agent} step. The steps that finished are shown; "
-        "try again in a minute."
+        f"No model provider could answer the {exc.agent} step right now. Try again in a minute."
     )
 
 
-# A streamed turn holds a concurrency slot from admission until its response is over. The
-# slot is freed here, around the whole response, rather than in the body's generator: if the
-# visitor disconnects before the first line is sent, the generator never starts and its
+# In short: a streamed turn's response, which frees the turn's concurrency slot when it is over.
+# The slot is freed here, around the whole response, rather than in the body's generator: if
+# the visitor disconnects before the first line is sent, the generator never starts and its
 # finally would never run, and the slot would stay taken for good.
 class _TurnStream(StreamingResponse):
     def __init__(self, *args: Any, release: Callable[[], None], **kwargs: Any):
@@ -216,6 +215,8 @@ class _TurnStream(StreamingResponse):
             self._release()
 
 
+# In short: a refused turn as JSON, with Retry-After when the refusal says when to try again.
+# agents is always present (empty) so the page reads every error body the same way.
 def _refusal_response(refusal: Refusal, session_id: Optional[str] = None) -> JSONResponse:
     body = refusal.as_dict()
     if session_id:
@@ -253,7 +254,7 @@ def create_app(
     guard = guard or GuardSettings.from_env(env)
     limiter = TurnLimiter(guard)
     loader = loader or load_retrieval
-    budget = _env_float(env, "CHAT_TURN_BUDGET_SECONDS", 100.0)
+    budget = _env_float(env, "CHAT_TURN_BUDGET_SECONDS", 120.0)
     max_tokens = {
         agent: int(_env_float(env, f"CHAT_MAX_TOKENS_{agent.upper()}", default))
         for agent, default in DEFAULT_MAX_TOKENS.items()
@@ -273,8 +274,11 @@ def create_app(
             capture_outputs=True,
         )
 
+    # In short: get ready to answer, in a thread so the server can say "loading" meanwhile:
+    # build the provider clients (the openai import is slow), then load MiniLM and the index.
     async def load() -> None:
         try:
+            await asyncio.to_thread(chain.prepare)
             await asyncio.to_thread(loader)
             retrieval["state"] = "ready"
             logger.info("chat: retrieval ready; providers: %s", ", ".join(chain.providers()) or "none")
@@ -349,17 +353,28 @@ def create_app(
     def corpus() -> dict[str, list[str]]:
         return {"documents": [doc["title"] for doc in local_retriever.corpus]}
 
-    # GET /health: whether a turn would run now, and if not why; which providers are in the
-    # chain (names and models, never keys or URLs with credentials); the limits a visitor is
-    # held to; and today's usage. 200 only when ready, so a probe can tell the states apart.
+    # GET /health: whether a turn would run now, and if not why; each provider's state
+    # (configured or not, last success, last failure as an outcome and a status, never a key,
+    # a URL or an error body); the limits a visitor is held to; and today's usage. 200 only
+    # when ready, so a probe can tell the states apart. "degraded" is true while a configured
+    # provider's last call failed, so an uptime monitor can catch a broken key or model id
+    # while the chain still answers through the providers after it.
     @app.get("/health")
     @app.get("/chat/health")
     def health() -> JSONResponse:
         state, message = status_now()
+        providers = chain.provider_status()
+        degraded = any(
+            p["configured"]
+            and p["last_error"]
+            and (not p["last_success"] or p["last_error"]["at"] > p["last_success"])
+            for p in providers
+        )
         body: dict[str, Any] = {
             "status": state,
+            "degraded": degraded,
             "embedding": retrieval["state"],
-            "providers": chain.providers(),
+            "providers": providers,
             "chain": [{"provider": r.provider, "model": r.model} for r in chain.routes],
             "agents": list(AGENTS),
             "limits": {
