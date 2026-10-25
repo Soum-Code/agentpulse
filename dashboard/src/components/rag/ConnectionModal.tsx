@@ -75,7 +75,7 @@ export const ConnectionModal: React.FC<ConnectionModalProps> = ({
         {/* Live Service Status */}
         <div className={`mt-4 p-3 rounded-lg ${theme.codeBg} border ${theme.codeBorder} space-y-2`}>
           <div className="flex items-center justify-between text-[11px]">
-            <span className={theme.subtextColor}>RAG Pipeline Service (:8100):</span>
+            <span className={theme.subtextColor}>Chat service (/chat):</span>
             <span className="flex items-center gap-1.5 font-medium">
               {ragStatus.ok ? (
                 <>
@@ -113,17 +113,17 @@ export const ConnectionModal: React.FC<ConnectionModalProps> = ({
         <form onSubmit={handleSave} className="mt-4 space-y-4">
           <div>
             <label className={`block text-[11px] font-medium ${theme.textColor} mb-1`}>
-              RAG FastAPI Base URL
+              Chat service base URL
             </label>
             <input
               type="text"
               value={localRagUrl}
               onChange={(e) => setLocalRagUrl(e.target.value)}
-              placeholder="http://localhost:8100"
+              placeholder="empty: this site's /chat; locally http://localhost:8100"
               className={`w-full px-3 py-2 ${theme.inputBg} border ${theme.inputBorder} rounded-lg ${theme.textColor} placeholder-neutral-500 focus:outline-none focus:border-cyan-500 text-xs`}
             />
             <span className={`text-[10px] ${theme.subtextColor} mt-1 block`}>
-              Handles <code className={theme.textColor}>POST /chat</code> and <code className={theme.textColor}>GET /corpus</code>.
+              Handles <code className={theme.textColor}>POST /chat/stream</code>, <code className={theme.textColor}>GET /chat/health</code> and <code className={theme.textColor}>GET /chat/corpus</code>.
             </span>
           </div>
 
