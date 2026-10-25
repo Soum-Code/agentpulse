@@ -4,10 +4,10 @@
 **Category:** Industry-trend oriented, product-based AI engineering project
 **Primary benchmark model:** `Qwen/Qwen3-8B` (Q4_K_M GGUF, local CPU inference via llama.cpp)
 **Reasoning strategies evaluated:** Direct (zero-shot), Chain-of-Thought (CoT), Atom of Thoughts (AoT)
-**Evaluation datasets:** `v1.0_dev`, `v1.0_val`, `v1.0_test` — 73 cases total (50 labeled via dual LLM-as-judge evaluation, 23 added by deterministic construction; see `LABEL_AGREEMENT_REPORT.md`)
+**Evaluation datasets:** `v1.0_dev`, `v1.0_val`, `v1.0_test` — 73 cases total (50 labeled via dual LLM-as-judge evaluation, 23 added by deterministic construction; see `LABEL_AGREEMENT_REPORT.md`). 68 of them are unique: `test_01` to `test_05` are copies of `dev_01` to `dev_05` (`GROUNDING_RECALIBRATION_2026-10.md`, section 0 item 8)
 **Evaluation cascade:** `all-MiniLM-L6-v2` (bi-encoder embeddings) + `cross-encoder/nli-deberta-v3-small` (NLI)
 **Hardware:** Windows x64, 16 logical / 8 physical CPU cores, no GPU
-**Automated test suite:** 99 tests passing
+**Automated test suite:** 422 backend tests passing (`pytest tests/`, 5 min 36 s) and 136 dashboard tests in 13 files (`npx vitest run`), both run on `main` at `2fefb91` on 2026-10-25
 
 ## 1. Problem
 
@@ -56,28 +56,34 @@ Design constraints:
 - The SDK is a pure observer. Reasoning strategy (Direct/CoT/AoT) is a property of the workload it watches, not something AgentPulse depends on internally.
 - All inference runs locally (CPU or GPU) on open-source models. No data leaves the host by default.
 
-The dashboard's operator loop (`CP[React dashboard]` above) was verified end-to-end with a real trace this session, not just loaded and eyeballed: ingest, an alert firing, curating that alert into a dataset via the UI, and reading the curated case back out. That surfaced and fixed four real bugs — a monitoring-critical one where the headline stat tiles read as permanently 0 in any background browser tab, a CORS/auth middleware ordering bug that broke every cross-origin request, an undocumented required env var that made dashboard writes fail silently, and a curation loop that wrote successfully but couldn't be read back. See `DASHBOARD_E2E_VERIFICATION_REPORT.md` for detail, including one confirmed-but-not-yet-fixed gap: the Overview page's topology and waterfall visualizations are still 100% static fixtures, unrelated to whatever trace is actually live.
+The dashboard's operator loop (`CP[React dashboard]` above) was verified end-to-end with a real trace this session, not just loaded and eyeballed: ingest, an alert firing, curating that alert into a dataset via the UI, and reading the curated case back out. That surfaced and fixed four real bugs — a monitoring-critical one where the headline stat tiles read as permanently 0 in any background browser tab, a CORS/auth middleware ordering bug that broke every cross-origin request, an undocumented required env var that made dashboard writes fail silently, and a curation loop that wrote successfully but couldn't be read back. See `DASHBOARD_E2E_VERIFICATION_REPORT.md` for detail, including one gap open at the time: the Overview page's topology and waterfall visualizations were static fixtures. [2026-10-25: that dashboard was later replaced; the current one reads every figure from the API through `dashboard/src/lib/adapters.ts` and prints an em dash where the API has no value (see `CODE_WALKTHROUGH.md`, section 6).]
 
 ## 3. Risk aggregation
 
 For a span with input context $C_{in}$, output $O_{out}$, and tool records $T$, the overall risk score is:
 
-$$R(s) = \frac{w_g \cdot P_{\text{contradiction}}(C_{in}, O_{out}) + w_t \cdot R_{\text{tool}}(T, O_{out}) + w_d \cdot R_{\text{disagree}}}{\sum \text{weights of signals present}}$$
+$$R(s) = \frac{w_g \cdot G(C_{in}, O_{out}) + w_t \cdot R_{\text{tool}}(T, O_{out})}{\sum \text{weights of signals present}}, \qquad G = P_{\text{contradiction}} + 0.3 \cdot P_{\text{neutral}}$$
 
-Only signals available for a given span contribute — $w_d$ is omitted when there is no upstream agent output — and the result is renormalized by the sum of the weights that did contribute, not divided by a fixed 1.0. A fourth weight, $w_s$ (semantic dissimilarity), is defined in configuration but is not currently used in `backend/app/services/evaluator.py`'s `_aggregate_risk()`. This is a known gap between the configuration and the implementation, not an intentional design choice.
+This is what `_aggregate_risk()` in `backend/app/services/evaluator.py` computes today. Only signals present for a span contribute: the tool-claim term is included only when at least one claim was extracted, and the result is renormalized by the sum of the weights that did contribute, not divided by a fixed 1.0. $G$ is the grounding score from `backend/app/services/grounding.py` (`NEUTRAL_RISK_WEIGHT = 0.3` since `model_version` v1.2). A span is `high_risk` above 0.7 and `medium_risk` above 0.4.
 
-Current weights (initial heuristic values, not empirically calibrated — see `THRESHOLD_ANALYSIS.md` for the sensitivity analysis that was performed on the semantic-similarity and NLI-contradiction thresholds):
+Weights (initial heuristic values, not empirically calibrated):
 
 | Weight | Value | Signal |
 | :--- | :---: | :--- |
-| $w_g$ | 0.40 | NLI contradiction probability |
+| $w_g$ | 0.40 | Grounding score $G$ |
 | $w_t$ | 0.25 | Deterministic tool-claim mismatch |
-| $w_d$ | 0.20 | Inter-agent disagreement |
-| $w_s$ | 0.15 | Semantic dissimilarity (defined, not wired in) |
+| $w_d$ | 0.20 | Inter-agent disagreement: declared in `RISK_WEIGHTS` but **not summed**. The score is stored and shown, but it measured at chance on real traces (AUC 0.457 with the planner excluded, `SESSION_HANDOFF.md` 24.9.5) and its alert is withdrawn |
+| $w_s$ | 0.15 | Semantic dissimilarity: declared, not summed |
+
+[2026-10-25: an earlier version of this section put $P_{contradiction}$ and the disagreement term in the formula; `_aggregate_risk()` sums only the grounding score and the tool-claim score.]
 
 The deterministic tool-claim signal ($w_t$) was benchmarked in isolation for the first time this session: 19 labeled cases against `evaluate_tool_claims`, precision 1.000 / recall 0.727 / F1 0.842. Two real bugs were found and fixed first — a partial tool-name match silently skipped the result-count check that the exact-match path already had, and the documented `RESULT_DISTORTION` mismatch type (claiming success when a tool call actually recorded an error) was never implemented, so such claims produced zero extracted claims and passed through unflagged. The remaining recall gap is three paraphrased/semantic claims with no lexical overlap with the validator's pattern list — an expected limitation of a deliberately simple, regex-based, sub-millisecond check, not something worth chasing with more regex (that would just turn it into an under-tested reimplementation of the NLI grounding check elsewhere in the pipeline). Full detail in `TOOL_CLAIM_VALIDATOR_REPORT.md`.
 
-A separate, verified limitation of the grounding signal, now fixed: DeBERTa NLI classifies a statement compared against itself (verbatim, maximally supported) as "neutral" (~99%) rather than "entailment" (~1%), because identical premise/hypothesis pairs are out of distribution for a model trained on genuine NLI pairs. The original formula, `grounding_score = 1 - entailment_prob` (equivalently `contradiction_prob + neutral_prob`), scored this neutral classification almost as risky as a genuine contradiction, so a fully-supported claim could score close to maximum risk if the NLI model classified it as neutral instead of confidently entailed. The formula is now `grounding_score = contradiction_prob + 0.5 * neutral_prob` (`backend/app/services/grounding.py`), halving the weight given to a neutral classification relative to an outright contradiction. The 0.5 weight is a principled default, not a value fitted to data: the development split was too small and clear-cut to discriminate between candidate weights (every weight from 0.0-0.9 tied at F1=1.0 in the sweep). On the held-out test split, this change moved classification metrics from F1=0.703/FPR=0.647 to F1=0.963/FPR=0.059, and the documented self-comparison case (Section 6) moved from a 0.989 risk score to 0.496. See `GROUNDING_SCORE_CALIBRATION_REPORT.md` for the full sweep and methodology.
+**On real agent traces the same check found nothing.** On an external corpus of 500 sessions (8,353 prose spans, five models) it extracted zero claims, and on a real-data benchmark it scored precision, recall and F1 **0.000** against its own 0.842 (`TOOL_CLAIM_EXTERNAL_TEST_REPORT.md`, section 10; `COMPETITIVE_POSITIONING.md` 5.1). The 19 hand-written cases used the phrasing the regex expects, so they tested the regex against itself. In the shipped system the check fires only when an output states a count in digits, as the Telemetry Lab's tool-claim scenario does.
+
+**The grounding score as shipped.** `grounding_score = contradiction_prob + 0.3 * neutral_prob` (`backend/app/services/grounding.py`, `NEUTRAL_RISK_WEIGHT = 0.3`), `high_risk` above 0.7 and `medium_risk` above 0.4. On the 30-case test split both cut-offs give precision 0.929, recall 1.000, F1 0.963 [0.897, 1.000] and FPR 0.059 (1 of 17 supported cases flagged); on the 47-case held-out pool (val plus the 25 test cases that are not copies of dev cases) F1 is 0.927 at 0.7 and 0.952 at 0.4, FPR 0.074 (2 of 27), and AUROC 0.996 [0.983, 1.000] (`GROUNDING_RECALIBRATION_2026-10.md` T3c, T3d, T3b, T3). Five of the 30 test cases copy dev cases. The 0.3 is a design choice, not a fit: weights 0.0 to 0.3 cannot be told apart on this data, and the only labelled case where a neutral weight matters at all is `val_17`.
+
+How it got here. Until 2026-10-21 the code read DeBERTa's `entailment` and `neutral` outputs in swapped order (fixed in PR #69). On those swapped labels an earlier calibration concluded that DeBERTa calls verbatim text "neutral" and chose a weight of 0.5; on the corrected labels DeBERTa calls it *entailment* (0.9865), so that premise was inverted. The 0.5 calibration's published test figures (F1 0.703 / FPR 0.647 for the old formula, 0.963 / 0.059 for 0.5) become 0.839 / 0.294 and 0.897 / 0.176 on corrected labels, and the self-comparison case scores about 0.014 (old formula, derived) and 0.008 (weight 0.5, measured), not 0.989 and 0.496 (`GROUNDING_RECALIBRATION_2026-10.md` section 3.3, T8b). The re-measurement found that the weight does not change ranking (AUROC equal for weights 0.0 to 0.8) and only decides where the medium line falls; 0.5 flagged 7 of 17 supported test cases as medium, 0.3 flags 1. PR #89 set 0.3. `GROUNDING_SCORE_CALIBRATION_REPORT.md` is kept as the historical record.
 
 ## 4. Reasoning strategy comparison: Direct vs CoT vs AoT
 
@@ -109,11 +115,13 @@ Ablation configurations were evaluated with thresholds selected on the developme
 | D: NLI + tool-claim validation | 0.929 | 1.000 | 0.963 | 0.059 | 0.000 | 132.13 |
 | E: NLI + inter-agent disagreement | 0.929 | 1.000 | 0.963 | 0.059 | 0.000 | 281.02 |
 | F: NLI + drift signal | 0.448 | 1.000 | 0.619 | 0.941 | 0.000 | 145.58 |
-| G: Full AgentPulse pipeline | 0.929 | 1.000 | 0.963 | 0.059 | 0.000 | 165.18 |
+| G: Full AgentPulse pipeline | 0.812 | 1.000 | 0.897 | 0.176 | 0.000 | 165.18 |
+
+Accuracy for A to F is from `experiments/results/ablation_results.json` and uses `contradiction_prob` or similarity only, so the label-order fix does not touch it. Config G runs the full pipeline, whose risk uses the grounding score: the file records 0.929 / 1.000 / 0.963 / 0.059, computed on swapped labels at weight 0.5; the row above is the same run re-scored on corrected labels (`GROUNDING_RECALIBRATION_2026-10.md` T8). G has not been re-run at the shipped weight 0.3.
 
 Latency is the per-case mean in milliseconds from the 2026-09-18 run of `experiments/ablation.py` (`experiments/results/ablation_results.json`), on the PyTorch path (`load_models(use_onnx=False)`), one run, CPU only. For A to F it is the sum of the per-case timings of the signals each configuration uses, so C is A plus B by construction (19.10 + 132.09 = 151.19); G is timed separately by running the full `EvaluationPipeline` over the 30 cases. The 2026-08-23 run of the same script recorded 27.8 / 188.1 / 215.9 / 188.1 / 373.5 / 207.7 / 241.6 ms for A to G with identical accuracy; the cause of the difference was not identified, so the two runs together show how far a single latency figure here can move.
 
-Configuration E produces metrics identical to Config B on this dataset: it collapses to B because the dataset's evaluation cases are single-agent records, so the only pair available to the disagreement engine is the same evidence-to-claim comparison NLI already makes. F scores below the plain NLI-only baseline because the drift detector's cold-start centroid, computed over case-file order rather than real temporal traffic, flags most of the non-failure test cases — this is not a subtle effect: F's false positive rate is 0.941. This limitation is analyzed in `THRESHOLD_ANALYSIS.md`. G (the full pipeline) now ties with B/C/D/E after the grounding-score recalibration described in Section 3 — an earlier version of this table showed G at F1=0.703/FPR=0.647 before that fix, since G's `overall_risk_score` incorporates `grounding_score` while A-F use `contradiction_prob` directly.
+Configuration E produces metrics identical to Config B on this dataset: it collapses to B because the dataset's evaluation cases are single-agent records, so the only pair available to the disagreement engine is the same evidence-to-claim comparison NLI already makes. F scores below the plain NLI-only baseline because the drift detector's cold-start centroid, computed over case-file order rather than real temporal traffic, flags most of the non-failure test cases — this is not a subtle effect: F's false positive rate is 0.941. This limitation is analyzed in `THRESHOLD_ANALYSIS.md`. G (the full pipeline) scores below B on corrected labels (F1 0.897 against 0.963): its risk uses the grounding score at weight 0.5 with a 0.50 flag line, so two supported test cases that the NLI model calls neutral (`test_03`, `test_16`, 0.5007 and 0.5010) cross it. A-F use `contradiction_prob` directly. The first committed G (F1 0.703 / FPR 0.647) pre-dated the 0.5 weight.
 
 Threshold sensitivity: every combination swept on the development split (semantic floor 0.10-0.40, NLI contradiction threshold 0.50-0.80) tied at F1 = 1.0. At 21 development cases, the sweep does not currently discriminate between thresholds; a larger development set is needed before threshold selection here is meaningful.
 
@@ -123,21 +131,23 @@ Five-node pipeline (A through E) with a fabricated claim injected at Node B, eva
 
 | Node | Condition A — unmitigated (risk / contradiction prob) | Condition B — verifier intervenes (risk / contradiction prob) |
 | :--- | :---: | :---: |
-| A: Planner | 0.495 / 0.002 | 0.495 / 0.002 |
+| A: Planner | 0.008 / 0.002 | 0.008 / 0.002 |
 | B: Retriever (fault injected) | 1.000 / 1.000 | 1.000 / 1.000 |
-| C: Verifier | 0.992 / 0.992 | 0.009 / 0.009 |
-| D: Analyst | 0.992 / 0.992 | 0.001 / 0.000 |
-| E: Writer | 0.992 / 0.992 | 0.001 / 0.000 |
+| C: Verifier | 0.996 / 0.992 | 0.504 / 0.009 |
+| D: Analyst | 0.996 / 0.992 | 0.500 / 0.000 |
+| E: Writer | 0.996 / 0.992 | 0.500 / 0.000 |
 
-Mean downstream risk after the fault node: 0.992 under the unmitigated condition, 0.004 once the verifier intervenes. This demonstrates that a caught contradiction stops propagating in this pipeline; it is a propagation measurement, not a proof that verification always catches faults in general.
+Risks are the corrected-label re-run at weight 0.5 (`experiments/results/grounding_recalibration_2026-10-22_compounding.json`, which ran the real `compounding_error.py` function); the published table (0.495 / 0.992 / 0.009 / 0.001) was computed with the swapped labels. Mean downstream risk after the fault node: 0.996 unmitigated, 0.501 once the verifier intervenes. The contradiction probability, which does not depend on the label order, drops from 0.992 to 0.009 or less, so a caught contradiction stops propagating in this pipeline; it is a propagation measurement, not a proof that verification always catches faults in general. But the intervening nodes are not "clean": their outputs (the verifier's correction and what follows it) are *neutral* against the faulty premise (neutral probability 0.99 or more), so at weight 0.5 they scored `medium_risk`. At the shipped weight 0.3 the same stored probabilities give 0.306, 0.300 and 0.300 (`low_risk`) for C, D and E and 0.006 for A (derived: contradiction + 0.3 × neutral; not re-run).
 
-Node A's risk score (0.495, medium_risk) in a case with near-zero contradiction probability (0.002) reflects the neutral-vs-entailment grounding limitation described in Section 3: comparing the baseline premise against itself lands as "neutral" rather than "entailment" in the underlying NLI model. Before the Section 3 grounding-score fix, this scored 0.989 (high_risk); the recalibrated formula roughly halves it to 0.495 but does not eliminate it, since the fix reduces rather than removes the weight given to a neutral classification. Treat Node A's absolute score as an improved-but-imperfect estimate of a clean baseline; the before/after comparison at Node C onward is unaffected either way since it is a relative difference, not an absolute magnitude.
+Node A compares the base premise with itself. DeBERTa calls that *entailment* (0.9865), so it scores 0.008. An earlier version of this paragraph explained a 0.495 here as DeBERTa calling self-comparison "neutral"; that explanation came from the swapped labels and was wrong.
 
 ## 7. Drift detection with negative controls
 
 Eleven scenarios covering graded positive shifts (10%, 25%, 50%) and negative controls (`experiments/drift_scenarios.py`):
 
 Two distinct quantities: **shift level** is the configured magnitude of each synthetic scenario, a parameter rather than a measurement; **centroid distance** is the measured cosine distance from the agent's baseline, which is what the 0.30 threshold applies to. Detection fires when `centroid_distance >= 0.30` **or** `stability_index < 70`.
+
+[2026-10-25: this experiment measured the per-output distance the detector used in August. The shipped `DRIFT_DETECTED` rule reads `window_centroid_distance` instead: the cosine distance between the mean embedding of an agent's first 20 outputs and of its latest 12, alert above 0.30. On a held-out split of an external real-trace corpus, measured once, it gave 1.5% false alarms and 91.9% detection, but only 24.5% of sessions were long enough to report a distance (`DRIFT_REAL_TEXT_DIAGNOSIS_REPORT.md` 11.3 and 11.5).]
 
 | Scenario | Type | Shift level | Centroid distance (measured) | Is anomaly | Detected | False alert | Time to detect | Final ASI |
 | :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
@@ -170,23 +180,32 @@ These 50 cases were labeled by two independent LLM-as-judge evaluation passes un
 
 ## 9. Test suite
 
+Run on `main` at `2fefb91`, 2026-10-25, Windows 11, the project venv:
+
 ```
 pytest tests/ -q
-...................................................................... [ 72%]
-...........................                                            [100%]
-99 passed
+422 passed, 7 warnings in 335.91s (0:05:35)
+
+cd dashboard && npx vitest run
+Test Files  13 passed (13)
+     Tests  136 passed (136)
 ```
+
+The 7 warnings are a `torch.jit.script` deprecation notice from one truncation test. The suite loads the real models for the tests that need them (`AGENTPULSE_MODEL_CACHE_DIR` pointed at the cached weights, `HF_HUB_OFFLINE=1`).
 
 ## 10. Anticipated questions
 
 **What do the latency numbers in Section 4 actually measure, given the earlier fake ones?**
-The earlier 0.04-0.15 ms figures were a deterministic string-template fallback, not model output — confirmed by grepping the codebase for `load_immediately=True`, which appeared nowhere. The fix wires a real GGUF model through llama.cpp; Section 4 will carry real measured latencies once the full benchmark run completes, and until then states plainly that it hasn't.
+The earlier 0.04-0.15 ms figures were a deterministic string-template fallback, not model output — confirmed by grepping the codebase for `load_immediately=True`, which appeared nowhere. The fix wires a real GGUF model through llama.cpp, and the run has completed: Section 4's latencies (11.6 s to 85.2 s mean per strategy) are real Qwen3-8B inference on CPU.
 
 **Why do drift and the full pipeline score worse than plain NLI in the ablation table?**
-Because the drift detector's centroid is cold-started over the case list's file order, which has no real temporal structure, and it flags the majority of non-failure cases as anomalous when folded into the composite score. This is reported directly in Section 5 rather than smoothed over — it is a real finding about the current drift-in-composite-score design, not evidence that drift detection itself is broken (Section 7's dedicated drift benchmark, run under conditions that match what drift is for, performs as expected).
+Two different reasons. Drift (F): the detector's centroid is cold-started over the case list's file order, which has no real temporal structure, and it flags most non-failure cases as anomalous when folded into the score. That is a finding about the drift-in-composite design, not about drift detection itself (Section 7 and `DRIFT_REAL_TEXT_DIAGNOSIS_REPORT.md`). The full pipeline (G): on corrected labels it ran at a neutral weight of 0.5 with a 0.50 flag line, so two supported answers the NLI model calls neutral crossed it (Section 5). It has not been re-run at the shipped 0.3.
 
 **Is Cohen's kappa of 0.922 evidence the labeling scheme is reliable in general?**
 It is evidence of agreement between two independent LLM-as-judge evaluation passes on 50 specific cases across three domains, using an explicit labeling taxonomy — not evidence of human-verified ground truth. It says nothing about the 23 deterministically-constructed cases (which don't need it, since their labels aren't a judgment call), and it does not extend to unseen production traffic, or substitute for human review, without further work.
 
 **Does Atom of Thoughts improve grounding over Chain-of-Thought?**
-Not yet answered honestly — see Section 4. The previous claim that it did was based on the same fake-latency run and should not be trusted until the real-inference benchmark completes.
+Not shown. The real-inference run completed (Section 4): AoT had the lowest mean grounding risk (0.233 against 0.283 for CoT) and no contradictions in 150 runs, but the spread between strategy means is smaller than the run-to-run standard deviation, so the risk ordering is inconclusive. Those risks were also computed before the label-order fix (`GROUNDING_RECALIBRATION_2026-10.md` section 1, row 7) and were not re-run.
+
+**Do the inter-agent disagreement and tool-claim checks work?**
+Not on real data, and the report says so. Disagreement detected 0 of 10 independently labelled contradictions on real multi-agent traces, and with the planner excluded it measured at chance (AUC 0.457); its alert is withdrawn and its score is stored only (`COMPETITIVE_POSITIONING.md` 5.2, `SESSION_HANDOFF.md` 14.1 and 24.9.5). Tool-claim scored F1 0.000 on real traces (Section 3). Drift is the signal that held up on external data, with the coverage caveat in Section 7.

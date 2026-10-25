@@ -104,8 +104,9 @@ being caught on it is much worse than volunteering it.
 **What is real is everything downstream of the text.** MiniLM and DeBERTa
 genuinely run, on CPU, on whatever strings they are handed. The queue leases and
 retries. The alert rules fire off measured scores. The drift maths runs on real
-embeddings. The grounding benchmark — F1 0.963 — is real inference over a real
-held-out split.
+embeddings. The grounding benchmark — F1 0.963 — is real inference over a test
+split, with one caveat to say out loud: 5 of its 30 cases are copies of dev cases
+(`GROUNDING_RECALIBRATION_2026-10.md`, section 0 item 8).
 
 Say it like this:
 
@@ -167,10 +168,18 @@ The four scenarios are `clean`, `hallucination`, `tool_mismatch` and `drift`.
 
 ## 5. The numbers — 90 seconds
 
-> Grounding F1 is **0.963** with a false positive rate of **0.059**, on a
-> held-out split. Latency is **151.19 ms** per case — 19.1 for MiniLM plus
-> 132.1 for DeBERTa, measured on the PyTorch path in one run. Both run on every
-> span.
+> Grounding risk is contradiction plus 0.3 times neutral, high above 0.7 and
+> medium above 0.4. On the 30-case test split both cut-offs give F1 **0.963**
+> with a false positive rate of **0.059** — one supported case of 17 flagged.
+> Five of those 30 cases copy dev cases, so on the 47-case pool that is truly
+> held out, F1 is **0.927** at 0.7 and **0.952** at 0.4, false positive rate
+> **0.074**. The 0.3 is a design choice, not a fit. Latency is **151.19 ms** per
+> case — 19.1 for MiniLM plus 132.1 for DeBERTa, measured on the PyTorch path in
+> one run. Both run on every span.
+
+(Sources: `GROUNDING_RECALIBRATION_2026-10.md` T3c, T3d and T3b for the
+weight-0.3 figures; `experiments/results/ablation_results.json`, run of
+2026-09-18, for the latencies.)
 
 If anyone calls it a cascade, correct it. Volunteering this lands better than
 being caught by it:
@@ -226,8 +235,13 @@ Do not skip this. In a review it is worth more than another feature.
 > `tool_call` field without narrating it produces no claim to check.
 >
 > Grounding misreads rounded numbers: "7.61 billion" against "approximately 7.6
-> billion" scores 0.922 risk. It is reproducible and deliberately unpatched,
-> because fixing it from one observed case is fitting to one data point.
+> billion" is called a contradiction (0.853) and scores about 0.86 risk. It is
+> reproducible and deliberately unpatched, because fixing it from one observed
+> case is fitting to one data point.
+
+(The 0.922 quoted here before 2026-10-25 was computed with DeBERTa's entailment and
+neutral outputs swapped; 0.857 at weight 0.5 and about 0.855 at 0.3 on the corrected
+labels, `GROUNDING_RECALIBRATION_2026-10.md` section 3.3.)
 
 ---
 
