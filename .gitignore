@@ -78,3 +78,6 @@ linkedin_profile.md
 
 # Office lock files
 ~$*
+
+# The live chat's kill switch on the VM (deploy/azure/docker-compose.azure.yml mounts it).
+chat-control/
