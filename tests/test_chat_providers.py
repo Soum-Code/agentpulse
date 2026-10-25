@@ -112,22 +112,34 @@ def _complete(chain, clock, budget=90.0, max_tokens=100):
     return asyncio.run(chain.complete("the prompt", max_tokens=max_tokens, deadline=clock() + budget))
 
 
+# Which providers are in the chain, in which order, with which settings: all from the
+# environment, with Pollinations (no key) always last.
 class TestBuildChain:
-    def test_order_is_groq_cerebras_nvidia_pollinations_openrouter(self):
+    def test_order_is_groq_cerebras_nvidia_openrouter_then_pollinations(self):
         routes = build_chain(dict(ALL_KEYS))
         assert [r.key for r in routes] == [
             "groq/openai/gpt-oss-20b",
             "cerebras/gpt-oss-120b",
             "cerebras/qwen-3.8-27b",
             "nvidia/google/gemma-4-31b-it",
-            "pollinations/openai-fast",
             "openrouter/google/gemma-4-31b-it:free",
+            "pollinations/openai-fast",
         ]
 
     def test_a_provider_without_its_key_is_left_out_and_pollinations_always_stays(self):
         assert [r.provider for r in build_chain({})] == ["pollinations"]
         routes = build_chain({"CEREBRAS_API_KEY": "x"})
         assert [r.provider for r in routes] == ["cerebras", "cerebras", "pollinations"]
+
+    def test_the_keyless_provider_is_last_even_when_the_list_leaves_it_out_or_puts_it_first(self):
+        assert [r.provider for r in build_chain({**ALL_KEYS, "CHAT_PROVIDERS": "groq"})] == [
+            "groq",
+            "pollinations",
+        ]
+        assert [r.provider for r in build_chain({**ALL_KEYS, "CHAT_PROVIDERS": "pollinations,groq"})] == [
+            "groq",
+            "pollinations",
+        ]
 
     def test_base_urls_models_and_limits_come_from_the_environment(self):
         routes = build_chain(
@@ -140,14 +152,14 @@ class TestBuildChain:
                 "CHAT_GROQ_MIN_INTERVAL_SECONDS": "2.5",
             }
         )
-        assert [(r.model, r.base_url, r.rpm, r.min_interval) for r in routes] == [
+        assert [(r.model, r.base_url, r.rpm, r.min_interval) for r in routes if r.provider == "groq"] == [
             ("a", "http://localhost:9/v1", 7, 2.5),
             ("b", "http://localhost:9/v1", 7, 2.5),
         ]
 
-    def test_chat_providers_reorders_and_shortens_the_chain(self):
-        routes = build_chain({**ALL_KEYS, "CHAT_PROVIDERS": "pollinations,groq"})
-        assert [r.provider for r in routes] == ["pollinations", "groq"]
+    def test_chat_providers_reorders_and_shortens_the_keyed_providers(self):
+        routes = build_chain({**ALL_KEYS, "CHAT_PROVIDERS": "nvidia,groq"})
+        assert [r.provider for r in routes] == ["nvidia", "groq", "pollinations"]
 
     def test_an_unknown_provider_is_an_error(self):
         with pytest.raises(ValueError):
@@ -171,6 +183,8 @@ class TestBuildChain:
         assert ALL_KEYS["GROQ_API_KEY"] not in repr(route)
 
 
+# What the chain does on each kind of failure: retry once, move on, pause the model, and
+# always stop (by the number of tries, or by the turn's deadline).
 class TestFailover:
     def test_the_first_provider_answers_when_it_can(self):
         chain, stub, clock = _chain()
@@ -205,16 +219,18 @@ class TestFailover:
         assert clock.sleeps == [2.0]
 
     def test_a_402_is_a_rate_limit_too(self):
-        # Pollinations refuses its anonymous tier's 31st second with 402, not 429.
+        # Pollinations refuses a request inside its anonymous tier's 30 s with 402, not 429.
         chain, stub, clock = _chain(
-            env={"CHAT_PROVIDERS": "pollinations,openrouter", "OPENROUTER_API_KEY": "x"},
-            script={"openai-fast": [StatusError(402, retry_after=300)]},
+            env={"CHAT_PROVIDERS": "pollinations"},
+            script={"openai-fast": [StatusError(402, retry_after=20)]},
         )
         result = _complete(chain, clock)
         assert [(a.provider, a.outcome, a.status) for a in result.attempts] == [
             ("pollinations", "rate_limited", 402),
-            ("openrouter", "ok", None),
+            ("pollinations", "ok", None),
         ]
+        # The retry waited for Retry-After (and the 32 s spacing after the refusal), and says so.
+        assert result.attempts[1].waited_ms >= 20_000
 
     def test_a_5xx_is_retried_once_then_fails_over(self):
         chain, stub, clock = _chain(
@@ -316,14 +332,47 @@ class TestFailover:
         assert err.value.all_rate_limited
 
 
+# The limits this service keeps itself, so it does not spend a request a provider will refuse:
+# spacing from the end of the last reply, one request at a time, and requests per minute.
 class TestLocalLimits:
-    def test_min_interval_makes_the_next_request_wait_for_its_slot(self):
-        chain, stub, clock = _chain(env={"CHAT_PROVIDERS": "pollinations"})
+    def test_min_interval_counts_from_the_end_of_the_last_reply(self):
+        # The first reply takes 9 s. 5 s after it ends, the next request still has 27 s of
+        # Pollinations' 32 s spacing to wait, counted from that end, not from the start.
+        chain, stub, clock = _chain(env={"CHAT_PROVIDERS": "pollinations"}, script={"openai-fast": [("slow", 9)]})
         _complete(chain, clock)
         clock.t += 5
-        _complete(chain, clock)
-        assert clock.sleeps == [25.0]
+        result = _complete(chain, clock)
+        assert clock.sleeps == [27.0]
         assert len(stub.calls) == 2
+        assert result.attempts[0].waited_ms == 27_000
+
+    def test_concurrent_turns_send_to_a_spaced_provider_one_at_a_time(self):
+        in_flight = {"now": 0, "most": 0}
+        chain, stub, clock = _chain(env={"CHAT_PROVIDERS": "pollinations"})
+        answer = stub.create
+
+        def counted(**kwargs):
+            in_flight["now"] += 1
+            in_flight["most"] = max(in_flight["most"], in_flight["now"])
+            time.sleep(0.05)
+            clock.t += 9
+            in_flight["now"] -= 1
+            return answer(**kwargs)
+
+        stub.create = counted
+
+        async def two_turns():
+            deadline = clock() + 120
+            return await asyncio.gather(
+                chain.complete("a", max_tokens=10, deadline=deadline),
+                chain.complete("b", max_tokens=10, deadline=deadline),
+            )
+
+        results = asyncio.run(two_turns())
+        assert [r.provider for r in results] == ["pollinations", "pollinations"]
+        assert in_flight["most"] == 1
+        # The second waited for the first to finish, then for the spacing after it.
+        assert clock.sleeps == [32.0]
 
     def test_a_wait_longer_than_the_queue_limit_skips_the_model(self):
         chain, stub, clock = _chain(
@@ -352,6 +401,36 @@ class TestLocalLimits:
         assert _complete(chain, clock).provider == "groq"
 
 
+# What /health shows per provider: configured or not, the last success, the last failure as
+# an outcome and a status (no body), and how long a refused provider stays paused.
+def test_provider_status_shows_each_provider_without_secrets():
+    chain, stub, clock = _chain(
+        env={"GROQ_API_KEY": ALL_KEYS["GROQ_API_KEY"], "CEREBRAS_API_KEY": ALL_KEYS["CEREBRAS_API_KEY"]},
+        script={"openai/gpt-oss-20b": [StatusError(429, retry_after=120)]},
+    )
+    _complete(chain, clock)
+    status = {s["provider"]: s for s in chain.provider_status()}
+    assert list(status) == ["groq", "cerebras", "nvidia", "openrouter", "pollinations"]
+    assert status["groq"]["configured"] is True
+    assert status["groq"]["last_error"]["outcome"] == "rate_limited"
+    assert status["groq"]["last_error"]["status"] == 429
+    assert status["groq"]["last_success"] is None
+    assert 100 < status["groq"]["paused_for_seconds"] <= 120
+    assert status["cerebras"]["last_success"] is not None
+    assert status["nvidia"] == {
+        "provider": "nvidia",
+        "configured": False,
+        "models": [],
+        "last_success": None,
+        "last_error": None,
+        "paused_for_seconds": 0,
+    }
+    assert status["pollinations"]["configured"] is True
+    text = repr(status)
+    assert ALL_KEYS["GROQ_API_KEY"] not in text and "account details" not in text
+
+
+# How a failure is named: by its HTTP status or exception type, with or without openai.
 class TestClassify:
     def test_outcomes(self):
         assert classify(StatusError(429, retry_after=7)) == ("rate_limited", 429, 7.0)

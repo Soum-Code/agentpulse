@@ -7,11 +7,13 @@ returns the first non-empty answer:
     groq          openai/gpt-oss-20b, reasoning effort low        GROQ_API_KEY
     cerebras      gpt-oss-120b, then qwen-3.8-27b                  CEREBRAS_API_KEY
     nvidia        google/gemma-4-31b-it                            NVIDIA_API_KEY
-    pollinations  openai-fast                                      (no key, always present)
     openrouter    google/gemma-4-31b-it:free                       OPENROUTER_API_KEY
+    pollinations  openai-fast                                      (no key; always last)
 
-A provider whose key variable is empty is left out, so with no key at all the chain is
-Pollinations alone. CHAT_PROVIDERS reorders or shortens the chain.
+A provider whose key variable is empty is left out. Pollinations needs no key and is always
+the last route, whatever CHAT_PROVIDERS says, so the chain can never end without a provider
+that is able to answer: with no key at all it is Pollinations alone. CHAT_PROVIDERS reorders
+or shortens the keyed providers in front of it.
 
 When a call fails the chain moves on to the next model. What it does first depends on why:
 
@@ -61,6 +63,7 @@ import os
 import time
 from collections import deque
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from typing import Any, Callable, Optional
 
 logger = logging.getLogger("agentpulse.chat")
@@ -82,11 +85,13 @@ logger = logging.getLogger("agentpulse.chat")
 #               low|medium|high for gpt-oss-120b, "none" turns qwen-3.8-27b's thinking off
 #   nvidia      https://integrate.api.nvidia.com/v1/models lists google/gemma-4-31b-it; the
 #               free key's rate limit is not published, so there is no local cap
+#   openrouter  https://openrouter.ai/docs/api-reference/limits: :free models 20 RPM, and 50
+#               requests a day on an account with less than 10 credits bought
 #   pollinations https://github.com/pollinations/pollinations/blob/master/APIDOCS.md:
 #               anonymous text is one reply every 30 seconds per IP, refused with 402 and a
 #               Retry-After header. Every visitor of the site shares the server's one IP.
-#   openrouter  https://openrouter.ai/docs/api-reference/limits: :free models 20 RPM, and 50
-#               requests a day on an account with less than 10 credits bought
+#               32 s rather than 30 leaves a margin for the two clocks disagreeing.
+# In short: one provider's defaults, any of which an environment variable can replace.
 @dataclass(frozen=True)
 class ProviderDefaults:
     base_url: str
@@ -106,18 +111,21 @@ PROVIDER_DEFAULTS: dict[str, ProviderDefaults] = {
     "nvidia": ProviderDefaults(
         "https://integrate.api.nvidia.com/v1", ("google/gemma-4-31b-it",), "NVIDIA_API_KEY"
     ),
-    "pollinations": ProviderDefaults(
-        "https://text.pollinations.ai/openai", ("openai-fast",), None, min_interval=30.0
-    ),
     "openrouter": ProviderDefaults(
         "https://openrouter.ai/api/v1",
         ("google/gemma-4-31b-it:free",),
         "OPENROUTER_API_KEY",
         rpm=20,
     ),
+    "pollinations": ProviderDefaults(
+        "https://text.pollinations.ai/openai", ("openai-fast",), None, min_interval=32.0
+    ),
 }
 
-DEFAULT_ORDER = ("groq", "cerebras", "nvidia", "pollinations", "openrouter")
+# The keyless provider that ends every chain (see the top of this file).
+KEYLESS_LAST = "pollinations"
+
+DEFAULT_ORDER = ("groq", "cerebras", "nvidia", "openrouter", KEYLESS_LAST)
 
 
 # One model on one provider: a place a completion can be sent. api_key is kept out of repr()
@@ -133,6 +141,7 @@ class Route:
     rpm: int = 0
     min_interval: float = 0.0
 
+    # In short: "provider/model", the name the limits and the logs use for this route.
     @property
     def key(self) -> str:
         return f"{self.provider}/{self.model}"
@@ -153,6 +162,8 @@ def reasoning_fields(provider: str, model: str, effort: str) -> dict[str, Any]:
     return {}
 
 
+# In short: a number from the environment, or the default when it is unset or not a number.
+# A typo in a limit must not stop the service from starting.
 def _env_float(env: dict[str, str], name: str, default: float) -> float:
     try:
         return float(env.get(name) or default)
@@ -167,9 +178,9 @@ def _env_int(env: dict[str, str], name: str, default: int) -> int:
         return default
 
 
-# Read the chain from the environment. In: a dict to read (tests pass one), by default
-# os.environ. Out: the Routes in the order they are tried. Raises ValueError for a provider
-# name in CHAT_PROVIDERS that is not one of PROVIDER_DEFAULTS.
+# In short: read the chain from the environment. In: a dict to read (tests pass one), by
+# default os.environ. Out: the Routes in the order they are tried. Raises ValueError for a
+# provider name in CHAT_PROVIDERS that is not one of PROVIDER_DEFAULTS.
 def build_chain(env: Optional[dict[str, str]] = None) -> list[Route]:
     env = dict(os.environ) if env is None else env
     names = [n.strip().lower() for n in (env.get("CHAT_PROVIDERS") or ",".join(DEFAULT_ORDER)).split(",")]
@@ -177,6 +188,10 @@ def build_chain(env: Optional[dict[str, str]] = None) -> list[Route]:
     unknown = [n for n in names if n not in PROVIDER_DEFAULTS]
     if unknown:
         raise ValueError(f"CHAT_PROVIDERS names {unknown}; known: {', '.join(PROVIDER_DEFAULTS)}")
+    # The keyless provider goes last, and is added if the list left it out, so that every
+    # chain ends with a provider that needs no key and no account, so a missing or revoked
+    # key can never leave the chain empty.
+    names = [n for n in names if n != KEYLESS_LAST] + [KEYLESS_LAST]
     effort = env.get("CHAT_REASONING_EFFORT") or "low"
 
     routes: list[Route] = []
@@ -217,7 +232,12 @@ class Attempt:
     outcome: str
     ms: int = 0
     status: Optional[int] = None
+    # Time spent queueing for this provider's slot before the request went out (its free-tier
+    # spacing, or another turn's request ahead of it). Part of the stage's time, not the call's.
+    waited_ms: int = 0
 
+    # In short: the attempt as JSON for the response, the stream and the span's metadata.
+    # status and waited_ms are left out when there is nothing to say, to keep the lines short.
     def as_dict(self) -> dict[str, Any]:
         out: dict[str, Any] = {
             "provider": self.provider,
@@ -227,6 +247,8 @@ class Attempt:
         }
         if self.status is not None:
             out["status"] = self.status
+        if self.waited_ms:
+            out["waited_ms"] = self.waited_ms
         return out
 
 
@@ -330,7 +352,9 @@ class ProviderChain:
     """The routes, the failover rules, and what has been learned about each route's limits.
 
     All of its state is changed only from the event loop (the blocking call runs in a thread
-    but returns before anything is recorded), so it needs no lock.
+    and returns before anything is recorded), so plain dicts are enough. A route with a
+    min_interval also has an asyncio lock: its requests go out one at a time, because such a
+    provider (Pollinations' anonymous tier) refuses a second request while one is running.
     """
 
     def __init__(
@@ -340,7 +364,7 @@ class ProviderChain:
         call_timeout: float = 25.0,
         retry_delay: float = 1.0,
         cooldown: float = 60.0,
-        max_queue_wait: float = 30.0,
+        max_queue_wait: float = 45.0,
         hang_grace: float = 2.0,
         client_factory: Optional[Callable[[Route, float], Any]] = None,
         clock: Callable[[], float] = time.monotonic,
@@ -357,11 +381,22 @@ class ProviderChain:
         self._clock = clock
         self._sleep = sleep
         self._clients: dict[str, Any] = {}
-        # Per route: the start times of recent requests (for rpm and min_interval), and the
-        # time before which it must not be called (a Retry-After or a cooldown).
+        # Per route: the start times of the last minute's requests (for rpm), when the last
+        # request ended (for min_interval), and the time before which it must not be called
+        # at all (a Retry-After or a cooldown).
         self._starts: dict[str, deque[float]] = {r.key: deque() for r in routes}
+        self._last_end: dict[str, float] = {}
         self._paused_until: dict[str, float] = {r.key: 0.0 for r in routes}
+        self._locks: dict[str, asyncio.Lock] = {
+            r.key: asyncio.Lock() for r in routes if r.min_interval > 0
+        }
+        # Per provider, for /health: when it last answered and how it last failed (UTC ISO
+        # times, the outcome word and the HTTP status; never an error body).
+        self._last_ok: dict[str, str] = {}
+        self._last_error: dict[str, dict[str, Any]] = {}
 
+    # In short: the chain with its settings read from the environment. Arguments passed in
+    # (tests pass a stub client_factory and a fake clock) win over the environment.
     @classmethod
     def from_env(cls, env: Optional[dict[str, str]] = None, **kwargs: Any) -> "ProviderChain":
         env = dict(os.environ) if env is None else env
@@ -369,35 +404,71 @@ class ProviderChain:
             "call_timeout": _env_float(env, "CHAT_CALL_TIMEOUT_SECONDS", 25.0),
             "retry_delay": _env_float(env, "CHAT_RETRY_DELAY_SECONDS", 1.0),
             "cooldown": _env_float(env, "CHAT_COOLDOWN_SECONDS", 60.0),
-            "max_queue_wait": _env_float(env, "CHAT_MAX_QUEUE_WAIT_SECONDS", 30.0),
+            "max_queue_wait": _env_float(env, "CHAT_MAX_QUEUE_WAIT_SECONDS", 45.0),
         }
-        # Arguments passed in (tests do) win over the environment.
         settings.update(kwargs)
         return cls(build_chain(env), **settings)
 
-    # The provider names in the chain, in order, each once. Shown on /health.
+    # In short: the provider names in the chain, in order, each once.
     def providers(self) -> list[str]:
         return list(dict.fromkeys(r.provider for r in self.routes))
 
+    # In short: one entry per known provider for /health, configured or not, so the owner or
+    # an uptime monitor can see a provider that is missing its key, paused after a refusal,
+    # or failing, before a visitor meets it. Times are UTC; nothing secret is in it.
+    def provider_status(self) -> list[dict[str, Any]]:
+        now = self._clock()
+        out = []
+        for name in PROVIDER_DEFAULTS:
+            routes = [r for r in self.routes if r.provider == name]
+            paused = max((self._paused_until[r.key] - now for r in routes), default=0.0)
+            out.append(
+                {
+                    "provider": name,
+                    "configured": bool(routes),
+                    "models": [r.model for r in routes],
+                    "last_success": self._last_ok.get(name),
+                    "last_error": self._last_error.get(name),
+                    "paused_for_seconds": round(paused) if paused > 0 else 0,
+                }
+            )
+        return out
+
+    # In short: build every route's client now, at start-up, in a thread. The first one
+    # imports the openai package, which takes over a second; done on the first call instead,
+    # that import held up the event loop and with it every other request (measured: one
+    # stream event arrived 1.7 s late on the first turn).
+    def prepare(self) -> None:
+        for route in self.routes:
+            self._client(route)
+
+    # In short: the client for a route's provider, made once and then reused.
     def _client(self, route: Route) -> Any:
         if route.provider not in self._clients:
             self._clients[route.provider] = self._client_factory(route, self.call_timeout)
         return self._clients[route.provider]
 
-    # The earliest time a request to this route may start: after its pause, min_interval after
-    # the last request, and, once rpm requests started in the last minute, a minute after the
-    # oldest of them.
+    # In short: the earliest time a request to this route may start: after its pause,
+    # min_interval after the last request to it ENDED, and, once rpm requests started in the
+    # last minute, a minute after the oldest of them.
+    #
+    # min_interval counts from the end because that is how Pollinations counts: one reply
+    # every 30 s from the last reply. Measured on 2026-10-25, a request sent 30 s after the
+    # previous one STARTED (that one had taken 9 s) was refused with 402, and the refusal
+    # itself restarted the 30 s, so a request sent too early costs a whole extra interval.
     def _next_slot(self, route: Route, now: float) -> float:
         starts = self._starts[route.key]
         while starts and starts[0] <= now - 60.0:
             starts.popleft()
         slot = max(now, self._paused_until[route.key])
-        if starts and route.min_interval > 0:
-            slot = max(slot, starts[-1] + route.min_interval)
+        if route.min_interval > 0 and route.key in self._last_end:
+            slot = max(slot, self._last_end[route.key] + route.min_interval)
         if route.rpm > 0 and len(starts) >= route.rpm:
             slot = max(slot, starts[-route.rpm] + 60.0)
         return slot
 
+    # In short: do not call this route again for `seconds` (a Retry-After, a cooldown, or the
+    # short gap before a retry). A longer pause already in place is kept.
     def _pause(self, route: Route, seconds: float) -> None:
         until = self._clock() + seconds
         self._paused_until[route.key] = max(self._paused_until[route.key], until)
@@ -408,60 +479,113 @@ class ProviderChain:
     # ChainExhausted when nothing answered.
     async def complete(self, prompt: str, *, max_tokens: int, deadline: float) -> Completion:
         attempts: list[Attempt] = []
+        # The failover loop: each route in order, each at most twice (`tries`), with the turn's
+        # deadline checked before every try, so it always ends.
         for route in self.routes:
             tries = 0
             while tries < 2:
                 now = self._clock()
                 if deadline - now < 1.0:
                     raise ChainExhausted(attempts, out_of_time=True)
-                # Wait for this route's next slot only when the wait is short and the turn
-                # still has time for a call after it; otherwise go to the next route.
-                # A retry that cannot happen is not recorded again: the failure before it is.
-                wait = self._next_slot(route, now) - now
-                if wait > 0:
-                    if wait > self.max_queue_wait or now + wait + 1.0 > deadline:
+                # A spaced provider takes one request at a time: queue behind another turn's
+                # request, but no longer than a slot wait may last, and never past the turn.
+                lock = self._locks.get(route.key)
+                if lock is not None and lock.locked():
+                    limit = min(self.max_queue_wait, deadline - now - 1.0)
+                    try:
+                        await asyncio.wait_for(lock.acquire(), timeout=max(limit, 0.001))
+                    except asyncio.TimeoutError:
                         if tries == 0:
                             attempts.append(Attempt(route.provider, route.model, "skipped_busy"))
                         break
-                # The slot is taken now, before the wait, so a turn running at the same time
-                # sees it as used and queues behind it instead of sending at the same moment.
-                self._starts[route.key].append(now + max(wait, 0.0))
-                if wait > 0:
-                    await self._sleep(wait)
-                tries += 1
-
-                started = self._clock()
-                timeout = max(1.0, min(self.call_timeout, deadline - started))
+                elif lock is not None:
+                    await lock.acquire()
                 try:
-                    # wait_for bounds the call even if a client ignores its own timeout. The
-                    # thread is then left to finish on its own; the turn does not wait for it.
-                    text, tin, tout = await asyncio.wait_for(
-                        asyncio.to_thread(_call, self._client(route), route, prompt, max_tokens, timeout),
-                        timeout=timeout + self.hang_grace,
-                    )
-                except Exception as exc:  # noqa: BLE001 - every failure is classified below
-                    outcome, status, retry_after = classify(exc)
-                    ms = round((self._clock() - started) * 1000)
-                    attempts.append(Attempt(route.provider, route.model, outcome, ms, status))
-                    # Provider name, model, outcome and status only: no error text, which can
-                    # hold the provider's body, and never the prompt.
-                    logger.warning(
-                        "chat: %s %s after %d ms%s",
-                        route.key,
-                        outcome,
-                        ms,
-                        f" (HTTP {status})" if status else "",
-                    )
-                    if outcome == "rate_limited":
-                        self._pause(route, retry_after if retry_after is not None else self.cooldown)
-                        continue  # retried once if the pause is short enough (see the top)
-                    if outcome in ("server_error", "connection_error"):
-                        self._pause(route, self.retry_delay)
-                        continue
-                    if outcome == "http_error" and status in (401, 403, 404):
-                        self._pause(route, self.cooldown)
+                    result = await self._attempt(route, prompt, max_tokens, deadline, now, tries, attempts)
+                finally:
+                    if lock is not None:
+                        lock.release()
+                if isinstance(result, Completion):
+                    return result
+                if result == "skip":
                     break
-                ms = round((self._clock() - started) * 1000)
-                attempts.append(Attempt(route.provider, route.model, "ok", ms))
-                return Completion(text, tin, tout, route.provider, route.model, attempts)
+                tries += 1
+                if result == "next":
+                    break
+                # result == "retry": round again on the same route, once (see `tries`).
         raise ChainExhausted(attempts)
+
+    # In short: one request to one route, after waiting for its slot. Out: the Completion, or
+    # what the caller does next: "retry" this route, go to the "next" one, or "skip" it (its
+    # slot is too far away; nothing was sent). Every outcome is appended to attempts.
+    async def _attempt(
+        self,
+        route: Route,
+        prompt: str,
+        max_tokens: int,
+        deadline: float,
+        queued_at: float,
+        tries: int,
+        attempts: list[Attempt],
+    ) -> Any:
+        # Wait for this route's next slot only when the wait is short and the turn still has
+        # time for a call after it; otherwise go to the next route. A retry that cannot happen
+        # is not recorded again: the failure before it already is.
+        now = self._clock()
+        wait = self._next_slot(route, now) - now
+        if wait > 0:
+            if wait > self.max_queue_wait or now + wait + 1.0 > deadline:
+                if tries == 0:
+                    attempts.append(Attempt(route.provider, route.model, "skipped_busy"))
+                return "skip"
+        # The slot is taken before the wait, so the rpm count already includes this request.
+        self._starts[route.key].append(now + max(wait, 0.0))
+        if wait > 0:
+            await self._sleep(wait)
+
+        started = self._clock()
+        waited_ms = round((started - queued_at) * 1000)
+        timeout = max(1.0, min(self.call_timeout, deadline - started))
+        try:
+            # wait_for bounds the call even if a client ignores its own timeout. The thread is
+            # then left to finish on its own; the turn does not wait for it.
+            text, tin, tout = await asyncio.wait_for(
+                asyncio.to_thread(_call, self._client(route), route, prompt, max_tokens, timeout),
+                timeout=timeout + self.hang_grace,
+            )
+        except Exception as exc:  # noqa: BLE001 - every failure is classified below
+            self._last_end[route.key] = self._clock()
+            outcome, status, retry_after = classify(exc)
+            ms = round((self._clock() - started) * 1000)
+            attempts.append(Attempt(route.provider, route.model, outcome, ms, status, waited_ms))
+            self._last_error[route.provider] = {
+                "at": _utc_now(),
+                "model": route.model,
+                "outcome": outcome,
+                "status": status,
+            }
+            # Provider, model, outcome and status only: no error text, which can hold the
+            # provider's body, and never the prompt.
+            logger.warning(
+                "chat: %s %s after %d ms%s", route.key, outcome, ms, f" (HTTP {status})" if status else ""
+            )
+            # What each failure means for this route (the table at the top of this file).
+            if outcome == "rate_limited":
+                self._pause(route, retry_after if retry_after is not None else self.cooldown)
+                return "retry"
+            if outcome in ("server_error", "connection_error"):
+                self._pause(route, self.retry_delay)
+                return "retry"
+            if outcome == "http_error" and status in (401, 403, 404):
+                self._pause(route, self.cooldown)
+            return "next"
+        self._last_end[route.key] = self._clock()
+        self._last_ok[route.provider] = _utc_now()
+        ms = round((self._clock() - started) * 1000)
+        attempts.append(Attempt(route.provider, route.model, "ok", ms, None, waited_ms))
+        return Completion(text, tin, tout, route.provider, route.model, attempts)
+
+
+# In short: the current UTC time as ISO text, to the second, for /health.
+def _utc_now() -> str:
+    return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
