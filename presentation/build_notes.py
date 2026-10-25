@@ -145,10 +145,10 @@ F.append(block(
 
 F.append(block(
     4, "The evaluator cascade", "~1 min 45 s",
-    "A cheap gate in front of an expensive judge, and the ablation that justifies it.",
-    ["Stage 1 is MiniLM cosine similarity at 19.1 ms. Stage 2 is a DeBERTa-v3 cross-encoder, only on the uncertain cases.",
+    "Two small models on every span, and the ablation that shows what each adds.",
+    ["MiniLM cosine similarity at 19.1 ms, and a DeBERTa-v3 cross-encoder: both run on every span, there is no gate. The risk is contradiction + 0.3 x neutral.",
      "End-to-end the two models measure 151.19 ms per case (PyTorch path, ablation run of 2026-09-18; the 2026-08-23 run of the same script gave 215.9 ms). Be precise about this: 19.1 ms is MiniLM alone, not the pipeline.",
-     "On the chart: the cascade matches DeBERTa alone at F1 0.963 while being cheaper on the common case. That is the justification.",
+     "On the chart: the cascade matches DeBERTa alone at F1 0.963; MiniLM adds about 19 ms and no F1. Its similarity is kept for the drift signal.",
      "Point at configuration F deliberately. Adding the old drift signal made the classifier worse, 0.619. That result was published rather than dropped, and the next slide but one explains why it was wrong."],
     "Thresholds were selected on the dev split and applied unchanged to the held-out test split."))
 
@@ -208,7 +208,7 @@ F.append(block(
 F.append(block(
     11, "Where it stands", "~1 min",
     "What is actually working today, and what was deliberately left out.",
-    ["209 of 209 backend tests pass. Over 20,700 spans stored. Five versioned evaluation datasets.",
+    ["422 backend and 136 dashboard tests pass (25 Oct 2026). 117 stored evaluations on the live site on 22 Oct. Five versioned evaluation datasets.",
      "Run through the shipped list quickly; the detail is on the slide.",
      "End on the deferred list and say the reasons are stated, not hidden: multi-tenancy, key rotation, backup and restore, Postgres, OTLP."],
     "If asked why 'production ready' never appears: it is binary and unfalsifiable. The claim made instead is specific and checkable."))
@@ -257,8 +257,10 @@ for q, a in qa:
 F += rule(4, 10)
 
 F.append(Paragraph("Numbers worth having ready", S_H2))
+# In short: the numbers to have ready, each with where it comes from; test counts measured
+# on 2026-10-25.
 rows = [
-    ["Grounding cascade F1", "0.963", "held-out v1.0_test, Config C"],
+    ["Grounding cascade F1", "0.963", "v1.0_test (5 of 30 copy dev), shipped score"],
     ["MiniLM only / DeBERTa only / shipped", "19.1 / 132.1 / 151.2 ms", "ablation_results.json, 2026-09-18"],
     ["Drift false alarms", "91.7% to 1.5%", "before and after the rebuild"],
     ["Drift detection / AUC", "0.9192 / 0.991", "111 held-out tasks"],
@@ -269,7 +271,7 @@ rows = [
     ["API memory", "1.24 GB to 0.10 GB", "models moved off ingest"],
     ["Tool-claim on real traces", "F1 0.000", "0 extractions, 8,353 prose spans"],
     ["Disagreement, external", "0 of 10", "internal benchmark was 0.960"],
-    ["Backend tests", "209 / 209", "pytest tests/ -q"],
+    ["Backend / dashboard tests", "422 / 136 passed", "pytest, vitest; 25 Oct 2026"],
 ]
 t = Table([[Paragraph(f"<b>{a}</b>", S_BODY), Paragraph(b, S_BODY), Paragraph(f"<font color='#8B94A4'>{c}</font>", S_BODY)]
            for a, b, c in rows], colWidths=[52 * mm, 40 * mm, 73 * mm])

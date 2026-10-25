@@ -50,17 +50,19 @@ AgentPulse evaluates *every* span in a continuous loop. At ~3.2 s per evaluation
 
 **3. Quality — and here the honest answer is not a clean win.**
 
-| Subset | n | NLI F1 | Judge F1 |
-| :--- | ---: | ---: | ---: |
-| Overall | 30 | 0.963 | **1.000** |
-| Deterministic labels | 10 | 1.000 | 1.000 |
-| LLM-judge labels | 20 | 0.941 | **1.000** |
+| Subset | n | NLI F1, as run (weight 0.5, corrected labels) | NLI F1 at the shipped weight 0.3 | Judge F1 |
+| :--- | ---: | ---: | ---: | ---: |
+| Overall | 30 | 0.897 | 0.963 | **1.000** |
+| Deterministic labels | 10 | 1.000 | 1.000 | 1.000 |
+| LLM-judge labels | 20 | 0.842 | 0.941 | **1.000** |
+
+The comparison ran on 2026-08-26, when the code had DeBERTa's `entailment` and `neutral` outputs swapped and the neutral weight was 0.5; it published NLI F1 0.963 / 1.000 / 0.941. The "as run" column is the same 30 cases re-scored on the corrected labels (`GROUNDING_RECALIBRATION_2026-10.md` T8 and section 3.3). The "shipped weight" column is arithmetic on the stored per-case probabilities (`contradiction + 0.3 × neutral`, the comparison's own 0.5 threshold; analysis JSON `reproduction_checks.llm_judge_comparison_nli_side`): `test_03` and `test_16` fall to about 0.31 and only `test_09` stays flagged. The judge was not re-run.
 
 **The judge outscored the cascade overall.** The "comparable quality" half of the original hypothesis is not confirmed as stated.
 
 But read where the difference sits. The 30 cases split by label provenance: 10 were correct by deterministic construction, 20 were labelled by LLM-judge passes. Scoring an LLM judge against labels LLM judges produced is partially circular and flatters the judge — and the judge's *entire* measured advantage comes from that subset. On the 10 cleanly-labelled cases both systems score 1.000 and do not separate at all.
 
-Across all 30 cases the two systems disagree on exactly **one**: `test_09`. Evidence says "approximately **7.61 billion** total parameters", the claim says "approximately **7.6 billion**". Ground truth is SUPPORTED. The judge got it right; DeBERTa scored the faithful restatement at **0.922** risk.
+At the shipped weight the two systems disagree on **one** case, `test_09`; as the comparison was run (weight 0.5, corrected labels) they disagree on three: `test_09`, `test_03` and `test_16`, the last two neutral-only outputs scoring 0.5007 and 0.5010 (`GROUNDING_RECALIBRATION_2026-10.md` section 3.3). In `test_09` the evidence says "approximately **7.61 billion** total parameters", the claim says "approximately **7.6 billion**". Ground truth is SUPPORTED. The judge got it right; DeBERTa called the faithful restatement a contradiction (probability 0.853), a risk of **0.857** at weight 0.5 and about 0.855 at 0.3. (The published 0.922 was computed with the swapped labels.)
 
 That is a genuine, reproducible NLI failure mode — numeric rounding paraphrase — and it has deliberately **not** been patched, because fixing from a single observed case is fitting to one data point.
 

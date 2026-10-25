@@ -105,11 +105,13 @@ function tag(s, text, x, y) {
   s.addNotes('Keep this to ninety seconds. The one sentence that must land is the last one: rare faults plus sampled evaluation equals faults you never see. Everything in the architecture follows from that.');
 }
 
-/* 3 — Literature survey comparison table */
+/* 3 — Reading list: prior work, verified to exist, not yet read in full.
+   Relabelled on 2026-10-25: SESSION_HANDOFF.md 17.3 records that these works were
+   verified by search but have not been read, so the slide must not call them a survey. */
 {
   const s = light();
-  head(s, 'Literature survey', 'Comparison of prior work', false);
-  tag(s, 'Lit. survey - comparison table', 9.1, 0.42);
+  head(s, 'Literature - verified to exist, not yet read in full', 'Reading list', false);
+  tag(s, 'Reading list - not read in full', 9.1, 0.42);
 
   const rows = [
     ['Work, year', 'Method', 'Evaluated on', 'Metric', 'Limitation for this problem'],
@@ -141,10 +143,10 @@ function tag(s, text, x, y) {
   });
 
   card(s, M, 6.5, 11.9, 0.62, 'FFF4D6');
-  s.addText('Ten of seventeen surveyed works shown; the full reference list is on the appendix slide. Read each one before defending this table - the panel may pick any row.', {
+  s.addText('Reading list (verified to exist, not yet read in full): ten of seventeen works shown, each row restating what the paper reports. Full list on the appendix slide.', {
     x: M + 0.3, y: 6.65, w: 11.3, h: 0.35, fontFace: B, fontSize: 11, bold: true, color: '7A5A00', margin: 0,
   });
-  s.addNotes('Nine of the seventeen surveyed works are from 2023 onward, which meets the checklist requirement. The limitation column is what motivates the gap on the next slide: consistency metrics assume a single-document premise, judge-based methods pay per evaluation, drift methods are not tied to correctness, and MAST describes multi-agent failures without detecting them at runtime. Read every paper on this slide before the review - a panel that finds you cannot discuss a row you cited will discount the whole survey.');
+  s.addNotes('Say it plainly: this is a reading list. The seventeen works were verified to exist, and each row restates what the paper itself reports; none has been read in full yet. Nine of the seventeen are from 2023 onward. The limitation column is what motivates the gap on the next slide: consistency metrics assume a single-document premise, judge-based methods pay per evaluation, drift methods are not tied to correctness, and MAST describes multi-agent failures without detecting them at runtime. Read every paper on this slide before the review - a panel that finds you cannot discuss a row you cited will discount the whole survey.');
 }
 
 /* 4 — Gap and objectives */
@@ -167,7 +169,9 @@ function tag(s, text, x, y) {
   s.addText('Objectives', { x: M, y: 4.0, w: 6, h: 0.34, fontFace: B, fontSize: 15, bold: true, color: INK, margin: 0 });
   const objs = [
     ['O1', 'Evaluate 100% of spans on CPU', 'Achieved - measured 12 spans/sec at 4 workers'],
-    ['O2', 'Match a strong NLI baseline on grounding', 'Achieved - F1 0.963 on held-out v1.0_test'],
+    // 5 of the 30 test cases copy dev cases; the pool figures are on the 47 truly held-out
+    // cases (GROUNDING_RECALIBRATION_2026-10.md T3c, T3d).
+    ['O2', 'Match a strong NLI baseline on grounding', 'F1 0.963 on v1.0_test; 0.927-0.952 held out'],
     ['O3', 'Detect sustained behavioural drift on real text', 'Achieved after rebuild - AUC 0.991, coverage 24.5%'],
     ['O4', 'Survive process failure without losing work', 'Achieved - exactly-once across 8,000 spans'],
     ['O5', 'Validate every signal against external data', 'Partly - 3 of 4 signals failed and are reported as such'],
@@ -207,8 +211,10 @@ function tag(s, text, x, y) {
   card(s, M, 3.65, 5.85, 2.9, 'FFFFFF');
   s.addText('The evaluator cascade', { x: M + 0.35, y: 3.85, w: 5.2, h: 0.32, fontFace: B, fontSize: 14, bold: true, color: DARKTEXT, margin: 0 });
   s.addText([
-    { text: 'Stage 1 - MiniLM-L6-v2 cosine gate, 19.1 ms.', options: { bullet: true, breakLine: true } },
-    { text: 'Stage 2 - DeBERTa-v3 cross-encoder NLI, run only when the gate is uncertain.', options: { bullet: true, breakLine: true } },
+    // Both models run on every span: evaluate_grounding calls MiniLM, then DeBERTa, with no
+    // branch between them, so the old "gate" wording was wrong.
+    { text: 'MiniLM-L6-v2 similarity, 19.1 ms, on every span (kept beside the score; not a gate).', options: { bullet: true, breakLine: true } },
+    { text: 'DeBERTa-v3 NLI on every span: risk = contradiction + 0.3 x neutral.', options: { bullet: true, breakLine: true } },
     { text: 'Deterministic tool-claim regex and per-agent drift run alongside.', options: { bullet: true, breakLine: true } },
     { text: 'End-to-end cascade: 151.19 ms mean per case (ablation, PyTorch path, 2026-09-18).', options: { bullet: true } },
   ], { x: M + 0.35, y: 4.25, w: 5.2, h: 2.1, fontFace: B, fontSize: 11.5, color: MUTED, paraSpaceAfter: 6, margin: 0 });
@@ -297,7 +303,7 @@ function tag(s, text, x, y) {
   s.addText('The full system is not the best row, and that is reported rather than hidden', {
     x: M + 0.35, y: 5.68, w: 11.2, h: 0.3, fontFace: B, fontSize: 13, bold: true, color: DARKTEXT, margin: 0,
   });
-  s.addText('Folding the drift score into a per-claim composite risk adds noise to a claim-level classification task - drift is a per-agent behavioural signal, not evidence about a single statement. The ablation shows the same effect independently: configuration F, NLI plus drift, drops to F1 0.619. Note also that this comparison is dated 18 August, nine days before the drift detector was rebuilt, so it measures the superseded signal. Re-running it is listed in future work.', {
+  s.addText('Folding the drift score into a per-claim composite risk adds noise to a claim-level classification task - drift is a per-agent behavioural signal, not evidence about a single statement. The ablation shows the same effect independently: configuration F, NLI plus drift, drops to F1 0.619. Note also that this comparison is dated 18 August, before the drift detector was rebuilt and before the NLI label-order fix of October, so it measures superseded signals. It was not re-run.', {
     x: M + 0.35, y: 6.02, w: 11.2, h: 0.8, fontFace: B, fontSize: 11.5, color: MUTED, margin: 0,
   });
   s.addNotes('Do not skip past the red row. Volunteering that your full system underperforms an ablated variant, and giving the mechanism plus the date caveat, is far stronger than being caught at it. Expect a question here and welcome it.');
@@ -312,10 +318,12 @@ function tag(s, text, x, y) {
   s.addChart(pres.ChartType.bar, [{
     name: 'F1',
     labels: ['A MiniLM', 'B DeBERTa', 'C Cascade', 'D + tool', 'E + disagree', 'F + drift', 'G Full'],
-    values: [0.786, 0.963, 0.963, 0.963, 0.963, 0.619, 0.963],
+    // G is the corrected-label re-score at the 0.5 weight that run used (0.897,
+    // GROUNDING_RECALIBRATION_2026-10.md T8); the file recorded 0.963 on swapped labels.
+    values: [0.786, 0.963, 0.963, 0.963, 0.963, 0.619, 0.897],
   }], {
     x: M, y: 1.5, w: 7.4, h: 3.3,
-    barDir: 'col', chartColors: ['3A4456', '2C3547', CYAN, '2C3547', '2C3547', BAD, CYAN],
+    barDir: 'col', chartColors: ['3A4456', '2C3547', CYAN, '2C3547', '2C3547', BAD, WARN],
     showValue: true, dataLabelPosition: 'outEnd', dataLabelFontSize: 10,
     dataLabelColor: INK, dataLabelFormatCode: '0.000',
     showLegend: false, valAxisMaxVal: 1.12, valAxisHidden: true,
@@ -326,9 +334,9 @@ function tag(s, text, x, y) {
   card(s, 8.35, 1.5, 4.25, 3.3);
   s.addText('What the ablation shows', { x: 8.7, y: 1.72, w: 3.6, h: 0.32, fontFace: B, fontSize: 13.5, bold: true, color: CYAN, margin: 0 });
   s.addText([
-    { text: 'The cascade (C) matches NLI alone (B) at 0.963 while handling the common case at a fraction of the cost. That is the justification for the gate.', options: { bullet: true, breakLine: true } },
+    { text: 'The cascade (C) matches NLI alone (B) at 0.963; MiniLM adds about 19 ms and no F1.', options: { bullet: true, breakLine: true } },
     { text: 'Tool-claim (D) and disagreement (E) change nothing - the single-agent test split cannot exercise either.', options: { bullet: true, breakLine: true } },
-    { text: 'Drift (F) actively harms classification, 0.619.', options: { bullet: true } },
+    { text: 'Drift (F) harms classification, 0.619. Full pipeline (G) 0.897 on corrected labels at the old 0.5 weight; not re-run at 0.3.', options: { bullet: true } },
   ], { x: 8.7, y: 2.15, w: 3.6, h: 2.5, fontFace: B, fontSize: 11, color: DIM, paraSpaceAfter: 7, margin: 0 });
 
   card(s, M, 5.05, 11.9, 1.5, '1B2230');
@@ -336,7 +344,7 @@ function tag(s, text, x, y) {
   s.addText('Configurations D and E producing identical numbers is itself the finding: the ablation could not test them, because a single-agent dataset structurally cannot exercise a cross-agent or tool-narration signal. That observation is what triggered the external validation on the next slide, and it is the reason those two signals ship as Experimental.', {
     x: M + 0.35, y: 5.6, w: 11.2, h: 0.8, fontFace: B, fontSize: 11.5, color: DIM, margin: 0,
   });
-  s.addNotes('The panel will ask why four configurations report the same F1. The answer is the strongest methodological point in the deck: the test split could not exercise those components, and noticing that is what led to the external validation.');
+  s.addNotes('G was 0.963 in the result file, computed while DeBERTa\'s entailment and neutral outputs were swapped; on corrected labels at the weight it used (0.5) it is 0.897, because two supported answers the model calls neutral cross its 0.50 line. The panel will ask why four configurations report the same F1. The answer is the strongest methodological point in the deck: the test split could not exercise those components, and noticing that is what led to the external validation.');
 }
 
 /* 9 — Grounding + drift results */
@@ -347,8 +355,9 @@ function tag(s, text, x, y) {
   card(s, M, 1.55, 5.85, 2.35, 'FFFFFF');
   s.addText('Grounding', { x: M + 0.35, y: 1.75, w: 5.2, h: 0.3, fontFace: B, fontSize: 13.5, bold: true, color: DARKTEXT, margin: 0 });
   s.addText('0.963', { x: M + 0.35, y: 2.1, w: 2.4, h: 0.65, fontFace: H, fontSize: 36, bold: true, color: '15704F', margin: 0 });
-  s.addText('F1 on held-out v1.0_test', { x: M + 0.35, y: 2.78, w: 3.0, h: 0.3, fontFace: B, fontSize: 11.5, color: MUTED, margin: 0 });
-  s.addText('Precision 0.929, recall 1.000, FPR 0.059. Thresholds were selected on the dev split and applied unchanged.', {
+  s.addText('F1 on v1.0_test, shipped score', { x: M + 0.35, y: 2.78, w: 4.0, h: 0.3, fontFace: B, fontSize: 11.5, color: MUTED, margin: 0 });
+  // contradiction + 0.3 x neutral, cut-offs 0.7 and 0.4 (GROUNDING_RECALIBRATION_2026-10.md T3c, T3d).
+  s.addText('P 0.929, R 1.000, FPR 0.059 at both cut-offs. 5 of 30 test cases copy dev; on 47 held-out cases F1 0.927-0.952.', {
     x: M + 0.35, y: 3.1, w: 5.2, h: 0.65, fontFace: B, fontSize: 11.5, color: MUTED, margin: 0,
   });
 
@@ -427,7 +436,7 @@ function tag(s, text, x, y) {
   card(s, 6.9, 1.55, 5.7, 4.3, 'FFFFFF');
   s.addText('What is not', { x: 7.25, y: 1.78, w: 5.05, h: 0.3, fontFace: B, fontSize: 13.5, bold: true, color: '9B2C3A', margin: 0 });
   s.addText([
-    { text: 'No multi-seed repetition of the grounding benchmark. The 0.963 figure is a single run on a 30-case split, so it carries no variance estimate.', options: { bullet: true, breakLine: true } },
+    { text: 'No multi-seed repetition of the grounding benchmark. The 0.963 figure is a single run on a 30-case split, 5 of whose cases copy dev cases.', options: { bullet: true, breakLine: true } },
     { text: 'No significance testing between the cascade and baseline D. Their difference is reported as observed, not as established.', options: { bullet: true, breakLine: true } },
     { text: 'Test splits are small - 20 to 30 cases. Adequate for direction, not for tight intervals.', options: { bullet: true, breakLine: true } },
     { text: 'Labels are LLM-generated. The kappa is between two model passes, not between human annotators.', options: { bullet: true } },
@@ -540,7 +549,8 @@ function tag(s, text, x, y) {
   s.addText('Repository and reproducibility', { x: M + 0.35, y: 1.7, w: 5.2, h: 0.3, fontFace: B, fontSize: 13.5, bold: true, color: DARKTEXT, margin: 0 });
   s.addText([
     { text: 'Git repository with full commit history and a README.', options: { bullet: true, breakLine: true } },
-    { text: '209 of 209 backend tests passing (pytest tests/ -q).', options: { bullet: true, breakLine: true } },
+    // Counts measured on main at 2fefb91, 2026-10-25.
+    { text: '422 backend and 136 dashboard tests passing (25 Oct 2026).', options: { bullet: true, breakLine: true } },
     { text: 'Schema under Alembic, baselined and verified byte-identical across 43,941 rows.', options: { bullet: true, breakLine: true } },
     { text: 'Every reported figure has a JSON file under experiments/results/ and a matching write-up.', options: { bullet: true, breakLine: true } },
     { text: 'Docker compose and documented dev-server commands.', options: { bullet: true } },
@@ -553,7 +563,7 @@ function tag(s, text, x, y) {
     ['Code repository, documented', 'Ready', OK],
     ['Results and ablation', 'Ready', OK],
     ['Project report', 'Draft - PROJECT_REPORT', WARN],
-    ['Literature survey', '17 works surveyed', OK],
+    ['Literature', 'Reading list, not read', WARN],
     ['Plagiarism report', 'Outstanding', BAD],
     ['Paper submission', 'Outstanding', BAD],
   ];
@@ -605,7 +615,7 @@ function tag(s, text, x, y) {
 /* 17 — References appendix */
 {
   const s = light();
-  head(s, 'Appendix', 'Full reference list - 17 works', false);
+  head(s, 'Appendix - reading list, verified to exist, not yet read in full', 'Full reference list - 17 works', false);
 
   const cols = [
     ['Factual consistency / NLI', [
@@ -669,4 +679,6 @@ function tag(s, text, x, y) {
   s.addNotes('Close on the fourth bullet, not the first. Then stop talking and take questions.');
 }
 
-pres.writeFile({ fileName: process.env.OUT || 'AgentPulse_Final_Review.pptx' }).then(f => console.log('written:', f));
+// Default output is the _v2 deck. The original AgentPulse_Final_Review.pptx was built by an
+// older version of this script, still quoted 215.9 ms, and is archived in presentation/archive/.
+pres.writeFile({ fileName: process.env.OUT || 'AgentPulse_Final_Review_v2.pptx' }).then(f => console.log('written:', f));
