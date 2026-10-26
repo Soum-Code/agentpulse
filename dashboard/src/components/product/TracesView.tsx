@@ -209,8 +209,14 @@ export const TracesView: React.FC<TracesViewProps> = ({
     const handleClickOutsideCopy = (e: MouseEvent) => {
       if (!copyMenuRef.current?.contains(e.target as Node)) setIsCopyMenuOpen(false);
     };
+    // Esc closes the menu too (its header says so).
+    const handleEscape = (e: KeyboardEvent) => e.key === 'Escape' && setIsCopyMenuOpen(false);
     document.addEventListener('mousedown', handleClickOutsideCopy);
-    return () => document.removeEventListener('mousedown', handleClickOutsideCopy);
+    document.addEventListener('keydown', handleEscape);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutsideCopy);
+      document.removeEventListener('keydown', handleEscape);
+    };
   }, [isCopyMenuOpen]);
 
   // Close the filter popover on a click outside it.
@@ -222,8 +228,14 @@ export const TracesView: React.FC<TracesViewProps> = ({
         setIsFilterDropdownOpen(false);
       }
     };
+    // The popover's close button is titled "Close filter menu (Esc)", so Esc has to work.
+    const handleEscape = (e: KeyboardEvent) => e.key === 'Escape' && setIsFilterDropdownOpen(false);
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleEscape);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscape);
+    };
   }, [isFilterDropdownOpen]);
 
   // How many traces each status and duration bracket holds, in the current agent scope.
