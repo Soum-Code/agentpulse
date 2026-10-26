@@ -294,6 +294,41 @@ class TestRefusals:
         assert (res.status_code, res.json()["code"]) == (429, "daily_cap")
         assert client.get("/chat/health").json()["usage"]["turns_today"] == 1
 
+    def test_one_ip_runs_one_turn_at_a_time_but_others_are_not_held_up(self, pulse):
+        # The first turn's model call waits on an event, so it is still running while the
+        # same IP, then another IP, ask a question.
+        release = threading.Event()
+        started = []
+
+        class Held(StubClient):
+            def create(self, **kwargs):
+                # Only the very first call is held; it is counted before it waits, so the
+                # other visitor's calls are not mistaken for it.
+                started.append(1)
+                if len(started) == 1:
+                    release.wait(5)
+                return super().create(**kwargs)
+
+        guard = GuardSettings(max_concurrent=5, ip_per_minute=100, trusted_proxies=parse_networks("172.16.0.0/12"))
+        client = _client(pulse, Held(), guard=guard, client_addr=("172.18.0.5", 40000))
+        same_ip = {"X-Forwarded-For": "198.51.100.1"}
+        first = {}
+        runner = threading.Thread(
+            target=lambda: first.update(res=client.post("/chat", json={"message": "q"}, headers=same_ip))
+        )
+        runner.start()
+        time.sleep(0.5)
+        again = client.post("/chat", json={"message": "q"}, headers=same_ip)
+        assert (again.status_code, again.json()["code"]) == (429, "busy")
+        assert "still being answered" in again.json()["error"]
+        other = client.post("/chat", json={"message": "q"}, headers={"X-Forwarded-For": "198.51.100.2"})
+        assert other.status_code == 200
+        release.set()
+        runner.join(10)
+        assert first["res"].status_code == 200
+        # Its slot is free again once the turn is over.
+        assert client.post("/chat", json={"message": "q"}, headers=same_ip).status_code == 200
+
 
 # Pausing and resuming a running service, for /chat, /chat/stream and /health alike.
 class TestKillSwitch:
@@ -375,6 +410,37 @@ class TestReadiness:
         client = _client(pulse, chain=ProviderChain([]))
         assert client.get("/chat/health").json()["status"] == "failed"
         assert client.post("/chat", json={"message": "q"}).status_code == 503
+
+
+# Without its own key for AgentPulse the chat would answer while recording nothing, so it
+# reports itself as not set up instead. Here the app builds its own AgentPulse client, as
+# in the container.
+class TestIngestKey:
+    # In short: /chat/health from an app that makes its own AgentPulse client from env, and,
+    # with ask=True, the answer to one question.
+    @staticmethod
+    def _ask(env, ask=False):
+        app = create_app(
+            chain=_chain(StubClient()),
+            guard=GuardSettings(max_concurrent=5),
+            loader=lambda: None,
+            env=env,
+            load_in_background=False,
+        )
+        with TestClient(app) as client:
+            health = client.get("/chat/health").json()
+            return health, (client.post("/chat", json={"message": "q"}) if ask else None)
+
+    def test_no_key_means_not_ready_and_no_turns(self):
+        health, res = self._ask({"AGENTPULSE_ENDPOINT": "http://unused"}, ask=True)
+        assert health["status"] == "failed"
+        assert "no AgentPulse key" in health["message"]
+        assert (res.status_code, res.json()["code"]) == (503, "unavailable")
+
+    def test_with_a_key_it_is_ready(self):
+        health, _ = self._ask({"AGENTPULSE_ENDPOINT": "http://unused", "AGENTPULSE_API_KEY": "issued-key"})
+        assert health["status"] == "ready"
+        assert "issued-key" not in json.dumps(health)
 
 
 # What /health tells the owner and an uptime monitor: every provider, configured or not, its

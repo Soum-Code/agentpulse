@@ -79,7 +79,8 @@ def parse_networks(value: Optional[str]) -> list[IPNetwork]:
 
 
 # In short: every limit, with defaults sized for a handful of examiners trying the site at
-# once (5 questions a minute and 25 a day each) and a site-wide day that stays inside the free
+# once (5 questions a minute and 40 a day per IP; a campus or shared network puts several
+# examiners behind one IP, hence 40) and a site-wide day that stays inside the free
 # quotas when the Groq and Cerebras keys are set. The arithmetic is in deploy/azure/README.md
 # ("Limits"): a turn is three calls and at most about 1,700 tokens, so 300 turns is about
 # 510K tokens and 900 requests a day, against Groq's 200K tokens and 1,000 requests and
@@ -87,7 +88,7 @@ def parse_networks(value: Optional[str]) -> list[IPNetwork]:
 @dataclass
 class GuardSettings:
     ip_per_minute: int = 5
-    ip_per_day: int = 25
+    ip_per_day: int = 40
     daily_cap: int = 300
     max_concurrent: int = 2
     max_input_chars: int = 500
@@ -102,7 +103,7 @@ class GuardSettings:
         env = dict(os.environ) if env is None else env
         return cls(
             ip_per_minute=_env_int(env, "CHAT_IP_TURNS_PER_MINUTE", 5),
-            ip_per_day=_env_int(env, "CHAT_IP_TURNS_PER_DAY", 25),
+            ip_per_day=_env_int(env, "CHAT_IP_TURNS_PER_DAY", 40),
             daily_cap=_env_int(env, "CHAT_DAILY_TURN_CAP", 300),
             max_concurrent=_env_int(env, "CHAT_MAX_CONCURRENT_TURNS", 2),
             max_input_chars=_env_int(env, "CHAT_MAX_INPUT_CHARS", 500),
@@ -232,8 +233,8 @@ class TurnLimiter:
 
     admit() either records a turn and returns None, or returns the Refusal. A turn counts
     when it is admitted, whether or not a provider answers it: otherwise a request that makes
-    every provider fail would cost nothing to repeat. finish() must be called once for every
-    admitted turn, to free its concurrency slot. Used only from the event loop, so no lock.
+    every provider fail would cost nothing to repeat. finish(ip) must be called once for every
+    admitted turn, to free its concurrency slots. Used only from the event loop, so no lock.
     """
 
     def __init__(self, settings: GuardSettings, clock: Callable[[], float] = time.time):
@@ -244,6 +245,9 @@ class TurnLimiter:
         self._day_by_ip: dict[str, int] = {}
         self._day_total = 0
         self.running = 0
+        # Turns running now, per IP. One IP runs one turn at a time: a second tab or a
+        # double-click would otherwise take a second slot, and a script could hold them all.
+        self._running_by_ip: dict[str, int] = {}
 
     # In short: on the first call of a new UTC day, start the daily counts again from zero.
     def _roll_day(self, now: float) -> None:
@@ -253,7 +257,8 @@ class TurnLimiter:
 
     # In short: the rate-limit check. Either record a turn for this IP and return None, or
     # return why not. The site's day is checked first (it is the same answer for everyone),
-    # then this IP's day, its last minute, and the turns running right now.
+    # then this IP's day, its last minute, a turn of its own still running, and the turns
+    # running right now on the whole site.
     def admit(self, ip: str) -> Optional[Refusal]:
         s = self.settings
         now = self._clock()
@@ -288,6 +293,13 @@ class TurnLimiter:
                 f"That is {s.ip_per_minute} questions in a minute. Try again in {wait} s.",
                 wait,
             )
+        if self._running_by_ip.get(ip, 0) >= 1:
+            return Refusal(
+                429,
+                "busy",
+                "Your previous question is still being answered. Try again when it has finished.",
+                5,
+            )
         if self.running >= s.max_concurrent:
             return Refusal(
                 429,
@@ -300,14 +312,21 @@ class TurnLimiter:
         self._day_by_ip[ip] = self._day_by_ip.get(ip, 0) + 1
         self._day_total += 1
         self.running += 1
+        self._running_by_ip[ip] = self._running_by_ip.get(ip, 0) + 1
         # Forget IPs whose minute window is empty, so the map does not grow with every visitor.
         if len(self._minute) > 5000:
             self._minute = {k: v for k, v in self._minute.items() if v and v[-1] > now - 60.0}
         return None
 
-    # In short: free the concurrency slot of a turn that has ended, however it ended.
-    def finish(self) -> None:
+    # In short: free the concurrency slots (the site's and this IP's) of a turn that has
+    # ended, however it ended. An IP with nothing left running is dropped from the map.
+    def finish(self, ip: str) -> None:
         self.running = max(0, self.running - 1)
+        left = self._running_by_ip.get(ip, 0) - 1
+        if left > 0:
+            self._running_by_ip[ip] = left
+        else:
+            self._running_by_ip.pop(ip, None)
 
     # In short: what /health shows: today's count and cap, and the turns running now. No IPs.
     def usage(self) -> dict:

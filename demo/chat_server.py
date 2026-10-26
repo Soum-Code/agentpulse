@@ -149,6 +149,10 @@ DEFAULT_CORS_REGEX = r"https?://(localhost|127\.0\.0\.1)(:\d+)?"
 # Shown while the embedding model loads after a start (a minute or so on the VM).
 LOADING_MESSAGE = "The chat is starting up. Try again in a minute."
 FAILED_MESSAGE = "The chat cannot search its documents right now, so it is not answering."
+NO_INGEST_KEY_MESSAGE = (
+    "The chat is not set up yet: it has no AgentPulse key to record its answers with, "
+    "so it is not answering."
+)
 
 
 # The JSON body of POST /chat and /chat/stream. The length rule a visitor sees is
@@ -267,6 +271,12 @@ def create_app(
     # owns_pulse is True when we create the AgentPulse client here. Then we also start
     # and stop it ourselves; a client passed in by the caller is the caller's to manage.
     owns_pulse = pulse is None
+    # Without a key, AgentPulse refuses every span with 401 and nothing the chat does would be
+    # recorded, while the visitor still sees answers: a live demo that silently monitors
+    # nothing. So the chat does not count as ready without one. On the VM the key is one
+    # issued through /v1/keys for the chat alone (deploy/azure/README.md, "The live chat"),
+    # never the server's own key, which can mint and revoke keys.
+    ingest_key_missing = owns_pulse and not env.get("AGENTPULSE_API_KEY")
     if pulse is None:
         pulse = AgentPulse(
             endpoint=env.get("AGENTPULSE_ENDPOINT") or "http://localhost:8000",
@@ -343,6 +353,8 @@ def create_app(
         pause = check_pause(guard)
         if pause:
             return "paused", pause.message
+        if ingest_key_missing:
+            return "failed", NO_INGEST_KEY_MESSAGE
         if retrieval["state"] == "loading":
             return "loading", LOADING_MESSAGE
         if retrieval["state"] == "failed":
@@ -396,27 +408,26 @@ def create_app(
 
     # The checks before a turn may spend anything, in this order: paused, not ready, a bad
     # question, then the limits (so a refused question costs the visitor nothing). Out: the
-    # cleaned session id, or the response that refuses the turn. A turn that is admitted
-    # holds a concurrency slot until limiter.finish().
-    def admit(request: Request, body: ChatRequest) -> tuple[str, Optional[JSONResponse]]:
+    # cleaned session id, the IP the turn counts against, and the response that refuses the
+    # turn (None when it may run). A turn that is admitted holds its concurrency slots until
+    # limiter.finish(ip).
+    def admit(request: Request, body: ChatRequest) -> tuple[str, str, Optional[JSONResponse]]:
         session_id = clean_session_id(body.session_id, lambda: "sess_" + uuid.uuid4().hex[:10])
+        ip = client_ip(
+            request.client.host if request.client else None,
+            request.headers.get("x-forwarded-for"),
+            guard.trusted_proxies,
+        )
         state, message = status_now()
         if state == "paused":
-            return session_id, _refusal_response(check_pause(guard), session_id)
+            return session_id, ip, _refusal_response(check_pause(guard), session_id)
         if state != "ready":
-            return session_id, _refusal_response(
+            return session_id, ip, _refusal_response(
                 Refusal(503, "loading" if state == "loading" else "unavailable", message, 30),
                 session_id,
             )
-        refusal = check_message(body.message, guard)
-        if refusal is None:
-            ip = client_ip(
-                request.client.host if request.client else None,
-                request.headers.get("x-forwarded-for"),
-                guard.trusted_proxies,
-            )
-            refusal = limiter.admit(ip)
-        return session_id, (_refusal_response(refusal, session_id) if refusal else None)
+        refusal = check_message(body.message, guard) or limiter.admit(ip)
+        return session_id, ip, (_refusal_response(refusal, session_id) if refusal else None)
 
     # Answer one question with the three agents, as a stream of events. Each is a dict with a
     # "type":
@@ -605,7 +616,7 @@ def create_app(
     # A failed turn's body still lists the agents that did run, and the trace id.
     @app.post("/chat")
     async def chat(request: Request, body: ChatRequest) -> JSONResponse:
-        session_id, refused = admit(request, body)
+        session_id, ip, refused = admit(request, body)
         if refused:
             return refused
         final: dict[str, Any] = {}
@@ -613,7 +624,7 @@ def create_app(
             async for event in run_turn(body.message, session_id):
                 final = event
         finally:
-            limiter.finish()
+            limiter.finish(ip)
         status = final.pop("status", 200) if final.get("type") == "error" else 200
         final.pop("type", None)
         return JSONResponse(status_code=status, content=final)
@@ -624,7 +635,7 @@ def create_app(
     # an "error" event.
     @app.post("/chat/stream")
     async def chat_stream(request: Request, body: ChatRequest):
-        session_id, refused = admit(request, body)
+        session_id, ip, refused = admit(request, body)
         if refused:
             return refused
 
@@ -637,7 +648,7 @@ def create_app(
 
         return _TurnStream(
             lines(),
-            release=limiter.finish,
+            release=lambda: limiter.finish(ip),
             media_type="application/x-ndjson",
             # no-transform and X-Accel-Buffering ask proxies on the way not to hold the lines
             # back; Caddy is told the same in the Caddyfile.
