@@ -23,7 +23,16 @@ import {
   Cpu,
   Shield
 } from 'lucide-react';
-import { TextDensity, TelemetryProject } from '../../types';
+import {
+  TextDensity,
+  TelemetryProject,
+  ColorPalette,
+  DarkSurfacePreset,
+  ButterSurfacePreset,
+  ChalkSurfacePreset,
+} from '../../types';
+import { UnifiedPaletteBar } from '../common/UnifiedPaletteBar';
+import { CHALK_PRESETS, DARK_PRESETS, BUTTER_PRESETS } from '../../lib/colorPalettes';
 import { api, PlatformHealth } from '../../lib/api';
 import { liveEvaluationTiming } from '../../lib/evalTiming';
 import { ingestionKeyView } from '../../lib/ingestionKey';
@@ -38,6 +47,21 @@ interface SettingsViewProps {
   activeProject?: TelemetryProject | null;
   onOpenProjectSelector?: () => void;
   onOpenAuth?: () => void;
+  // Palette state from useAppTheme (App spreads it in); without it the palette section is hidden.
+  palette?: ColorPalette;
+  onSelectPalette?: (palette: ColorPalette) => void;
+  darkPreset?: DarkSurfacePreset;
+  onSelectDarkPreset?: (preset: DarkSurfacePreset) => void;
+  darkCustomColor?: string;
+  onSelectDarkCustomColor?: (hex: string) => void;
+  butterPreset?: ButterSurfacePreset;
+  onSelectButterPreset?: (preset: ButterSurfacePreset) => void;
+  butterCustomColor?: string;
+  onSelectButterCustomColor?: (hex: string) => void;
+  chalkSurface?: ChalkSurfacePreset;
+  onSelectChalkPreset?: (preset: ChalkSurfacePreset) => void;
+  chalkCustomColor?: string;
+  onSelectChalkCustomColor?: (hex: string) => void;
 }
 
 export const SettingsView: React.FC<SettingsViewProps> = ({
@@ -48,7 +72,21 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   currentUser,
   activeProject,
   onOpenProjectSelector,
-  onOpenAuth
+  onOpenAuth,
+  palette,
+  onSelectPalette,
+  darkPreset = 'obsidian-void',
+  onSelectDarkPreset,
+  darkCustomColor = '#06070a',
+  onSelectDarkCustomColor,
+  butterPreset = 'canary-gold',
+  onSelectButterPreset,
+  butterCustomColor = '#faf5e6',
+  onSelectButterCustomColor,
+  chalkSurface = 'classic-white',
+  onSelectChalkPreset,
+  chalkCustomColor = '#f6f8fb',
+  onSelectChalkCustomColor
 }) => {
   // Read from the active project on every render, so switching project while this
   // page is open shows that project's key. Only a key shaped like one the API
@@ -208,6 +246,158 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Surface colours: palette, tint presets and custom colour. Shown when App passes the theme state. */}
+      {palette && onSelectPalette && onSelectDarkPreset && onSelectDarkCustomColor && onSelectButterPreset && onSelectButterCustomColor && onSelectChalkPreset && onSelectChalkCustomColor && (
+      <>
+      {/* Unified Surface Color Palette & Multi-Color Spectrum */}
+      <div className="ios-liquid-card border-glow-subtle rounded-2xl p-6 space-y-5 relative overflow-hidden">
+        <div className="absolute inset-x-0 top-0 h-[1.5px] apple-liquid-specular pointer-events-none" />
+
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-white/[0.08]">
+          <div className="flex items-center space-x-2.5">
+            <div className={`p-2 rounded-xl border transition-all ${
+              palette === 'butter'
+                ? 'bg-amber-400/20 border-amber-400/40 text-amber-500'
+                : palette === 'chalk'
+                ? 'bg-neutral-200 border-neutral-300 text-neutral-800'
+                : 'bg-indigo-500/10 border-indigo-500/30 text-indigo-400'
+            }`}>
+              <Sparkles className="w-4 h-4" />
+            </div>
+            <div>
+              <div className="text-white font-semibold text-xs uppercase tracking-wider flex items-center space-x-2">
+                <span>Surface Color System</span>
+                <span className="px-2 py-0.5 rounded text-[10px] font-mono uppercase tracking-wider font-semibold border bg-white/[0.06] border-white/[0.14] text-white">
+                  Active: {palette.toUpperCase()} ({palette === 'dark' ? darkPreset : palette === 'butter' ? butterPreset : chalkSurface})
+                </span>
+              </div>
+              <p className="text-neutral-400 text-[11px] mt-0.5 font-sans">
+                Unified color palette applied across Public Website, Observability Dashboard, and Flagship Live Chat
+              </p>
+            </div>
+          </div>
+
+          {/* Interactive Palette & Tint Switcher */}
+          <UnifiedPaletteBar
+            palette={palette}
+            onSelectPalette={onSelectPalette!}
+            darkPreset={darkPreset}
+            onSelectDarkPreset={onSelectDarkPreset!}
+            darkCustomColor={darkCustomColor}
+            onSelectDarkCustomColor={onSelectDarkCustomColor!}
+            butterPreset={butterPreset}
+            onSelectButterPreset={onSelectButterPreset!}
+            butterCustomColor={butterCustomColor}
+            onSelectButterCustomColor={onSelectButterCustomColor!}
+            chalkSurface={chalkSurface}
+            onSelectChalkPreset={onSelectChalkPreset!}
+            chalkCustomColor={chalkCustomColor}
+            onSelectChalkCustomColor={onSelectChalkCustomColor!}
+          />
+        </div>
+
+        {/* Triple Palette Atmosphere Comparison & Live Preview */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-1">
+          {/* Butter Palette Card */}
+          <div
+            onClick={() => onSelectPalette!('butter')}
+            className={`p-4 rounded-xl border transition-all cursor-pointer space-y-2 relative overflow-hidden ${
+              palette === 'butter'
+                ? 'bg-amber-100/90 border-amber-400 ring-2 ring-amber-400 text-neutral-950 shadow-md'
+                : 'bg-white/[0.02] border-white/[0.08] hover:border-amber-400/30 text-neutral-300 hover:text-white'
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <span className="font-semibold text-xs flex items-center space-x-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                <span>Buttermax Canary</span>
+              </span>
+              {palette === 'butter' && <CheckCircle2 className="w-4 h-4 text-amber-600" />}
+            </div>
+            <p className="text-[11px] font-sans leading-relaxed opacity-90">
+              Iconic editorial canary gold, toasted honeycomb, French vanilla, and matcha cream.
+            </p>
+            <div className="flex items-center space-x-1.5 pt-1">
+              {BUTTER_PRESETS.map((p) => (
+                <span
+                  key={p.id}
+                  className="w-2.5 h-2.5 rounded-full border border-black/20"
+                  style={{ backgroundColor: p.bgHex }}
+                  title={p.name}
+                />
+              ))}
+              <span className="text-[10px] opacity-75 ml-1">4 Warm Tints</span>
+            </div>
+          </div>
+
+          {/* Dark Palette Card */}
+          <div
+            onClick={() => onSelectPalette!('dark')}
+            className={`p-4 rounded-xl border transition-all cursor-pointer space-y-2 relative overflow-hidden ${
+              palette === 'dark'
+                ? 'bg-white/[0.08] border-indigo-400 ring-2 ring-indigo-400 text-white shadow-md'
+                : 'bg-white/[0.02] border-white/[0.08] hover:border-white/[0.2] text-neutral-300 hover:text-white'
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <span className="font-semibold text-xs flex items-center space-x-1.5">
+                <Moon className="w-3.5 h-3.5 text-indigo-400" />
+                <span>Obsidian Cyber</span>
+              </span>
+              {palette === 'dark' && <CheckCircle2 className="w-4 h-4 text-indigo-400" />}
+            </div>
+            <p className="text-[11px] font-sans leading-relaxed opacity-90">
+              Pure atmospheric void, oceanic sapphire, imperial amethyst nebula, and cyber matrix jade.
+            </p>
+            <div className="flex items-center space-x-1.5 pt-1">
+              {DARK_PRESETS.map((p) => (
+                <span
+                  key={p.id}
+                  className="w-2.5 h-2.5 rounded-full border border-white/20"
+                  style={{ backgroundColor: p.bgHex }}
+                  title={p.name}
+                />
+              ))}
+              <span className="text-[10px] opacity-75 ml-1">4 Void Tints</span>
+            </div>
+          </div>
+
+          {/* Chalk Palette Card */}
+          <div
+            onClick={() => onSelectPalette!('chalk')}
+            className={`p-4 rounded-xl border transition-all cursor-pointer space-y-2 relative overflow-hidden ${
+              palette === 'chalk'
+                ? 'bg-neutral-100 border-neutral-400 ring-2 ring-neutral-400 text-neutral-900 shadow-md'
+                : 'bg-white/[0.02] border-white/[0.08] hover:border-white/[0.2] text-neutral-300 hover:text-white'
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <span className="font-semibold text-xs flex items-center space-x-1.5">
+                <Sun className="w-3.5 h-3.5 text-amber-500" />
+                <span>Studio Chalk</span>
+              </span>
+              {palette === 'chalk' && <CheckCircle2 className="w-4 h-4 text-neutral-900" />}
+            </div>
+            <p className="text-[11px] font-sans leading-relaxed opacity-90">
+              Clean studio alabaster, antique sepia parchment, sage emerald slate, and blueprint cyan.
+            </p>
+            <div className="flex items-center space-x-1.5 pt-1">
+              {CHALK_PRESETS.map((p) => (
+                <span
+                  key={p.id}
+                  className="w-2.5 h-2.5 rounded-full border border-black/20"
+                  style={{ backgroundColor: p.bgHex }}
+                  title={p.name}
+                />
+              ))}
+              <span className="text-[10px] opacity-75 ml-1">4 Paper Tints</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      </>
+      )}
 
       {/* Visual Ergonomics & Calm Mode (Deep Zen Theme) */}
       <div className="ios-liquid-card border-glow-subtle rounded-2xl p-6 space-y-5 relative overflow-hidden">
