@@ -19,6 +19,9 @@ export const ConnectModal: React.FC<ConnectModalProps> = ({
   const [endpoint, setEndpoint] = useState(typeof window !== 'undefined' ? window.location.origin : '');
   const [apiKey, setApiKey] = useState('');
   const [verifyError, setVerifyError] = useState<string | null>(null);
+  // The dashboard's own server (nginx) adds the shared key to every API request, so a call to it succeeds
+  // whatever key was typed: the success step must not claim the key was accepted.
+  const sameOrigin = typeof window !== 'undefined' && endpoint.trim().replace(/\/+$/, '') === window.location.origin;
   const [copied, setCopied] = useState(false);
 
   const handleCopySnippet = () => {
@@ -188,8 +191,8 @@ client = pulse.instrument_llm(OpenAI())`}
               <div className="py-12 flex flex-col items-center justify-center space-y-4 text-center">
                 <div className="w-10 h-10 rounded-full border-2 border-neutral-700 border-t-neutral-100 animate-spin" />
                 <div>
-                  <h4 className="text-sm font-medium text-neutral-200">Listening for Agent Telemetry Packets</h4>
-                  <p className="text-xs text-neutral-500 mt-1 font-mono">POST /v1/ingest &nbsp;·&nbsp; validating SpanInput signature</p>
+                  <h4 className="text-sm font-medium text-neutral-200">Calling the API</h4>
+                  <p className="text-xs text-neutral-500 mt-1 font-mono">GET {endpoint.trim().replace(/\/+$/, '')}/v1/metrics</p>
                 </div>
               </div>
             )}
@@ -200,10 +203,18 @@ client = pulse.instrument_llm(OpenAI())`}
                   <CheckCircle2 className="w-6 h-6" />
                 </div>
                 <div>
-                  <h4 className="text-base font-semibold text-white">Agent Handshake Verified</h4>
+                  <h4 className="text-base font-semibold text-white">API reachable</h4>
+                  {/* Only what the check proved: one GET answered 200. No agent connected and no span was received. */}
                   <p className="text-xs text-neutral-400 mt-1 max-w-sm">
-                    Received initial heartbeat from <span className="text-neutral-200 font-mono">agent-arbitrage-alpha</span>. Zero schema dropouts detected.
+                    <span className="text-neutral-200 font-mono">{endpoint.trim().replace(/\/+$/, '')}</span> answered GET /v1/metrics (HTTP 200).
+                    No agent has connected and no span has been received yet.
                   </p>
+                  {sameOrigin && (
+                    <p className="text-xs text-amber-300 mt-2 max-w-sm">
+                      This endpoint is the dashboard&rsquo;s own server. It adds its own key to every request, so the key
+                      you typed was not checked here.
+                    </p>
+                  )}
                 </div>
                 <div className="w-full pt-4">
                   <button

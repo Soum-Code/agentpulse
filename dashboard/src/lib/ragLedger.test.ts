@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { SpanDetail } from './api';
-import { allEvaluated, spanToLedgerRow } from './ragLedger';
+import { allEvaluated, alertsReading, spanToLedgerRow } from './ragLedger';
 
 function span(over: Partial<SpanDetail> = {}): SpanDetail {
   return {
@@ -79,3 +79,33 @@ describe('allEvaluated', () => {
     expect(allEvaluated([span({ evaluation: evaluated() })])).toBe(true);
   });
 });
+
+describe('skipped evaluations', () => {
+  it('a span the worker marked skipped is unmeasured with the reason, not a measured stage', () => {
+    const row = spanToLedgerRow(span({ evaluation: evaluated({ evaluation_stage: 'skipped', grounding_score: null }) }), true);
+    expect(row.stage.status).toBe('unmeasured');
+    expect(row.stage.reason).toMatch(/skipped/);
+    expect(row.groundingRisk.status).toBe('unmeasured');
+  });
+});
+
+describe('alertsReading', () => {
+  const scored = [span({ evaluation: evaluated() })];
+  const unscored = [span()];
+
+  it('lists alerts whenever there are any', () => {
+    expect(alertsReading(2, unscored, false)).toBe('list');
+  });
+
+  it('says none only when every span has been scored', () => {
+    expect(alertsReading(0, scored, true)).toBe('none');
+    expect(alertsReading(0, scored, false)).toBe('none');
+  });
+
+  it('is unknown, never none, while spans are unscored: running, then timed out', () => {
+    expect(alertsReading(0, unscored, false)).toBe('unknown-running');
+    expect(alertsReading(0, unscored, true)).toBe('unknown-timeout');
+    expect(alertsReading(0, [], true)).toBe('unknown-timeout');
+  });
+});
+
