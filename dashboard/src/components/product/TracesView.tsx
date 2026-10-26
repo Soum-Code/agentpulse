@@ -51,6 +51,7 @@ import {
   copyTraceLogBodyToClipboard,
 } from '../../utils/traceExport';
 import { isTypingTarget, isChordFollowUp } from '../../utils/keyboard';
+import { formatLatencyMs } from '../../lib/agentFormat';
 import { loadFullTrace, loadFullTraces } from '../../lib/traceDetail';
 import type { GroundingVerdict } from '../../lib/api';
 import { riskTextClasses, verdictBadgeClasses, verdictLabel, verdictTooltip } from '../../lib/riskTone';
@@ -1444,7 +1445,8 @@ export const TracesView: React.FC<TracesViewProps> = ({
                           </div>
 
                           <div className="flex items-center space-x-4 text-neutral-400 group-hover:text-neutral-200 transition-colors duration-250">
-                            <span>{span.durationMs}ms</span>
+                            {/* latencyMs, not durationMs: an unrecorded latency is a dash, not "0ms". */}
+                            <span>{formatLatencyMs(span.latencyMs)}</span>
                             {span.tokens && <span>{span.tokens.total}t</span>}
                           </div>
                         </div>
@@ -1485,7 +1487,7 @@ export const TracesView: React.FC<TracesViewProps> = ({
                             {span.agentLane || span.name} &nbsp;·&nbsp; <span className="text-neutral-400 text-[11px] group-hover:text-neutral-200 transition-colors duration-250">{span.name}</span>
                           </span>
                           <span className="text-[11px] text-neutral-400 group-hover:text-neutral-200 transition-colors duration-250">
-                            +{span.startOffsetMs}ms ({span.durationMs}ms)
+                            +{span.startOffsetMs}ms ({formatLatencyMs(span.latencyMs)})
                           </span>
                         </div>
 
@@ -1522,7 +1524,12 @@ export const TracesView: React.FC<TracesViewProps> = ({
                 <div className="space-y-1 pt-2">
                   {currentTrace.spans.map((span, idx) => {
                     const isSelected = currentSpan?.id === span.id;
-                    const pct = Math.round((span.durationMs / currentTrace.durationMs) * 100);
+                    // Share of the trace's duration; none when the span's latency was not recorded or
+                    // the trace has no duration (dividing by 0 printed "NaN%").
+                    const pct =
+                      span.latencyMs != null && currentTrace.durationMs > 0
+                        ? Math.round((span.latencyMs / currentTrace.durationMs) * 100)
+                        : null;
 
                     return (
                       <div
@@ -1539,7 +1546,7 @@ export const TracesView: React.FC<TracesViewProps> = ({
                           <span className="font-semibold text-neutral-200 group-hover:text-white transition-colors duration-250">{span.name}</span>
                         </div>
                         <div className="flex items-center space-x-3 text-neutral-400 group-hover:text-neutral-200 transition-colors duration-250 shrink-0">
-                          <span>{span.durationMs}ms ({pct}%)</span>
+                          <span>{formatLatencyMs(span.latencyMs)}{pct != null ? ` (${pct}%)` : ''}</span>
                         </div>
                       </div>
                     );
