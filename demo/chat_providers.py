@@ -489,8 +489,11 @@ class ProviderChain:
                     raise ChainExhausted(attempts, out_of_time=True)
                 # A spaced provider takes one request at a time: queue behind another turn's
                 # request, but no longer than a slot wait may last, and never past the turn.
+                # Always through wait_for, never a bare acquire(): locked() can be False while
+                # a waiter that was just handed the lock has not run yet, and a bare acquire()
+                # would then queue behind that waiter's whole request with no limit at all.
                 lock = self._locks.get(route.key)
-                if lock is not None and lock.locked():
+                if lock is not None:
                     limit = min(self.max_queue_wait, deadline - now - 1.0)
                     try:
                         await asyncio.wait_for(lock.acquire(), timeout=max(limit, 0.001))
@@ -498,15 +501,19 @@ class ProviderChain:
                         if tries == 0:
                             attempts.append(Attempt(route.provider, route.model, "skipped_busy"))
                         break
-                elif lock is not None:
-                    await lock.acquire()
+                # Who frees the lock: this turn, unless _attempt has started a request, which
+                # then frees it when the request itself ends (see _attempt). `hold` is how
+                # _attempt says it took the lock over.
+                hold = {"lock": lock}
                 try:
-                    result = await self._attempt(route, prompt, max_tokens, deadline, now, tries, attempts)
+                    result = await self._attempt(route, prompt, max_tokens, deadline, now, tries, attempts, hold)
                 finally:
-                    if lock is not None:
-                        lock.release()
+                    if hold["lock"] is not None:
+                        hold["lock"].release()
                 if isinstance(result, Completion):
                     return result
+                if result == "out_of_time":
+                    raise ChainExhausted(attempts, out_of_time=True)
                 if result == "skip":
                     break
                 tries += 1
@@ -516,8 +523,10 @@ class ProviderChain:
         raise ChainExhausted(attempts)
 
     # In short: one request to one route, after waiting for its slot. Out: the Completion, or
-    # what the caller does next: "retry" this route, go to the "next" one, or "skip" it (its
-    # slot is too far away; nothing was sent). Every outcome is appended to attempts.
+    # what the caller does next: "retry" this route, go to the "next" one, "skip" it (its slot
+    # is too far away; nothing was sent), or "out_of_time" (the turn's deadline has passed, so
+    # nothing may be sent at all). Every outcome is appended to attempts. hold["lock"] is the
+    # route's lock if the caller holds one; see below for who frees it.
     async def _attempt(
         self,
         route: Route,
@@ -527,17 +536,21 @@ class ProviderChain:
         queued_at: float,
         tries: int,
         attempts: list[Attempt],
+        hold: dict[str, Any],
     ) -> Any:
+        # Queueing for the lock may have used up the turn, so the deadline is checked again
+        # here, before every send and not only when there is a slot to wait for.
+        now = self._clock()
+        if now + 1.0 > deadline:
+            return "out_of_time"
         # Wait for this route's next slot only when the wait is short and the turn still has
         # time for a call after it; otherwise go to the next route. A retry that cannot happen
         # is not recorded again: the failure before it already is.
-        now = self._clock()
         wait = self._next_slot(route, now) - now
-        if wait > 0:
-            if wait > self.max_queue_wait or now + wait + 1.0 > deadline:
-                if tries == 0:
-                    attempts.append(Attempt(route.provider, route.model, "skipped_busy"))
-                return "skip"
+        if wait > 0 and (wait > self.max_queue_wait or now + wait + 1.0 > deadline):
+            if tries == 0:
+                attempts.append(Attempt(route.provider, route.model, "skipped_busy"))
+            return "skip"
         # The slot is taken before the wait, so the rpm count already includes this request.
         self._starts[route.key].append(now + max(wait, 0.0))
         if wait > 0:
@@ -546,13 +559,23 @@ class ProviderChain:
         started = self._clock()
         waited_ms = round((started - queued_at) * 1000)
         timeout = max(1.0, min(self.call_timeout, deadline - started))
+        # The request runs as its own task in a thread, and the turn waits on a shield of it.
+        # If the turn stops waiting first (the visitor disconnected, or the request outlived
+        # its timeout), the request is still out at the provider. For a one-at-a-time
+        # provider the lock must stay taken until it really ends, or the next turn would send
+        # a second request at once: Pollinations refuses that with 402 and restarts its 30 s,
+        # and repeated send-and-abort would keep it refusing everyone. So once the request has
+        # started, the lock is freed, and the end time recorded, by the request's own end.
+        request = asyncio.ensure_future(
+            asyncio.to_thread(_call, self._client(route), route, prompt, max_tokens, timeout)
+        )
+        lock = hold["lock"]
+        hold["lock"] = None
+        request.add_done_callback(lambda done: self._request_ended(route, lock, done))
         try:
-            # wait_for bounds the call even if a client ignores its own timeout. The thread is
-            # then left to finish on its own; the turn does not wait for it.
-            text, tin, tout = await asyncio.wait_for(
-                asyncio.to_thread(_call, self._client(route), route, prompt, max_tokens, timeout),
-                timeout=timeout + self.hang_grace,
-            )
+            # wait_for bounds the wait even if a client ignores its own timeout; the shield
+            # keeps the request itself running when the wait is cut short.
+            text, tin, tout = await asyncio.wait_for(asyncio.shield(request), timeout=timeout + self.hang_grace)
         except Exception as exc:  # noqa: BLE001 - every failure is classified below
             self._last_end[route.key] = self._clock()
             outcome, status, retry_after = classify(exc)
@@ -584,6 +607,18 @@ class ProviderChain:
         ms = round((self._clock() - started) * 1000)
         attempts.append(Attempt(route.provider, route.model, "ok", ms, None, waited_ms))
         return Completion(text, tin, tout, route.provider, route.model, attempts)
+
+    # In short: a request has really ended (answered, failed, or finished after its turn
+    # stopped waiting for it). Record when, for the spacing, and free the route's lock if the
+    # request was holding it. Runs on the event loop, as a done-callback of the request.
+    # Reading the exception marks it as seen: a request whose turn had already gone would
+    # otherwise end in a "Task exception was never retrieved" line in the log.
+    def _request_ended(self, route: Route, lock: Optional[asyncio.Lock], done: asyncio.Future) -> None:
+        if not done.cancelled():
+            done.exception()
+        self._last_end[route.key] = max(self._last_end.get(route.key, 0.0), self._clock())
+        if lock is not None:
+            lock.release()
 
 
 # In short: the current UTC time as ISO text, to the second, for /health.

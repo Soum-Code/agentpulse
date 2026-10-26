@@ -6,9 +6,11 @@ Nothing leaves the process, and the openai package is not needed.
 """
 
 import asyncio
+import itertools
 import logging
 import os
 import sys
+import threading
 import time
 from types import SimpleNamespace
 
@@ -399,6 +401,87 @@ class TestLocalLimits:
         assert providers == ["groq", "groq", "pollinations"]
         clock.t += 61
         assert _complete(chain, clock).provider == "groq"
+
+
+# The one-at-a-time lock of a spaced provider (Pollinations): held until a request really
+# ends, even when its turn has gone, and never waited on past the turn's deadline. These use
+# the real clock and real threads, because the bugs they guard against are about timing.
+class TestSpacedProviderLock:
+    def test_a_cancelled_turn_keeps_the_lock_until_its_request_really_ends(self):
+        release = threading.Event()
+        sent = []
+
+        class Slow(StubClient):
+            def create(self, **kwargs):
+                label = kwargs["messages"][0]["content"]
+                sent.append(label)
+                if label == "A":
+                    release.wait(5)
+                return _response(f"answer to {label}")
+
+        stub = Slow(None)
+        env = {"CHAT_PROVIDERS": "pollinations", "CHAT_POLLINATIONS_MIN_INTERVAL_SECONDS": "0.05"}
+        chain = ProviderChain(build_chain(env), client_factory=lambda route, timeout: stub)
+
+        async def scenario():
+            deadline = time.monotonic() + 30
+            a = asyncio.create_task(chain.complete("A", max_tokens=10, deadline=deadline))
+            await asyncio.sleep(0.2)  # A's request is out at the provider
+            a.cancel()  # the visitor disconnects
+            with pytest.raises(asyncio.CancelledError):
+                await a
+            b = asyncio.create_task(chain.complete("B", max_tokens=10, deadline=deadline))
+            await asyncio.sleep(0.5)
+            sent_while_a_was_out = list(sent)
+            release.set()  # A's request comes back
+            return sent_while_a_was_out, await asyncio.wait_for(b, 5)
+
+        sent_while_a_was_out, result = asyncio.run(scenario())
+        # Before the fix the cancelled turn freed the lock at once and B was sent next to A.
+        assert sent_while_a_was_out == ["A"]
+        assert sent == ["A", "B"]
+        assert result.text == "answer to B"
+
+    def test_a_turn_never_queues_past_its_deadline_at_the_lock_hand_off(self):
+        env = {"CHAT_PROVIDERS": "pollinations", "CHAT_POLLINATIONS_MIN_INTERVAL_SECONDS": "1"}
+        stub = StubClient(None)
+        chain = ProviderChain(build_chain(env), client_factory=lambda route, timeout: stub)
+        lock = chain._locks["pollinations/openai-fast"]
+
+        async def scenario():
+            await lock.acquire()  # turn A's request holds the provider
+            waiter = asyncio.create_task(lock.acquire())  # turn B queues for it
+            await asyncio.sleep(0)
+            lock.release()  # A ends: B is handed the lock but has not run yet
+            # The state the old code read as "free" and then waited on with no limit.
+            assert not lock.locked()
+            started = time.monotonic()
+            with pytest.raises(ChainExhausted) as err:
+                await asyncio.wait_for(chain.complete("C", max_tokens=10, deadline=started + 2.0), 10)
+            await waiter
+            return time.monotonic() - started, err.value
+
+        elapsed, err = asyncio.run(scenario())
+        # C gave up within its 2 s turn (1 s of queueing, the rest kept for a call) instead
+        # of waiting behind B's whole request.
+        assert elapsed < 2.0
+        assert [a.outcome for a in err.attempts] == ["skipped_busy"]
+        assert stub.calls == []
+
+    def test_nothing_is_sent_once_queueing_has_used_up_the_turn(self):
+        # The clock jumps past the deadline between the top of the loop and the send, as it
+        # would after a long wait for the lock: the request must not go out.
+        ticks = itertools.chain([1000.0], itertools.repeat(1100.0))
+        stub = StubClient(None)
+        chain = ProviderChain(
+            build_chain({"CHAT_PROVIDERS": "pollinations"}),
+            client_factory=lambda route, timeout: stub,
+            clock=lambda: next(ticks),
+        )
+        with pytest.raises(ChainExhausted) as err:
+            asyncio.run(chain.complete("q", max_tokens=10, deadline=1030.0))
+        assert err.value.out_of_time is True
+        assert stub.calls == []
 
 
 # What /health shows per provider: configured or not, the last success, the last failure as
