@@ -59,9 +59,14 @@ services:
       dockerfile: demo/chat.Dockerfile
     environment:
       # Spans go straight to the backend over the compose network, not through Caddy, so they
-      # need no write password; the key is the server's own, as nginx gets it.
+      # need no write password. The key is one issued through /v1/keys for the chat alone
+      # (README, "The live chat"), not the server's own AGENTPULSE_API_KEY, which can mint
+      # and revoke keys: the chat is the part of the stack open to anyone.
+      # It defaults to empty rather than `:?`: a required variable here would make every
+      # compose command fail, deploy.sh's included, until it is set. Empty instead makes the
+      # chat report "not set up" on /chat/health and refuse questions (demo/chat_server.py).
       AGENTPULSE_ENDPOINT: http://backend:8000
-      AGENTPULSE_API_KEY: ${AGENTPULSE_API_KEY:-change-me-to-a-secure-key}
+      AGENTPULSE_API_KEY: ${CHAT_AGENTPULSE_API_KEY:-}
       # Provider keys, each optional: a provider whose key is empty is left out of the chain,
       # and with none at all Pollinations (keyless) answers alone. Never put them in a file in
       # the repository; .env on the VM only.

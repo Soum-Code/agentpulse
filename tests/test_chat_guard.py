@@ -107,11 +107,20 @@ class TestPause:
 
 # The per-IP minute and day, the site's day, and the turns running at once.
 class TestLimiter:
+    # In short: admit a turn for this IP and, if it was admitted, let it end, as the server
+    # does when the turn is over. Returns what admit() returned.
+    @staticmethod
+    def _turn(limiter, ip):
+        refusal = limiter.admit(ip)
+        if refusal is None:
+            limiter.finish(ip)
+        return refusal
+
     def test_per_ip_per_minute(self):
         clock = Clock(_noon())
         limiter = TurnLimiter(GuardSettings(ip_per_minute=2, max_concurrent=10), clock)
-        assert limiter.admit("a") is None
-        assert limiter.admit("a") is None
+        assert self._turn(limiter, "a") is None
+        assert self._turn(limiter, "a") is None
         refusal = limiter.admit("a")
         assert (refusal.status, refusal.code) == (429, "rate_limited")
         assert 1 <= refusal.retry_after <= 61
@@ -124,7 +133,7 @@ class TestLimiter:
         clock = Clock(_noon())
         limiter = TurnLimiter(GuardSettings(ip_per_minute=100, ip_per_day=3, max_concurrent=10), clock)
         for _ in range(3):
-            assert limiter.admit("a") is None
+            assert self._turn(limiter, "a") is None
             clock.t += 61
         refusal = limiter.admit("a")
         assert refusal.code == "rate_limited" and "today" in refusal.message
@@ -146,8 +155,21 @@ class TestLimiter:
         limiter = TurnLimiter(GuardSettings(max_concurrent=1), Clock(_noon()))
         assert limiter.admit("a") is None
         assert limiter.admit("b").code == "busy"
-        limiter.finish()
+        limiter.finish("a")
         assert limiter.admit("b") is None
+
+    def test_one_ip_runs_one_turn_at_a_time(self):
+        # A second tab or a double-click from the same IP waits for its first turn, while
+        # another visitor is not held up by it.
+        limiter = TurnLimiter(GuardSettings(max_concurrent=5), Clock(_noon()))
+        assert limiter.admit("a") is None
+        refusal = limiter.admit("a")
+        assert (refusal.status, refusal.code) == (429, "busy")
+        assert "still being answered" in refusal.message
+        assert limiter.admit("b") is None
+        limiter.finish("a")
+        assert limiter.admit("a") is None
+        assert limiter.usage()["running"] == 2
 
     def test_a_refused_request_is_not_counted(self):
         limiter = TurnLimiter(GuardSettings(max_concurrent=1, ip_per_day=5), Clock(_noon()))
@@ -160,7 +182,7 @@ class TestLimiter:
 # turned on on purpose: an empty or "0" value must never hide the demo.
 def test_defaults_suit_a_few_examiners_and_leave_the_chat_on():
     s = GuardSettings.from_env({})
-    assert (s.ip_per_minute, s.ip_per_day, s.daily_cap) == (5, 25, 300)
+    assert (s.ip_per_minute, s.ip_per_day, s.daily_cap) == (5, 40, 300)
     assert s.ip_per_minute >= 5 and s.ip_per_day >= 20
     for value in ("", "0", "false", "no", "off"):
         assert check_pause(GuardSettings.from_env({"CHAT_PAUSED": value})) is None
