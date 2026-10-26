@@ -258,11 +258,22 @@ export const LiquidBackgroundCanvas: React.FC<LiquidBackgroundCanvasProps> = ({
     const scene = new THREE.Scene();
     const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
 
-    const renderer = new THREE.WebGLRenderer({
-      antialias: true,
-      alpha: true,
-      powerPreference: 'high-performance',
-    });
+    // Without WebGL (hardware acceleration off, a blocked GPU, some remote desktops) three.js throws here,
+    // and an uncaught throw in an effect unmounts the whole page. The animated background is decoration:
+    // skip it and let the CSS background show.
+    let renderer: THREE.WebGLRenderer;
+    try {
+      renderer = new THREE.WebGLRenderer({
+        antialias: true,
+        alpha: true,
+        powerPreference: 'high-performance',
+      });
+    } catch (err) {
+      console.warn('WebGL is not available, so the animated background is skipped.', err);
+      return;
+    }
+    // Someone who asked their system for less motion gets one still frame instead of the animation.
+    const reduceMotion = typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     const colors = getPaletteColors(
       palette,
@@ -574,6 +585,8 @@ export const LiquidBackgroundCanvas: React.FC<LiquidBackgroundCanvasProps> = ({
     // Resize Observer
     const resizeObserver = new ResizeObserver(() => {
       updateSize();
+      // Resizing clears the canvas; with no running loop (reduced motion) draw the still frame again.
+      if (reduceMotion) renderLoop();
     });
     resizeObserver.observe(container);
 
@@ -581,7 +594,7 @@ export const LiquidBackgroundCanvas: React.FC<LiquidBackgroundCanvasProps> = ({
     const clock = new THREE.Clock();
 
     const renderLoop = () => {
-      animFrameId.current = requestAnimationFrame(renderLoop);
+      if (!reduceMotion) animFrameId.current = requestAnimationFrame(renderLoop);
 
       const delta = clock.getDelta();
       const elapsedTime = clock.getElapsedTime();

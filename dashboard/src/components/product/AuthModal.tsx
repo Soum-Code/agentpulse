@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { useEscapeKey } from '../../utils/useEscapeKey';
 import {
   X,
   Mail,
@@ -71,6 +72,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [displayName, setDisplayName] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // Escape closes the dialog (it had no keyboard way out)
+  useEscapeKey(isOpen, onClose);
 
   const handleGoogleSignIn = async () => {
     setLoading(true);
@@ -162,6 +166,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             className="fixed inset-0 bg-black/75 backdrop-blur-md"
           />
           <motion.div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Sign in"
             initial={{ opacity: 0, scale: 0.94, y: 16, filter: 'blur(4px)' }}
             animate={{ opacity: 1, scale: 1, y: 0, filter: 'blur(0px)' }}
             exit={{ opacity: 0, scale: 0.96, y: 12, filter: 'blur(4px)' }}
@@ -206,12 +213,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-neutral-500">Telemetry Storage:</span>
-                <span className="text-white">Firestore Cloud Isolation</span>
+                <span className="text-neutral-500">Project list:</span>
+                <span className="text-white">Firestore (spans are stored by the AgentPulse API)</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-neutral-500">Security Rule:</span>
-                <span className="text-amber-300">User Scoped (RBAC)</span>
+                <span className="text-neutral-500">Access:</span>
+                <span className="text-amber-300">Projects are filtered by your user id; enforcement depends on the Firestore rules deployed for this project</span>
               </div>
             </div>
 

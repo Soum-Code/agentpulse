@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isTypingTarget, isChordFollowUp, CHORD_WINDOW_MS } from './keyboard';
+import { isTypingTarget, isChordFollowUp, isActivatableTarget, CHORD_WINDOW_MS } from './keyboard';
 
 describe('isTypingTarget', () => {
   it('is true for input, textarea and select', () => {
@@ -41,5 +41,27 @@ describe('isChordFollowUp', () => {
 
   it('is false when G was never pressed', () => {
     expect(isChordFollowUp(0, 5)).toBe(false);
+  });
+});
+
+describe('isActivatableTarget', () => {
+  it('is true for a button, a link, a menu item and anything inside one', () => {
+    const button = document.createElement('button');
+    button.innerHTML = '<span>Filters</span>';
+    expect(isActivatableTarget(button)).toBe(true);
+    expect(isActivatableTarget(button.firstElementChild)).toBe(true);
+    const link = document.createElement('a');
+    link.setAttribute('href', '#x');
+    expect(isActivatableTarget(link)).toBe(true);
+    const item = document.createElement('div');
+    item.setAttribute('role', 'menuitem');
+    expect(isActivatableTarget(item)).toBe(true);
+  });
+
+  it('is false for the page body, a plain div and nothing', () => {
+    expect(isActivatableTarget(document.body)).toBe(false);
+    expect(isActivatableTarget(document.createElement('div'))).toBe(false);
+    expect(isActivatableTarget(null)).toBe(false);
+    expect(isActivatableTarget(undefined)).toBe(false);
   });
 });

@@ -64,7 +64,7 @@ import {
   copyTraceIdToClipboard,
   copyTraceLogBodyToClipboard,
 } from '../../utils/traceExport';
-import { isTypingTarget, isChordFollowUp } from '../../utils/keyboard';
+import { isTypingTarget, isChordFollowUp, isActivatableTarget } from '../../utils/keyboard';
 import { formatLatencyMs } from '../../lib/agentFormat';
 import { loadFullTrace, loadFullTraces } from '../../lib/traceDetail';
 import type { GroundingVerdict } from '../../lib/api';
@@ -540,8 +540,11 @@ export const TracesView: React.FC<TracesViewProps> = ({
         return;
       }
 
-      // Enter: Focus / Inspect details of selected trace
+      // Enter: Focus / Inspect details of selected trace. Not when a button, link or menu item has the
+      // focus: Enter must click it (export buttons, status chips, perspective tabs), so the shortcut
+      // steps aside and does not preventDefault.
       if (e.key === 'Enter') {
+        if (isActivatableTarget(activeEl)) return;
         e.preventDefault();
         if (currentTrace) {
           if (currentTrace.spans && currentTrace.spans.length > 0 && !selectedSpan) {

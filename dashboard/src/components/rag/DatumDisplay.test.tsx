@@ -64,4 +64,13 @@ describe('DatumDisplay', () => {
     const down = datumFromFeed({ status: 'unreachable' }, () => 0, 'n/a');
     expect(html(<DatumDisplay datum={down} format="count" />)).toContain('Unreachable');
   });
+
+  it('stage: names each evaluation stage, says "Not scored" for a skipped span, shows any other word as is', () => {
+    expect(html(<DatumDisplay datum={datum.measured('stage2')} format="stage" />)).toContain('Stage 2 (NLI)');
+    expect(html(<DatumDisplay datum={datum.measured('stage1')} format="stage" />)).toContain('Stage 1 (similarity fallback)');
+    const skipped = html(<DatumDisplay datum={datum.measured('skipped')} format="stage" />);
+    expect(skipped).toContain('Not scored');
+    expect(skipped).not.toContain('Stage 1');
+    expect(html(<DatumDisplay datum={datum.measured('stage9')} format="stage" />)).toContain('stage9');
+  });
 });
