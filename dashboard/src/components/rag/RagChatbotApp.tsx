@@ -21,9 +21,10 @@ import { CorpusModal } from './CorpusModal';
 import { ConnectionModal } from './ConnectionModal';
 import { ragApi } from '../../lib/ragApi';
 import { api, EvaluatorReadiness, Agent as ApiAgent } from '../../lib/api';
-import type { ChatTurn, PipelineAgent, AgentDriftReading } from '../../lib/ragTypes';
+import type { ChatTurn, PipelineAgent, AgentDriftReading, ChatHealth, ChatStreamEvent, TurnProgress } from '../../lib/ragTypes';
 import type { ProductTab, ColorPalette, ChalkSurfacePreset } from '../../types';
 import { getRagTheme } from './ragTheme';
+import { RagErrorBoundary } from './RagErrorBoundary';
 
 interface RagChatbotAppProps {
   onOpenConsole?: () => void;
@@ -41,7 +42,15 @@ function generateSessionId(): string {
   return 'sess_' + Math.random().toString(36).substring(2, 8) + Math.random().toString(36).substring(2, 6);
 }
 
-export const RagChatbotApp: React.FC<RagChatbotAppProps> = ({
+// In short: the chat view inside an error boundary, so a rendering error shows a sentence
+// and a reload button rather than a blank page. Both places App.tsx shows it get this.
+export const RagChatbotApp: React.FC<RagChatbotAppProps> = (props) => (
+  <RagErrorBoundary>
+    <RagChatbotView {...props} />
+  </RagErrorBoundary>
+);
+
+const RagChatbotView: React.FC<RagChatbotAppProps> = ({
   onOpenConsole,
   onSelectTab,
   embedded = false,
@@ -64,7 +73,9 @@ export const RagChatbotApp: React.FC<RagChatbotAppProps> = ({
   const timerIntervalRef = useRef<number | null>(null);
 
   // Connection & Health State
-  const [ragStatus, setRagStatus] = useState<{ ok: boolean; status: string }>({ ok: false, status: 'checking' });
+  const [ragStatus, setRagStatus] = useState<{ ok: boolean; status: string; message?: string }>({ ok: false, status: 'checking' });
+  // What the chat service says about itself: its limits and providers. Null until it answers.
+  const [chatHealth, setChatHealth] = useState<ChatHealth | null>(null);
   const [evaluatorReadiness, setEvaluatorReadiness] = useState<EvaluatorReadiness | null>(null);
   const [evaluatorLoading, setEvaluatorLoading] = useState(false);
   const [apiAgents, setApiAgents] = useState<ApiAgent[]>([]);
@@ -93,9 +104,10 @@ export const RagChatbotApp: React.FC<RagChatbotAppProps> = ({
 
   // 1. Initial health checks
   const checkHealth = useCallback(async () => {
-    // Check RAG FastAPI :8100
+    // The chat service: ready, or why not (paused, starting up, unreachable).
     const ragHealth = await ragApi.checkHealth();
-    setRagStatus({ ok: ragHealth.ok, status: ragHealth.status });
+    setRagStatus({ ok: ragHealth.ok, status: ragHealth.status, message: ragHealth.message });
+    setChatHealth(ragHealth.health ?? null);
 
     // Fetch Corpus
     try {
@@ -155,6 +167,18 @@ export const RagChatbotApp: React.FC<RagChatbotAppProps> = ({
     const interval = setInterval(checkHealth, 20000);
     return () => clearInterval(interval);
   }, [checkHealth]);
+
+  // While the chat service is not ready (starting up, restarting, paused), ask only it again
+  // every 5 s, so the page turns usable soon after a cold start instead of up to 20 s later.
+  useEffect(() => {
+    if (ragStatus.ok) return;
+    const interval = setInterval(async () => {
+      const ragHealth = await ragApi.checkHealth();
+      setRagStatus({ ok: ragHealth.ok, status: ragHealth.status, message: ragHealth.message });
+      setChatHealth(ragHealth.health ?? null);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [ragStatus.ok]);
 
   // 2. Poll AgentPulse for Async Grounding Evaluation of a Trace
   const pollTraceEvaluation = useCallback(async (traceId: string, turnId: string) => {
@@ -234,8 +258,33 @@ export const RagChatbotApp: React.FC<RagChatbotAppProps> = ({
       setInFlightElapsedSeconds(Math.floor((Date.now() - startTime) / 1000));
     }, 500);
 
+    // Each stream event updates the running turn, so the page shows every stage as it
+    // finishes. Only what the service reported is shown; nothing is estimated.
+    const applyEvent = (event: ChatStreamEvent) => {
+      setTurns((prev) =>
+        prev.map((t) => {
+          if (t.id !== turnId) return t;
+          const progress: TurnProgress = t.progress ?? { done: [] };
+          switch (event.type) {
+            case 'start':
+              return { ...t, progress: { ...progress, traceId: event.trace_id } };
+            case 'retrieved':
+              return { ...t, progress: { ...progress, retrieved: event.retrieved, searchMs: event.search_ms } };
+            case 'agent_start':
+              return { ...t, progress: { ...progress, running: event.agent } };
+            case 'agent_done': {
+              const { type: _type, ...agent } = event;
+              return { ...t, progress: { ...progress, running: undefined, done: [...progress.done, agent] } };
+            }
+            default:
+              return t;
+          }
+        })
+      );
+    };
+
     try {
-      const response = await ragApi.sendChat(message, sessionId, controller.signal);
+      const response = await ragApi.sendChatStream(message, sessionId, applyEvent, controller.signal);
 
       // Turn finished
       const isError = Boolean(response.error);
@@ -289,7 +338,7 @@ export const RagChatbotApp: React.FC<RagChatbotAppProps> = ({
               ? {
                   ...t,
                   status: 'error',
-                  errorMessage: err?.message || `Failed to reach the RAG service at ${ragApi.getBaseUrl()}`,
+                  errorMessage: err?.message || `Failed to reach the chat service at ${ragApi.getBaseUrl() || "this site's /chat"}`,
                   groundingStatus: 'unmeasured',
                 }
               : t
@@ -450,6 +499,10 @@ export const RagChatbotApp: React.FC<RagChatbotAppProps> = ({
             onSelectTrace={(tId) => setSelectedTraceId(tId)}
             sessionId={sessionId}
             onResetSession={handleResetSession}
+            onRetry={handleSendMessage}
+            chatStatus={ragStatus}
+            chatHealth={chatHealth}
+            chatTarget={ragUrl ? `${ragUrl}/chat` : '/chat (this site)'}
             palette={palette}
             isCalmMode={isCalmMode}
             chalkSurface={chalkSurface}
