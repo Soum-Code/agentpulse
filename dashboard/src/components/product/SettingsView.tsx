@@ -327,7 +327,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   title={p.name}
                 />
               ))}
-              <span className="text-[10px] opacity-75 ml-1">4 Warm Tints</span>
+              <span className="text-[10px] opacity-90 ml-1">4 Warm Tints</span>
             </div>
           </div>
 
@@ -359,7 +359,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   title={p.name}
                 />
               ))}
-              <span className="text-[10px] opacity-75 ml-1">4 Void Tints</span>
+              <span className="text-[10px] opacity-90 ml-1">4 Void Tints</span>
             </div>
           </div>
 
@@ -391,7 +391,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   title={p.name}
                 />
               ))}
-              <span className="text-[10px] opacity-75 ml-1">4 Paper Tints</span>
+              <span className="text-[10px] opacity-90 ml-1">4 Paper Tints</span>
             </div>
           </div>
         </div>
