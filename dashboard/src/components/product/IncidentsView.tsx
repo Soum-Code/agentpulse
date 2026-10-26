@@ -309,7 +309,10 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
 
                   <div className="flex items-center justify-between text-[11px] font-mono text-neutral-400 pt-2 border-t border-white/[0.06]">
                     <span className="text-neutral-200">{incident.agentName.split(' ')[0]}</span>
-                    <span className="text-rose-400/90 font-medium">{incident.affectedRunsCount} affected runs</span>
+                    {/* No affected-run count is recorded by the alerting service; never print the unit alone. */}
+                    {incident.affectedRunsCount != null && (
+                      <span className="text-rose-400/90 font-medium">{incident.affectedRunsCount} affected runs</span>
+                    )}
                   </div>
                 </div>
               );
@@ -401,7 +404,9 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
                 <div className="anime-spine-step space-y-1.5 border-l-2 border-rose-500/80 pl-4">
                   <div className="text-[10px] uppercase text-neutral-400 font-medium">4. Root Cause Discrepancy</div>
                   <div className="p-3.5 bg-rose-500/10 rounded-xl border border-rose-500/20 text-rose-200/95 leading-relaxed">
-                    {currentIncident.rootCause}
+                    {/* adapters.ts leaves rootCause absent: the alerting service does not produce
+                        one. An empty red box read as "cause unknown but serious". */}
+                    {currentIncident.rootCause ?? 'Not produced. The alert names the rule and the score that crossed it (above); finding the cause is left to a person.'}
                   </div>
                 </div>
 
@@ -412,7 +417,7 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
                     <span>Recommended Remedial Action</span>
                   </div>
                   <p className="text-neutral-300 leading-relaxed">
-                    {currentIncident.suggestedAction}
+                    {currentIncident.suggestedAction ?? 'None recorded. AgentPulse observes and alerts; it does not suggest or apply a fix.'}
                   </p>
                 </div>
               </div>

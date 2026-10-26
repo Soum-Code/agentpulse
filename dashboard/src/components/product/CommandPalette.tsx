@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { prefersReducedMotion } from '../../utils/liquidHoverAnime';
+import { agentSubtitle } from '../../lib/agentFormat';
 import {
   Search,
   Bot,
@@ -148,7 +149,9 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
         category: 'agents',
         typeLabel: 'Agent',
         title: agent.name,
-        subtitle: `${agent.framework} · ${agent.model} · ${agent.latencyAvgMs}ms avg · ${agent.successRate}% OK`,
+        // Only the parts that exist: framework and model have no source, and latency can be
+        // missing, so this used to read "undefined · undefined · undefinedms avg".
+        subtitle: agentSubtitle(agent),
         badge: agent.driftStatus === 'drift' ? 'DRIFT' : agent.driftStatus === 'deviation' ? 'DEVIATION' : agent.status.toUpperCase(),
         statusSemantic:
           agent.status === 'critical' || agent.driftStatus === 'drift'
@@ -172,7 +175,8 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
         category: 'traces',
         typeLabel: 'Trace',
         title: `Trace ${trace.id}: ${trace.inputPreview.slice(0, 48)}...`,
-        subtitle: `${trace.agentName} · ${trace.durationMs}ms · ${trace.totalTokens} tokens`,
+        // totalTokens is undefined when no span reported tokens; it printed "undefined tokens".
+        subtitle: `${trace.agentName} · ${trace.durationMs}ms${trace.totalTokens != null ? ` · ${trace.totalTokens} tokens` : ''}`,
         badge: trace.status.toUpperCase(),
         statusSemantic: trace.status === 'error' ? 'rose' : trace.status === 'warning' ? 'amber' : 'neutral',
         icon: Activity,
@@ -192,14 +196,16 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
       cat: FilterCategory;
       icon: any;
     }> = [
-      { tab: 'overview', title: 'System Overview & Percentiles', sub: 'P50/P99 latency, cost burn & fleet health', cat: 'all', icon: Activity },
+      // Subtitles say what each view shows. Overview has no percentiles or cost, Drift has no
+      // 3D view or golden baseline, Incidents no root cause, Experiments no product comparison.
+      { tab: 'overview', title: 'System Overview', sub: 'Spans ingested, open alerts, drifting agents & the agent roster', cat: 'all', icon: Activity },
       { tab: 'rag-monitor', title: 'Aetheris (Flagship RAG Prism)', sub: 'Live multi-agent stimulus, grounding risk & drift observation', cat: 'all', icon: Sparkles },
       { tab: 'performance', title: 'Performance Metrics (APM)', sub: 'API latency percentiles, ingestion counters, queue and worker state', cat: 'all', icon: Gauge },
-      { tab: 'agents', title: 'Autonomous Agent Roster', sub: 'Swarm runtime, framework specs & tool bindings', cat: 'agents', icon: Bot },
-      { tab: 'traces', title: 'Trace Investigation & Tree', sub: 'LangSmith / Weave waterfall execution trees', cat: 'traces', icon: Activity },
-      { tab: 'incidents', title: 'Incident Root Cause Analysis', sub: 'Causal chain & failure discrepancies', cat: 'incidents', icon: AlertTriangle },
-      { tab: 'drift', title: '3D Trajectory & Cluster Drift', sub: 'Embedding space divergence vs golden baseline', cat: 'drift', icon: TrendingDown },
-      { tab: 'experiments', title: 'Model Experiments & Eval Matrix', sub: 'Braintrust / Langfuse benchmark comparisons', cat: 'experiments', icon: FlaskConical },
+      { tab: 'agents', title: 'Agent Roster', sub: 'Per-agent latency (moving avg), success rate & drift distance', cat: 'agents', icon: Bot },
+      { tab: 'traces', title: 'Trace Investigation & Tree', sub: 'Span waterfall with evaluator scores and alerts', cat: 'traces', icon: Activity },
+      { tab: 'incidents', title: 'Incidents', sub: 'Alerts raised by the evaluator, with the rule that fired', cat: 'incidents', icon: AlertTriangle },
+      { tab: 'drift', title: 'Drift', sub: 'Window centroid distance per agent against the 0.30 alert threshold', cat: 'drift', icon: TrendingDown },
+      { tab: 'experiments', title: 'Experiments', sub: 'Result files from experiments/results and recorded experiment runs', cat: 'experiments', icon: FlaskConical },
       { tab: 'datasets', title: 'Curated Golden Datasets', sub: 'Regression test cases curated from production spans', cat: 'experiments', icon: Database },
       { tab: 'replay', title: 'Deterministic Time-Travel Replay', sub: 'Step-by-step state & token debugger', cat: 'traces', icon: Play },
       { tab: 'telemetry-lab', title: 'Synthetic Telemetry Stress Lab', sub: 'Inject anomalies & test automated evaluators', cat: 'all', icon: Cpu },
@@ -301,7 +307,8 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
           : 'Switch to Compact Text Density (0.88x High-Density Scale)',
         subtitle: textDensity === 'compact'
           ? 'Currently Compact. Switch to relaxed typography scale and spacious line-height'
-          : 'Currently Comfortable. Switch to compact typography for +35% visible trace rows',
+          // The old "+35% visible trace rows" was never measured; 0.88x is the font scale in index.css.
+          : 'Currently Comfortable. Switch to compact typography (0.88x font) to fit more rows on screen',
         badge: textDensity === 'compact' ? 'DENSE 0.88x' : 'SPACIOUS 1.0x',
         statusSemantic: 'neutral',
         icon: Type,
@@ -319,7 +326,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
       category: 'all',
       typeLabel: 'Mode',
       title: 'Switch to Public Editorial Landing',
-      subtitle: '3D interactive hero, live stream story, and research baseline',
+      subtitle: 'The public landing page',
       statusSemantic: 'neutral',
       icon: Sparkles,
       action: onSwitchToPublic,
