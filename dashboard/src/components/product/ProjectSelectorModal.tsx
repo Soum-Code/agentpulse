@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { TelemetryProject } from '../../types';
 import { createTelemetryProject, deleteTelemetryProject } from '../../lib/firebase';
+import { ingestionKeyView } from '../../lib/ingestionKey';
 import { User as FirebaseUser } from 'firebase/auth';
 
 interface ProjectSelectorModalProps {
@@ -43,6 +44,8 @@ export const ProjectSelectorModal: React.FC<ProjectSelectorModalProps> = ({
   const [environment, setEnvironment] = useState<'production' | 'staging' | 'development'>('production');
   const [loading, setLoading] = useState(false);
   const [copiedKeyId, setCopiedKeyId] = useState<string | null>(null);
+  // The last create/delete failure, shown in the modal (a failed delete means the key could not be revoked).
+  const [error, setError] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
@@ -55,6 +58,7 @@ export const ProjectSelectorModal: React.FC<ProjectSelectorModalProps> = ({
     if (!projectName.trim()) return;
 
     setLoading(true);
+    setError(null);
     try {
       const newProj = await createTelemetryProject(currentUser.uid, {
         name: projectName.trim(),
@@ -67,6 +71,7 @@ export const ProjectSelectorModal: React.FC<ProjectSelectorModalProps> = ({
       setProjectDescription('');
     } catch (err) {
       console.error('Failed to create project in Firestore:', err);
+      setError(err instanceof Error ? err.message : 'Could not create the project.');
     } finally {
       setLoading(false);
     }
@@ -79,6 +84,7 @@ export const ProjectSelectorModal: React.FC<ProjectSelectorModalProps> = ({
       await deleteTelemetryProject(projectId);
     } catch (err) {
       console.error('Failed to delete project:', err);
+      setError(err instanceof Error ? `Project not deleted: ${err.message}` : 'Project not deleted.');
     }
   };
 
@@ -117,6 +123,11 @@ export const ProjectSelectorModal: React.FC<ProjectSelectorModalProps> = ({
 
         {/* Content Area */}
         <div className="py-6 flex-1 overflow-y-auto space-y-6 scrollbar-none">
+          {error && (
+            <div role="alert" className="p-3 rounded-xl bg-rose-950/50 border border-rose-500/40 text-xs font-mono text-rose-200">
+              {error}
+            </div>
+          )}
           {!currentUser ? (
             /* Unauthenticated Prompt */
             <div className="p-6 rounded-2xl bg-amber-400/10 border border-amber-400/30 text-center space-y-4">
@@ -304,29 +315,45 @@ export const ProjectSelectorModal: React.FC<ProjectSelectorModalProps> = ({
                           </button>
                         </div>
 
-                        {/* Scoped API Key Bar */}
-                        <div className="mt-3 pt-3 border-t border-white/[0.08] flex items-center justify-between font-mono text-xs">
-                          <div className="flex items-center space-x-2 text-neutral-400 truncate max-w-[70%]">
-                            <Key className="w-3.5 h-3.5 text-amber-300 shrink-0" />
-                            <span className="text-[11px] truncate text-neutral-300">{proj.apiKey}</span>
-                          </div>
-                          <button
-                            onClick={(e) => copyApiKey(proj.apiKey, proj.id, e)}
-                            className="flex items-center space-x-1 text-[10px] font-mono text-neutral-400 hover:text-white px-2 py-1 rounded bg-white/5 hover:bg-white/10 border border-white/10 transition-colors"
-                          >
-                            {copiedKeyId === proj.id ? (
-                              <>
-                                <CheckCheck className="w-3 h-3 text-emerald-400" />
-                                <span className="text-emerald-400">Copied!</span>
-                              </>
-                            ) : (
-                              <>
-                                <Copy className="w-3 h-3" />
-                                <span>Copy Key</span>
-                              </>
-                            )}
-                          </button>
-                        </div>
+                        {/* Scoped API Key Bar. The full key exists only in the session that created the
+                            project (the API shows it once, nothing stores it); otherwise only the
+                            non-secret prefix is shown and there is nothing to copy. */}
+                        {(() => {
+                          const keyView = ingestionKeyView(proj);
+                          return (
+                            <div className="mt-3 pt-3 border-t border-white/[0.08] flex items-center justify-between font-mono text-xs">
+                              <div className="flex items-center space-x-2 text-neutral-400 truncate max-w-[70%]">
+                                <Key className="w-3.5 h-3.5 text-amber-300 shrink-0" />
+                                <span
+                                  className="text-[11px] truncate text-neutral-300"
+                                  title={keyView.reason ?? undefined}
+                                >
+                                  {keyView.key ?? keyView.masked ?? '—'}
+                                </span>
+                              </div>
+                              {keyView.key ? (
+                                <button
+                                  onClick={(e) => copyApiKey(keyView.key as string, proj.id, e)}
+                                  className="flex items-center space-x-1 text-[10px] font-mono text-neutral-400 hover:text-white px-2 py-1 rounded bg-white/5 hover:bg-white/10 border border-white/10 transition-colors"
+                                >
+                                  {copiedKeyId === proj.id ? (
+                                    <>
+                                      <CheckCheck className="w-3 h-3 text-emerald-400" />
+                                      <span className="text-emerald-400">Copied!</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Copy className="w-3 h-3" />
+                                      <span>Copy Key</span>
+                                    </>
+                                  )}
+                                </button>
+                              ) : (
+                                <span className="text-[10px] text-neutral-500">shown once</span>
+                              )}
+                            </div>
+                          );
+                        })()}
                       </div>
                     );
                   })}
