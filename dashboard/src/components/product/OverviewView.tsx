@@ -83,7 +83,9 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
               </span>
             </div>
             <p className="text-xs font-sans text-neutral-300 leading-relaxed max-w-3xl">
-              <strong className="text-white font-medium">AgentPulse never calls an LLM to judge.</strong> Your models stay outside the system. All grounding, inter-agent contradiction, and drift evaluations execute locally on CPU using small transformer classifiers with 203ms median latency.
+              {/* The 203 ms needs its sample size (LLM_JUDGE_COMPARISON_REPORT.md: median 202.94 ms,
+                  30 cases), and the disagreement score has no alert since it measured at chance. */}
+              <strong className="text-white font-medium">AgentPulse never calls an LLM to judge.</strong> Your models stay outside the system. Grounding and drift are computed locally on CPU by two small transformer models (the inter-agent disagreement score is still stored, but its alert is withdrawn). Offline, the median evaluation took 203&nbsp;ms per span over 30 test cases.
             </p>
           </div>
 
@@ -134,7 +136,9 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
           <div className="absolute inset-x-0 top-0 h-[1.5px] apple-liquid-specular pointer-events-none" />
           <div className="flex items-center justify-between text-neutral-400 text-xs mb-3">
             <span className="font-sans font-medium tracking-wider text-[11px] text-neutral-400 uppercase liquid-card-label">
-              Avg Inference Latency
+              {/* The agents' own span latency (each agent's moving average, averaged), not the
+                  evaluator's inference time: "inference" read as AgentPulse's model latency. */}
+              Avg Agent Latency
             </span>
             <div className="p-1.5 rounded-lg bg-white/[0.06] border border-white/[0.12] text-neutral-200">
               <Clock className="w-3.5 h-3.5 text-cyan-400 phosphor-cyan" />
@@ -237,9 +241,12 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
                 {maxDrift ? `${maxDrift.distance.toFixed(2)} Δ (${maxDrift.agentId})` : '—'}
               </span>
             </div>
+            {/* "No drift distance yet" covers both cases: the baseline (first 20 outputs) or
+                the current window (latest 12) still filling. "No baseline" was wrong for an
+                agent whose baseline is full; the Agents view says which pool is missing. */}
             {agentsWithoutBaseline > 0 && (
               <div className="text-[11px] font-sans text-neutral-400 liquid-card-label">
-                {agentsWithoutBaseline} of {agents.length} {agents.length === 1 ? 'agent has' : 'agents have'} no baseline yet
+                {agentsWithoutBaseline} of {agents.length} {agents.length === 1 ? 'agent has' : 'agents have'} no drift distance yet
               </div>
             )}
           </div>
@@ -307,7 +314,8 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
                   Autonomous Agent Swarm Roster
                 </h3>
                 <p className="text-xs font-sans text-neutral-400 mt-0.5 liquid-card-label">
-                  Real-time telemetry, framework bindings &amp; execution profiles
+                  {/* No framework is recorded (adapters.ts), so the subtitle names what is shown. */}
+                  Latency (moving average), success rate and drift status per agent
                 </p>
               </div>
             </div>
@@ -547,9 +555,13 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
 
                     <div className="flex items-center justify-between text-xs text-neutral-400 pt-2.5 border-t border-white/[0.08]">
                       <span className="text-neutral-200 font-sans font-medium">{incident.agentName}</span>
-                      <span className="text-rose-300/90 font-mono tabular-nums font-medium text-[10px] uppercase tracking-wider bg-rose-500/15 px-2 py-0.5 rounded border border-rose-500/30">
-                        {incident.affectedRunsCount} runs affected
-                      </span>
+                      {/* The alerting service records no affected-run count, so the badge printed
+                          "runs affected" with no number. It shows only when a count exists. */}
+                      {incident.affectedRunsCount != null && (
+                        <span className="text-rose-300/90 font-mono tabular-nums font-medium text-[10px] uppercase tracking-wider bg-rose-500/15 px-2 py-0.5 rounded border border-rose-500/30">
+                          {incident.affectedRunsCount} runs affected
+                        </span>
+                      )}
                     </div>
                   </div>
                 );

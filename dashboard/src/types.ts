@@ -83,34 +83,37 @@ export type ProductTab =
 
 export type AgentStatus = 'idle' | 'running' | 'warning' | 'critical';
 
-export interface LatencyDataPoint {
-  minute: number; // 0 to 60 (or -60 to 0)
-  timeLabel: string; // e.g. "-55m", "-10m", "Now"
-  timestamp: string; // e.g. "14:32:00"
-  timeAgo: string; // e.g. "32 mins ago" or "Just now"
-  latencyMs: number;
-  baselineMs: number;
-  driftThresholdMs: number;
-  status: 'normal' | 'deviation' | 'drift';
-}
-
+// The LatencyDataPoint type and the latencyHistory60m field were removed on 2026-10-25: the
+// API keeps one moving-average latency per agent and no per-minute history, so the only
+// thing that ever filled them was a Math.random() generator (utils/latencyTelemetry.ts).
 export interface Agent {
   id: string;
   name: string;
   version?: string;
   model?: string;
   status: AgentStatus;
-  latencyAvgMs: number;
+  /** avg_latency_ms from GET /v1/agents: a moving average (each new span counts 5%), or
+   *  undefined when the backend has no latency for the agent. */
+  latencyAvgMs?: number;
   costPerHour?: number;
+  /** Percentage, 0-100, rounded to one decimal (1 - error_rate). */
   successRate: number;
   totalTraces24h: number;
-  description: string;
+  /** agent_role from the API; undefined when the SDK did not send one. */
+  description?: string;
   framework?: string;
-  driftScore: number; // 0 to 1
-  driftStatus: 'normal' | 'deviation' | 'drift';
+  /** latest_window_centroid_distance; undefined until the baseline (first 20 outputs) and the
+   *  current window (latest 12) have both filled. A cosine distance, so 0 to 2. */
+  driftScore?: number;
+  /** 'drift' above the 0.30 threshold, 'normal' at or below it, undefined with no baseline.
+   *  adapters.ts never produces 'deviation'; it stays in the union for older callers. */
+  driftStatus?: 'normal' | 'deviation' | 'drift';
+  /** Spans the drift detector had seen, the latest included (baseline_size + 1 from GET
+   *  /v1/drift); undefined when the agent has no drift record. Tells "baseline still filling"
+   *  (under 20) apart from "window still filling" (20 or more). */
+  driftSpansSeen?: number;
   lastActive: string;
   tools?: string[];
-  latencyHistory60m?: LatencyDataPoint[];
 }
 
 export type SpanType = 'agent' | 'tool' | 'model' | 'evaluator' | 'retrieval';
@@ -139,7 +142,10 @@ export interface Span {
   type: SpanType;
   status: SpanStatus;
   startOffsetMs: number;
+  /** For layout (bar widths, sums): latency_ms, or 0 when the SDK sent none. Print latencyMs. */
   durationMs: number;
+  /** The span's recorded latency_ms; undefined when it was not recorded. What the views print. */
+  latencyMs?: number;
   agentLane?: string;
   model?: string;
   prompt?: string;
@@ -229,16 +235,23 @@ export interface DriftPoint {
   label: string;
 }
 
+// The three distances are optional because GET /v1/drift returns null for an agent with no
+// drift record, and the window distance stays null until both windows fill. The view prints
+// an em dash for each one that is missing, never 0.
 export interface DriftProfile {
   agentId: string;
   agentName: string;
-  driftMagnitude: number; // 0 to 1
+  /** latest_window_centroid_distance: what DRIFT_DETECTED reads (alert above 0.30). */
+  driftMagnitude?: number;
   clusterDivergence?: number;
   parameterDrift?: number;
-  semanticDrift: number;
-  toolCallDrift: number;
+  /** latest_centroid_distance: one output against the agent's running average. */
+  semanticDrift?: number;
+  /** latest_tool_drift: how evenly the agent spreads its calls over its tools (0 to 1). */
+  toolCallDrift?: number;
+  /** baseline_size: how many of the agent's spans had been analysed before the latest record. */
   baselineSampleCount: number;
-  currentSampleCount: number;
+  currentSampleCount?: number;
   points: DriftPoint[];
   driftReason: string;
 }
@@ -267,6 +280,10 @@ export interface Dataset {
 export interface Experiment {
   id: string;
   name: string;
+  /** The result file under experiments/results/ this entry was read from, when it is one. */
+  sourceFile?: string;
+  /** The `model` field of the result file, when it has one. */
+  model?: string;
   datasetId: string;
   datasetName: string;
   baselineModel?: string;

@@ -454,9 +454,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               className="w-full accent-emerald-400 bg-white/[0.12] hover:bg-white/[0.16] h-2.5 rounded-lg cursor-pointer appearance-none transition-all focus:outline-none"
               aria-label="Text density slider to toggle between Compact and Comfortable typography scales"
             />
+            {/* These numbers are --density-font-scale and --density-line-height in index.css
+                (.density-compact / .density-comfortable); compact said 1.34 against the CSS's 1.35. */}
             <div className="flex justify-between text-[10px] text-neutral-400 font-mono pt-1.5">
               <span className={textDensity === 'compact' ? 'text-cyan-300 font-medium' : 'text-neutral-500'}>
-                0 · Compact (0.88x font · 1.34 line-height)
+                0 · Compact (0.88x font · 1.35 line-height)
               </span>
               <span className={textDensity === 'comfortable' ? 'text-emerald-300 font-medium' : 'text-neutral-500'}>
                 1 · Comfortable (1.0x font · 1.55 line-height)
@@ -492,7 +494,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             </div>
 
             <p className="text-[11px] font-sans text-neutral-300 leading-snug">
-              Decreases font scales to 0.88x and tightens line-height to 1.34. Maximizes visible trace spans and telemetry rows on laptops and split-screen investigations.
+              Decreases font scales to 0.88x and tightens line-height to 1.35 (the values in index.css). Maximizes visible trace spans and telemetry rows on laptops and split-screen investigations.
             </p>
 
             {/* Miniature Visual Snippet in Compact Typography */}

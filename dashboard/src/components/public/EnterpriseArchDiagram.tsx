@@ -23,7 +23,9 @@ const ARCH_NODES = [
     tech: 'Python SDK',
     badge: 'Never blocks',
     desc: 'Spans are buffered and sent in the background, so instrumentation cannot slow the agent down. The buffer is bounded at 10,000 spans and drops the oldest first, because a collector that cannot reach its backend must not grow inside the host process.',
-    details: ['Fail-open: SDK errors re-run the agent', 'Redacts email, phone, SSN and secrets before the wire', 'Prompt capture off by default']
+    // sdk/src/agentpulse/decorators.py calls the wrapped function exactly once; on an SDK error
+    // before the call it runs without a span. The old text said SDK errors "re-run the agent".
+    details: ['Fail-open: an SDK error never stops the agent, which runs once without a span', 'Redacts email, phone, SSN and secrets before the wire', 'Prompt capture off by default']
   },
   {
     id: 'ingress',

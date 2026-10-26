@@ -1,0 +1,22 @@
+# What the chat service container (demo/chat.Dockerfile) installs. torch is not listed: the
+# Dockerfile installs it first from PyTorch's CPU index, pinned there, as backend/Dockerfile
+# does. The packages the backend also uses are pinned by backend/constraints.txt, which the
+# Dockerfile applies, so the embedding stack is the one the worker runs on Azure. The two the
+# backend does not have are pinned here, at the versions the tests and the local run used.
+
+# The web service.
+fastapi
+uvicorn
+
+# The model providers' OpenAI-compatible API.
+openai==3.15.0
+
+# The AgentPulse SDK, used from sdk/src without installing it; these are its dependencies
+# (sdk/pyproject.toml).
+pydantic
+aiohttp
+python-ulid==2.7.0
+
+# Retrieval: MiniLM embeddings (demo/workflows/retrieval.py, through backend/app/services/grounding.py).
+numpy
+sentence-transformers

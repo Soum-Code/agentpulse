@@ -6,6 +6,8 @@
 **Dataset:** `v1.0_test` — 30 cases, same `is_failure` ground truth used by `experiments/ablation.py`, so figures are directly comparable to `THRESHOLD_ANALYSIS.md`
 **Real inference confirmed:** NLI models `{nli_model, nli_tokenizer, embedding_model}` all loaded; judge warm-up returned `'SUPPORTED'` in 3830 ms with 6 output tokens
 
+> **Correction, 2026-10-25 (NLI side only; the judge and all latency and token figures are unaffected).** This run read DeBERTa's `entailment` and `neutral` outputs in swapped order, the bug fixed in PR #69, with a neutral weight of 0.5. `GROUNDING_RECALIBRATION_2026-10.md` re-scored the NLI side of all 30 cases from the same model (T8, section 3.3; per-case values in `experiments/results/grounding_recalibration_2026-10-22_analysis.json`, `reproduction_checks.llm_judge_comparison_nli_side`). As run (weight 0.5, flag at `grounding_score >= 0.50`), corrected labels give NLI F1 **0.897** overall (13/3/0/14), 1.000 on the 10 deterministic-label cases and **0.842** on the 20 judge-labelled ones, and the systems disagree on **three** cases: `test_09` (0.857), `test_03` (0.5007) and `test_16` (0.5010). At the weight that ships today (0.3), the stored probabilities give `test_03` and `test_16` about 0.31, so the NLI side is again 13/1/0/16: F1 0.963 overall, 1.000 and 0.941 by subset, with `test_09` (about 0.855) the only disagreement (derived from the stored probabilities; not re-run). The tables below are corrected in place; the published value is given beside each change.
+
 ---
 
 ## 1. The claim being tested
@@ -74,17 +76,21 @@ matches the ground-truth base rate exactly.
 
 | Subset | n | System | Precision | Recall | F1 | FPR |
 | :--- | ---: | :--- | ---: | ---: | ---: | ---: |
-| **Overall** | 30 | NLI cascade | 0.929 | 1.000 | 0.963 | 0.059 |
+| **Overall** | 30 | NLI cascade | 0.812 | 1.000 | 0.897 | 0.176 |
 | **Overall** | 30 | LLM judge | **1.000** | **1.000** | **1.000** | **0.000** |
 | Deterministic labels | 10 | NLI cascade | 1.000 | 1.000 | 1.000 | 0.000 |
 | Deterministic labels | 10 | LLM judge | 1.000 | 1.000 | 1.000 | 0.000 |
-| LLM-judge labels | 20 | NLI cascade | 0.889 | 1.000 | 0.941 | 0.083 |
+| LLM-judge labels | 20 | NLI cascade | 0.727 | 1.000 | 0.842 | 0.250 |
 | LLM-judge labels | 20 | LLM judge | **1.000** | **1.000** | **1.000** | **0.000** |
+
+NLI rows: corrected labels at the weight this run used (0.5). Published (swapped labels): overall 0.929 / 1.000 / 0.963 / 0.059, judge-labelled 0.889 / 1.000 / 0.941 / 0.083. The re-score reports the judge-labelled subset as F1 only; its precision and FPR are derived from the counts (all three false positives sit in this subset, because the deterministic subset stays at 1.000, so 8 / 3 / 0 / 9). At the shipped weight 0.3 the NLI side is 0.929 / 1.000 / 0.963 / 0.059 overall (derived, see the correction above).
 
 **The LLM judge outscored the NLI cascade overall.** The "comparable quality" half of the
 hypothesis is not confirmed on this data as stated.
 
 ### 3.1 But the two systems disagree on exactly one case — and it sits in the circular subset
+
+[2026-10-25: one case at the shipped weight 0.3; three as this run was configured (weight 0.5) once the labels are corrected. The other two, `test_03` and `test_16`, are supported answers the NLI model calls neutral (neutral 0.945), scoring 0.5007 and 0.5010 at 0.5 and about 0.31 at 0.3.]
 
 Across all 30 cases there is **one** case where the systems differ: `test_09`.
 
@@ -93,7 +99,7 @@ Across all 30 cases there is **one** case where the systems differ: `test_09`.
 | Evidence | "Qwen 2.5 7B contains approximately **7.61 billion** total parameters with dense transformer layers." |
 | Claim | "Qwen 2.5 7B has approximately **7.6 billion** parameters in its dense transformer architecture." |
 | Ground truth | SUPPORTED (not a failure) |
-| NLI cascade | grounding_score **0.922** → predicted failure |
+| NLI cascade | grounding_score **0.857** → predicted failure (contradiction 0.853; about 0.855 at the shipped weight 0.3; published 0.922 on swapped labels) |
 | LLM judge | `SUPPORTED` → correct |
 
 This is a **numeric rounding paraphrase**. DeBERTa scored a faithful restatement as high
@@ -159,13 +165,13 @@ which vendor runs them.
 
 **Not supported:**
 
-- "Comparable or better quality" as an unqualified claim. Overall F1 was 0.963 vs 1.000.
+- "Comparable or better quality" as an unqualified claim. Overall F1 was 0.963 vs 1.000 as published; 0.897 vs 1.000 on corrected labels at this run's weight, and 0.963 vs 1.000 at the shipped weight 0.3.
 - Any claim about LLM judges in general. This is **one** judge model, **one** generic
   prompt, **one** temperature/seed, on **30** cases. A larger judge, a tuned prompt, or a
   hosted frontier model could all score differently.
 
 **Newly identified defect:** the NLI cascade mis-scores numeric rounding paraphrase
-("7.61 billion" vs "approximately 7.6 billion" → 0.922 risk). This is a concrete,
+("7.61 billion" vs "approximately 7.6 billion" → 0.857 risk on corrected labels, 0.922 as published). This is a concrete,
 reproducible weakness worth tracking. It has **not** been fixed here — doing so from a
 single observed case would be fitting to one data point.
 

@@ -56,8 +56,8 @@ it down while testing.
 # and ask().
 #
 # HOW IT FITS IN
-# Run it directly: python demo/multi_model_pipeline.py. demo/chat_server.py imports
-# its tables and helpers. It uses the AgentPulse SDK (sdk/src/agentpulse) and the
+# Run it directly: python demo/multi_model_pipeline.py. demo/chat_server.py no longer imports
+# its tables (the chat has its own provider chain, demo/chat_providers.py). It uses the AgentPulse SDK (sdk/src/agentpulse) and the
 # document search in demo/workflows/retrieval.py. The AgentPulse worker scores the
 # spans later; this script only sends them.
 
