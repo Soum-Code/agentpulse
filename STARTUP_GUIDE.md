@@ -142,7 +142,7 @@ Loads MiniLM and DeBERTa, then leases jobs from the queue. First start takes
 cd dashboard && npm run dev
 ```
 
-Then open <http://localhost:5173>.
+Then open <http://localhost:3000> (the port `npm run dev` uses, set in `dashboard/package.json`; the Docker image serves on 5173).
 
 > Run this **from inside `dashboard/`**. Tailwind resolves its `content` globs
 > against the current working directory, not against Vite's root, so starting

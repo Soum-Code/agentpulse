@@ -211,7 +211,7 @@ function arrow(s, x1, y1, x2, y2, label) {
   const s = slide('Four signals over every span', 'What it does');
   table(s, [
     ['Signal', 'Question', 'Method', 'Maturity'],
-    ['Grounding', 'Is the output supported by its evidence?', 'MiniLM cosine gate to DeBERTa-v3 NLI', 'Beta'],
+    ['Grounding', 'Is the output supported by its evidence?', 'DeBERTa-v3 NLI: contradiction + 0.3 x neutral', 'Beta'],
     ['Drift / ASI', 'Has this agent shifted from its own baseline?', 'Embedding centroid distance, EMA and windowed', 'Beta'],
     ['Disagreement', 'Do two agents contradict each other?', 'Pairwise NLI within one trace', 'Experimental'],
     ['Tool-claim', 'Does the claim match what the tool returned?', 'Regex extraction vs count parsed from the tool result', 'Experimental'],
@@ -291,7 +291,7 @@ function arrow(s, x1, y1, x2, y2, label) {
     ['3', 'Buffer', 'Spans batch in memory; transport failures are swallowed so telemetry cannot break the pipeline.'],
     ['4', 'Ingest', 'Validate, upsert the trace, write spans, enqueue one evaluation job per span.'],
     ['5', 'Lease', 'A worker atomically claims a job with a 120-second lease and an attempt counter.'],
-    ['6', 'Evaluate', 'Four signals run; a weighted composite risk score is aggregated.'],
+    ['6', 'Evaluate', 'Four signals run; risk = weighted mean of grounding and tool-claim.'],
     ['7', 'Persist', 'Evaluation and drift rows written idempotently, keyed on span id.'],
     ['8', 'Alert', 'Threshold rules fire, subject to a 900 s cooldown and a 50/hour cap.'],
   ], { colW: [0.55, 1.9, 9.44], fontSize: 12 });
@@ -448,7 +448,7 @@ client.chat.completions.create(       # recorded, scored, unchanged
   const s = slide('Ablation on the held-out test split', 'Measured results');
   table(s, [
     ['Configuration', 'Precision', 'Recall', 'F1', 'Latency'],
-    ['MiniLM gate only', '0.733', '0.846', '0.786', '19.1 ms'],
+    ['MiniLM only', '0.733', '0.846', '0.786', '19.1 ms'],
     ['DeBERTa NLI only', '0.929', '1.000', '0.963', '132.1 ms'],
     ['Cascade (shipped)', '0.929', '1.000', '0.963', '151.2 ms'],
   ], { colW: [4.0, 2.0, 2.0, 1.9, 1.99], fontSize: 13, y: 1.75 });
@@ -573,8 +573,9 @@ after 14 shifted spans
   const s = slide('What can be checked, and where', 'Evidence');
   table(s, [
     ['Check', 'Result'],
-    ['Python + SDK test suite', '260 passed'],
-    ['Dashboard test suite', '32 passed'],
+    // Measured on main at 2fefb91, 2026-10-25.
+    ['Python + SDK test suite', '422 passed'],
+    ['Dashboard test suite', '136 passed'],
     ['Dashboard build', 'passes'],
     ['Dashboard typecheck', 'clean, strict off'],
     ['Grounding F1 (v1.0_test)', '0.963'],
@@ -603,13 +604,13 @@ after 14 shifted spans
     ['Drift needs 32 samples per agent',
       'Twenty baseline plus twelve window. Short-lived agents never produce a sustained value. Both pools are persisted, so a restart no longer resets them.'],
     ['Benchmark is small',
-      '30 held-out cases. Enough to demonstrate the pipeline, not to claim generalisation.'],
+      '30 test cases, 5 of them copies of dev cases. Enough to demonstrate the pipeline, not to claim generalisation.'],
     ['Not OpenTelemetry',
       'The span schema is custom. No OTel dependency, import or semantic-convention mapping.'],
     ['Single-node storage',
       'SQLite with WAL. Suited to self-hosted single-instance use, not multi-writer deployment.'],
     ['Grounding misreads rounded numbers',
-      '"7.61 billion" against "approximately 7.6 billion" scores 0.922 risk. Reproducible, and deliberately unpatched: fixing from one observed case is fitting to one data point.'],
+      '"7.61 billion" against "approximately 7.6 billion" is called a contradiction, about 0.86 risk. Reproducible, and deliberately unpatched: fixing from one observed case is fitting to one data point.'],
     ['No model in the loop yet',
       'Agent text in the simulator and demo pipeline is a fixture, not model output. Everything downstream of it is real; the system has not been measured against live traffic.'],
   ], { colW: [3.5, 8.39], fontSize: 11 });
