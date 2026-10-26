@@ -1206,10 +1206,10 @@ async def researcher_node(state):
               palette === 'butter'
                 ? 'bg-[#FAF5E8] text-neutral-950 border-2 border-neutral-950 shadow-[6px_6px_0px_#000000]'
                 : palette === 'chalk'
-                ? 'bg-white text-slate-900 border border-slate-300 shadow-xl'
+                ? 'chalk-tactile-card text-slate-900 shadow-xl'
                 : 'liquid-glass-card border-glow-subtle text-white'
             }`}>
-              <div className="absolute inset-x-0 top-0 h-[1px] apple-liquid-specular pointer-events-none" />
+              <div className={`absolute inset-x-0 top-0 h-[1.5px] pointer-events-none ${palette === 'chalk' ? 'chalk-specular' : 'apple-liquid-specular'}`} />
               <div className={`flex items-center justify-between pb-3 border-b ${
                 palette === 'butter' ? 'border-neutral-950' : palette === 'chalk' ? 'border-slate-200' : 'border-white/[0.08]'
               }`}>
@@ -1235,7 +1235,7 @@ async def researcher_node(state):
                   palette === 'butter'
                     ? 'bg-white border-neutral-950 text-neutral-950 shadow-[2px_2px_0px_#000000]'
                     : palette === 'chalk'
-                    ? 'bg-slate-50 border-slate-200 text-slate-900'
+                    ? 'chalk-tactile-card border-white/80 text-slate-900 shadow-sm'
                     : 'bg-white/[0.04] border-white/[0.08] text-neutral-300'
                 }`}>
                   <span className={palette === 'butter' ? 'font-bold' : palette === 'chalk' ? 'text-slate-700 font-medium' : 'text-neutral-300'}>Evaluation rate, 1 worker</span>
@@ -1247,7 +1247,7 @@ async def researcher_node(state):
                   palette === 'butter'
                     ? 'bg-white border-neutral-950 text-neutral-950 shadow-[2px_2px_0px_#000000]'
                     : palette === 'chalk'
-                    ? 'bg-slate-50 border-slate-200 text-slate-900'
+                    ? 'chalk-tactile-card border-white/80 text-slate-900 shadow-sm'
                     : 'bg-white/[0.04] border-white/[0.08] text-neutral-300'
                 }`}>
                   <span className={palette === 'butter' ? 'font-bold' : palette === 'chalk' ? 'text-slate-700 font-medium' : 'text-neutral-300'}>{loopPhases[activeLoopStep].metricLabel}</span>
@@ -1257,7 +1257,7 @@ async def researcher_node(state):
                   palette === 'butter'
                     ? 'bg-white border-neutral-950 text-neutral-950 shadow-[2px_2px_0px_#000000]'
                     : palette === 'chalk'
-                    ? 'bg-slate-50 border-slate-200 text-slate-900'
+                    ? 'chalk-tactile-card border-white/80 text-slate-900 shadow-sm'
                     : 'bg-white/[0.04] border-white/[0.08] text-neutral-300'
                 }`}>
                   <span className={palette === 'butter' ? 'font-bold' : palette === 'chalk' ? 'text-slate-700 font-medium' : 'text-neutral-300'}>Verification Model</span>
@@ -1326,12 +1326,12 @@ async def researcher_node(state):
                     ? palette === 'butter'
                       ? 'bg-black text-white border-2 border-black shadow-[6px_6px_0px_#000000] -translate-x-1'
                       : palette === 'chalk'
-                      ? 'bg-neutral-900 text-white border-neutral-900 shadow-lg'
+                      ? 'chalk-tactile-card border-neutral-400 text-neutral-950 font-semibold shadow-md ring-1 ring-neutral-400/30'
                       : 'apple-liquid-dock border-white/40 text-white shadow-[0_0_24px_rgba(255,255,255,0.06)]'
                     : palette === 'butter'
                     ? 'bg-white text-black border-2 border-black shadow-[2px_2px_0px_#000000] hover:shadow-[4px_4px_0px_#000000]'
                     : palette === 'chalk'
-                    ? 'bg-white text-neutral-700 border-neutral-200 hover:border-neutral-400'
+                    ? 'chalk-tactile-card text-neutral-700 hover:text-neutral-950 shadow-sm'
                     : 'bg-white/[0.03] border-white/[0.08] text-neutral-400 hover:text-neutral-100 hover:bg-white/[0.06] hover:border-white/20'
                 }`}
               >
@@ -2125,7 +2125,7 @@ async def researcher_node(state):
             palette === 'butter'
               ? 'border-2 border-neutral-950 bg-white'
               : palette === 'chalk'
-              ? 'border border-neutral-200 bg-white'
+              ? 'chalk-tactile-card text-neutral-900 shadow-xl'
               : 'apple-liquid-dock border-white/[0.1]'
           }`}
         >

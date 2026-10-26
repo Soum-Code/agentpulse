@@ -121,6 +121,12 @@ export function getRagTheme(
       chalkCard = 'bg-[#f3f9f5]';
       chalkHeader = 'bg-[#eaf2ec]/95';
       chalkBorder = 'border-[#c2dccb]';
+    } else if (chalkSurface === 'blueprint-mist') {
+      // The fourth chalk surface (colours from CHALK_PRESETS in lib/colorPalettes.ts).
+      chalkBg = 'bg-[#e7eff7]';
+      chalkCard = 'bg-[#f5f9fd]';
+      chalkHeader = 'bg-[#e7eff7]/95';
+      chalkBorder = 'border-[#bfd6ee]';
     }
 
     return {

@@ -121,10 +121,10 @@ export const EnterpriseArchDiagram: React.FC<EnterpriseArchDiagramProps> = ({ pa
             className={`p-3 rounded-2xl text-left font-mono transition-all border backdrop-blur-md tactile-press ${
               activeNode === idx
                 ? palette === 'chalk'
-                  ? 'bg-neutral-900 border-neutral-900 shadow-sm text-white'
+                  ? 'chalk-tactile-card border-neutral-900 shadow-md text-neutral-950 font-bold ring-1 ring-neutral-400/30'
                   : 'bg-amber-400/20 border-amber-400/60 shadow-[0_0_16px_rgba(245,158,11,0.3),inset_0_1px_1px_rgba(255,255,255,0.2)] text-white'
                 : palette === 'chalk'
-                ? 'bg-white border-neutral-200 hover:bg-neutral-100 text-neutral-800'
+                ? 'chalk-tactile-card text-neutral-800 hover:text-neutral-950 shadow-sm'
                 : 'bg-white/[0.04] border-white/[0.08] hover:bg-white/[0.08] text-neutral-300'
             }`}
           >
@@ -148,10 +148,10 @@ export const EnterpriseArchDiagram: React.FC<EnterpriseArchDiagramProps> = ({ pa
       {/* Detail Showcase of Active Node - Liquid Glass Surface */}
       <div className={`p-6 sm:p-8 rounded-2xl grid grid-cols-1 lg:grid-cols-12 gap-6 items-center relative z-10 overflow-hidden ${
         palette === 'chalk'
-          ? 'bg-white border border-neutral-200 shadow-md text-neutral-900'
+          ? 'chalk-tactile-card shadow-xl text-neutral-900'
           : 'bg-black/35 backdrop-blur-2xl border border-white/15 shadow-[0_12px_32px_rgba(0,0,0,0.4),inset_0_1px_1px_rgba(255,255,255,0.15)] text-white'
       }`}>
-        <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-amber-300/40 to-transparent" />
+        <div className={`absolute inset-x-0 top-0 h-[1.5px] pointer-events-none ${palette === 'chalk' ? 'chalk-specular' : 'bg-gradient-to-r from-transparent via-amber-300/40 to-transparent'}`} />
         <div className="lg:col-span-8 space-y-3">
           <div className="flex flex-wrap items-center gap-2.5">
             <span className={`px-2.5 py-0.5 rounded-md text-xs font-mono font-bold shadow-sm ${
@@ -185,7 +185,7 @@ export const EnterpriseArchDiagram: React.FC<EnterpriseArchDiagramProps> = ({ pa
                 key={dIdx}
                 className={`px-2.5 py-1 rounded-lg text-xs font-mono flex items-center ${
                   palette === 'chalk'
-                    ? 'bg-neutral-100 border border-neutral-300 text-neutral-800'
+                    ? 'chalk-tactile-card border-white/70 text-neutral-800 shadow-sm'
                     : 'bg-white/[0.06] backdrop-blur-md border border-white/12 text-neutral-200'
                 }`}
               >
@@ -198,7 +198,7 @@ export const EnterpriseArchDiagram: React.FC<EnterpriseArchDiagramProps> = ({ pa
 
         <div className={`lg:col-span-4 p-4 rounded-xl font-mono text-xs space-y-2.5 ${
           palette === 'chalk'
-            ? 'bg-neutral-50 border border-neutral-200 shadow-sm text-neutral-900'
+            ? 'chalk-tactile-card border-white/80 shadow-inner text-neutral-900'
             : 'bg-white/[0.04] backdrop-blur-xl border border-white/12 shadow-inner text-neutral-200'
         }`}>
           <span className={`text-[10px] uppercase block font-bold tracking-wider ${

@@ -105,12 +105,12 @@ export const LiveTailStream: React.FC<LiveTailProps> = ({ palette }) => {
         palette === 'butter'
           ? 'ios-ultra-thin-butter border-2 border-neutral-950 text-neutral-950 shadow-[8px_8px_0px_#000000]'
           : palette === 'chalk'
-          ? 'ios-ultra-thin-chalk border border-neutral-200 text-neutral-900 shadow-xl'
+          ? 'chalk-tactile-card border border-neutral-200 text-neutral-900 shadow-xl'
           : 'liquid-glass-card border-glow-subtle text-white'
       }`}
     >
       {/* Specular Top Bevel & Optical Radiance */}
-      <div className="absolute inset-x-0 top-0 h-[1.5px] apple-liquid-specular pointer-events-none" />
+      <div className={`absolute inset-x-0 top-0 h-[1.5px] pointer-events-none ${palette === 'chalk' ? 'chalk-specular' : 'apple-liquid-specular'}`} />
       <div className="absolute -top-32 -left-32 w-80 h-80 bg-red-400/10 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute -bottom-32 -right-32 w-80 h-80 bg-emerald-400/10 rounded-full blur-3xl pointer-events-none" />
 
@@ -150,10 +150,10 @@ export const LiveTailStream: React.FC<LiveTailProps> = ({ palette }) => {
             className={`flex items-center space-x-2 px-3.5 py-1.5 rounded-xl text-xs font-mono font-bold border transition-all backdrop-blur-md tactile-press ${
               isStreaming
                 ? palette === 'chalk'
-                  ? 'bg-emerald-100 text-emerald-800 border-emerald-300 hover:bg-emerald-200 shadow-sm'
+                  ? 'chalk-tactile-card text-emerald-900 border-emerald-300 shadow-sm hover:border-emerald-400'
                   : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 hover:bg-emerald-500/30 shadow-[0_0_12px_rgba(16,185,129,0.2)]'
                 : palette === 'chalk'
-                ? 'bg-neutral-100 text-neutral-800 border-neutral-300 hover:bg-neutral-200'
+                ? 'chalk-tactile-card text-neutral-800 hover:text-neutral-950 shadow-sm'
                 : 'bg-white/10 text-neutral-200 border-white/20 hover:bg-white/15'
             }`}
           >
@@ -175,7 +175,7 @@ export const LiveTailStream: React.FC<LiveTailProps> = ({ palette }) => {
       {/* Stream Table */}
       <div className={`mt-6 overflow-x-auto relative z-10 rounded-2xl p-4 ${
         palette === 'chalk'
-          ? 'bg-white border border-neutral-200 shadow-sm'
+          ? 'chalk-tactile-card text-neutral-900 shadow-md'
           : 'bg-black/30 backdrop-blur-xl border border-white/10 shadow-[0_8px_24px_rgba(0,0,0,0.3),inset_0_1px_1px_rgba(255,255,255,0.1)]'
       }`}>
         <table className="w-full text-left font-mono text-xs">
