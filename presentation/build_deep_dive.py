@@ -152,7 +152,7 @@ A(table([
     ["Evaluation models", "MiniLM-L6-v2 embeddings, DeBERTa-v3-small NLI, ONNX Runtime", "2 local models"],
     ["Client SDK", "Python, aiohttp, batched async transport", "1,528 lines"],
     ["Dashboard", "React 19, TypeScript, Vite 6, Tailwind 4, three.js", "8,854 lines"],
-    ["Test suite", "pytest, pytest-asyncio", "3,826 lines / 209 tests"],
+    ["Test suite", "pytest, pytest-asyncio", "36 files / 422 tests"],
 ], [38 * mm, 78 * mm, 34 * mm], mono_cols=(2,)))
 A(Spacer(1, 8 * mm))
 A(caption(
@@ -204,7 +204,7 @@ A(Spacer(1, 2 * mm))
 A(table([
     ["Signal", "Question it answers", "Method", "Maturity"],
     ["Grounding", "Is the output supported by the input evidence?",
-     "MiniLM cosine gate escalating to DeBERTa-v3 NLI", "Beta"],
+     "DeBERTa-v3 NLI: contradiction + 0.3 x neutral (MiniLM similarity kept beside it)", "Beta"],
     ["Drift / ASI", "Has this agent's behaviour shifted from its own baseline?",
      "Embedding centroid distance, EMA and windowed", "Beta"],
     ["Disagreement", "Do two agents in one trace contradict each other?",
@@ -273,7 +273,7 @@ A(table([
     ["3", "Buffer", "Spans go into an in-memory buffer, flushed on batch size or interval; failures are swallowed so telemetry cannot break the pipeline.", "sdk/transport.py"],
     ["4", "Ingest", "POST /v1/ingest validates, upserts the trace, writes spans, and enqueues one evaluation job per span.", "routers/ingest.py"],
     ["5", "Lease", "A worker atomically claims a queued job with a 120-second lease and an attempt counter.", "services/job_queue.py"],
-    ["6", "Evaluate", "Grounding, tool-claim, disagreement and drift run; a weighted risk score is aggregated.", "services/evaluator.py"],
+    ["6", "Evaluate", "Grounding, tool-claim, disagreement and drift run; the risk score is the weighted mean of grounding and tool-claim (disagreement is stored, not summed).", "services/evaluator.py"],
     ["7", "Persist", "Evaluation and drift rows are written idempotently, keyed on span id.", "services/evaluation_runner.py"],
     ["8", "Alert", "Threshold rules fire, subject to cooldown and hourly caps.", "services/alerting.py"],
     ["9", "Serve", "REST endpoints and a WebSocket expose the results.", "routers/__init__.py"],
@@ -354,12 +354,12 @@ A(code("""
   Stage 2 - DeBERTa-v3-small cross-encoder NLI           ~132 ms
         |
         +--> entailment / contradiction / neutral
-             -> grounding_risk in [0, 1]
+             -> grounding_risk = contradiction + 0.3 x neutral
 """))
 A(P(
-    "Both models run locally on CPU through ONNX Runtime, with a PyTorch "
-    "fallback if ONNX is unavailable. No prompt text leaves the host and no "
-    "per-token cost is incurred."))
+    "Both models run locally on CPU. DeBERTa runs on ONNX Runtime when it "
+    "loads and on PyTorch otherwise; MiniLM always runs on PyTorch. No prompt "
+    "text leaves the host and no per-token cost is incurred."))
 A(H2("Operating point"))
 A(P(
     "Thresholds were selected on a 21-case development split and applied "
@@ -367,15 +367,25 @@ A(P(
     "0.5, semantic low-similarity floor 0.1, Stage 1 safe threshold 0.85."))
 
 A(Spacer(1, 5 * mm)); A(H1("8. Measured results"))
+# In short: the full-system row is the corrected-label re-score (GROUNDING_RECALIBRATION_2026-10.md T8);
+# the paragraph after the table says so and gives the shipped weight-0.3 figures.
 A(P("Ablation on dataset v1.0_test, 30 held-out cases."))
 A(table([
     ["Configuration", "Precision", "Recall", "F1", "Latency"],
-    ["MiniLM gate only", "0.733", "0.846", "0.786", "19.1 ms"],
+    ["MiniLM only", "0.733", "0.846", "0.786", "19.1 ms"],
     ["DeBERTa NLI only", "0.929", "1.000", "0.963", "132.1 ms"],
     ["Cascade (shipped)", "0.929", "1.000", "0.963", "151.2 ms"],
-    ["Full system (all signals)", "0.929", "1.000", "0.963", "-"],
+    ["Full system (all signals)", "0.812", "1.000", "0.897", "165.2 ms"],
 ], [46 * mm, 24 * mm, 22 * mm, 20 * mm, 24 * mm], mono_cols=(1, 2, 3, 4)))
 A(Spacer(1, 2 * mm))
+A(P(
+    "The full-system row is the corrected-label re-score at the 0.5 neutral "
+    "weight that run used (GROUNDING_RECALIBRATION_2026-10.md, T8); the result "
+    "file recorded 0.963, computed while DeBERTa's entailment and neutral "
+    "outputs were swapped. Five of the 30 test cases copy dev cases. The "
+    "shipped score (contradiction + 0.3 x neutral) gives the same 0.963 on the "
+    "test split at both cut-offs, and F1 0.927 / 0.952 with FPR 0.074 on the 47 "
+    "truly held-out cases (T3c, T3d)."))
 A(P(
     "Confusion matrix at the shipped operating point: 13 true positives, 1 "
     "false positive, 0 false negatives, 16 true negatives. False positive rate "
@@ -627,7 +637,8 @@ A(P(
 
 A(Spacer(1, 5 * mm)); A(H1("15. Testing"))
 A(P(
-    "209 tests pass across 19 files, covering the durable queue and crash "
+    "422 tests pass across 36 files (pytest tests/, run on 25 October 2026), "
+    "covering the durable queue and crash "
     "recovery, migrations, retention, health and readiness contracts, "
     "resilience, security fixes, self-monitoring, the SDK, the evaluation "
     "services, claim extraction, disagreement, dataset curation, LLM adapters, "

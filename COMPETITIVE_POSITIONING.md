@@ -385,7 +385,12 @@ AgentPulse uses a fixed NLI cascade: no judge API cost, no judge drift.
   ("7.61 billion" vs "approximately 7.6 billion") that the cascade scored as 0.922 risk.
   On the 10 deterministically-labelled cases the two are tied at 1.000; the judge's entire
   measured advantage falls inside the subset whose labels LLM judges produced, which is
-  where circularity is expected to flatter it.
+  where circularity is expected to flatter it. [2026-10-25: these NLI figures were computed
+  with DeBERTa's entailment and neutral outputs swapped. On corrected labels at the weight
+  used then (0.5) the cascade is F1 0.897 with three disagreements, and the rounding case
+  scores 0.857; at the shipped weight 0.3 it is 0.963 again with that one disagreement
+  (`LLM_JUDGE_COMPARISON_REPORT.md`, correction note; `GROUNDING_RECALIBRATION_2026-10.md`
+  section 3.3).]
 
 So the defensible version of this argument is narrower than the original phrasing: **an
 order-of-magnitude cheaper evaluation that is deterministic and reproducible, at quality
