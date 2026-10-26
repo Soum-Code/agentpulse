@@ -380,7 +380,15 @@ Ten pages, grouped by what you are trying to do.
 
 Telemetry Lab → run `tool_mismatch`. Watch a `TOOL_CLAIM_MISMATCH` appear in Incidents, open the span in Replay, and show the claimed count next to the actual tool result. That is the whole system in one loop: real ingest, real model inference, real alert — nothing seeded directly into the database.
 
-The agent text in that scenario is a fixture, written as string literals in `backend/app/routers/ingest.py`. No model generates agent text anywhere in this project. Everything downstream of the text is real, which is what the loop demonstrates: evaluating text does not require producing it.
+The agent text in that scenario is a fixture, written as string literals in `backend/app/routers/ingest.py`. Everything downstream of the text is real, which is what the loop demonstrates: evaluating text does not require producing it. The live chat below is where models do write the agent text.
+
+### The live chat
+
+The RAG page's chat (`demo/chat_server.py`, the `chat` container on the public site) is the same journey with real model text. Each question runs three agents in turn, each one model call and one span: the **retriever** searches the local corpus with MiniLM and describes in its own words what it found (its span carries the real search result, so the tool-claim check has something to compare), the **verifier** says whether the evidence answers the question, and the **answerer** writes the reply from the evidence only. All three spans carry the retrieved documents as their input, so grounding scores each reply against them.
+
+The calls go down a chain of free providers (Groq, Cerebras, NVIDIA, OpenRouter, then Pollinations, which needs no key and is always last), moving on when one is rate limited, failing or too slow, inside a 120 s budget per question. The page streams each stage as it finishes, with the provider that answered and its time, and the worker scores the spans as it does any others. Per-visitor and daily limits and a kill switch keep the free quotas for the people the demo is for; `deploy/azure/README.md` ("The live chat") has the settings, the arithmetic and the commands.
+
+Two things to keep in mind when reading its numbers. When one provider answers a whole question (the usual case: the first one that is not at its limit), all three agents run the same model, so the disagreement signal compares a model with itself; the response names the model per agent. And a question's stage times include waiting for a provider's free-tier spacing, which the response reports separately (`waited_ms`).
 
 For drift, remember Section 4.4: you need 32 evaluated spans for that agent before `window_centroid_distance` exists.
 

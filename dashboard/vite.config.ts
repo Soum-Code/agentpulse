@@ -17,6 +17,11 @@ export default defineConfig(() => {
       hmr: process.env.DISABLE_HMR !== 'true',
       // Disable file watching when DISABLE_HMR is true to save CPU during agent edits.
       watch: process.env.DISABLE_HMR === 'true' ? null : {},
+      // `npm run dev` only: the chat page calls /chat on its own origin, as on the public site
+      // where Caddy routes it, so the dev server passes it to a local chat service on 8100.
+      proxy: {
+        '/chat': 'http://localhost:8100',
+      },
     },
     build: {
       outDir: 'dist',
