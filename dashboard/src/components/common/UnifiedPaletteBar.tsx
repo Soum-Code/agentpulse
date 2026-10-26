@@ -187,7 +187,9 @@ export const UnifiedPaletteBar: React.FC<UnifiedPaletteBarProps> = ({
 
         <button
           onClick={() => onSelectPalette('chalk')}
-          data-keep-white="true"
+          // Only the ACTIVE chalk button is a dark pill with white text. data-keep-white forces white text in
+          // the light palettes, so an inactive Chalk button in Butter had white text on a cream bar (1.1:1).
+          data-keep-white={palette === 'chalk' ? 'true' : undefined}
           className={`px-2.5 py-1 rounded-full transition-all flex items-center space-x-1 cursor-pointer ${
             palette === 'chalk'
               ? 'bg-neutral-900 !text-white font-bold shadow-xs scale-102'

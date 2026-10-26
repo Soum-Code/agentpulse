@@ -699,6 +699,179 @@ body.palette-dark {
   color: #0f172a !important;
 }
 
+/* ==== Light palettes: readable text on every surface (review finding ux-tests-1) ====
+   Chalk and Butter are light. The rules after this block recolour .text-white and .text-neutral-* to
+   dark ink for them, so a surface that stayed dark gave dark text on dark (the Traces cards, the agent
+   rows, the badges). This block (1) makes the dark surfaces that had no light variant light, (2) turns
+   the dark-tinted badge backgrounds (outside surfaces marked data-keep-white) (bg-emerald-950/60 and so on) into light tints, and (3) darkens the
+   pale tint text colours (text-emerald-300 and so on) that were written for dark pages. A surface that
+   is meant to stay dark carries data-keep-white="true"; the rule after this block keeps its text white.
+   ==== */
+
+/* chalk: card-like hex backgrounds and the glass row that had no light variant */
+:is([data-palette="chalk"], .palette-chalk) .bg-\[\#101116\],
+:is([data-palette="chalk"], .palette-chalk) .bg-\[\#111218\]\/90,
+:is([data-palette="chalk"], .palette-chalk) .bg-\[\#1a1b24\],
+:is([data-palette="chalk"], .palette-chalk) .bg-\[\#121316\],
+:is([data-palette="chalk"], .palette-chalk) .ios-liquid-row {
+  background: var(--chalk-card-bg, #ffffff) !important;
+  border-color: var(--chalk-border, rgba(203, 213, 225, 0.9)) !important;
+  box-shadow: 0 4px 14px -6px rgba(15, 23, 42, 0.12) !important;
+}
+:is([data-palette="chalk"], .palette-chalk) .ios-liquid-row:hover {
+  background: #ffffff !important;
+}
+
+/* butter: card-like hex backgrounds and the glass row that had no light variant */
+:is([data-palette="butter"], .palette-butter) .bg-\[\#101116\],
+:is([data-palette="butter"], .palette-butter) .bg-\[\#111218\]\/90,
+:is([data-palette="butter"], .palette-butter) .bg-\[\#1a1b24\],
+:is([data-palette="butter"], .palette-butter) .bg-\[\#121316\],
+:is([data-palette="butter"], .palette-butter) .ios-liquid-row {
+  background: var(--butter-card-bg, #ffffff) !important;
+  border-color: var(--butter-border, rgba(217, 119, 6, 0.22)) !important;
+  box-shadow: 0 4px 14px -6px rgba(15, 23, 42, 0.12) !important;
+}
+:is([data-palette="butter"], .palette-butter) .ios-liquid-row:hover {
+  background: #ffffff !important;
+}
+
+/* dark-tinted badge backgrounds -> light tints of the same colour */
+:is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) [class*="bg-emerald-950"]:not([data-keep-white="true"] *) { background-color: #d1fae5 !important; }
+:is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) [class*="bg-green-950"]:not([data-keep-white="true"] *) { background-color: #dcfce7 !important; }
+:is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) [class*="bg-teal-950"]:not([data-keep-white="true"] *) { background-color: #ccfbf1 !important; }
+:is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) [class*="bg-cyan-950"]:not([data-keep-white="true"] *) { background-color: #cffafe !important; }
+:is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) [class*="bg-sky-950"]:not([data-keep-white="true"] *) { background-color: #e0f2fe !important; }
+:is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) [class*="bg-blue-950"]:not([data-keep-white="true"] *) { background-color: #dbeafe !important; }
+:is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) [class*="bg-indigo-950"]:not([data-keep-white="true"] *) { background-color: #e0e7ff !important; }
+:is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) [class*="bg-violet-950"]:not([data-keep-white="true"] *) { background-color: #ede9fe !important; }
+:is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) [class*="bg-purple-950"]:not([data-keep-white="true"] *) { background-color: #f3e8ff !important; }
+:is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) [class*="bg-fuchsia-950"]:not([data-keep-white="true"] *) { background-color: #fae8ff !important; }
+:is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) [class*="bg-pink-950"]:not([data-keep-white="true"] *) { background-color: #fce7f3 !important; }
+:is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) [class*="bg-rose-950"]:not([data-keep-white="true"] *) { background-color: #ffe4e6 !important; }
+:is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) [class*="bg-red-950"]:not([data-keep-white="true"] *) { background-color: #fee2e2 !important; }
+:is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) [class*="bg-orange-950"]:not([data-keep-white="true"] *) { background-color: #ffedd5 !important; }
+:is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) [class*="bg-amber-950"]:not([data-keep-white="true"] *) { background-color: #fef3c7 !important; }
+:is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) [class*="bg-yellow-950"]:not([data-keep-white="true"] *) { background-color: #fef9c3 !important; }
+:is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) [class*="bg-lime-950"]:not([data-keep-white="true"] *) { background-color: #ecfccb !important; }
+:is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) [class*="bg-neutral-800"]:not([data-keep-white="true"] *),
+:is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) [class*="bg-neutral-900/"]:not([data-keep-white="true"] *),
+:is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) [class*="bg-neutral-950/"]:not([data-keep-white="true"] *) {
+  background-color: #f1f5f9 !important;
+}
+
+/* pale tint text colours -> their 800 shade (readable on the light cards) */
+:is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) [class*="text-emerald-200"],
+:is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) [class*="text-emerald-300"],
+:is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) [class*="text-emerald-400"],
+:is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) [class*="text-emerald-500"] {
+  color: #065f46 !important;
+}
+:is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) [class*="text-green-200"],
+:is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) [class*="text-green-300"],
+:is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) [class*="text-green-400"],
+:is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) [class*="text-green-500"] {
+  color: #166534 !important;
+}
+:is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) [class*="text-teal-200"],
+:is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) [class*="text-teal-300"],
+:is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) [class*="text-teal-400"],
+:is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) [class*="text-teal-500"] {
+  color: #115e59 !important;
+}
+:is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) [class*="text-cyan-200"],
+:is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) [class*="text-cyan-300"],
+:is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) [class*="text-cyan-400"],
+:is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) [class*="text-cyan-500"] {
+  color: #155e75 !important;
+}
+:is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) [class*="text-sky-200"],
+:is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) [class*="text-sky-300"],
+:is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) [class*="text-sky-400"],
+:is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) [class*="text-sky-500"] {
+  color: #075985 !important;
+}
+:is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) [class*="text-blue-200"],
+:is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) [class*="text-blue-300"],
+:is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) [class*="text-blue-400"],
+:is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) [class*="text-blue-500"] {
+  color: #1e40af !important;
+}
+:is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) [class*="text-indigo-200"],
+:is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) [class*="text-indigo-300"],
+:is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) [class*="text-indigo-400"],
+:is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) [class*="text-indigo-500"] {
+  color: #3730a3 !important;
+}
+:is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) [class*="text-violet-200"],
+:is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) [class*="text-violet-300"],
+:is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) [class*="text-violet-400"],
+:is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) [class*="text-violet-500"] {
+  color: #5b21b6 !important;
+}
+:is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) [class*="text-purple-200"],
+:is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) [class*="text-purple-300"],
+:is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) [class*="text-purple-400"],
+:is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) [class*="text-purple-500"] {
+  color: #6b21a8 !important;
+}
+:is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) [class*="text-fuchsia-200"],
+:is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) [class*="text-fuchsia-300"],
+:is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) [class*="text-fuchsia-400"],
+:is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) [class*="text-fuchsia-500"] {
+  color: #86198f !important;
+}
+:is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) [class*="text-pink-200"],
+:is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) [class*="text-pink-300"],
+:is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) [class*="text-pink-400"],
+:is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) [class*="text-pink-500"] {
+  color: #9d174d !important;
+}
+:is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) [class*="text-rose-200"],
+:is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) [class*="text-rose-300"],
+:is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) [class*="text-rose-400"],
+:is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) [class*="text-rose-500"] {
+  color: #9f1239 !important;
+}
+:is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) [class*="text-red-200"],
+:is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) [class*="text-red-300"],
+:is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) [class*="text-red-400"],
+:is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) [class*="text-red-500"] {
+  color: #991b1b !important;
+}
+:is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) [class*="text-orange-200"],
+:is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) [class*="text-orange-300"],
+:is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) [class*="text-orange-400"],
+:is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) [class*="text-orange-500"] {
+  color: #9a3412 !important;
+}
+:is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) [class*="text-amber-200"],
+:is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) [class*="text-amber-300"],
+:is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) [class*="text-amber-400"],
+:is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) [class*="text-amber-500"] {
+  color: #92400e !important;
+}
+:is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) [class*="text-yellow-200"],
+:is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) [class*="text-yellow-300"],
+:is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) [class*="text-yellow-400"],
+:is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) [class*="text-yellow-500"] {
+  color: #854d0e !important;
+}
+:is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) [class*="text-lime-200"],
+:is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) [class*="text-lime-300"],
+:is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) [class*="text-lime-400"],
+:is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) [class*="text-lime-500"] {
+  color: #3f6212 !important;
+}
+/* neutral-500 grey is 4.3-4.4:1 on the cream/white cards: one step darker */
+:is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) [class*="text-neutral-500"] {
+  color: #52525b !important;
+}
+:is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) [class~="text-neutral-50"],
+:is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) [class*="text-neutral-100"] {
+  color: #0f172a !important;
+}
+
 /* High Contrast Text & Tiles for Butter and Chalk */
 [data-palette="butter"] .text-white:not([data-keep-white="true"]):not(button.bg-neutral-900):not(button.bg-black):not(.bg-neutral-900):not(.bg-black):not(.bg-neutral-950),
 .palette-butter .text-white:not([data-keep-white="true"]):not(button.bg-neutral-900):not(button.bg-black):not(.bg-neutral-900):not(.bg-black):not(.bg-neutral-950),
@@ -2170,3 +2343,25 @@ body.palette-dark {
   gap: 0.75rem !important;
 }
 
+/* ==== Light palettes, late overrides (review finding ux-tests-1) ====
+   These come last because the rules they beat are written with !important in the dark theme further
+   down this file (the glass surfaces' dark gradient and the pale card labels), and for equal
+   specificity the later rule wins. ==== */
+:is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) .glass-morphism-v2,
+:is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) .glass-floating,
+:is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) .glass-morphism,
+:is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) .surface-solid,
+:is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) .surface-soft {
+  /* the dark gradient is a background-image, so the light background-color alone never showed */
+  background-image: none !important;
+  box-shadow: 0 10px 28px -10px rgba(15, 23, 42, 0.14) !important;
+}
+:is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) :is(.bg-black, .bg-neutral-900, .bg-neutral-950, [data-keep-white="true"])[class*="text-"],
+:is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) :is(.bg-black, .bg-neutral-900, .bg-neutral-950, [data-keep-white="true"]) [class*="text-"] {
+  /* text inside a surface that is meant to stay dark: light ink again, whatever colour class it has */
+  color: #e5e7eb !important;
+}
+:is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) .ios-liquid-card .liquid-card-label,
+:is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) .ios-liquid-label {
+  color: #475569 !important;
+}
