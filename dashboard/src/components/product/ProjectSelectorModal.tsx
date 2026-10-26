@@ -16,6 +16,7 @@ import {
   ExternalLink
 } from 'lucide-react';
 import { TelemetryProject } from '../../types';
+import type { Feed } from '../../lib/stateModel';
 import { createTelemetryProject, deleteTelemetryProject } from '../../lib/firebase';
 import { ingestionKeyView } from '../../lib/ingestionKey';
 import { User as FirebaseUser } from 'firebase/auth';
@@ -25,6 +26,8 @@ interface ProjectSelectorModalProps {
   onClose: () => void;
   currentUser: FirebaseUser | null;
   projects: TelemetryProject[];
+  /** How the Firestore project list is doing: pending until the first snapshot, error if it was refused. */
+  projectsFeed?: Feed;
   activeProject: TelemetryProject | null;
   onSelectProject: (project: TelemetryProject) => void;
   onOpenAuth: () => void;
@@ -35,6 +38,7 @@ export const ProjectSelectorModal: React.FC<ProjectSelectorModalProps> = ({
   onClose,
   currentUser,
   projects,
+  projectsFeed,
   activeProject,
   onSelectProject,
   onOpenAuth
@@ -253,7 +257,11 @@ export const ProjectSelectorModal: React.FC<ProjectSelectorModalProps> = ({
                 <div className="p-8 rounded-2xl bg-white/[0.02] border border-white/[0.06] text-center space-y-3">
                   <Folder className="w-8 h-8 text-neutral-500 mx-auto" />
                   <p className="text-xs font-mono text-neutral-400">
-                    No custom projects yet. Create one to generate your scoped ingestion API key.
+                    {projectsFeed?.status === 'error'
+                      ? `The project list could not be read from Firestore: ${projectsFeed.message ?? 'no details'}`
+                      : projectsFeed?.status === 'pending'
+                      ? 'Loading your projects...'
+                      : 'No custom projects yet. Create one to generate your scoped ingestion API key.'}
                   </p>
                   <button
                     onClick={() => setIsCreating(true)}
@@ -376,8 +384,17 @@ export const ProjectSelectorModal: React.FC<ProjectSelectorModalProps> = ({
 
         {/* Footer info */}
         <div className="pt-4 border-t border-white/10 flex items-center justify-between text-[11px] font-mono text-neutral-400">
-          <span>Database: Firestore Multi-Tenant</span>
-          <span className="text-emerald-400">Cloud Sync Active</span>
+          <span>Project list: Firestore, one list per signed-in user</span>
+          {/* Shown only after a snapshot really arrived (it used to be a fixed green label) */}
+          {!currentUser ? (
+            <span className="text-neutral-500">Sign in to sync</span>
+          ) : projectsFeed?.status === 'ready' ? (
+            <span className="text-emerald-400">Cloud Sync Active</span>
+          ) : projectsFeed?.status === 'error' ? (
+            <span className="text-rose-400">Cloud sync failed</span>
+          ) : (
+            <span className="text-amber-300">Connecting...</span>
+          )}
         </div>
       </div>
     </div>
