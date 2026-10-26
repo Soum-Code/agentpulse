@@ -863,6 +863,10 @@ body.palette-dark {
 :is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) [class*="text-lime-500"] {
   color: #3f6212 !important;
 }
+/* white text with an opacity modifier (text-white/90) is not matched by the .text-white rule below: dark ink too */
+:is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) [class*="text-white/"] {
+  color: #0f172a !important;
+}
 /* neutral-500 grey is 4.3-4.4:1 on the cream/white cards: one step darker */
 :is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) [class*="text-neutral-500"] {
   color: #52525b !important;
