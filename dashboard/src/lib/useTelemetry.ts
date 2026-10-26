@@ -12,6 +12,7 @@ import {
   toIncidents,
   toTrace,
 } from './adapters';
+import { Feed, feedFromError } from './stateModel';
 import type { Agent, Dataset, DriftProfile, Experiment, Incident, Trace } from '../types';
 
 const POLL_MS = 10000;
@@ -30,10 +31,17 @@ export interface TelemetryState {
   loading: boolean;
   error: string | null;
   connected: boolean;
+  /** The same answer as `loading`/`error`, in the five-state model: read numbers through
+   *  datumFromFeed(feed, ...) so none is shown as 0 or blank while the API is down. */
+  feed: Feed;
   refresh: () => void;
 }
 
-export function useTelemetry(): TelemetryState {
+/**
+ * Polls the AgentPulse API for the console's data every POLL_MS.
+ * `paused` stops the automatic refresh (the header's live toggle); a manual refresh() still works.
+ */
+export function useTelemetry(paused = false): TelemetryState {
   const [agents, setAgents] = useState<Agent[]>([]);
   const [traces, setTraces] = useState<Trace[]>([]);
   const [incidents, setIncidents] = useState<Incident[]>([]);
@@ -42,6 +50,8 @@ export function useTelemetry(): TelemetryState {
   const [experiments, setExperiments] = useState<Experiment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // Why the last poll failed, classified as unreachable (no answer) or error (API said no).
+  const [failure, setFailure] = useState<Feed | null>(null);
   const [connected, setConnected] = useState(false);
   const [tick, setTick] = useState(0);
 
@@ -78,6 +88,7 @@ export function useTelemetry(): TelemetryState {
         setTraces(listed);
         setConnected(true);
         setError(null);
+        setFailure(null);
         setLoading(false);
 
         const hydrated = await Promise.all(
@@ -95,6 +106,7 @@ export function useTelemetry(): TelemetryState {
         if (cancelled || !mounted.current) return;
         setConnected(false);
         setError(err instanceof Error ? err.message : 'Failed to reach AgentPulse');
+        setFailure(feedFromError(err));
         setLoading(false);
       }
     }
@@ -124,9 +136,13 @@ export function useTelemetry(): TelemetryState {
   }, [tick]);
 
   useEffect(() => {
+    if (paused) return;
     const id = setInterval(refresh, POLL_MS);
     return () => clearInterval(id);
-  }, [refresh]);
+  }, [refresh, paused]);
+
+  // pending until the first answer; after that the last poll's outcome.
+  const feed: Feed = loading ? { status: 'pending' } : failure ?? { status: 'ready' };
 
   return {
     agents,
@@ -138,6 +154,7 @@ export function useTelemetry(): TelemetryState {
     loading,
     error,
     connected,
+    feed,
     refresh,
   };
 }
