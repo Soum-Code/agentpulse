@@ -386,12 +386,23 @@ export default function App() {
 
   if (mode === 'public') {
     return (
-      <PublicExperience
-        onEnterProduct={() => {
-          setMode('product');
-          setProductTab('overview');
-        }}
-      />
+      <>
+        {/* The landing page shares the console's palette and has the same sign-in */}
+        <PublicExperience
+          {...theme}
+          onEnterProduct={() => {
+            setMode('product');
+            setProductTab('overview');
+          }}
+          currentUser={currentUser}
+          onOpenAuth={() => setIsAuthModalOpen(true)}
+        />
+        <AuthModal
+          isOpen={isAuthModalOpen}
+          onClose={() => setIsAuthModalOpen(false)}
+          currentUser={currentUser}
+        />
+      </>
     );
   }
 
