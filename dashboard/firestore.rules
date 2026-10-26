@@ -1,0 +1,37 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Collections the console really uses (src/lib/firebase.ts):
+    //   users/{uid}      one profile per signed-in user
+    //   projects/{id}    telemetry projects, each owned by one user
+    // Anything else is denied by default. In particular there is NO projects/{id}/spans rule:
+    // the console never reads or writes spans in Firestore (spans live in the AgentPulse API),
+    // and the version this file came from let ANY signed-in user read and write every project's
+    // spans.
+
+    // User profile: a user reads and writes only their own document.
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Projects: scoped to the owner.
+    match /projects/{projectId} {
+      // A project must be created with the creator as owner, and must NOT carry an `apiKey`.
+      // The ingest key is shown once by the API and is never stored (firebase.ts keeps only keyId
+      // and keyPrefix). Refusing the field here means a future bug cannot quietly start storing it.
+      allow create: if request.auth != null
+        && request.resource.data.ownerId == request.auth.uid
+        && !('apiKey' in request.resource.data);
+
+      allow read, delete: if request.auth != null && resource.data.ownerId == request.auth.uid;
+
+      // Update: only the owner, ownership cannot move to someone else, and no plaintext key may be
+      // written. (The console removes a legacy `apiKey` with deleteField(), so the document after
+      // the update has no such field and passes.)
+      allow update: if request.auth != null
+        && resource.data.ownerId == request.auth.uid
+        && request.resource.data.ownerId == request.auth.uid
+        && !('apiKey' in request.resource.data);
+    }
+  }
+}
