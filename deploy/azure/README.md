@@ -132,12 +132,13 @@ What changes for people and programs:
 - **The SDK can no longer write through the public URL.** It sends `X-API-Key`, and Caddy asks
   for HTTP basic auth before the request reaches the key check. A `curl` from outside needs
   `-u <user>`; the `X-API-Key` header is not needed, because nginx adds the key.
-- **The dashboard's write buttons** (Telemetry Lab "Run scenario", acknowledging an incident,
-  curating a span into the dataset) make the browser ask for the username and password on the
-  first write, in a login box titled "AgentPulse writes". The browser then sends them with
-  later requests until it is closed. If the box is cancelled, "Run scenario" shows its error,
-  while acknowledge and curate only log a warning to the browser console and look like they did
-  nothing. Every view that only reads works without a password.
+- **The dashboard's write buttons** (acknowledging an incident, curating a span into the
+  dataset) make the browser ask for the username and password on the first write, in a login
+  box titled "AgentPulse writes". The browser then sends them with later requests until it is
+  closed. If the box is cancelled, they only log a warning to the browser console and look like
+  they did nothing. Every view that only reads works without a password. The Telemetry Lab's
+  "Run scenario" is the exception and asks for nothing (see "Telemetry Lab" below), as does the
+  live chat.
 - **Nothing on the VM is affected.** The worker and `seed_demo.py` (run with `docker compose
   exec`) talk to the backend over the Docker network, and `deploy.sh` checks health inside the
   containers and with `GET`s through Caddy.
@@ -190,7 +191,8 @@ To turn writes on:
    The last one asks for the password. Any status other than 401 means Caddy accepted it.
 
 To change the password, repeat steps 2 to 4. A write that must stay public is one more line in
-the `@write` block of the Caddyfile; the live chat's `/chat*` is the one there now (next section).
+the `@write` block of the Caddyfile; there are two now: the live chat's `/chat*` (next section)
+and the Telemetry Lab's `POST /v1/simulate` (the section after it).
 
 ## The live chat
 
@@ -438,6 +440,144 @@ Measured with the image: 378 MiB once MiniLM is loaded, 455 MiB at the peak of a
 a 900 MB limit. With the worker (1.15 GB), the backend (80 MB) and the dashboard (4 MB) the
 containers come to about 1.7 GB of the VM's 4 GB, plus its 2 GB of swap. The chat loads only
 MiniLM, not the NLI model the worker uses.
+
+## Telemetry Lab
+
+The dashboard's Telemetry Lab starts a demo run ("Run scenario": a made-up five-agent run, a
+32-span drift run or a two-agent disagreement) with `POST /v1/simulate`, and an examiner has to be
+able to press it without the write password, and without the owner there.
+
+**What is exempt.** Exactly `POST /v1/simulate` and nothing else: one line in the `@write` block of
+the Caddyfile. `PUT`/`PATCH`/`DELETE` on that path, `/v1/simulate/`, `/v1/simulate/<id>`,
+`/v1//simulate`, `/V1/simulate`, `/v1/x/../simulate`, `/v1/simulate%2f..`, `/v1/ingest`, `/v1/keys`,
+`/v1/alerts/...` and every other write still get 401. (`GET /v1/simulate/<id>`, which reads a run
+back, was public already.) The line is a `not expression`, not `not path`, because Caddy's `path`
+matcher ignores letter case, merges double slashes, resolves `..` and ignores the method; tried
+against the real image, the plain `path` line let nine such variants through
+(`check_caddy_paths.sh`, below).
+
+**Why that is acceptable.** nginx adds the server's `AGENTPULSE_API_KEY` to every `/v1/` request,
+so whatever Caddy lets through is a fully authenticated request. The route is therefore
+limited by the backend itself (`backend/app/services/simulate_guard.py`), it writes only traces
+under the one fixed service name `simulation_studio` (what a visitor chooses is the scenario, one
+of five, and a topic text of at most 500 characters), and a refused request writes nothing.
+
+### Limits
+
+Each is an environment variable of the backend; put it in `.env` on the VM (the backend service
+reads `.env` as a whole). An unset or empty value is the default, and a value that is not a whole
+number is logged and the default is used.
+
+| setting | default | what it does |
+|---|---|---|
+| `AGENTPULSE_SIMULATE_IP_PER_HOUR` | 6 | runs one visitor (IP) may start in any rolling hour |
+| `AGENTPULSE_SIMULATE_IP_PER_DAY` | 30 | and in a UTC day |
+| `AGENTPULSE_SIMULATE_DAILY_CAP` | 300 | runs the whole site starts in a UTC day |
+| `AGENTPULSE_SIMULATE_MAX_QUEUE_DEPTH` | 100 | a run is refused while this many evaluation jobs are queued or running |
+| `AGENTPULSE_SIMULATE_TRUSTED_PROXIES` | `10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,fc00::/7` | peers whose `X-Forwarded-For` is believed (below) |
+
+A limit of 0 refuses every run, so `AGENTPULSE_SIMULATE_DAILY_CAP=0` closes the Lab from the
+backend alone. A change takes effect when the backend is recreated, and the counters (they live in
+the backend's memory, not in a table) start again from zero:
+
+```bash
+cd ~/agentpulse
+F="-f docker-compose.yml -f deploy/azure/docker-compose.azure.yml"
+sudo docker compose $F up -d --no-deps --force-recreate backend
+```
+
+The API is unreachable for the few seconds the backend takes to start; `GET /v1/health/ready`
+says when it is back.
+
+Where the numbers come from. A run is 2 spans (disagreement), 5 (clean, hallucination, tool
+mismatch) or 32 (drift). At most 300 runs a day is at most 300 x 32 = 9,600 spans, about 41
+minutes of scoring for the one worker at the 3.88 spans a second of
+`experiments/results/throughput_benchmark.json` (one worker, ONNX, a 16-thread development
+machine: not measured on the VM, which may be slower). 100 waiting jobs is about 26 seconds of that
+work, room for three drift runs. 6 an hour is enough to try each of the five scenarios once and
+repeat one; the counts are per IP and a campus network puts several people behind one, so raise
+`AGENTPULSE_SIMULATE_IP_PER_HOUR` before the viva if the examiners will share a network. The
+daily cap, not the per-IP limit, is what bounds the worst case: a visitor with many addresses can
+still start at most 300 runs a day. A burst that arrives before the first job is queued can pass
+the queue check together; the daily cap bounds that too.
+
+### What a refused run looks like
+
+HTTP 429, a `Retry-After` header in seconds, and a short JSON body (the same keys every time):
+
+```json
+{"detail": "You have run 6 scenarios in the last hour, the most one visitor can. Try again in 55 min.",
+ "code": "ip_hour_limit", "retry_after": 3300}
+```
+
+`code` is one of `ip_hour_limit`, `ip_day_limit`, `daily_cap` (these two say when they reset:
+"at 00:00 UTC, in 5 h 12 min") or `busy` (the queue is deep, or no worker is running: "Try again
+in 30 s"). `detail` is the sentence to show a visitor. A request whose body is not valid (an unknown
+scenario, a topic over 500 characters) is a 422 and is not counted.
+
+### Which address is counted
+
+The visitor's address, not nginx's. Caddy replaces any `X-Forwarded-For` a visitor sends with the
+address it saw (checked below), nginx passes it on unchanged, and the backend reads the header
+only when the TCP peer is inside `AGENTPULSE_SIMULATE_TRUSTED_PROXIES`, from the right: skipping
+proxies it trusts, the first address that is not one is the visitor (the rule of `client_ip()` in
+`demo/chat_guard.py`). Whatever a visitor writes at the left of the header is never read, and a
+request that reaches the backend without a trusted proxy has the header ignored. An IPv6 visitor
+is counted by the `/64` network, not the single address, and `::ffff:1.2.3.4` is `1.2.3.4`. If the
+backend ever sits behind another proxy, add that proxy's range to the setting, or every visitor is
+counted as that proxy.
+
+### Check it
+
+`deploy/azure/check_caddy_paths.sh` needs only Docker. It runs the Caddyfile in this checkout in
+the real `caddy:2-alpine` image, in front of a stub that only reports what reached it, with a
+password made up for the run; it runs `caddy validate`, then sends 35 requests (32 for the paths
+above and their lookalikes, 3 with made-up `X-Forwarded-For` headers) and prints which got 401 and
+which passed. It ends with `ALL AS EXPECTED` and exit status 0 only if every one came out as the
+script lists it. No secret is involved and nothing on the VM is touched. Run it after any change
+to the `@write` block.
+
+```bash
+bash deploy/azure/check_caddy_paths.sh
+```
+
+### Putting it live, closing it again
+
+Order matters: the backend with the limits must be running **before** Caddy lets the route
+through, because the route is open the moment Caddy is recreated.
+
+Every command runs in `~/agentpulse` with
+`F="-f docker-compose.yml -f deploy/azure/docker-compose.azure.yml"`.
+
+1. Merge, and let the deploy-azure run finish green (the backend changed, so it is rebuilt and
+   swapped). Check that the limits are in the running backend (this prints nothing and ends with
+   status 0 when they are):
+
+   ```bash
+   sudo docker compose $F exec -T backend python -c "import app.services.simulate_guard" </dev/null
+   ```
+2. Validate and recreate Caddy, exactly as for the chat (the workflow never recreates it):
+
+   ```bash
+   sudo docker compose $F run --rm --no-deps --entrypoint caddy caddy validate --config /etc/caddy/Caddyfile
+   sudo docker compose $F up -d --no-deps --force-recreate caddy
+   ```
+3. Check it from outside. The first line starts one real run (it counts against your IP's six an
+   hour), the others must be 401:
+
+   ```bash
+   H=https://<hostname>
+   curl -s -o /dev/null -w '%{http_code}\n' -X POST -H 'Content-Type: application/json' -d '{"scenario":"disagreement"}' $H/v1/simulate   # 200
+   curl -s -o /dev/null -w '%{http_code}\n' -X POST -d '{}' $H/v1/ingest                                                                  # 401
+   curl -s -o /dev/null -w '%{http_code}\n' -X PUT  -d '{}' $H/v1/simulate                                                                # 401
+   curl -s -o /dev/null -w '%{http_code}\n' -X POST -d '{}' --path-as-is $H/v1//simulate                                                  # 401
+   ```
+
+**To close it again** remove the line that starts with `not expression` from the `@write` block of
+`deploy/azure/Caddyfile` (on the VM, then validate and recreate Caddy as in step 2: nothing is
+public any more, and "Run scenario" asks for the password again, as before this section). Faster
+and without touching Caddy: `AGENTPULSE_SIMULATE_DAILY_CAP=0` in `.env` and the backend recreate
+above, which answers every run with 429 until it is set back.
 
 ## Seeding demo data
 
