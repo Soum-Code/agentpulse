@@ -241,9 +241,12 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
                 {maxDrift ? `${maxDrift.distance.toFixed(2)} Δ (${maxDrift.agentId})` : '—'}
               </span>
             </div>
+            {/* "No drift distance yet" covers both cases: the baseline (first 20 outputs) or
+                the current window (latest 12) still filling. "No baseline" was wrong for an
+                agent whose baseline is full; the Agents view says which pool is missing. */}
             {agentsWithoutBaseline > 0 && (
               <div className="text-[11px] font-sans text-neutral-400 liquid-card-label">
-                {agentsWithoutBaseline} of {agents.length} {agents.length === 1 ? 'agent has' : 'agents have'} no baseline yet
+                {agentsWithoutBaseline} of {agents.length} {agents.length === 1 ? 'agent has' : 'agents have'} no drift distance yet
               </div>
             )}
           </div>

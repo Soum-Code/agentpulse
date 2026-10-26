@@ -115,7 +115,9 @@ export const DriftView: React.FC<DriftViewProps> = ({
                 </p>
               </div>
 
-              {/* The other two numbers GET /v1/drift returns. Neither raises an alert. */}
+              {/* The other two numbers GET /v1/drift returns. DRIFT_DETECTED reads neither, but both
+                  feed the Agent Stability Index (services/drift.py, weights 0.35 and 0.15), and
+                  ASI_DROP fires when that index falls below 50 (alerting.py). */}
               <div className="space-y-3 pt-3 border-t border-white/[0.08]">
                 <div>
                   <div className="flex justify-between text-[11px] mb-1">
@@ -126,7 +128,7 @@ export const DriftView: React.FC<DriftViewProps> = ({
                     <div className="h-full bg-neutral-400 rounded-full" style={{ width: `${distanceBarPct(currentProfile.semanticDrift)}%` }} />
                   </div>
                   <p className="text-[10px] text-neutral-500 mt-1">
-                    The latest output against the agent&rsquo;s running average. Noisy from output to output, so no alert reads it.
+                    The latest output against the agent&rsquo;s running average. Too noisy for DRIFT_DETECTED; it feeds the stability index, which raises ASI_DROP below 50.
                   </p>
                 </div>
 
@@ -139,7 +141,7 @@ export const DriftView: React.FC<DriftViewProps> = ({
                     <div className="h-full bg-neutral-400 rounded-full" style={{ width: `${distanceBarPct(currentProfile.toolCallDrift)}%` }} />
                   </div>
                   <p className="text-[10px] text-neutral-500 mt-1">
-                    0 when one tool does every call, 1 when calls are spread evenly over the agent&rsquo;s tools; 0 until it has made 10 tool calls.
+                    0 when one tool does every call, 1 when calls are spread evenly over the agent&rsquo;s tools; 0 until it has made 10 tool calls. Also feeds the stability index.
                   </p>
                 </div>
               </div>

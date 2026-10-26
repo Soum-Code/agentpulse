@@ -16,6 +16,7 @@ import { describe, expect, it } from 'vitest';
 import {
   toAgents,
   toDriftProfiles,
+  toExperiments,
   toIncidents,
   toSpans,
   toTrace,
@@ -73,6 +74,20 @@ const alert = (over: Partial<AlertItem> = {}): AlertItem =>
   }) as unknown as AlertItem;
 
 describe('toAgents', () => {
+  it('counts the spans the drift detector saw, and knows when there is no record', () => {
+    const entry = (over: Partial<DriftEntry>): DriftEntry => ({
+      agent_id: 'researcher', current_asi: null, latest_centroid_distance: 0.1,
+      latest_window_centroid_distance: null, baseline_size: 0, ...over,
+    });
+    // baseline_size is the count before the latest record, so + 1.
+    expect(toAgents([agent()], [entry({ baseline_size: 2 })])[0].driftSpansSeen).toBe(3);
+    // The very first span: count 0 before it, its own distance 0.0.
+    expect(toAgents([agent()], [entry({ baseline_size: 0, latest_centroid_distance: 0 })])[0].driftSpansSeen).toBe(1);
+    // GET /v1/drift sends baseline_size 0 and null distances when no drift record exists.
+    expect(toAgents([agent()], [entry({ baseline_size: 0, latest_centroid_distance: null })])[0].driftSpansSeen).toBeUndefined();
+    expect(toAgents([agent()], [])[0].driftSpansSeen).toBeUndefined();
+  });
+
   it('reports success rate as a percentage', () => {
     // Regression: this was once returned as a 0-1 fraction while the roster
     // compared it against 90 and appended '%', so a perfectly healthy agent
@@ -302,6 +317,23 @@ describe('toTrace', () => {
   it('leaves the grounding score absent when the trace has no risk score', () => {
     const t = { trace_id: 't1', service_name: 'svc', start_time: '2026-09-14T10:00:00' } as TraceListItem;
     expect(toTrace(t, [], []).groundingScore).toBeUndefined();
+  });
+});
+
+describe('toExperiments', () => {
+  it('names a result file by its file name and leaves every score absent', () => {
+    // The shape GET /v1/experiments sends for a file under experiments/results/.
+    const [e] = toExperiments([
+      { file: 'ablation_results.json', timestamp: '2026-09-18 17:34:03 UTC', model: null, dataset: null, data: {} },
+    ]);
+    expect(e.id).toBe('ablation_results.json');
+    expect(e.name).toBe('ablation_results.json');
+    expect(e.sourceFile).toBe('ablation_results.json');
+    expect(e.createdAt).toBe('2026-09-18 17:34:03 UTC');
+    expect(e.datasetName).toBe('');
+    for (const k of ['winRate', 'baselineScore', 'candidateScore', 'runCount', 'insights', 'comparisonDiffs', 'model'] as const) {
+      expect(e[k], k).toBeUndefined();
+    }
   });
 });
 

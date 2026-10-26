@@ -50,6 +50,19 @@ function agentStatus(agent: ApiAgent, drift?: DriftEntry): AgentStatus {
   return 'idle';
 }
 
+// How many of the agent's spans the drift detector had seen, the latest included. baseline_size
+// is the count before the latest record, hence + 1. GET /v1/drift answers baseline_size 0 with
+// both distances null for an agent that has no drift record at all: that is unknown, not 1.
+// The count includes spans with no output text, which add nothing to the embedding pools, so
+// "20 or more" means the baseline should be full, not that it certainly is.
+function driftSpansSeen(d?: DriftEntry): number | undefined {
+  if (!d || d.baseline_size == null) return undefined;
+  if (d.baseline_size === 0 && d.latest_centroid_distance == null && d.latest_window_centroid_distance == null) {
+    return undefined;
+  }
+  return d.baseline_size + 1;
+}
+
 export function toAgents(apiAgents: ApiAgent[], drift: DriftEntry[]): Agent[] {
   const byId = new Map(drift.map((d) => [d.agent_id, d]));
   return apiAgents.map((a) => {
@@ -74,6 +87,7 @@ export function toAgents(apiAgents: ApiAgent[], drift: DriftEntry[]): Agent[] {
       driftScore: window ?? undefined,
       driftStatus:
         window == null ? undefined : window > DRIFT_THRESHOLD ? 'drift' : 'normal',
+      driftSpansSeen: driftSpansSeen(d),
       // version, model, framework, tools and costPerHour have no source in
       // the AgentPulse schema and stay absent.
     };
@@ -282,16 +296,21 @@ export function toDatasets(raw: unknown[]): Dataset[] {
   }));
 }
 
+/** One entry per experiment from GET /v1/experiments. For a result file the API sends the
+ *  file name, and the file's own timestamp, model and dataset when it has them (each may be
+ *  null). The file name is used as the id and the name, so each card says which file it is. */
 export function toExperiments(raw: unknown[]): Experiment[] {
   return (raw as Record<string, any>[]).map((e, i) => ({
-    id: String(e.run_id ?? e.experiment_id ?? i),
-    name: String(e.name ?? e.experiment_name ?? e.model ?? `run ${i + 1}`),
-    datasetId: String(e.dataset ?? ''),
-    datasetName: String(e.dataset ?? ''),
+    id: String(e.file ?? e.run_id ?? e.experiment_id ?? `run-${i + 1}`),
+    name: String(e.name ?? e.experiment_name ?? e.file ?? e.model ?? `run ${i + 1}`),
+    sourceFile: e.file ?? undefined,
+    model: e.model ?? e.model_name ?? undefined,
+    datasetId: String(e.dataset ?? e.dataset_version ?? ''),
+    datasetName: String(e.dataset ?? e.dataset_version ?? ''),
     evaluators: [],
     status: 'completed',
     createdAt: String(e.timestamp ?? e.created_at ?? ''),
-    // Scores, win rate and per-item diffs vary by result file and are not
-    // exposed in a single shape, so they are left absent.
+    // Scores, win rate, run count, insights and per-item diffs vary by result file and are
+    // not exposed in a single shape, so they are left absent; ExperimentsView prints a dash.
   }));
 }

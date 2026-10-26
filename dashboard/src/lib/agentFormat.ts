@@ -53,22 +53,54 @@ export function isOverDriftThreshold(distance: number | null | undefined): boole
   return measured(distance) && distance > DRIFT_THRESHOLD;
 }
 
-/** The roster's drift badge text. Undefined means the windows have not filled, which is
- *  neither 'normal' nor 'drift'. */
-export function driftStatusLabel(status: Agent['driftStatus']): string {
-  return status ?? 'no baseline';
+/** Which of the two drift pools is still filling for an agent with no window distance:
+ *  'baseline' under 20 spans seen, 'window' at 20 or more (the baseline should be full and the
+ *  latest-12 window is what is missing), 'unknown' with no drift record. */
+export type DriftWait = 'baseline' | 'window' | 'unknown';
+
+export function driftWait(agent: Pick<Agent, 'driftSpansSeen'>): DriftWait {
+  const n = agent.driftSpansSeen;
+  if (n == null) return 'unknown';
+  return n < DRIFT_BASELINE_OUTPUTS ? 'baseline' : 'window';
+}
+
+/** The roster's drift badge text: the status once a window distance exists, otherwise which
+ *  pool is still filling. It used to say "no baseline" even when only the window was missing. */
+export function driftStatusLabel(agent: Pick<Agent, 'driftStatus' | 'driftSpansSeen'>): string {
+  if (agent.driftStatus) return agent.driftStatus;
+  const wait = driftWait(agent);
+  if (wait === 'baseline') return `baseline ${agent.driftSpansSeen}/${DRIFT_BASELINE_OUTPUTS}`;
+  if (wait === 'window') return 'window filling';
+  return 'no drift data';
+}
+
+/** One sentence for the inspector when there is no window distance, naming what is missing. */
+export function driftWaitSentence(agent: Pick<Agent, 'driftSpansSeen'>): string {
+  const wait = driftWait(agent);
+  if (wait === 'baseline') {
+    return `The baseline is still filling: ${agent.driftSpansSeen} of the first ${DRIFT_BASELINE_OUTPUTS} outputs seen. After that, the latest ${DRIFT_CURRENT_WINDOW_OUTPUTS} outputs form the current window.`;
+  }
+  if (wait === 'window') {
+    return `The baseline (first ${DRIFT_BASELINE_OUTPUTS} outputs) should be full; the current window of the latest ${DRIFT_CURRENT_WINDOW_OUTPUTS} is still filling.`;
+  }
+  return `No drift record yet. A distance needs the first ${DRIFT_BASELINE_OUTPUTS} evaluated outputs as a baseline and the latest ${DRIFT_CURRENT_WINDOW_OUTPUTS} as the current window.`;
 }
 
 /** One line under the roster heading, built from the loaded agents. Replaces a typed-in
- *  "4 active swarms · LangGraph, LangGraph & Custom Orchestrators" that matched nothing. */
+ *  "4 active swarms · LangGraph, LangGraph & Custom Orchestrators" that matched nothing.
+ *  Agents without a window distance are split by which pool is still filling. */
 export function rosterSummary(agents: Agent[]): string {
   if (agents.length === 0) return 'No agents have sent a span yet';
-  const { drifting, noBaseline } = summarizeDrift(agents);
+  const { drifting } = summarizeDrift(agents);
+  const waiting = agents.filter((a) => a.driftStatus == null);
+  const windowFilling = waiting.filter((a) => driftWait(a) === 'window').length;
+  const baselineFilling = waiting.length - windowFilling;
   const parts = [
     `${agents.length} ${agents.length === 1 ? 'agent' : 'agents'} seen`,
     `${drifting} drifting`,
-    `${noBaseline} with no drift baseline yet`,
   ];
+  if (baselineFilling > 0) parts.push(`${baselineFilling} still building a drift baseline`);
+  if (windowFilling > 0) parts.push(`${windowFilling} with the drift window still filling`);
   return parts.join(' · ');
 }
 
