@@ -603,8 +603,7 @@ export default function App() {
 
             {productTab === 'settings' && (
               <SettingsView
-                isCalmMode={isCalmMode}
-                onToggleCalmMode={theme.onToggleCalmMode}
+                {...theme}
                 currentUser={currentUser}
                 activeProject={activeProject}
                 onOpenProjectSelector={() => setIsProjectSelectorOpen(true)}

@@ -102,6 +102,39 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
         </div>
       </div>
 
+      {/* Flagship RAG Chat & Instrument Panel Spotlight Banner */}
+      <div className="aetheris-iris-glass aetheris-spatial-glow rounded-2xl p-5 border border-purple-500/30 relative overflow-hidden shadow-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="absolute inset-x-0 top-0 h-[1.5px] aetheris-iris-specular pointer-events-none" />
+        <div className="flex items-start sm:items-center space-x-3.5">
+          <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-purple-500 via-indigo-500 to-cyan-400 p-[1.5px] aetheris-halo-glow shrink-0 shadow-lg">
+            <div className="w-full h-full bg-[#080914] rounded-2xl flex items-center justify-center">
+              <Bot className="w-5 h-5 text-purple-300" />
+            </div>
+          </div>
+          <div>
+            <div className="flex items-center space-x-2">
+              <h3 className="text-base font-bold text-white tracking-tight">
+                Live Multi-Agent RAG Chat & Instrument Panel
+              </h3>
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-200 border border-purple-400/30 uppercase font-semibold">
+                Aetheris Iris
+              </span>
+            </div>
+            <p className="text-xs text-neutral-300 font-mono mt-0.5">
+              Interact with the live 3-agent chat (Retriever &rarr; Verifier &rarr; Answerer) and watch AgentPulse evaluate grounding risk in real time.
+            </p>
+          </div>
+        </div>
+
+        <button
+          onClick={() => onNavigateTab('rag-monitor')}
+          className="aetheris-send-button px-4 py-2 rounded-xl text-white font-mono text-xs font-semibold flex items-center space-x-2 shrink-0 self-start sm:self-center transition-all shadow-lg active:scale-95"
+        >
+          <span>Open Live Chat Bot</span>
+          <ArrowRight className="w-4 h-4" />
+        </button>
+      </div>
+
       {/* Top Section: System Pulse & Aggregate Density Metrics */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* KPI 1: Spans Ingested. This was titled "24h Trace Volume", but the value is each agent's
