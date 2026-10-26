@@ -24,6 +24,7 @@ import { ProductHeader } from './components/product/ProductHeader';
 import { FloatingDock } from './components/product/FloatingDock';
 import { CommandPalette } from './components/product/CommandPalette';
 import { FeedStatusPanel } from './components/product/FeedStatusPanel';
+import { ViewErrorBoundary } from './components/product/ViewErrorBoundary';
 import { OverviewView } from './components/product/OverviewView';
 import { AgentsView } from './components/product/AgentsView';
 import { TracesView } from './components/product/TracesView';
@@ -460,6 +461,7 @@ export default function App() {
             )}
 
             {feed.status === 'ready' && (hasTelemetry || !needsTelemetry) && (
+            <ViewErrorBoundary key={productTab} viewName={productTab.replace('-', ' ')}>
             <AnimeTabTransitionContainer activeTab={productTab}>
             {productTab === 'overview' && (
               <OverviewView
@@ -654,6 +656,7 @@ export default function App() {
               </div>
             )}
             </AnimeTabTransitionContainer>
+            </ViewErrorBoundary>
             )}
           </main>
 
