@@ -2361,6 +2361,13 @@ body.palette-dark {
   /* text inside a surface that is meant to stay dark: light ink again, whatever colour class it has */
   color: #e5e7eb !important;
 }
+/* Dark palette: the neutral-500 and neutral-600 greys read 4.0-4.2:1 and 2.4:1 on the dark cards; one step lighter */
+:is([data-palette="dark"], .palette-dark) .text-neutral-500 {
+  color: #8e8e96 !important;
+}
+:is([data-palette="dark"], .palette-dark) .text-neutral-600 {
+  color: #7a7a84 !important;
+}
 :is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) .ios-liquid-card .liquid-card-label,
 :is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) .ios-liquid-label {
   color: #475569 !important;
