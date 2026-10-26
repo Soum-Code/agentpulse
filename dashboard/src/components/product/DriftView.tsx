@@ -1,6 +1,14 @@
 import React, { useState } from 'react';
-import { TrendingDown, Activity, Bot, ArrowRight, Layers, Sparkles, Filter, Crosshair } from 'lucide-react';
+import { TrendingDown, Crosshair } from 'lucide-react';
 import { DriftProfile, Agent } from '../../types';
+import { DRIFT_THRESHOLD } from '../../lib/adapters';
+import {
+  DRIFT_BASELINE_OUTPUTS,
+  DRIFT_CURRENT_WINDOW_OUTPUTS,
+  distanceBarPct,
+  formatDistance,
+  isOverDriftThreshold,
+} from '../../lib/agentFormat';
 
 interface DriftViewProps {
   driftProfiles: DriftProfile[];
@@ -9,18 +17,28 @@ interface DriftViewProps {
   onNavigateToTrace: (traceId: string) => void;
 }
 
+/** The Drift tab. Every number is read from GET /v1/drift through toDriftProfiles
+ *  (lib/adapters.ts); a distance the backend has not computed prints as an em dash.
+ *
+ *  Removed on 2026-10-25 because nothing in the API produces them: "5,000 verified runs",
+ *  "12-30% Δ", "> 50% Δ Divergence", a "Parameter Drift" meter, "Active Sample: 0", and a
+ *  "Detailed Divergence Analysis" (a 28% SQL rejection rate, 14% cross-joins) that was shown
+ *  for every agent whatever its data. */
 export const DriftView: React.FC<DriftViewProps> = ({
   driftProfiles,
-  agents,
   selectedAgentId,
-  onNavigateToTrace
 }) => {
   const [activeProfileId, setActiveProfileId] = useState<string>(
-    selectedAgentId || driftProfiles[0]?.agentId || 'agent-sql-synthesizer'
+    selectedAgentId || driftProfiles[0]?.agentId || ''
   );
   const [driftSubView, setDriftSubView] = useState<'spatial' | 'matrix'>('spatial');
 
   const currentProfile = driftProfiles.find(p => p.agentId === activeProfileId) || driftProfiles[0];
+
+  // Colour for a window distance: rose over the alert threshold, emerald at or under it,
+  // grey when there is no distance yet.
+  const distanceTone = (d?: number) =>
+    d == null ? 'text-neutral-500' : isOverDriftThreshold(d) ? 'text-rose-400' : 'text-emerald-400';
 
   return (
     <div className="space-y-6 pb-28">
@@ -29,10 +47,11 @@ export const DriftView: React.FC<DriftViewProps> = ({
         <div>
           <h2 className="text-lg font-mono font-semibold text-white uppercase tracking-wider flex items-center space-x-2">
             <TrendingDown className="w-5 h-5 text-amber-400" />
-            <span>Behavioral & Trajectory Drift Analysis</span>
+            <span>Behavioral Drift</span>
           </h2>
           <p className="text-xs font-mono text-neutral-400 mt-1">
-            Detect semantic embedding divergence, parameter shift, and ungrounded execution paths
+            Per agent: the mean embedding of its latest {DRIFT_CURRENT_WINDOW_OUTPUTS} outputs against the mean of its
+            first {DRIFT_BASELINE_OUTPUTS}. DRIFT_DETECTED fires above a cosine distance of {DRIFT_THRESHOLD.toFixed(2)}.
           </p>
         </div>
 
@@ -44,7 +63,7 @@ export const DriftView: React.FC<DriftViewProps> = ({
               driftSubView === 'spatial' ? 'bg-neutral-800 text-white font-bold' : 'text-neutral-400 hover:text-neutral-200'
             }`}
           >
-            Vector Embedding Map
+            How it is measured
           </button>
           <button
             onClick={() => setDriftSubView('matrix')}
@@ -52,12 +71,16 @@ export const DriftView: React.FC<DriftViewProps> = ({
               driftSubView === 'matrix' ? 'bg-neutral-800 text-white font-bold' : 'text-neutral-400 hover:text-neutral-200'
             }`}
           >
-            Parameter & Metric Matrix
+            All agents (table)
           </button>
         </div>
       </div>
 
-      {/* Agent Selector Bar */}
+      {driftProfiles.length === 0 && (
+        <p className="text-xs font-mono text-neutral-500">No agent has a drift record yet.</p>
+      )}
+
+      {/* Agent Selector Bar: the window distance next to each name, a dash until it exists. */}
       <div className="flex items-center space-x-2 overflow-x-auto pb-1 scrollbar-none font-mono text-xs">
         {driftProfiles.map((p) => (
           <button
@@ -69,8 +92,8 @@ export const DriftView: React.FC<DriftViewProps> = ({
                 : 'surface-solid text-neutral-400 hover:text-neutral-200 hover:bg-neutral-850'
             }`}
           >
-            <span>{p.agentName.split(' ')[0]} {p.agentName.split(' ')[1]}</span>
-            <span className="ml-2 text-rose-400 font-bold">({p.driftMagnitude} Δ)</span>
+            <span>{p.agentName}</span>
+            <span className={`ml-2 font-bold ${distanceTone(p.driftMagnitude)}`}>({formatDistance(p.driftMagnitude)} Δ)</span>
           </button>
         ))}
       </div>
@@ -78,95 +101,60 @@ export const DriftView: React.FC<DriftViewProps> = ({
       {/* Main Drift Workspace */}
       {currentProfile && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          {/* Left Column: Drift Metrics & Breakdown */}
+          {/* Left Column: the selected agent's measured distances */}
           <div className="lg:col-span-4 space-y-4">
             <div className="ios-liquid-card border-glow-subtle rounded-2xl p-5 space-y-4 font-mono text-xs relative overflow-hidden">
               <div className="absolute inset-x-0 top-0 h-[1.5px] apple-liquid-specular pointer-events-none" />
               <div>
-                <span className="text-[10px] uppercase text-neutral-400 font-bold tracking-wider">AGGREGATE DRIFT MAGNITUDE</span>
-                <div className="text-3xl font-black text-rose-400 mt-1 drop-shadow-xs">
-                  {currentProfile.driftMagnitude} Δ
+                <span className="text-[10px] uppercase text-neutral-400 font-bold tracking-wider">WINDOW CENTROID DISTANCE</span>
+                <div className={`text-3xl font-black mt-1 drop-shadow-xs ${distanceTone(currentProfile.driftMagnitude)}`}>
+                  {formatDistance(currentProfile.driftMagnitude)} Δ
                 </div>
                 <p className="text-[11px] text-neutral-300 mt-1.5 leading-relaxed">
                   {currentProfile.driftReason}
                 </p>
               </div>
 
-              {/* Sub-component meters */}
+              {/* The other two numbers GET /v1/drift returns. DRIFT_DETECTED reads neither, but both
+                  feed the Agent Stability Index (services/drift.py, weights 0.35 and 0.15), and
+                  ASI_DROP fires when that index falls below 50 (alerting.py). */}
               <div className="space-y-3 pt-3 border-t border-white/[0.08]">
                 <div>
                   <div className="flex justify-between text-[11px] mb-1">
-                    <span className="text-neutral-400">Semantic Embedding Drift:</span>
-                    <span className="text-rose-400 font-semibold">{currentProfile.semanticDrift} Δ</span>
+                    <span className="text-neutral-400">Per-output distance:</span>
+                    <span className="text-neutral-200 font-semibold">{formatDistance(currentProfile.semanticDrift)}</span>
                   </div>
                   <div className="w-full h-1.5 bg-black/60 rounded-full overflow-hidden border border-white/[0.06]">
-                    <div className="h-full bg-rose-500 rounded-full shadow-[0_0_8px_rgba(244,63,94,0.8)]" style={{ width: `${currentProfile.semanticDrift * 100}%` }} />
+                    <div className="h-full bg-neutral-400 rounded-full" style={{ width: `${distanceBarPct(currentProfile.semanticDrift)}%` }} />
                   </div>
+                  <p className="text-[10px] text-neutral-500 mt-1">
+                    The latest output against the agent&rsquo;s running average. Too noisy for DRIFT_DETECTED; it feeds the stability index, which raises ASI_DROP below 50.
+                  </p>
                 </div>
 
                 <div>
                   <div className="flex justify-between text-[11px] mb-1">
-                    <span className="text-neutral-400">Tool Argument / Parameter Drift:</span>
-                    <span className="text-amber-400 font-semibold">{currentProfile.parameterDrift} Δ</span>
+                    <span className="text-neutral-400">Tool-use spread:</span>
+                    <span className="text-neutral-200 font-semibold">{formatDistance(currentProfile.toolCallDrift)}</span>
                   </div>
                   <div className="w-full h-1.5 bg-black/60 rounded-full overflow-hidden border border-white/[0.06]">
-                    <div className="h-full bg-amber-500 rounded-full shadow-[0_0_8px_rgba(245,158,11,0.8)]" style={{ width: `${currentProfile.parameterDrift * 100}%` }} />
+                    <div className="h-full bg-neutral-400 rounded-full" style={{ width: `${distanceBarPct(currentProfile.toolCallDrift)}%` }} />
                   </div>
-                </div>
-
-                <div>
-                  <div className="flex justify-between text-[11px] mb-1">
-                    <span className="text-neutral-400">Tool Call Frequency Divergence:</span>
-                    <span className="text-amber-400 font-semibold">{currentProfile.toolCallDrift} Δ</span>
-                  </div>
-                  <div className="w-full h-1.5 bg-black/60 rounded-full overflow-hidden border border-white/[0.06]">
-                    <div className="h-full bg-amber-500 rounded-full shadow-[0_0_8px_rgba(245,158,11,0.8)]" style={{ width: `${currentProfile.toolCallDrift * 100}%` }} />
-                  </div>
+                  <p className="text-[10px] text-neutral-500 mt-1">
+                    0 when one tool does every call, 1 when calls are spread evenly over the agent&rsquo;s tools; 0 until it has made 10 tool calls. Also feeds the stability index.
+                  </p>
                 </div>
               </div>
 
               <div className="pt-2 flex items-center justify-between text-[10px] text-neutral-400 border-t border-white/[0.06]">
-                <span>Baseline Runs: <strong className="text-neutral-200">{currentProfile.baselineSampleCount}</strong></span>
-                <span>Active Sample: <strong className="text-neutral-200">{currentProfile.currentSampleCount}</strong></span>
-              </div>
-            </div>
-
-            {/* Drift Sample Cluster Points (Navigable to Traces) */}
-            <div className="ios-liquid-card border-glow-subtle rounded-2xl p-4 space-y-2 font-mono text-xs relative overflow-hidden">
-              <div className="absolute inset-x-0 top-0 h-[1.5px] apple-liquid-specular pointer-events-none" />
-              <div className="text-neutral-300 uppercase tracking-wider text-[10px] font-bold pb-2 border-b border-white/[0.08]">
-                Sample Execution Points ({currentProfile.points.length})
-              </div>
-
-              <div className="space-y-1.5 pt-1">
-                {currentProfile.points.map((pt) => (
-                  <div
-                    key={pt.id}
-                    onClick={() => onNavigateToTrace(pt.traceId)}
-                    className="p-2.5 rounded-lg bg-neutral-950/70 border border-neutral-800/80 hover:border-neutral-600 hover:bg-neutral-900 cursor-pointer transition-colors flex items-center justify-between anime-tab-row"
-                  >
-                    <div>
-                      <div className="font-semibold text-neutral-200">{pt.label}</div>
-                      <div className="text-[10px] text-neutral-500">Trace: {pt.traceId} · {pt.timestamp}</div>
-                    </div>
-                    <span
-                      className={`text-[10px] px-1.5 py-0.5 rounded font-bold uppercase ${
-                        pt.cluster === 'baseline'
-                          ? 'text-neutral-400 bg-neutral-900'
-                          : pt.cluster === 'deviation'
-                          ? 'text-amber-400 bg-amber-950/60'
-                          : 'text-rose-400 bg-rose-950/60'
-                      }`}
-                    >
-                      {pt.cluster}
-                    </span>
-                  </div>
-                ))}
+                {/* baseline_size counts the agent's spans analysed before its latest drift record. */}
+                <span>Spans before latest record: <strong className="text-neutral-200">{currentProfile.baselineSampleCount}</strong></span>
+                <span>Alert above: <strong className="text-neutral-200">{DRIFT_THRESHOLD.toFixed(2)}</strong></span>
               </div>
             </div>
           </div>
 
-          {/* Right Column: 2D Embedding Vector Canvas or Matrix View */}
+          {/* Right Column: a labelled schematic of the rule, or every agent's numbers. */}
           <div className="lg:col-span-8">
             {driftSubView === 'spatial' ? (
               <div className="h-[520px] rounded-2xl ios-liquid-card border-glow-subtle relative overflow-hidden flex flex-col p-6">
@@ -176,88 +164,68 @@ export const DriftView: React.FC<DriftViewProps> = ({
                     <Crosshair className="w-4 h-4 text-rose-400" />
                     <span>Drift schematic &mdash; no projection: the API exposes distances, not coordinates</span>
                   </div>
-                  <span className="text-[11px] font-mono text-neutral-400">
-                    Click points below to inspect execution spans
+                  <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded border border-rose-500/30 bg-rose-500/10 text-rose-300">
+                    Illustrative, not measured
                   </span>
                 </div>
 
-                {/* Vector Canvas */}
+                {/* Two pools and the distance between their means, as drift.py computes it.
+                    The positions are a drawing; only the rule in the labels is real. */}
                 <div className="flex-1 relative my-4 rounded-xl bg-[#040507] border border-neutral-800/60 overflow-hidden flex items-center justify-center">
                   <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff05_1px,transparent_1px),linear-gradient(to_bottom,#ffffff05_1px,transparent_1px)] bg-[size:28px_28px]" />
 
-                  {/* Golden Baseline Hull */}
-                  <div className="absolute left-[15%] top-[35%] w-52 h-44 rounded-full bg-emerald-500/5 border border-emerald-500/20 flex flex-col items-center justify-center p-4">
-                    <span className="text-[10px] font-mono font-bold text-emerald-400">Golden Baseline Region</span>
-                    <span className="text-[9px] font-mono text-emerald-500/70">5,000 verified runs</span>
+                  <div className="absolute left-[12%] top-[30%] w-52 h-44 rounded-full bg-emerald-500/5 border border-emerald-500/20 flex flex-col items-center justify-center p-4 text-center">
+                    <span className="text-[10px] font-mono font-bold text-emerald-400">Baseline</span>
+                    <span className="text-[9px] font-mono text-emerald-500/70">mean of the agent&rsquo;s first {DRIFT_BASELINE_OUTPUTS} outputs</span>
                   </div>
 
-                  {/* Deviation Boundary */}
-                  <div className="absolute left-[38%] top-[25%] w-36 h-36 rounded-full bg-amber-500/5 border border-amber-500/20 flex flex-col items-center justify-center p-2">
-                    <span className="text-[10px] font-mono font-bold text-amber-400">Deviation Zone</span>
-                    <span className="text-[9px] font-mono text-amber-500/70">12-30% Δ</span>
+                  <svg className="absolute inset-0 w-full h-full pointer-events-none" aria-hidden="true">
+                    <line x1="38%" y1="50%" x2="62%" y2="42%" stroke="#f43f5e" strokeWidth="2" strokeDasharray="5 5" />
+                  </svg>
+
+                  <div className="absolute right-[12%] top-[22%] w-48 h-48 rounded-full bg-rose-500/10 border-2 border-rose-500/30 flex flex-col items-center justify-center p-4 text-center">
+                    <span className="text-[10px] font-mono font-bold text-rose-300">Current window</span>
+                    <span className="text-[9px] font-mono text-rose-400/80">mean of its latest {DRIFT_CURRENT_WINDOW_OUTPUTS} outputs</span>
                   </div>
 
-                  {/* Outlier Drift Cluster */}
-                  <div className="absolute right-[12%] top-[20%] w-48 h-48 rounded-full bg-rose-500/10 border-2 border-rose-500/30 flex flex-col items-center justify-center p-4 animate-pulse">
-                    <span className="text-[10px] font-mono font-bold text-rose-300">Critical Drift Cluster</span>
-                    <span className="text-[9px] font-mono text-rose-400/80">&gt; 50% Δ Divergence</span>
+                  <div className="absolute bottom-[14%] left-1/2 -translate-x-1/2 text-[10px] font-mono text-neutral-300 text-center px-3">
+                    cosine distance between the two means &rarr; DRIFT_DETECTED above {DRIFT_THRESHOLD.toFixed(2)}
                   </div>
-
-                  {/* Interactive Scatter Points */}
-                  {currentProfile.points.map((pt, idx) => {
-                    const posX = pt.cluster === 'baseline' ? 22 + (idx * 5) : pt.cluster === 'deviation' ? 45 + (idx * 6) : 75 + (idx * 4);
-                    const posY = pt.cluster === 'baseline' ? 45 + ((idx % 3) * 6) : pt.cluster === 'deviation' ? 35 + ((idx % 2) * 8) : 32 + ((idx % 3) * 10);
-                    
-                    return (
-                      <button
-                        key={pt.id}
-                        onClick={() => onNavigateToTrace(pt.traceId)}
-                        style={{ left: `${posX}%`, top: `${posY}%` }}
-                        className={`absolute w-4 h-4 rounded-full border-2 transition-all transform hover:scale-150 z-20 flex items-center justify-center ${
-                          pt.cluster === 'baseline'
-                            ? 'bg-emerald-500 border-white shadow-[0_0_10px_rgba(16,185,129,0.8)]'
-                            : pt.cluster === 'deviation'
-                            ? 'bg-amber-400 border-black shadow-[0_0_10px_rgba(251,191,36,0.8)]'
-                            : 'bg-rose-500 border-white shadow-[0_0_12px_rgba(244,63,94,0.9)] animate-bounce'
-                        }`}
-                        title={`${pt.label} (${pt.traceId})`}
-                      />
-                    );
-                  })}
                 </div>
 
-                <div className="flex items-center justify-between text-xs font-mono text-neutral-400 pt-2 border-t border-neutral-800/80">
-                  <span className="flex items-center space-x-1.5">
-                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
-                    <span>Golden Baseline</span>
-                  </span>
-                  <span className="flex items-center space-x-1.5">
-                    <span className="w-2.5 h-2.5 rounded-full bg-amber-400" />
-                    <span>Deviation Zone</span>
-                  </span>
-                  <span className="flex items-center space-x-1.5">
-                    <span className="w-2.5 h-2.5 rounded-full bg-rose-400" />
-                    <span>Critical Drift Outliers</span>
-                  </span>
-                </div>
+                <p className="text-[11px] font-mono text-neutral-400 pt-2 border-t border-neutral-800/80 leading-relaxed">
+                  The distance stays empty until both pools are full, so an agent with fewer than{' '}
+                  {DRIFT_BASELINE_OUTPUTS + DRIFT_CURRENT_WINDOW_OUTPUTS} evaluated outputs has none. The embeddings come
+                  from MiniLM-L6-v2 on CPU.
+                </p>
               </div>
             ) : (
-              <div className="surface-solid rounded-xl p-6 border border-neutral-800 space-y-6 font-mono text-xs">
+              <div className="surface-solid rounded-xl p-6 border border-neutral-800 space-y-4 font-mono text-xs overflow-x-auto">
                 <h3 className="text-sm font-semibold text-white uppercase tracking-wider">
-                  Detailed Divergence Analysis
+                  Every agent, as GET /v1/drift returns it
                 </h3>
-                <div className="p-4 bg-neutral-950 rounded-lg border border-neutral-800 space-y-2">
-                  <div className="text-neutral-400 font-semibold">1. Prompt Cache Desynchronization</div>
-                  <p className="text-neutral-300 leading-relaxed">
-                    Following the warehouse schema migration from v2 to v3, the model's in-context few-shot prompts retained deprecated column references, triggering a 28% syntax rejection rate on generated Trino SQL queries.
-                  </p>
-                </div>
-                <div className="p-4 bg-neutral-950 rounded-lg border border-neutral-800 space-y-2">
-                  <div className="text-neutral-400 font-semibold">2. Tool Argument Formatting Divergence</div>
-                  <p className="text-neutral-300 leading-relaxed">
-                    Tool invocations to <code>sql_dry_run_explain</code> shifted from single-partition filters to unbounded cross-joins on 14% of analytical requests.
-                  </p>
-                </div>
+                <table className="w-full text-left">
+                  <thead className="text-[10px] uppercase text-neutral-400">
+                    <tr>
+                      <th className="py-2 pr-4">Agent</th>
+                      <th className="py-2 pr-4">Window distance</th>
+                      <th className="py-2 pr-4">Per-output</th>
+                      <th className="py-2 pr-4">Tool spread</th>
+                      <th className="py-2 pr-4">Spans before latest</th>
+                    </tr>
+                  </thead>
+                  <tbody className="text-neutral-200">
+                    {driftProfiles.map((p) => (
+                      <tr key={p.agentId} className="border-t border-neutral-800/80">
+                        <td className="py-2 pr-4">{p.agentName}</td>
+                        <td className={`py-2 pr-4 font-bold ${distanceTone(p.driftMagnitude)}`}>{formatDistance(p.driftMagnitude)}</td>
+                        <td className="py-2 pr-4">{formatDistance(p.semanticDrift)}</td>
+                        <td className="py-2 pr-4">{formatDistance(p.toolCallDrift)}</td>
+                        <td className="py-2 pr-4">{p.baselineSampleCount}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             )}
           </div>
