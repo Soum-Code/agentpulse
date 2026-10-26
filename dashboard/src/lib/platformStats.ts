@@ -56,6 +56,63 @@ export function summariseStatus(input: {
   if (ready && !ready.ready) level = 'bad';
   if (level !== 'bad' && evaluator && (!evaluator.ready || evaluator.degraded)) level = 'warn';
 
-  const label = platform ? (platform.state === 'healthy' ? 'operational' : platform.state) : level === 'ok' ? 'operational' : level === 'bad' ? 'failing' : 'degraded';
+  // The label follows the FINAL level. It used to come from the platform's own state alone, so a healthy
+  // platform with a failed readiness check read 'operational' on a red banner (review finding honesty-7).
+  // The platform's own word (backlogged, starting, ...) is kept when it already agrees with the level.
+  const platformLevel: StatusLevel | null = !platform ? null : platform.state === 'healthy' ? 'ok' : platform.state === 'failing' ? 'bad' : 'warn';
+  const label =
+    level === 'ok' ? 'operational' : platform && platformLevel === level ? platform.state : level === 'bad' ? 'failing' : 'degraded';
   return { level, label, reasons };
+}
+
+export type BannerLevel = StatusLevel | 'unknown';
+
+export interface BannerModel {
+  level: BannerLevel;
+  /** The headline, e.g. 'SYSTEM STATUS: ALL SYSTEMS OPERATIONAL'. */
+  headline: string;
+  /** The line under it: reasons, which endpoint did not answer, or the all-clear. */
+  detail: string;
+}
+
+type FeedState = 'pending' | 'ready' | 'unreachable' | 'error';
+
+/**
+ * Everything the status banner says, from what the three endpoints returned.
+ *
+ * The all-clear ('ALL SYSTEMS OPERATIONAL' and 'No degradation reported') is printed only when all three
+ * endpoints answered and their summary is ok. If any did not answer the status is partial: the banner says
+ * which one, and does not claim health from the ones that did (review finding honesty-3: /v1/platform and
+ * the evaluator probe failing while the public readiness probe answered gave a green banner).
+ */
+export function describeBanner(
+  feeds: { platform: FeedState; ready: FeedState; evaluator: FeedState },
+  summary: StatusSummary,
+): BannerModel {
+  const entries: [string, FeedState][] = [
+    ['/v1/platform', feeds.platform],
+    ['/v1/health/ready', feeds.ready],
+    ['/v1/health/evaluator', feeds.evaluator],
+  ];
+  const states = entries.map(([, s]) => s);
+  if (states.every((s) => s === 'pending')) {
+    return { level: 'unknown', headline: 'SYSTEM STATUS: CHECKING', detail: 'Waiting for the first answer from the health endpoints.' };
+  }
+  if (states.every((s) => s === 'unreachable' || s === 'error')) {
+    return { level: 'bad', headline: 'SYSTEM STATUS: API UNREACHABLE', detail: 'None of the health endpoints answered.' };
+  }
+  const missing = entries.filter(([, s]) => s !== 'ready').map(([name]) => name);
+  const missingNote = missing.length ? `${missing.join(' and ')} did not answer, so the status is not fully known.` : '';
+  const reasons = summary.reasons.join(' \u00b7 ');
+  if (summary.level !== 'ok') {
+    return {
+      level: summary.level,
+      headline: `SYSTEM STATUS: ${summary.label.toUpperCase()}`,
+      detail: [reasons, missingNote].filter(Boolean).join(' \u00b7 '),
+    };
+  }
+  if (missing.length > 0) {
+    return { level: 'unknown', headline: 'SYSTEM STATUS: PARTIAL', detail: missingNote };
+  }
+  return { level: 'ok', headline: 'SYSTEM STATUS: ALL SYSTEMS OPERATIONAL', detail: 'No degradation reported by the platform check.' };
 }

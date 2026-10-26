@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { ApiReadiness, EvaluatorReadiness, PlatformHealth } from './api';
-import { serverErrorRate, summariseStatus } from './platformStats';
+import { describeBanner, serverErrorRate, summariseStatus } from './platformStats';
 
 const platform = (state: PlatformHealth['state'], reasons: string[] = []): PlatformHealth =>
   ({ state, reasons, evaluation_queue: { depth: 0, backlog_threshold: 750 }, workers: {} }) as PlatformHealth;
@@ -67,3 +67,60 @@ describe('summariseStatus', () => {
     expect(s.level).toBe('bad');
   });
 });
+
+describe('summariseStatus label follows the final level', () => {
+  it('a healthy platform with a failed readiness check is failing, not operational', () => {
+    expect(summariseStatus({ platform: platform('healthy'), ready: ready(false, ['database down']), evaluator: null }).label).toBe('failing');
+  });
+
+  it('a healthy platform with no live evaluator worker is degraded, not operational', () => {
+    const s = summariseStatus({ platform: platform('healthy'), ready: ready(true), evaluator: evaluator({ ready: false, workers_alive: 0 }) });
+    expect(s.level).toBe('warn');
+    expect(s.label).toBe('degraded');
+  });
+
+  it('keeps the platform own word when it agrees with the level', () => {
+    expect(summariseStatus({ platform: platform('backlogged'), ready: ready(true), evaluator: evaluator() }).label).toBe('backlogged');
+    expect(summariseStatus({ platform: platform('failing'), ready: null, evaluator: null }).label).toBe('failing');
+  });
+});
+
+describe('describeBanner', () => {
+  const ok = summariseStatus({ platform: platform('healthy'), ready: ready(true), evaluator: evaluator() });
+
+  it('prints the all-clear only when all three endpoints answered and the summary is ok', () => {
+    const b = describeBanner({ platform: 'ready', ready: 'ready', evaluator: 'ready' }, ok);
+    expect(b.level).toBe('ok');
+    expect(b.headline).toContain('ALL SYSTEMS OPERATIONAL');
+    expect(b.detail).toContain('No degradation reported');
+  });
+
+  it('is PARTIAL, never operational, when an endpoint did not answer but the others look fine', () => {
+    const b = describeBanner({ platform: 'error', ready: 'ready', evaluator: 'unreachable' }, summariseStatus({ platform: null, ready: ready(true), evaluator: null }));
+    expect(b.level).toBe('unknown');
+    expect(b.headline).toBe('SYSTEM STATUS: PARTIAL');
+    expect(b.headline).not.toContain('OPERATIONAL');
+    expect(b.detail).toContain('/v1/platform');
+    expect(b.detail).toContain('/v1/health/evaluator');
+    expect(b.detail).not.toContain('No degradation');
+  });
+
+  it('a pending endpoint counts as not answered', () => {
+    expect(describeBanner({ platform: 'ready', ready: 'pending', evaluator: 'ready' }, ok).headline).toBe('SYSTEM STATUS: PARTIAL');
+  });
+
+  it('is CHECKING while nothing has answered yet and UNREACHABLE when everything failed', () => {
+    expect(describeBanner({ platform: 'pending', ready: 'pending', evaluator: 'pending' }, ok).headline).toBe('SYSTEM STATUS: CHECKING');
+    expect(describeBanner({ platform: 'error', ready: 'unreachable', evaluator: 'error' }, ok)).toMatchObject({ level: 'bad', headline: 'SYSTEM STATUS: API UNREACHABLE' });
+  });
+
+  it('keeps a real warning or failure and adds what did not answer', () => {
+    const bad = summariseStatus({ platform: platform('healthy'), ready: ready(false, ['database down']), evaluator: null });
+    const b = describeBanner({ platform: 'ready', ready: 'ready', evaluator: 'error' }, bad);
+    expect(b.level).toBe('bad');
+    expect(b.headline).toBe('SYSTEM STATUS: FAILING');
+    expect(b.detail).toContain('database down');
+    expect(b.detail).toContain('/v1/health/evaluator');
+  });
+});
+
