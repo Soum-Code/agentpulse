@@ -226,25 +226,64 @@ OPENROUTER_API_KEY=<optional, openrouter.ai/keys>
 The keys stay in `.env` on the VM: never in the repository, a chat window or a screenshot. The
 other `CHAT_*` settings (limits, models, timeouts) are listed in the overlay's `chat` service
 and in the docstrings of `demo/chat_server.py`, `chat_guard.py` and `chat_providers.py`; empty
-means the default. A change to `.env` takes effect when the container is recreated (step 3).
+means the default. A change to `.env` takes effect when the container is recreated (step 4).
+
+One more line is required, and is made by a command rather than typed: the chat's own key for
+AgentPulse, `CHAT_AGENTPULSE_API_KEY` (step 2 below). The chat does not get the server's
+`AGENTPULSE_API_KEY`: that key can mint and revoke keys, and the chat is the part of the stack
+that anyone can talk to. Without its own key the chat says "not set up" on `/chat/health` and
+answers nothing.
 
 ### First start
 
-1. Get the code: `git pull --ff-only`, or run the deploy-azure workflow.
-2. Build. About 10 to 20 minutes on the VM's 2 vCPUs, most of it installing torch; the image
+1. Wait for the deploy-azure run of the merge commit to finish green (Actions → deploy-azure).
+   It fast-forwards the checkout and rebuilds the dashboard, whose new build calls `/chat` on
+   the site itself. **Do not `git pull` on the VM when `dashboard/` changed**: `deploy.sh` would
+   then find the checkout already at the new commit, see nothing to rebuild and exit, and the
+   live dashboard would stay on the old build, whose chat calls `http://localhost:8100`, the
+   visitor's own machine. Check that the live page is the new build (a number above 0):
+
+   ```bash
+   H=https://<hostname>
+   for js in $(curl -s $H/ | grep -o 'assets/[^"]*\.js'); do curl -s $H/$js | grep -c '/chat/stream'; done
+   ```
+
+   In a browser, the RAG page's network tab shows `GET /chat/health` going to the site itself.
+2. Issue the chat's own AgentPulse key, once. It is made inside the backend container with the
+   server's key and written straight into `.env`, so it is never shown on the screen; the
+   second command only counts the line (it must print 1).
+
+   ```bash
+   cd ~/agentpulse
+   echo >> .env
+   sudo docker compose $F exec -T backend python -c '
+   import json, os, urllib.request
+   req = urllib.request.Request(
+       "http://127.0.0.1:8000/v1/keys", method="POST",
+       data=json.dumps({"owner_id": "live-chat", "label": "chat container ingest"}).encode(),
+       headers={"Content-Type": "application/json", "X-API-Key": os.environ["AGENTPULSE_API_KEY"]})
+   print("CHAT_AGENTPULSE_API_KEY=" + json.load(urllib.request.urlopen(req))["key"])
+   ' >> .env
+   grep -c '^CHAT_AGENTPULSE_API_KEY=' .env
+   ```
+
+   It can write spans and read, like any issued key, but `/v1/keys` refuses it. To revoke it,
+   list the owner's keys (`GET /v1/keys?owner_id=live-chat`) and `DELETE /v1/keys/<id>?owner_id=live-chat`
+   with the server's key, then issue a new one the same way (remove the old line first).
+3. Build. About 10 to 20 minutes on the VM's 2 vCPUs, most of it installing torch; the image
    is about 2.1 GB, so check that `df -h /` shows at least 10 GB free first.
 
    ```bash
    mkdir -p chat-control      # the kill switch's folder, owned by you, not by root
    sudo docker compose $F build chat
    ```
-3. Start it, and only it (`--no-deps` keeps compose away from the backend):
+4. Start it, and only it (`--no-deps` keeps compose away from the backend):
 
    ```bash
    sudo docker compose $F up -d --no-deps chat
    sudo docker compose $F ps chat     # "healthy" after a minute or two
    ```
-4. Recreate Caddy, which reads the Caddyfile only when it starts; the workflow never recreates
+5. Recreate Caddy, which reads the Caddyfile only when it starts; the workflow never recreates
    it. Validate first: a broken Caddyfile would take the whole site down. Recreating takes a few
    seconds and keeps the certificate.
 
@@ -252,7 +291,7 @@ means the default. A change to `.env` takes effect when the container is recreat
    sudo docker compose $F run --rm --no-deps --entrypoint caddy caddy validate --config /etc/caddy/Caddyfile
    sudo docker compose $F up -d --no-deps --force-recreate caddy
    ```
-5. Check it from outside:
+6. Check it from outside:
 
    ```bash
    curl -s https://<hostname>/chat/health                                           # "status":"ready"
@@ -263,7 +302,7 @@ means the default. A change to `.env` takes effect when the container is recreat
 
    The last one prints one JSON line per stage, then the answer.
 
-Until step 4, the RAG page says the chat service is not reachable and does not let anyone
+Until step 5, the RAG page says the chat service is not reachable and does not let anyone
 send: the old Caddyfile hands `/chat/health` to the dashboard, which answers with its HTML.
 
 ### Pause and resume (the kill switch)
@@ -363,13 +402,18 @@ not the plan; set the Groq and Cerebras keys.
 | setting | default | what it does |
 |---|---|---|
 | `CHAT_IP_TURNS_PER_MINUTE` | 5 | questions one visitor (IP) may ask in a minute |
-| `CHAT_IP_TURNS_PER_DAY` | 25 | and in a UTC day |
+| `CHAT_IP_TURNS_PER_DAY` | 40 | and in a UTC day |
 | `CHAT_DAILY_TURN_CAP` | 300 | questions the whole site answers in a UTC day |
-| `CHAT_MAX_CONCURRENT_TURNS` | 2 | questions running at the same time |
+| `CHAT_MAX_CONCURRENT_TURNS` | 2 | questions running at the same time; one IP runs one at a time |
 | `CHAT_MAX_INPUT_CHARS` | 500 | longest question; Caddy also refuses a body over 16 KB |
 
 Refusals say why and when to try again; the daily ones say "at 00:00 UTC, in 5 h 12 min".
 The counters live in the container's memory, so a restart resets them.
+
+The limits count per IP, and a campus or other shared network puts several people behind one
+IP: examiners on the same college Wi-Fi share one IP's 40 questions a day and its one question
+at a time (a second one waits with "your previous question is still being answered"). Raise
+`CHAT_IP_TURNS_PER_DAY` for the viva day if they will all use the same network.
 
 Why 300 a day stays inside the free quotas with the Groq and Cerebras keys set. A question is
 three model calls. Each call sends about 230 tokens (measured: Pollinations reported 521 to 554
@@ -386,7 +430,7 @@ requests a day.
   3 more; above that the chain falls back to NVIDIA, OpenRouter if set, then Pollinations.
 
 So the daily cap uses about a quarter of the two providers' combined daily tokens. Five
-examiners at 25 questions each use 125.
+examiners at 40 questions each use 200, still under the cap of 300.
 
 ### Memory
 
