@@ -101,13 +101,14 @@ F.append(Paragraph(
     "of speaking with 10 minutes for questions. Each slide is tagged with the Final "
     "Review checklist item it answers, so the panel can follow the rubric.", S_SUB))
 
+# In short: point 1 tells the presenter the literature slides are a reading list (verified to
+# exist, not yet read in full), as SESSION_HANDOFF.md 17.3 records.
 F.append(Paragraph("Three things to know before you start", S_H2))
 F.append(Paragraph(
-    "<b>1. Read the seventeen surveyed papers before you present.</b> Slide 3 carries a "
-    "comparison table of ten of them and slide 17 has the full list. The works themselves "
-    "are real and their limitation column is accurate, but a panel may pick any row and ask "
-    "you to discuss it. If you cannot, the whole survey is discounted - so treat the table "
-    "as a reading list you still owe, not as finished work.", S_BODY))
+    "<b>1. Slides 3 and 17 are a reading list: verified to exist, not yet read in full.</b> "
+    "Slide 3 shows ten of the seventeen works and slide 17 has the full list. The works are "
+    "real and each row restates what the paper reports, but none has been read in full, and "
+    "the slides now say so. A panel may pick any row; read the ones you cite before the review.", S_BODY))
 F.append(Paragraph(
     "<b>2. Two checklist items are genuinely outstanding</b> - the plagiarism report and a "
     "paper submission. They are on slide 15 with a timeline on slide 16. The panel has the "
@@ -139,14 +140,14 @@ F.append(block(
     "Rare faults plus sampled evaluation equals faults you never see."))
 
 F.append(block(
-    3, "Literature survey", "15-20 papers, comparison table", "~1 min 45 s",
+    3, "Reading list (verified to exist, not yet read in full)", "15-20 papers, comparison table", "~1 min 45 s",
     "Prior work falls into three families, and each one stops short of the problem this project targets.",
     ["Do not read the table. Group it out loud instead: NLI-based consistency (SummaC, AlignScore), judge-based evaluation (RAGAS, ARES, MT-Bench, Prometheus), and drift or failure analysis (DriftLens, MAST).",
      "Then give the limitation that each family shares, because that is what motivates slide 4. Consistency metrics assume a single-document premise. Judge methods pay per evaluation, which is what forces sampling. Drift methods are untied to output correctness. MAST describes multi-agent failures but does not detect them at runtime.",
-     "Seventeen works surveyed, nine of them from 2023 onward, which satisfies the checklist.",
+     "Seventeen works on the reading list, nine of them from 2023 onward. Say that they were verified to exist and have not yet been read in full.",
      "If asked for a specific figure: SummaC reports balanced accuracy 74.4% on its six-dataset benchmark; MAST annotated 1600+ traces across seven frameworks with inter-annotator kappa 0.88."],
     "The gap statement on slide 4 falls straight out of the limitation column - make that connection explicit.",
-    "Read all seventeen before presenting. The papers are real, but a row you cannot discuss will cost you the whole survey."))
+    "Read the works you cite before presenting. The papers are real, but a row you cannot discuss will cost you the whole list."))
 
 F.append(block(
     4, "Gap and objectives", "Research gap, SMART objectives", "~1 min 30 s",
@@ -187,7 +188,8 @@ F.append(block(
 F.append(block(
     8, "Ablation study", "Ablation completed and discussed", "~1 min 45 s",
     "Seven configurations, and the two most interesting results are the ones that did not move.",
-    ["The cascade at C matches NLI alone at B, 0.963, while handling the common case far more cheaply. That is the justification for the gate.",
+    ["The cascade at C matches NLI alone at B, 0.963; MiniLM adds about 19 ms and no F1. Both models run on every span: there is no gate.",
+     "G, the full pipeline, is 0.897 on corrected NLI labels at the 0.5 weight it ran with (the file said 0.963, computed with entailment and neutral swapped). It was not re-run at the shipped 0.3.",
      "Configuration F, adding drift, drops to 0.619 - consistent with the baseline table.",
      "Then the error analysis box: D and E report identical numbers because the single-agent test split structurally cannot exercise a cross-agent or tool-narration signal.",
      "Noticing that is what triggered the external validation on slide 12, and it is why those two signals ship as Experimental."],
@@ -196,7 +198,7 @@ F.append(block(
 F.append(block(
     9, "Grounding and drift results", "Final results", "~2 min",
     "Two validated signals, each with a held-out number and a stated cost.",
-    ["Grounding: F1 0.963 on the held-out split, precision 0.929, recall 1.000, FPR 0.059.",
+    ["Grounding, as shipped (contradiction + 0.3 x neutral, cut-offs 0.7 and 0.4): F1 0.963 on the 30-case test split, precision 0.929, recall 1.000, FPR 0.059. Five of those cases copy dev cases; on the 47 truly held-out cases F1 is 0.927 to 0.952, FPR 0.074. The 0.3 is a design choice.",
      "Drift: AUC 0.991 on 111 held-out tasks, false alarms down from 91.7% to 1.5%.",
      "Then tell the rebuild story across the three numbered steps - synthetic looked fine, real text destroyed it, and the diagnosis showed the threshold was never the problem.",
      "Always say coverage 24.5% in the same breath as the AUC. Never quote one without the other."],
@@ -247,8 +249,8 @@ F.append(block(
 F.append(block(
     15, "Deliverables and reproducibility", "Repo, reproducibility, submission status", "~1 min 30 s",
     "The repository is complete and reproducible; three submission items are outstanding.",
-    ["Left: 209 of 209 tests, Alembic-managed schema verified across 43,941 rows, and every reported figure traceable to a JSON file under experiments/results.",
-     "Right: read the status table honestly. The literature survey is done at seventeen works; the report is a draft; plagiarism report and paper submission are outstanding.",
+    ["Left: 422 backend and 136 dashboard tests passing (run on 25 Oct 2026), Alembic-managed schema verified across 43,941 rows, and every reported figure traceable to a JSON file under experiments/results.",
+     "Right: read the status table honestly. The literature is a reading list of seventeen works, verified to exist and not yet read in full; the report is a draft; plagiarism report and paper submission are outstanding.",
      "Ethical position: everything runs locally, no third-party API calls, no PII stored, payload capture opt-in and off by default."],
     "Do not gloss the two outstanding items - the panel has the same checklist you do."))
 
@@ -262,8 +264,8 @@ F.append(block(
 
 F.append(block(
     17, "References appendix", "Full reference list", "do not present unless asked",
-    "The full list of seventeen surveyed works, grouped by family.",
-    ["Skip this slide in the main run - it exists so you can answer 'what else did you survey' without hunting.",
+    "The reading list of seventeen works, grouped by family: verified to exist, not yet read in full.",
+    ["Skip this slide in the main run - it exists so you can answer 'what else is on your reading list' without hunting.",
      "Three columns: factual consistency and NLI, RAG and judge-based evaluation, and drift plus multi-agent failure.",
      "Full citations with venue and identifier belong in the report bibliography, not on the slide."],
     "Jump here only if the panel presses on coverage of prior work."))
@@ -298,15 +300,18 @@ qa = [
     ("Does it scale?",
      "To roughly 100,000 traces on SQLite with WAL, which was the measured target. Beyond that, Postgres and horizontal partitioning are deferred with stated reasons rather than implemented. Scale was never the binding constraint - framework breadth and automatic issue surfacing are, and both are scale-independent."),
     ("Can someone else reproduce this?",
-     "Yes. The repository has full commit history, a README, Docker compose, 209 passing tests, an Alembic-managed schema verified byte-identical across 43,941 rows, and every reported figure has a JSON file under experiments/results with a matching write-up. The one gap is that the venv's editable installs point at a pre-rename path, so PYTHONPATH has to be set - that is a known issue, not a hidden one."),
+     "Yes. The repository has full commit history, a README, Docker compose, 422 passing backend tests and 136 dashboard tests, an Alembic-managed schema verified byte-identical across 43,941 rows, and every reported figure has a JSON file under experiments/results with a matching write-up. The one gap is that the venv's editable installs point at a pre-rename path, so PYTHONPATH has to be set - that is a known issue, not a hidden one."),
 ]
 for q, a in qa:
     F.append(KeepTogether([Paragraph(q, S_Q), Paragraph(a, S_A)]))
 
 F += rule(4, 10)
 F.append(Paragraph("Numbers to have ready", S_H2))
+# In short: the numbers to have ready, each with where it comes from; test counts measured
+# on 2026-10-25, grounding at the shipped weight 0.3.
 rows = [
-    ["Grounding F1", "0.963", "held-out v1.0_test, Config C"],
+    ["Grounding F1", "0.963", "v1.0_test (5 of 30 copy dev), shipped score"],
+    ["Grounding F1, 47 held-out", "0.927 / 0.952", "cut-off 0.7 / 0.4, FPR 0.074"],
     ["Precision / recall / FPR", "0.929 / 1.000 / 0.059", "same run"],
     ["MiniLM only / DeBERTa only / shipped", "19.1 / 132.1 / 151.2 ms", "ablation_results.json, 2026-09-18"],
     ["Best baseline (D, no drift)", "F1 0.941", "full system 0.842 - see slide 7"],
@@ -320,7 +325,7 @@ rows = [
     ["Tool-claim on real traces", "F1 0.000", "0 extractions, 8,353 prose spans"],
     ["Disagreement, external", "0 of 10", "internal benchmark 0.960"],
     ["Label agreement", "kappa 0.922 / 0.225", "original 50 / later attempt"],
-    ["Backend tests", "209 / 209", "pytest tests/ -q"],
+    ["Backend / dashboard tests", "422 / 136 passed", "pytest, vitest; 25 Oct 2026"],
 ]
 t = Table([[Paragraph(f"<b>{a}</b>", S_BODY), Paragraph(b, S_BODY),
             Paragraph(f"<font color='#8B94A4'>{c}</font>", S_BODY)] for a, b, c in rows],

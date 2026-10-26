@@ -16,8 +16,9 @@ import {
   Layers,
   ArrowRight,
 } from 'lucide-react';
-import type { ChatTurn, RagAgentExecution } from '../../lib/ragTypes';
+import type { ChatTurn, ChatHealth, RagAgentExecution } from '../../lib/ragTypes';
 import type { ColorPalette, ChalkSurfacePreset } from '../../types';
+import { chatErrorTitle, isRefusal, isRetryable } from '../../lib/ragApi';
 import { getRagTheme } from './ragTheme';
 
 interface ChatConsoleProps {
@@ -30,6 +31,13 @@ interface ChatConsoleProps {
   onSelectTrace: (traceId: string) => void;
   sessionId: string;
   onResetSession: () => void;
+  /** Send a question again, for the retry button on a turn that failed for a passing reason. */
+  onRetry?: (message: string) => void;
+  /** Whether the chat service would run a turn now, and if not why (from GET /chat/health). */
+  chatStatus?: { ok: boolean; status: string; message?: string };
+  chatHealth?: ChatHealth | null;
+  /** Where turns are sent, shown under the input. */
+  chatTarget?: string;
   palette?: ColorPalette;
   isCalmMode?: boolean;
   chalkSurface?: ChalkSurfacePreset;
@@ -52,6 +60,33 @@ function formatLatency(ms: number | null | undefined): string {
   return `${Math.round(ms)}ms`;
 }
 
+const STAGES = ['retriever', 'verifier', 'answerer'] as const;
+
+/** "groq · openai/gpt-oss-20b", or the model alone when the service did not name a provider. */
+function providerAndModel(exec: RagAgentExecution | undefined): string {
+  if (!exec) return '—';
+  return exec.provider ? `${exec.provider} · ${exec.model}` : exec.model;
+}
+
+/** How many tries failed before the one that answered, as reported by the service. */
+function failoverCount(exec: RagAgentExecution | undefined): number {
+  return Math.max(0, (exec?.attempts?.length ?? 1) - 1);
+}
+
+function failoverNote(exec: RagAgentExecution | undefined): string {
+  const n = failoverCount(exec);
+  return n > 0 ? `after ${n} failover${n === 1 ? '' : 's'}` : '';
+}
+
+/** Why sending is not possible right now, or null when it is. */
+function unavailableReason(status: { ok: boolean; status: string; message?: string } | undefined): string | null {
+  if (!status || status.ok) return null;
+  if (status.message) return status.message;
+  if (status.status === 'checking') return 'Checking the chat service...';
+  return `The chat service is not reachable right now (${status.status}); it may be restarting. This page checks again every few seconds.`;
+}
+
+
 export const ChatConsole: React.FC<ChatConsoleProps> = ({
   turns,
   onSendMessage,
@@ -62,6 +97,10 @@ export const ChatConsole: React.FC<ChatConsoleProps> = ({
   onSelectTrace,
   sessionId,
   onResetSession,
+  onRetry,
+  chatStatus,
+  chatHealth,
+  chatTarget = '/chat',
   palette = 'dark',
   isCalmMode = false,
   chalkSurface = 'classic-white',
@@ -72,6 +111,9 @@ export const ChatConsole: React.FC<ChatConsoleProps> = ({
   const [activeRawTab, setActiveRawTab] = useState<Record<string, string>>({});
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const blockedReason = unavailableReason(chatStatus);
+  const runningTurn = turns.find((t) => t.status === 'running');
+  const limits = chatHealth?.limits;
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -97,7 +139,7 @@ export const ChatConsole: React.FC<ChatConsoleProps> = ({
 
   const handleSubmit = async () => {
     const trimmed = inputText.trim();
-    if (!trimmed || isInFlight) return;
+    if (!trimmed || isInFlight || blockedReason) return;
     setInputText('');
     await onSendMessage(trimmed);
   };
@@ -144,8 +186,9 @@ export const ChatConsole: React.FC<ChatConsoleProps> = ({
               Live Multi-Agent RAG Observer
             </h3>
             <p className={`${theme.subtextColor} text-[11px] mt-2 leading-relaxed`}>
-              Every message executes a three-stage pipeline (retriever → verifier → answerer).
-              AgentPulse captures each span asynchronously to verify grounding and accumulate drift.
+              Every message runs three agents in turn (retriever → verifier → answerer), each a
+              real model call. AgentPulse captures each span asynchronously to verify grounding
+              and accumulate drift.
             </p>
 
             <div className="w-full mt-6 text-left">
@@ -191,7 +234,9 @@ export const ChatConsole: React.FC<ChatConsoleProps> = ({
                 </div>
               </div>
 
-              {/* Assistant message */}
+              {/* Assistant message. A running turn has none yet: its stages are shown in the
+                  in-flight panel below as the stream reports them. */}
+              {turn.status !== 'running' && (
               <div className="flex justify-start">
                 <div
                   className={`w-full max-w-[95%] rounded-xl p-4 transition-all ${
@@ -235,17 +280,34 @@ export const ChatConsole: React.FC<ChatConsoleProps> = ({
                     <div className="mb-3 p-3 rounded-lg bg-rose-950/50 border border-rose-500/40 text-rose-200 text-[11px]">
                       <div className="flex items-center gap-1.5 font-semibold text-rose-300 mb-1">
                         <AlertTriangle className="w-3.5 h-3.5 text-rose-400" />
-                        <span>PIPELINE FAILURE • PARTIAL TURN RENDERED</span>
+                        <span className="uppercase">{chatErrorTitle(resp?.code)}</span>
                       </div>
-                      <div className="font-mono text-[10px] text-rose-300/90 whitespace-pre-wrap break-all">
+                      <div className="font-sans text-[11px] text-rose-200 whitespace-pre-wrap break-words">
                         {turn.errorMessage || resp?.error || 'Pipeline halted before completion'}
                       </div>
-                      <div className="text-[10px] text-rose-400/80 mt-1.5">
-                        Completed {agents.length} of 3 agent stages before failure.{' '}
-                        {turn.traceId
-                          ? "This turn's spans remain visible in AgentPulse telemetry."
-                          : 'The service returned no trace id, so there is nothing to look up in AgentPulse.'}
-                      </div>
+                      {onRetry && isRetryable(resp?.code, Boolean(resp)) && (
+                        <button
+                          onClick={() => onRetry(turn.userMessage)}
+                          disabled={isInFlight || Boolean(blockedReason)}
+                          className="mt-2 px-2.5 py-1 rounded bg-rose-900/60 border border-rose-500/40 text-rose-100 hover:bg-rose-800/70 text-[10px] font-semibold disabled:opacity-40"
+                          title="Send the same question again"
+                        >
+                          Retry
+                        </button>
+                      )}
+                      {isRefusal(resp?.code) ? (
+                        <div className="text-[10px] text-rose-400/80 mt-1.5">
+                          No agent ran, so nothing was sent to AgentPulse for this question.
+                          {resp?.retry_after ? ` Try again in about ${resp.retry_after} s.` : ''}
+                        </div>
+                      ) : (
+                        <div className="text-[10px] text-rose-400/80 mt-1.5">
+                          Completed {agents.length} of 3 agent stages {resp?.code === 'aborted' ? 'before you stopped it' : 'before it ended'}.{' '}
+                          {turn.traceId
+                            ? "This turn's spans remain visible in AgentPulse telemetry."
+                            : 'The service returned no trace id, so there is nothing to look up in AgentPulse.'}
+                        </div>
+                      )}
                     </div>
                   )}
 
@@ -272,16 +334,23 @@ export const ChatConsole: React.FC<ChatConsoleProps> = ({
                   <div className={`mt-3 pt-3 border-t ${theme.divider}`}>
                     <div className={`text-[10px] font-semibold uppercase tracking-wider ${theme.subtextColor} mb-2 flex items-center justify-between`}>
                       <span>Multi-Agent Execution Chain ({agents.length}/3 stages)</span>
-                      <span className={`${theme.subtextColor} font-mono`}>
-                        Total:{' '}
+                      <span
+                        className={`${theme.subtextColor} font-mono`}
+                        title={
+                          resp?.total_ms != null
+                            ? 'The whole turn as the service measured it: the search and all three model calls'
+                            : 'The sum of the stage times the service reported'
+                        }
+                      >
+                        {resp?.total_ms != null ? 'Turn' : 'Total'}:{' '}
                         {formatLatency(
-                          agents.reduce((sum, a) => sum + (a.latency_ms || 0), 0)
+                          resp?.total_ms ?? agents.reduce((sum, a) => sum + (a.latency_ms || 0), 0)
                         )}
                       </span>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                      {['retriever', 'verifier', 'answerer'].map((stageName) => {
+                      {STAGES.map((stageName) => {
                         const exec = agents.find((a) => a.agent === stageName);
                         const isExecuted = Boolean(exec);
 
@@ -312,10 +381,18 @@ export const ChatConsole: React.FC<ChatConsoleProps> = ({
                             </div>
                             <div
                               className={`text-[10px] ${theme.subtextColor} font-mono truncate`}
-                              title={exec?.model || '—'}
+                              title={providerAndModel(exec)}
                             >
-                              {exec?.model || '—'}
+                              {providerAndModel(exec)}
                             </div>
+                            {failoverCount(exec) > 0 && (
+                              <div
+                                className="text-[9px] font-mono text-amber-400 truncate"
+                                title={(exec?.attempts ?? []).map((a) => `${a.provider}/${a.model}: ${a.outcome}`).join('\n')}
+                              >
+                                {failoverNote(exec)}
+                              </div>
+                            )}
                           </div>
                         );
                       })}
@@ -405,7 +482,7 @@ export const ChatConsole: React.FC<ChatConsoleProps> = ({
                                 <div>
                                   <div className={`flex items-center justify-between text-[10px] ${theme.subtextColor} mb-1.5 font-mono`}>
                                     <span>
-                                      Model: <span className={theme.textColor}>{ag.model}</span>
+                                      Model: <span className={theme.textColor}>{providerAndModel(ag)}</span>
                                     </span>
                                     <span>
                                       Latency: <span className={theme.accentText}>{formatLatency(ag.latency_ms)}</span>
@@ -424,6 +501,7 @@ export const ChatConsole: React.FC<ChatConsoleProps> = ({
                   )}
                 </div>
               </div>
+              )}
             </div>
           );
         })}
@@ -457,10 +535,41 @@ export const ChatConsole: React.FC<ChatConsoleProps> = ({
               </div>
             </div>
 
-            <p className={`text-[11px] ${theme.subtextColor} leading-relaxed`}>
-              Three sequential LLM calls (retriever, verifier, answerer); a turn can take a minute or more.
-              The service reports no per-stage progress, so which stage is running is not shown. The
-              stages and the models that ran appear on the turn when it returns.
+            {/* Each stage as the stream reports it: waiting, running, or done with its time and
+                the provider that answered. */}
+            <div className="space-y-1.5 text-[11px] font-mono">
+              <div className="flex items-center justify-between">
+                <span className={theme.subtextColor}>search</span>
+                <span className={runningTurn?.progress?.retrieved ? theme.accentText : theme.subtextColor}>
+                  {runningTurn?.progress?.retrieved
+                    ? `${runningTurn.progress.retrieved.length} documents · ${formatLatency(runningTurn.progress.searchMs)}`
+                    : 'running'}
+                </span>
+              </div>
+              {STAGES.map((stageName) => {
+                const done = runningTurn?.progress?.done.find((a) => a.agent === stageName);
+                const running = runningTurn?.progress?.running === stageName;
+                const note = failoverNote(done);
+                return (
+                  <div key={stageName} className="flex items-center justify-between gap-3">
+                    <span className={done || running ? theme.textColor : theme.subtextColor}>{stageName}</span>
+                    <span
+                      className={`truncate ${done ? theme.accentText : theme.subtextColor}`}
+                      title={done ? providerAndModel(done) : undefined}
+                    >
+                      {done
+                        ? `${formatLatency(done.latency_ms)} · ${providerAndModel(done)}${note ? ` (${note})` : ''}`
+                        : running
+                        ? 'running'
+                        : 'waiting'}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+            <p className={`text-[10px] ${theme.subtextColor} leading-relaxed`}>
+              Three model calls in turn. With a fast provider a turn takes seconds; when the free
+              providers are at their limits it falls back to slower ones and can take a minute.
             </p>
           </div>
         )}
@@ -480,16 +589,17 @@ export const ChatConsole: React.FC<ChatConsoleProps> = ({
             placeholder={
               isInFlight
                 ? 'Turn in flight...'
-                : 'Ask a question the corpus covers, or one it does not (Enter to send)...'
+                : blockedReason ?? 'Ask a question the corpus covers, or one it does not (Enter to send)...'
             }
-            disabled={isInFlight}
+            maxLength={limits?.max_input_chars}
+            disabled={isInFlight || Boolean(blockedReason)}
             className={`w-full pl-3 pr-24 py-2.5 rounded-lg ${theme.inputBg} border ${theme.inputBorder} ${theme.inputText} ${theme.inputPlaceholder} text-[12px] font-mono focus:outline-none resize-none disabled:opacity-50`}
           />
 
           <div className="absolute right-2 bottom-2.5 flex items-center gap-1.5">
             <button
               onClick={handleSubmit}
-              disabled={isInFlight || !inputText.trim()}
+              disabled={isInFlight || Boolean(blockedReason) || !inputText.trim()}
               className={`px-3 py-1.5 rounded-md ${
                 palette === 'butter'
                   ? 'bg-amber-400 hover:bg-amber-300 text-black font-bold shadow-md shadow-amber-500/20'
@@ -506,9 +616,23 @@ export const ChatConsole: React.FC<ChatConsoleProps> = ({
           </div>
         </div>
 
-        <div className={`mt-2 flex items-center justify-between text-[10px] ${theme.subtextColor} font-mono`}>
-          <span>Target: RAG FastAPI (:8100/chat) ➔ Observability: AgentPulse (:8000)</span>
-          <span>Shift + Enter for newline</span>
+        {/* Why Send is disabled, as visible text next to it: a placeholder alone is easy to miss,
+            and screen readers announce it only when the field is focused. */}
+        {blockedReason && !isInFlight && (
+          <div role="status" className="mt-2 px-2.5 py-1.5 rounded border border-amber-500/40 bg-amber-950/30 text-amber-200 text-[11px] font-sans">
+            {blockedReason}
+          </div>
+        )}
+
+        <div className={`mt-2 flex items-center justify-between gap-3 text-[10px] ${theme.subtextColor} font-mono`}>
+          <span className="truncate">Chat: {chatTarget} ➔ Observability: AgentPulse /v1</span>
+          <span className="shrink-0">Shift + Enter for newline</span>
+        </div>
+        <div className={`mt-1 text-[10px] ${theme.subtextColor} font-sans leading-relaxed`}>
+          Questions and answers are recorded in AgentPulse traces, which anyone can read on this
+          site. Do not type anything personal.
+          {limits &&
+            ` Each visitor can ask ${limits.ip_turns_per_minute} questions a minute and ${limits.ip_turns_per_day} a day, of up to ${limits.max_input_chars} characters.`}
         </div>
       </div>
     </div>

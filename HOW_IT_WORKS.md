@@ -50,17 +50,19 @@ AgentPulse evaluates *every* span in a continuous loop. At ~3.2 s per evaluation
 
 **3. Quality — and here the honest answer is not a clean win.**
 
-| Subset | n | NLI F1 | Judge F1 |
-| :--- | ---: | ---: | ---: |
-| Overall | 30 | 0.963 | **1.000** |
-| Deterministic labels | 10 | 1.000 | 1.000 |
-| LLM-judge labels | 20 | 0.941 | **1.000** |
+| Subset | n | NLI F1, as run (weight 0.5, corrected labels) | NLI F1 at the shipped weight 0.3 | Judge F1 |
+| :--- | ---: | ---: | ---: | ---: |
+| Overall | 30 | 0.897 | 0.963 | **1.000** |
+| Deterministic labels | 10 | 1.000 | 1.000 | 1.000 |
+| LLM-judge labels | 20 | 0.842 | 0.941 | **1.000** |
+
+The comparison ran on 2026-08-26, when the code had DeBERTa's `entailment` and `neutral` outputs swapped and the neutral weight was 0.5; it published NLI F1 0.963 / 1.000 / 0.941. The "as run" column is the same 30 cases re-scored on the corrected labels (`GROUNDING_RECALIBRATION_2026-10.md` T8 and section 3.3). The "shipped weight" column is arithmetic on the stored per-case probabilities (`contradiction + 0.3 × neutral`, the comparison's own 0.5 threshold; analysis JSON `reproduction_checks.llm_judge_comparison_nli_side`): `test_03` and `test_16` fall to about 0.31 and only `test_09` stays flagged. The judge was not re-run.
 
 **The judge outscored the cascade overall.** The "comparable quality" half of the original hypothesis is not confirmed as stated.
 
 But read where the difference sits. The 30 cases split by label provenance: 10 were correct by deterministic construction, 20 were labelled by LLM-judge passes. Scoring an LLM judge against labels LLM judges produced is partially circular and flatters the judge — and the judge's *entire* measured advantage comes from that subset. On the 10 cleanly-labelled cases both systems score 1.000 and do not separate at all.
 
-Across all 30 cases the two systems disagree on exactly **one**: `test_09`. Evidence says "approximately **7.61 billion** total parameters", the claim says "approximately **7.6 billion**". Ground truth is SUPPORTED. The judge got it right; DeBERTa scored the faithful restatement at **0.922** risk.
+At the shipped weight the two systems disagree on **one** case, `test_09`; as the comparison was run (weight 0.5, corrected labels) they disagree on three: `test_09`, `test_03` and `test_16`, the last two neutral-only outputs scoring 0.5007 and 0.5010 (`GROUNDING_RECALIBRATION_2026-10.md` section 3.3). In `test_09` the evidence says "approximately **7.61 billion** total parameters", the claim says "approximately **7.6 billion**". Ground truth is SUPPORTED. The judge got it right; DeBERTa called the faithful restatement a contradiction (probability 0.853), a risk of **0.857** at weight 0.5 and about 0.855 at 0.3. (The published 0.922 was computed with the swapped labels.)
 
 That is a genuine, reproducible NLI failure mode — numeric rounding paraphrase — and it has deliberately **not** been patched, because fixing from a single observed case is fitting to one data point.
 
@@ -380,7 +382,15 @@ Ten pages, grouped by what you are trying to do.
 
 Telemetry Lab → run `tool_mismatch`. Watch a `TOOL_CLAIM_MISMATCH` appear in Incidents, open the span in Replay, and show the claimed count next to the actual tool result. That is the whole system in one loop: real ingest, real model inference, real alert — nothing seeded directly into the database.
 
-The agent text in that scenario is a fixture, written as string literals in `backend/app/routers/ingest.py`. No model generates agent text anywhere in this project. Everything downstream of the text is real, which is what the loop demonstrates: evaluating text does not require producing it.
+The agent text in that scenario is a fixture, written as string literals in `backend/app/routers/ingest.py`. Everything downstream of the text is real, which is what the loop demonstrates: evaluating text does not require producing it. The live chat below is where models do write the agent text.
+
+### The live chat
+
+The RAG page's chat (`demo/chat_server.py`, the `chat` container on the public site) is the same journey with real model text. Each question runs three agents in turn, each one model call and one span: the **retriever** searches the local corpus with MiniLM and describes in its own words what it found (its span carries the real search result, so the tool-claim check has something to compare), the **verifier** says whether the evidence answers the question, and the **answerer** writes the reply from the evidence only. All three spans carry the retrieved documents as their input, so grounding scores each reply against them.
+
+The calls go down a chain of free providers (Groq, Cerebras, NVIDIA, OpenRouter, then Pollinations, which needs no key and is always last), moving on when one is rate limited, failing or too slow, inside a 120 s budget per question. The page streams each stage as it finishes, with the provider that answered and its time, and the worker scores the spans as it does any others. Per-visitor and daily limits and a kill switch keep the free quotas for the people the demo is for; `deploy/azure/README.md` ("The live chat") has the settings, the arithmetic and the commands.
+
+Two things to keep in mind when reading its numbers. When one provider answers a whole question (the usual case: the first one that is not at its limit), all three agents run the same model, so the disagreement signal compares a model with itself; the response names the model per agent. And a question's stage times include waiting for a provider's free-tier spacing, which the response reports separately (`waited_ms`).
 
 For drift, remember Section 4.4: you need 32 evaluated spans for that agent before `window_centroid_distance` exists.
 

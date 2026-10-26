@@ -192,7 +192,9 @@ function stat(s, x, y, w, value, label, color, sub) {
 /* ─ 4 · Cascade ───────────────────────────────────────────────────── */
 {
   const s = lightSlide();
-  head(s, 'The evaluator', 'A cheap gate in front of an expensive judge', false);
+  // Both models run on every span (evaluate_grounding has no branch between them), so the
+  // old "cheap gate" framing was removed on 2026-10-25.
+  head(s, 'The evaluator', 'Two small models on every span, no LLM judge', false);
 
   card(s, M, 1.9, 5.7, 2.5, 'FFFFFF');
   s.addText('Stage 1  ·  MiniLM-L6-v2', {
@@ -212,7 +214,7 @@ function stat(s, x, y, w, value, label, color, sub) {
     x: 7.25, y: 2.12, w: 5, h: 0.34, fontFace: B, fontSize: 15, bold: true,
     color: DARKTEXT, margin: 0,
   });
-  s.addText('Cross-encoder entailment, run only when the fast gate is not confident. Catches the subtle contradictions.', {
+  s.addText('Cross-encoder NLI on every span. Risk = contradiction + 0.3 x neutral; high above 0.7.', {
     x: 7.25, y: 2.52, w: 5, h: 0.75, fontFace: B, fontSize: 12.5, color: '5A6478', margin: 0,
   });
   s.addText('151.19 ms', {
@@ -231,10 +233,11 @@ function stat(s, x, y, w, value, label, color, sub) {
   s.addChart(pres.ChartType.bar, [{
     name: 'F1 score',
     labels: ['A · MiniLM only', 'B · DeBERTa only', 'C · Cascade', 'F · + drift signal', 'G · Full pipeline'],
-    values: [0.786, 0.963, 0.963, 0.619, 0.963],
+    // G: corrected-label re-score at the 0.5 weight it ran with (GROUNDING_RECALIBRATION_2026-10.md T8).
+    values: [0.786, 0.963, 0.963, 0.619, 0.897],
   }], {
     x: M, y: 4.95, w: 11.9, h: 2.05,
-    barDir: 'col', chartColors: ['3A4456', '2C3547', CYAN, BAD, CYAN],
+    barDir: 'col', chartColors: ['3A4456', '2C3547', CYAN, BAD, WARN],
     showValue: true, dataLabelPosition: 'outEnd', dataLabelFontSize: 11,
     dataLabelColor: DARKTEXT, dataLabelFormatCode: '0.000',
     showLegend: false, valAxisMaxVal: 1.1, valAxisHidden: true,
@@ -242,7 +245,7 @@ function stat(s, x, y, w, value, label, color, sub) {
     valGridLine: { style: 'none' }, catGridLine: { style: 'none' },
     barGapWidthPct: 55,
   });
-  s.addNotes('Point out two things on the chart. The cascade matches DeBERTa alone at 0.963 while being cheaper on the common case, which is the whole justification for a gate. And config F is deliberately shown: adding the old drift signal made the classifier worse, 0.619, and that result was published rather than dropped.');
+  s.addNotes('Point out three things on the chart. The cascade matches DeBERTa alone at 0.963; MiniLM adds about 19 ms and no F1, and both run on every span. G, the full pipeline, is 0.897 on corrected NLI labels at the 0.5 weight it ran with, not re-run at the shipped 0.3. And config F is deliberately shown: adding the old drift signal made the classifier worse, 0.619, and that result was published rather than dropped.');
 }
 
 /* ─ 5 · Four signals ──────────────────────────────────────────────── */
@@ -251,7 +254,7 @@ function stat(s, x, y, w, value, label, color, sub) {
   head(s, 'Capabilities', 'Four signals, and an honest maturity label on each', true);
 
   const rows = [
-    ['Grounding', 'Beta', OK, 'NLI cascade over retrieved premises. F1 0.963 on the held-out split.'],
+    ['Grounding', 'Beta', OK, 'NLI over the evidence. F1 0.963 on the 30-case test split (5 cases copy dev).'],
     ['Drift / ASI', 'Beta', OK, 'Sustained embedding shift. Rebuilt after it failed on real text; now AUC 0.991.'],
     ['Disagreement', 'Experimental', WARN, 'Cross-agent contradiction. Strong internally, 0 of 10 on external traces.'],
     ['Tool-claim', 'Experimental', WARN, 'Deterministic claim matching. Extracts nothing from agents that do not narrate.'],
@@ -474,8 +477,10 @@ function stat(s, x, y, w, value, label, color, sub) {
   head(s, 'Current state', 'What is real today', true);
 
   const left = [
-    ['209 / 209', 'Backend tests passing', OK],
-    ['20,700+', 'Spans ingested and stored', CYAN],
+    // Measured 2026-10-25 on main (pytest, vitest); 117 is the live site's evaluation count on
+    // 2026-10-22 (SESSION_HANDOFF.md 29.11.3). The old 20,700+ was a local database since deleted.
+    ['422 / 136', 'Backend / dashboard tests passing', OK],
+    ['117', 'Evaluations on the live site, 22 Oct', CYAN],
     ['5', 'Versioned evaluation datasets', CYAN],
   ];
   let y = 2.0;
