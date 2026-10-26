@@ -61,6 +61,10 @@ export function chatErrorTitle(code: string | undefined): string {
       return 'Providers at their limit';
     case 'provider_failed':
       return 'Provider failed';
+    case 'stream_ended':
+      return 'Connection dropped';
+    case 'aborted':
+      return 'Stopped';
     case 'budget_exceeded':
       return 'Turn ran out of time';
     case 'empty_message':
@@ -81,7 +85,7 @@ export function isRefusal(code: string | undefined): boolean {
 /** Codes for a failure that can pass by itself, where sending the same question again makes
  * sense: every provider busy or failing, the turn's time running out, a cold start, a cut
  * connection. Not the daily limits, a pause, or a question refused for its length. */
-const RETRYABLE = new Set(['providers_busy', 'provider_failed', 'budget_exceeded', 'busy', 'loading', 'stream_ended', 'internal']);
+const RETRYABLE = new Set(['providers_busy', 'provider_failed', 'budget_exceeded', 'busy', 'loading', 'stream_ended', 'aborted', 'internal']);
 
 /** True when the page should offer a Retry button. No response at all (the network failed or
  * the turn was aborted) is worth a retry too. */
@@ -149,7 +153,14 @@ export class RagApiClient {
     onEvent: (event: ChatStreamEvent) => void,
     signal?: AbortSignal,
   ): Promise<ChatResponse> {
-    const res = await this.post('/chat/stream', message, sessionId, signal);
+    let res: Response;
+    try {
+      res = await this.post('/chat/stream', message, sessionId, signal);
+    } catch (err) {
+      // Stopped before the service answered at all: nothing had started that the page knows of.
+      if (isAbort(err)) return { session_id: sessionId, agents: [], code: 'aborted', error: STOPPED_TEXT };
+      throw err;
+    }
     // Refusals (limits, pause, a bad question) come before the stream, as plain JSON.
     if (!res.ok) {
       const data = (await res.json().catch(() => ({}))) as Partial<ChatResponse>;
@@ -178,31 +189,44 @@ export class RagApiClient {
       onEvent(event);
     };
 
-    if (res.body && typeof res.body.getReader === 'function') {
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      for (;;) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        parser.push(decoder.decode(value, { stream: true })).forEach(handle);
-      }
-      parser.push(decoder.decode()).forEach(handle);
-    } else {
-      // No readable body in this environment: the events arrive all at once at the end.
-      parser.push(await res.text()).forEach(handle);
-    }
-    parser.flush().forEach(handle);
-
-    if (final) return final;
-    // The connection ended before the turn did. Report what had finished; never fill in the rest.
-    return {
+    // What the stream had reported so far, as a turn that ended early with this code and text.
+    // The trace id and the finished stages are real (their spans were sent), so they are kept;
+    // nothing that had not arrived is filled in.
+    const partial = (code: string, error: string): ChatResponse => ({
       session_id: sessionId,
       trace_id: traceId,
       agents,
       retrieved,
-      code: 'stream_ended',
-      error: 'The connection to the chat service closed before the turn finished.',
-    };
+      code,
+      error,
+    });
+
+    // The read loop. reader.read() rejects when the connection is cut mid-stream (a container
+    // restart, a crash, a mobile network blip) or when the visitor presses Cancel; either
+    // way the turn so far is reported, not thrown away with the browser's raw error text.
+    try {
+      if (res.body && typeof res.body.getReader === 'function') {
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        for (;;) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          parser.push(decoder.decode(value, { stream: true })).forEach(handle);
+        }
+        parser.push(decoder.decode()).forEach(handle);
+      } else {
+        // No readable body in this environment: the events arrive all at once at the end.
+        parser.push(await res.text()).forEach(handle);
+      }
+      parser.flush().forEach(handle);
+    } catch (err) {
+      if (final) return final;
+      return isAbort(err) ? partial('aborted', STOPPED_TEXT) : partial('stream_ended', DROPPED_TEXT);
+    }
+
+    if (final) return final;
+    // The stream closed cleanly but before the turn's last event.
+    return partial('stream_ended', DROPPED_TEXT);
   }
 
   private post(path: string, message: string, sessionId: string, signal?: AbortSignal): Promise<Response> {
@@ -214,6 +238,15 @@ export class RagApiClient {
       signal,
     });
   }
+}
+
+const DROPPED_TEXT =
+  'The connection dropped while the answer was being written. The stages that finished are shown, and their spans are in AgentPulse.';
+const STOPPED_TEXT = 'You stopped this turn. The stages that finished before that are shown.';
+
+/** True for the error fetch and a stream reader throw when the request's AbortSignal fires. */
+function isAbort(err: unknown): boolean {
+  return (err as { name?: string } | null)?.name === 'AbortError';
 }
 
 /** A failed or refused turn. The service answers errors with the partial turn it completed,
