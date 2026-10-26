@@ -55,7 +55,8 @@ export const FloatingDock: React.FC<FloatingDockProps> = ({
 
   const secondaryItems: { id: ProductTab; label: string; icon: React.FC<{ className?: string }> }[] = [
     { id: 'replay', label: 'Replay & Trace Time-Travel', icon: Play },
-    { id: 'experiments', label: 'Experiments (Braintrust/Langfuse)', icon: FlaskConical },
+    // The view lists result files; naming other products here read as an integration.
+    { id: 'experiments', label: 'Experiments (result files)', icon: FlaskConical },
     { id: 'datasets', label: 'Curated Golden Datasets', icon: Database },
     { id: 'telemetry-lab', label: 'Telemetry Lab & Live Simulator', icon: Cpu },
     { id: 'settings', label: 'Settings & Evaluators', icon: Settings },

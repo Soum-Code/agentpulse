@@ -10,12 +10,15 @@ answer in any order with any other test.
 """
 
 import logging
+import sys
+import types
 import zlib
 
 import numpy as np
+import pytest
 
 import app.services.grounding as grounding
-from demo.workflows.retrieval import LocalVectorIndex, ensure_embedding_model
+from demo.workflows.retrieval import EMBEDDING_MODEL, LocalVectorIndex, ensure_embedding_model
 
 QUERY = "transformer attention"
 
@@ -154,6 +157,7 @@ def test_a_stand_in_index_is_not_marked_built_and_is_rebuilt_once_the_model_load
 def test_the_embedding_model_is_loaded_only_when_it_is_not_loaded_yet(monkeypatch):
     loads = []
     monkeypatch.setattr(grounding, "load_models", lambda **kwargs: loads.append(kwargs))
+    monkeypatch.delenv("AGENTPULSE_MODEL_CACHE_DIR", raising=False)
 
     monkeypatch.setattr(grounding, "models_loaded", lambda: {"embedding_model": True})
     ensure_embedding_model()
@@ -162,4 +166,38 @@ def test_the_embedding_model_is_loaded_only_when_it_is_not_loaded_yet(monkeypatc
     # A second load in one process would leave torch tensors on the meta device, hence the guard.
     monkeypatch.setattr(grounding, "models_loaded", lambda: {"embedding_model": False})
     ensure_embedding_model()
-    assert loads == [{"use_onnx": False, "sync": True}]
+    assert loads == [{"use_onnx": False, "sync": True, "cache_dir": "./models"}]
+
+
+def test_the_model_cache_is_the_backends_setting(monkeypatch):
+    loads = []
+    monkeypatch.setattr(grounding, "load_models", lambda **kwargs: loads.append(kwargs))
+    monkeypatch.setattr(grounding, "models_loaded", lambda: {"embedding_model": False})
+    monkeypatch.setenv("AGENTPULSE_MODEL_CACHE_DIR", "/cache/models")
+    ensure_embedding_model()
+    assert loads[0]["cache_dir"] == "/cache/models"
+
+
+# The chat container's memory limit fits MiniLM and not the NLI model, so embedding_only must
+# never go through load_models (which loads both).
+def test_embedding_only_loads_minilm_and_not_the_nli_model(monkeypatch):
+    made = []
+
+    def fake_sentence_transformer(name, cache_folder):
+        made.append((name, cache_folder))
+        return "minilm"
+
+    monkeypatch.setitem(
+        sys.modules,
+        "sentence_transformers",
+        types.SimpleNamespace(SentenceTransformer=fake_sentence_transformer),
+    )
+    monkeypatch.setattr(grounding, "load_models", lambda **kwargs: pytest.fail("NLI model loaded"))
+    monkeypatch.setattr(grounding, "models_loaded", lambda: {"embedding_model": False})
+    monkeypatch.setattr(grounding, "_embedding_model", None)
+    monkeypatch.setenv("AGENTPULSE_MODEL_CACHE_DIR", "/cache/models")
+
+    ensure_embedding_model(embedding_only=True)
+
+    assert made == [(EMBEDDING_MODEL, "/cache/models")]
+    assert grounding._embedding_model == "minilm"

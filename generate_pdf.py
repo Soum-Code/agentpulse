@@ -71,28 +71,34 @@ def generate_charts():
     plt.savefig(p1, bbox_inches='tight')
     plt.close()
 
-    # Chart 2: Baselines Comparison
+    # Chart 2: Ablation on v1.0_test (30 cases).
+    # In short: configs A-F are experiments/results/ablation_results.json (run of 2026-09-18).
+    # G is the corrected-label re-score from GROUNDING_RECALIBRATION_2026-10.md T8 (the file
+    # records 0.929 / 1.000 / 0.963, computed with DeBERTa's entailment and neutral swapped).
+    # This replaces a 2026-08-18 comparison on an earlier 20-case test file, which predates the
+    # grounding-score fixes and was never re-run.
     fig, ax = plt.subplots(figsize=(6.2, 1.8), dpi=300)
-    baselines = ['Baseline A\n(No Monitoring)', 'Baseline B\n(25% Sampled)', 'Baseline C\n(Cosine Only)', 'Baseline D\n(NLI Only)', 'AgentPulse\n(Full Cascade)']
-    precision = [1.000, 0.750, 0.833, 0.889, 0.727]
-    recall =    [0.125, 0.750, 0.625, 1.000, 1.000]
-    f1 =        [0.222, 0.750, 0.714, 0.941, 0.842]
+    baselines = ['A\nMiniLM only', 'B\nDeBERTa only', 'C\nCascade', 'D\n+ tool', 'E\n+ disagree', 'F\n+ drift', 'G\nFull pipeline*']
+    precision = [0.733, 0.929, 0.929, 0.929, 0.929, 0.448, 0.812]
+    recall =    [0.846, 1.000, 1.000, 1.000, 1.000, 1.000, 1.000]
+    f1 =        [0.786, 0.963, 0.963, 0.963, 0.963, 0.619, 0.897]
 
     x = np.arange(len(baselines))
     width = 0.24
 
     ax.bar(x - width, precision, width, label='Precision', color='#6366F1', edgecolor='#4338CA', alpha=0.9)
-    ax.bar(x, recall, width, label='Recall (0% Missed Errors)', color='#10B981', edgecolor='#047857', alpha=0.9)
+    ax.bar(x, recall, width, label='Recall', color='#10B981', edgecolor='#047857', alpha=0.9)
     ax.bar(x + width, f1, width, label='F1-Score', color='#2563EB', edgecolor='#1D4ED8', alpha=0.9)
 
     ax.set_ylabel('Score (0 - 1.0)', fontweight='bold', fontsize=7.5)
-    ax.set_title('Detection Quality vs. Industry Baselines (v1.0_test)', fontweight='bold', fontsize=8.5, pad=6)
+    ax.set_title('Ablation on v1.0_test, 30 cases (* G: corrected NLI labels, weight 0.5)', fontweight='bold', fontsize=8.5, pad=6)
     ax.set_xticks(x)
-    ax.set_xticklabels(baselines, fontsize=7, fontweight='bold')
-    ax.set_ylim(0, 1.18)
+    ax.set_xticklabels(baselines, fontsize=6.5, fontweight='bold')
+    # Head-room above 1.0 so the legend sits clear of the bars.
+    ax.set_ylim(0, 1.38)
     ax.tick_params(axis='y', labelsize=7)
     ax.grid(axis='y', linestyle='--', alpha=0.3)
-    ax.legend(loc='upper left', fontsize=7, framealpha=0.92)
+    ax.legend(loc='upper center', ncol=3, fontsize=7, framealpha=0.92)
 
     p2 = os.path.join(CHARTS_DIR, "chart_baselines.png")
     plt.savefig(p2, bbox_inches='tight')
@@ -307,8 +313,10 @@ def build_pdf(filename="PROJECT_REPORT.pdf"):
         ],
         [
             Paragraph("<b>Reasoning Strategies:</b> Direct, CoT, AoT", meta_style),
-            Paragraph("<b>Inter-Annotator Agreement:</b> kappa = 0.922 (High Reliability)", meta_style),
-            Paragraph("<b>Automated Test Suite:</b> <font color='#10B981'><b>92 / 92 Passed (100% Pass Rate)</b></font>", meta_style)
+            # In short: kappa is between two LLM-as-judge passes on 50 cases, not human annotators
+            # (LABEL_AGREEMENT_REPORT.md). Test counts were run on main at 2fefb91 on 2026-10-25.
+            Paragraph("<b>Label Agreement:</b> kappa = 0.922 (two LLM-judge passes, 50 cases)", meta_style),
+            Paragraph("<b>Tests (25 Oct 2026):</b> <font color='#10B981'><b>422 backend + 136 dashboard passed</b></font>", meta_style)
         ]
     ]
     meta_table = Table(meta_data, colWidths=[180, 180, 180])
@@ -354,18 +362,18 @@ def build_pdf(filename="PROJECT_REPORT.pdf"):
 
     story.append(Paragraph("2. System Architecture & Core Product Capabilities", h1_style))
     story.append(Paragraph(
-        "AgentPulse provides an end-to-end local observability platform comprising an ultra-lightweight client SDK, a high-throughput FastAPI/SQLite backend, a local neural evaluation cascade, deterministic tool verification, a 4-signal temporal drift engine, and a React control plane.",
+        "AgentPulse is a self-hosted observability prototype (version 0.1.0): a lightweight client SDK, a FastAPI/SQLite backend with a durable job queue, a separate worker that runs two small local models on every span, a regex tool-claim check, a drift detector, and a React dashboard. One worker evaluated 3.9 spans/s on a 16-thread development machine (experiments/results/throughput_benchmark.json).",
         body_style
     ))
 
     arch_points = [
         [
             Paragraph("<b>• Fail-Open Async SDK:</b> Non-blocking memory buffer with node wrapper overhead of <b>0.005 ms (P50)</b> and a synthetic in-memory enqueue loop of 5.4M spans/sec (not network throughput).", body_style),
-            Paragraph("<b>• Deterministic Tool Validator:</b> RegEx entity extraction matching counts/names vs actual tool logs in <b>0.07 ms</b> (mean over 19 benchmark cases).", body_style)
+            Paragraph("<b>• Tool-Claim Check:</b> regex extraction of stated counts vs the tool's recorded result, <b>0.07 ms</b> per call, F1 0.842 on 19 hand-written cases but <b>F1 0.000 on real agent traces</b> (TOOL_CLAIM_EXTERNAL_TEST_REPORT.md).", body_style)
         ],
         [
-            Paragraph("<b>• Two-Stage Evaluation Cascade:</b> <code>all-MiniLM-L6-v2</code> (~13 ms) + <code>nli-deberta-v3-small</code> (~70 ms) running locally with 0 API cost.", body_style),
-            Paragraph("<b>• 4-Signal Drift & ASI Engine:</b> Continuous 0–100 Agent Stability Index tracking semantic drift, tool entropy, and error rates.", body_style)
+            Paragraph("<b>• Two Local Models, Every Span:</b> <code>all-MiniLM-L6-v2</code> (~13 ms) and <code>nli-deberta-v3-small</code> (~70 ms; latency profile of 2026-08-18) both run on every span, with no LLM judge and no API cost.", body_style),
+            Paragraph("<b>• Drift:</b> DRIFT_DETECTED when the mean embedding of an agent's latest 12 outputs is more than 0.30 (cosine) from the mean of its first 20; an Agent Stability Index (0-100) is kept beside it.", body_style)
         ]
     ]
     arch_table = Table(arch_points, colWidths=[270, 270])
@@ -383,10 +391,15 @@ def build_pdf(filename="PROJECT_REPORT.pdf"):
     # =============================================================
     # PAGE 2: MATHEMATICAL FORMULATION, LATENCY & REASONING STRATEGIES
     # =============================================================
+    # In short: section 3 states the risk formula exactly as _aggregate_risk computes it (grounding and
+    # tool-claim only) and the shipped weight-0.3 figures from GROUNDING_RECALIBRATION_2026-10.md.
     story.append(Paragraph("3. Mathematical Formulation & Latency Profiling", h1_style))
     story.append(Paragraph(
         "<b>Composite Grounding Risk Score Formulation:</b> For span <i>s</i> with input context <i>C<sub>in</sub></i>, output <i>O<sub>out</sub></i>, and tool records <i>T</i>:<br/>"
-        "&nbsp;&nbsp;&nbsp;&nbsp;<b>R(s) = 0.40 * P<sub>contradiction</sub>(C<sub>in</sub>, O<sub>out</sub>) + 0.25 * R<sub>tool</sub>(T, O<sub>out</sub>) + 0.20 * R<sub>disagree</sub> + 0.15 * (1 - sim(C<sub>in</sub>, O<sub>out</sub>))</b>",
+        "&nbsp;&nbsp;&nbsp;&nbsp;<b>R(s) = [0.40 * G(C<sub>in</sub>, O<sub>out</sub>) + 0.25 * R<sub>tool</sub>(T, O<sub>out</sub>)] / (sum of the weights of the signals present)</b>,&nbsp; "
+        "<b>G = P<sub>contradiction</sub> + 0.3 * P<sub>neutral</sub></b><br/>"
+        "The tool term counts only when a claim was extracted. High risk above 0.7, medium above 0.4. The disagreement score (weight 0.20 declared) and the similarity (0.15) are stored but not summed (<code>backend/app/services/evaluator.py</code> <code>_aggregate_risk</code>). "
+        "Shipped grounding score on the 30-case test split: F1 0.963, FPR 0.059 at both cut-offs; on the 47 truly held-out cases F1 0.927 (0.7) / 0.952 (0.4), FPR 0.074 (GROUNDING_RECALIBRATION_2026-10.md T3c, T3d). 5 of the 30 test cases copy dev cases; the 0.3 weight is a design choice.",
         body_style
     ))
     
@@ -403,9 +416,9 @@ def build_pdf(filename="PROJECT_REPORT.pdf"):
         [Paragraph("7. SDK In-Memory Enqueue", table_cell), Paragraph("0.025 ms", table_cell), Paragraph("0.016 ms", table_cell), Paragraph("0.032 ms", table_cell), Paragraph("0.037 ms", table_cell), Paragraph("Thread-safe deque append", table_cell)],
         [Paragraph("8. HTTP Ingestion Overhead", table_cell), Paragraph("n/m", table_cell), Paragraph("n/m", table_cell), Paragraph("n/m", table_cell), Paragraph("n/m", table_cell), Paragraph("Random number in the script; no HTTP request sent", table_cell)],
         [Paragraph("9. Evaluation Worker Dispatch", table_cell), Paragraph("n/m", table_cell), Paragraph("n/m", table_cell), Paragraph("n/m", table_cell), Paragraph("n/m", table_cell), Paragraph("Random number in the script; nothing dispatched", table_cell)],
-        [Paragraph("<b>10. MiniLM Embedding Inference</b>", table_cell_bold), Paragraph("<b>13.33 ms</b>", table_cell_bold), Paragraph("<b>12.81 ms</b>", table_cell_bold), Paragraph("<b>14.95 ms</b>", table_cell_bold), Paragraph("1.483 ms", table_cell), Paragraph("<b>Stage 1 bi-encoder triage</b>", table_cell_bold)],
-        [Paragraph("<b>11. DeBERTa NLI Cross-Encoder</b>", table_cell_bold), Paragraph("<b>70.82 ms</b>", table_cell_bold), Paragraph("<b>66.92 ms</b>", table_cell_bold), Paragraph("<b>71.88 ms</b>", table_cell_bold), Paragraph("21.46 ms", table_cell), Paragraph("<b>Stage 2 contradiction verification</b>", table_cell_bold)],
-        [Paragraph("<b>12. Full Evaluation Cascade</b>", table_cell_bold), Paragraph("<b>90.81 ms</b>", table_cell_bold), Paragraph("<b>90.96 ms</b>", table_cell_bold), Paragraph("<b>97.79 ms</b>", table_cell_bold), Paragraph("4.339 ms", table_cell), Paragraph("<b>Total Stage 1 + Stage 2 + Tool</b>", table_cell_bold)],
+        [Paragraph("<b>10. MiniLM Embedding Inference</b>", table_cell_bold), Paragraph("<b>13.33 ms</b>", table_cell_bold), Paragraph("<b>12.81 ms</b>", table_cell_bold), Paragraph("<b>14.95 ms</b>", table_cell_bold), Paragraph("1.483 ms", table_cell), Paragraph("<b>Embedding similarity, every span</b>", table_cell_bold)],
+        [Paragraph("<b>11. DeBERTa NLI Cross-Encoder</b>", table_cell_bold), Paragraph("<b>70.82 ms</b>", table_cell_bold), Paragraph("<b>66.92 ms</b>", table_cell_bold), Paragraph("<b>71.88 ms</b>", table_cell_bold), Paragraph("21.46 ms", table_cell), Paragraph("<b>NLI classification, every span</b>", table_cell_bold)],
+        [Paragraph("<b>12. Full Evaluation Cascade</b>", table_cell_bold), Paragraph("<b>90.81 ms</b>", table_cell_bold), Paragraph("<b>90.96 ms</b>", table_cell_bold), Paragraph("<b>97.79 ms</b>", table_cell_bold), Paragraph("4.339 ms", table_cell), Paragraph("<b>MiniLM + DeBERTa + tool check</b>", table_cell_bold)],
         [Paragraph("<b>13. Entire Multi-Agent DAG</b>", table_cell_bold), Paragraph("n/m", table_cell_bold), Paragraph("n/m", table_cell_bold), Paragraph("n/m", table_cell_bold), Paragraph("n/m", table_cell), Paragraph("Computed from layers 2, 6 and 12, not timed", table_cell)]
     ]
     lat_table = Table(latency_rows, colWidths=[126, 48, 48, 48, 50, 220])
@@ -456,9 +469,11 @@ def build_pdf(filename="PROJECT_REPORT.pdf"):
     # =============================================================
     # PAGE 3: BASELINES & COMPOUNDING ERROR MITIGATION
     # =============================================================
-    story.append(Paragraph("5. Baselines Comparison & Architectural Ablation", h1_style))
+    story.append(Paragraph("5. Architectural Ablation", h1_style))
     story.append(Paragraph(
-        "Benchmarked on the standardized 20-case test split (<code>v1.0_test</code>) against common production monitoring architectures:",
+        "Seven configurations on <code>v1.0_test</code> (30 cases; thresholds chosen on the 21-case dev split and applied unchanged), run of 2026-09-18 on the PyTorch path (<code>experiments/results/ablation_results.json</code>). "
+        "Configuration G is shown re-scored on corrected NLI labels at the 0.5 weight it ran with (GROUNDING_RECALIBRATION_2026-10.md T8); it has not been re-run at the shipped 0.3. "
+        "An earlier comparison against four baselines (2026-08-18, a 20-case test file) predates the grounding-score fixes and was not re-run, so it is no longer shown.",
         body_style
     ))
 
@@ -469,13 +484,16 @@ def build_pdf(filename="PROJECT_REPORT.pdf"):
 
     bl_rows = [
         [Paragraph("System / Configuration", table_cell_header), Paragraph("Precision", table_cell_header), Paragraph("Recall", table_cell_header), Paragraph("F1-Score", table_cell_header), Paragraph("FPR", table_cell_header), Paragraph("FNR", table_cell_header), Paragraph("Latency", table_cell_header), Paragraph("Key Trade-off", table_cell_header)],
-        [Paragraph("Baseline A: No Monitoring", table_cell), Paragraph("1.000", table_cell), Paragraph("0.125", table_cell), Paragraph("0.222", table_cell), Paragraph("0.000", table_cell), Paragraph("0.875", table_cell), Paragraph("0.00 ms", table_cell), Paragraph("Misses 87.5% of hallucinations.", table_cell)],
-        [Paragraph("Baseline B: 25% Sampled", table_cell), Paragraph("0.750", table_cell), Paragraph("0.750", table_cell), Paragraph("0.750", table_cell), Paragraph("0.167", table_cell), Paragraph("0.250", table_cell), Paragraph("53.18 ms", table_cell), Paragraph("Misses 1 in 4 outages silently.", table_cell)],
-        [Paragraph("Baseline C: Cosine Embedding", table_cell), Paragraph("0.833", table_cell), Paragraph("0.625", table_cell), Paragraph("0.714", table_cell), Paragraph("0.083", table_cell), Paragraph("0.375", table_cell), Paragraph("15.09 ms", table_cell), Paragraph("Cannot detect subtle numerical/logic errors.", table_cell)],
-        [Paragraph("Baseline D: Raw NLI Only", table_cell), Paragraph("0.889", table_cell), Paragraph("1.000", table_cell), Paragraph("0.941", table_cell), Paragraph("0.083", table_cell), Paragraph("0.000", table_cell), Paragraph("72.60 ms", table_cell), Paragraph("No tool-claim or multi-span drift tracking.", table_cell)],
-        [Paragraph("<b>AgentPulse (Full Cascade)</b>", table_cell_bold), Paragraph("<b>0.727</b>", table_cell_bold), Paragraph("<b>1.000</b>", table_cell_bold), Paragraph("<b>0.842</b>", table_cell_bold), Paragraph("0.250", table_cell), Paragraph("<b>0.000</b>", table_cell_bold), Paragraph("<b>101.54 ms</b>", table_cell_bold), Paragraph("<b>100% Recall (0% missed errors) + Tool + Drift.</b>", table_cell_bold)]
+        # In short: one row per ablation configuration, values from ablation_results.json except G.
+        [Paragraph("A: MiniLM embedding only", table_cell), Paragraph("0.733", table_cell), Paragraph("0.846", table_cell), Paragraph("0.786", table_cell), Paragraph("0.235", table_cell), Paragraph("0.154", table_cell), Paragraph("19.10 ms", table_cell), Paragraph("Similarity alone misses contradictions.", table_cell)],
+        [Paragraph("B: DeBERTa NLI only", table_cell), Paragraph("0.929", table_cell), Paragraph("1.000", table_cell), Paragraph("0.963", table_cell), Paragraph("0.059", table_cell), Paragraph("0.000", table_cell), Paragraph("132.09 ms", table_cell), Paragraph("The signal that does the work.", table_cell)],
+        [Paragraph("<b>C: MiniLM + DeBERTa (shipped)</b>", table_cell_bold), Paragraph("<b>0.929</b>", table_cell_bold), Paragraph("<b>1.000</b>", table_cell_bold), Paragraph("<b>0.963</b>", table_cell_bold), Paragraph("0.059", table_cell), Paragraph("0.000", table_cell), Paragraph("<b>151.19 ms</b>", table_cell_bold), Paragraph("Both models on every span; MiniLM adds no F1.", table_cell)],
+        [Paragraph("D: NLI + tool-claim", table_cell), Paragraph("0.929", table_cell), Paragraph("1.000", table_cell), Paragraph("0.963", table_cell), Paragraph("0.059", table_cell), Paragraph("0.000", table_cell), Paragraph("132.13 ms", table_cell), Paragraph("Single-agent cases cannot exercise it.", table_cell)],
+        [Paragraph("E: NLI + disagreement", table_cell), Paragraph("0.929", table_cell), Paragraph("1.000", table_cell), Paragraph("0.963", table_cell), Paragraph("0.059", table_cell), Paragraph("0.000", table_cell), Paragraph("281.02 ms", table_cell), Paragraph("Same; 0 of 10 on real multi-agent traces.", table_cell)],
+        [Paragraph("F: NLI + drift", table_cell), Paragraph("0.448", table_cell), Paragraph("1.000", table_cell), Paragraph("0.619", table_cell), Paragraph("0.941", table_cell), Paragraph("0.000", table_cell), Paragraph("145.58 ms", table_cell), Paragraph("Cold-start drift on non-temporal data.", table_cell)],
+        [Paragraph("G: Full pipeline*", table_cell), Paragraph("0.812", table_cell), Paragraph("1.000", table_cell), Paragraph("0.897", table_cell), Paragraph("0.176", table_cell), Paragraph("0.000", table_cell), Paragraph("165.18 ms", table_cell), Paragraph("*Corrected labels, weight 0.5; file says 0.963.", table_cell)]
     ]
-    bl_table = Table(bl_rows, colWidths=[115, 42, 42, 42, 36, 36, 50, 177])
+    bl_table = Table(bl_rows, colWidths=[125, 42, 42, 42, 36, 36, 50, 167])
     bl_table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), primary_color),
         ('GRID', (0, 0), (-1, -1), 0.5, border_color),
@@ -490,7 +508,9 @@ def build_pdf(filename="PROJECT_REPORT.pdf"):
 
     story.append(Paragraph("6. 5-Node Compounding Error: Control vs. Active Intervention", h1_style))
     story.append(Paragraph(
-        "Evaluated on a 5-node pipeline (<code>Planner -&gt; Retriever -&gt; Verifier -&gt; Analyst -&gt; Writer</code>) with an ungrounded assertion injected at Node B:",
+        "Evaluated on a 5-node pipeline (<code>Planner -&gt; Retriever -&gt; Verifier -&gt; Analyst -&gt; Writer</code>) with an ungrounded assertion injected at Node B. "
+        "Risks are the corrected-label re-run at weight 0.5 (<code>experiments/results/grounding_recalibration_2026-10-22_compounding.json</code>); the contradiction probabilities in the chart do not depend on the label order. "
+        "At the shipped weight 0.3 the intervening nodes C-E score about 0.30 (low), Node A 0.006 (derived from the stored probabilities, not re-run):",
         body_style
     ))
 
@@ -499,13 +519,15 @@ def build_pdf(filename="PROJECT_REPORT.pdf"):
         story.append(Image(cp_img, width=510, height=148))
         story.append(Spacer(1, 2))
 
+    # In short: risks are the corrected-label re-run at weight 0.5; the contradiction probabilities
+    # (second number) do not depend on the label order. The old 0.989 for Node A came from the swapped labels.
     cp_rows = [
         [Paragraph("Pipeline Node", table_cell_header), Paragraph("Condition A: Control (Risk / Contra Prob)", table_cell_header), Paragraph("Condition B: Active Intervention (Risk / Contra Prob)", table_cell_header), Paragraph("Operational Outcome", table_cell_header)],
-        [Paragraph("Node A (Planner)", table_cell), Paragraph("0.989 / 0.002", table_cell), Paragraph("0.989 / 0.002", table_cell), Paragraph("Normal initial query generation.", table_cell)],
+        [Paragraph("Node A (Planner)", table_cell), Paragraph("0.008 / 0.002", table_cell), Paragraph("0.008 / 0.002", table_cell), Paragraph("Premise compared with itself: entailment 0.9865.", table_cell)],
         [Paragraph("<b>Node B (Retriever - Fault)</b>", table_cell_bold), Paragraph("<font color='#DC2626'><b>1.000 / 1.000 (Fault Injected)</b></font>", table_cell), Paragraph("<font color='#DC2626'><b>1.000 / 1.000 (Fault Injected)</b></font>", table_cell), Paragraph("Fabricated citation injected into stream.", table_cell)],
-        [Paragraph("<b>Node C (Verifier)</b>", table_cell_bold), Paragraph("<font color='#DC2626'>0.992 / 0.992 (Propagated)</font>", table_cell), Paragraph("<font color='#047857'><b>0.009 / 0.009 (Caught & Mitigated)</b></font>", table_cell_bold), Paragraph("<b>AgentPulse flags contradiction; halts propagation.</b>", table_cell_bold)],
-        [Paragraph("Node D (Analyst)", table_cell), Paragraph("<font color='#DC2626'>0.992 / 0.992 (Corrupted)</font>", table_cell), Paragraph("<font color='#047857'><b>0.001 / 0.000 (Fully Grounded)</b></font>", table_cell), Paragraph("Downstream synthesis protected.", table_cell)],
-        [Paragraph("Node E (Writer)", table_cell), Paragraph("<font color='#DC2626'>0.992 / 0.992 (Corrupted)</font>", table_cell), Paragraph("<font color='#047857'><b>0.001 / 0.000 (Fully Grounded)</b></font>", table_cell), Paragraph("Final report generated with verified factual basis.", table_cell)]
+        [Paragraph("<b>Node C (Verifier)</b>", table_cell_bold), Paragraph("<font color='#DC2626'>0.996 / 0.992 (Propagated)</font>", table_cell), Paragraph("<font color='#B45309'><b>0.504 / 0.009 (Contradiction stopped)</b></font>", table_cell_bold), Paragraph("<b>Contradiction no longer propagates; output is neutral, not entailed.</b>", table_cell_bold)],
+        [Paragraph("Node D (Analyst)", table_cell), Paragraph("<font color='#DC2626'>0.996 / 0.992 (Corrupted)</font>", table_cell), Paragraph("<font color='#B45309'><b>0.500 / 0.000 (Neutral)</b></font>", table_cell), Paragraph("Medium at weight 0.5; about 0.30 (low) at 0.3.", table_cell)],
+        [Paragraph("Node E (Writer)", table_cell), Paragraph("<font color='#DC2626'>0.996 / 0.992 (Corrupted)</font>", table_cell), Paragraph("<font color='#B45309'><b>0.500 / 0.000 (Neutral)</b></font>", table_cell), Paragraph("Medium at weight 0.5; about 0.30 (low) at 0.3.", table_cell)]
     ]
     cp_table = Table(cp_rows, colWidths=[115, 140, 140, 145])
     cp_table.setStyle(TableStyle([
@@ -525,9 +547,12 @@ def build_pdf(filename="PROJECT_REPORT.pdf"):
     # =============================================================
     # PAGE 4: DRIFT BENCHMARK, TEST SUITE & VIVA DEFENSE
     # =============================================================
+    # In short: the synthetic drift benchmark, reported with its 2-of-5 detection and the untested
+    # 0.30 path, followed by the real-text result of the shipped window-mean rule.
     story.append(Paragraph("7. Graded Drift Benchmark with Negative Controls", h1_style))
     story.append(Paragraph(
-        "AgentPulse monitors temporal degradation across 11 scenarios with positive perturbations and negative controls to guarantee zero false alerting on normal operations:",
+        "11 synthetic scenarios with graded shifts and negative controls (<code>experiments/drift_scenarios.py</code>, the per-output distance used in August). 2 of 5 anomalies were detected and 0 of 6 non-anomalies raised an alert, but no scenario reached the 0.30 centroid threshold, so that path was untested (DRIFT_EXPERIMENT_REPORT.md). "
+        "The shipped rule now compares window means (first 20 vs latest 12 outputs): offline on a held-out real-trace split, measured once, 1.5% false alarms and 91.9% detection, with only 24.5% of sessions long enough to report (DRIFT_REAL_TEXT_DIAGNOSIS_REPORT.md 11.3):",
         body_style
     ))
 
@@ -558,18 +583,20 @@ def build_pdf(filename="PROJECT_REPORT.pdf"):
     story.append(drift_table)
     story.append(Spacer(1, 4))
 
-    story.append(Paragraph("8. Human Annotation Reliability & 9. Test Suite Verification", h1_style))
+    story.append(Paragraph("8. Label Agreement & 9. Test Suite", h1_style))
     
+    # In short: label agreement is between two LLM-judge passes (not humans); test counts are the
+    # ones measured on main on 2026-10-25, replacing the old "92 / 92".
     val_data = [
         [
-            Paragraph("<b>Human Annotation Reliability:</b><br/>"
-                      "• <b>Dataset Splits:</b> <code>v1.0_dev</code> (15), <code>v1.0_val</code> (15), <code>v1.0_test</code> (20).<br/>"
+            Paragraph("<b>Label agreement (two LLM-as-judge passes, not human annotators):</b><br/>"
+                      "• <b>Dual-evaluated cases:</b> <code>v1.0_dev</code> 15, <code>v1.0_val</code> 15, <code>v1.0_test</code> 20 (full splits 21 / 22 / 30; 5 test cases copy dev cases).<br/>"
                       "• <b>Observed Agreement (p<sub>o</sub>):</b> 0.960 &nbsp;|&nbsp; <b>Chance Agreement (p<sub>e</sub>):</b> 0.490<br/>"
-                      "• <b>Cohen's Kappa (kappa):</b> <b>0.922</b> (Near-perfect labeling consistency across domain sets).", body_style),
-            Paragraph("<b>Automated Test Suite Status:</b><br/>"
-                      "• <b>Total Tests Executed:</b> <b>92 Unit & Integration Tests</b><br/>"
-                      "• <b>Pass Rate:</b> <font color='#10B981'><b>100% Passed (92/92 in 1.78s)</b></font><br/>"
-                      "• <b>Coverage:</b> SDK non-blocking queue, LangGraph adapter, NLI cascade, regex validator, token-bucket alerting, SQLite WAL.", body_style)
+                      "• <b>Cohen's Kappa:</b> <b>0.922</b> between two LLM passes; not human-verified ground truth (LABEL_AGREEMENT_REPORT.md).", body_style),
+            Paragraph("<b>Automated tests, run on 25 Oct 2026 (main at 2fefb91):</b><br/>"
+                      "• <b>Backend:</b> <font color='#10B981'><b>422 passed</b></font> (<code>pytest tests/</code>, 335.91 s, real models loaded)<br/>"
+                      "• <b>Dashboard:</b> <font color='#10B981'><b>136 passed</b></font> in 13 files (<code>npx vitest run</code>)<br/>"
+                      "• <b>Coverage:</b> SDK queue and decorators, ingest, durable job queue and crash recovery, NLI grounding, tool-claim, drift, alerting, migrations, retention, dashboard adapters.", body_style)
         ]
     ]
     val_table = Table(val_data, colWidths=[270, 270])
@@ -587,15 +614,17 @@ def build_pdf(filename="PROJECT_REPORT.pdf"):
 
     story.append(Paragraph("10. Examiner Hostile Review & Viva Defense Summary", h1_style))
 
+    # In short: four likely examiner questions with answers that match the measured results,
+    # including the negative ones (tool-claim F1 0.000, disagreement 0 of 10).
     viva_qa = [
         [Paragraph("<b>Q1: What exactly did your latency timers measure?</b><br/>"
                    "<b>Defense:</b> We profiled 13 layers (<code>experiments/latency_profiler.py</code>); layers 8, 9 and 13 are not measurements (two random numbers and a sum, marked n/m) and layers 4 and 5 time small stand-ins. String templating took &lt;0.002 ms, the SDK decorator added 0.005 ms (P50, 2,000 calls, <code>benchmarks/run_benchmarks.py</code>), local MiniLM forward pass took 12.8 ms (P50), and DeBERTa NLI took 66.9 ms (P50). We distinguish between in-memory queue append (0.016 ms) and neural model inference.", callout_style)],
-        [Paragraph("<b>Q2: Why did Baseline D (Raw NLI) achieve high recall?</b><br/>"
-                   "<b>Defense:</b> Baseline D runs heavy DeBERTa cross-encoder inference indiscriminately on every span. AgentPulse matches 100% recall (0.000 FNR) while adding deterministic tool mismatch detection (0.07 ms) and 4-signal drift tracking without requiring external API dependencies.", callout_style)],
+        [Paragraph("<b>Q2: Do the extra signals beat NLI alone?</b><br/>"
+                   "<b>Answer:</b> No, not on this data. On the 30-case test split, tool-claim (D) and disagreement (E) tie with NLI alone (B) because single-agent cases cannot exercise them, drift folded into the score (F) is worse (F1 0.619), and the full pipeline (G) is 0.897 on corrected labels. On real traces tool-claim scored F1 0.000 and disagreement found 0 of 10 labelled contradictions; its alert is withdrawn. Grounding and drift are the signals that held up.", callout_style)],
         [Paragraph("<b>Q3: Does Atom of Thoughts (AoT) actually improve factual grounding?</b><br/>"
                    "<b>Defense:</b> Not shown. On Qwen3-8B Q4_K_M (30 cases x 5 runs), AoT produced about 8.5x DIRECT's output tokens (319.7 vs 37.5) and took 85.2 s per execution against 11.6 s. It had the lowest mean grounding risk (0.233, against 0.283 for CoT and 0.424 for DIRECT) and no contradictions in 150 runs, but the spread between strategy means (0.191) is smaller than the within-strategy standard deviation (0.377), so the risk ordering is inconclusive. The zero-contradiction result is the part the data supports.", callout_style)],
         [Paragraph("<b>Q4: How does AgentPulse prevent false alerts on benign phrasing shifts?</b><br/>"
-                   "<b>Defense:</b> Evaluated across negative controls (<code>experiments/drift_scenarios.py</code>). Legitimate paraphrasings produced centroid shifts &lt;= 0.15, well below the calibrated alert threshold of 0.30, resulting in <b>0 false drift alerts</b>.", callout_style)]
+                   "<b>Answer:</b> In the synthetic scenarios the three negative controls measured centroid distances of 0.000 to 0.002 and raised 0 alerts; the 0.30 threshold was not tuned, and no scenario reached it, so 3 of 5 real anomalies were missed. On real agent text the shipped window-mean rule gave 1.5% false alarms on a held-out split, but only on the 24.5% of sessions long enough to report (DRIFT_REAL_TEXT_DIAGNOSIS_REPORT.md).", callout_style)]
     ]
     viva_table = Table(viva_qa, colWidths=[540])
     viva_table.setStyle(TableStyle([

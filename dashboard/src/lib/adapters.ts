@@ -36,8 +36,9 @@ export interface DriftEntry {
   baseline_size?: number;
 }
 
-// Matches AGENTPULSE_DRIFT_THRESHOLD in backend/app/config.py.
-const DRIFT_THRESHOLD = 0.3;
+// Matches AGENTPULSE_DRIFT_THRESHOLD in backend/app/config.py. Exported so the Agents and
+// Drift views colour and explain a distance against the same number the alert uses.
+export const DRIFT_THRESHOLD = 0.3;
 
 function agentStatus(agent: ApiAgent, drift?: DriftEntry): AgentStatus {
   const window = drift?.latest_window_centroid_distance;
@@ -47,6 +48,19 @@ function agentStatus(agent: ApiAgent, drift?: DriftEntry): AgentStatus {
   const asi = drift?.current_asi ?? agent.current_asi;
   if (asi != null && asi < 80) return 'warning';
   return 'idle';
+}
+
+// How many of the agent's spans the drift detector had seen, the latest included. baseline_size
+// is the count before the latest record, hence + 1. GET /v1/drift answers baseline_size 0 with
+// both distances null for an agent that has no drift record at all: that is unknown, not 1.
+// The count includes spans with no output text, which add nothing to the embedding pools, so
+// "20 or more" means the baseline should be full, not that it certainly is.
+function driftSpansSeen(d?: DriftEntry): number | undefined {
+  if (!d || d.baseline_size == null) return undefined;
+  if (d.baseline_size === 0 && d.latest_centroid_distance == null && d.latest_window_centroid_distance == null) {
+    return undefined;
+  }
+  return d.baseline_size + 1;
 }
 
 export function toAgents(apiAgents: ApiAgent[], drift: DriftEntry[]): Agent[] {
@@ -61,8 +75,10 @@ export function toAgents(apiAgents: ApiAgent[], drift: DriftEntry[]): Agent[] {
       description: a.agent_role ?? undefined,
       status: agentStatus(a, d),
       latencyAvgMs: a.avg_latency_ms ?? undefined,
-      // Percentage: the roster compares this against 90 and appends '%'.
-      successRate: (1 - a.error_rate) * 100,
+      // Percentage: the roster compares this against 90 and appends '%'. Rounded to one
+      // decimal here, because (1 - 0.1667) * 100 is 83.33000000000001 in floating point and
+      // three views printed it raw.
+      successRate: Math.round((1 - a.error_rate) * 1000) / 10,
       lastActive: a.last_seen,
       // Lifetime span count, not a 24h trace window; the card is labelled
       // 'Spans Ingested' to match what this actually is.
@@ -71,6 +87,7 @@ export function toAgents(apiAgents: ApiAgent[], drift: DriftEntry[]): Agent[] {
       driftScore: window ?? undefined,
       driftStatus:
         window == null ? undefined : window > DRIFT_THRESHOLD ? 'drift' : 'normal',
+      driftSpansSeen: driftSpansSeen(d),
       // version, model, framework, tools and costPerHour have no source in
       // the AgentPulse schema and stay absent.
     };
@@ -156,7 +173,10 @@ export function toSpans(spans: SpanDetail[], traceId: string): Span[] {
       type: spanType(s),
       status: spanStatus(s),
       startOffsetMs: Number.isFinite(start) ? start - t0 : 0,
+      // durationMs stays a number because the waterfall lays bars out with it; latencyMs keeps
+      // "not recorded" apart from 0 so the views print a dash instead of "0ms".
       durationMs: s.latency_ms ?? 0,
+      latencyMs: s.latency_ms ?? undefined,
       agentLane: s.agent_id,
       model: s.model ?? undefined,
       prompt: s.input_summary ?? undefined,
@@ -248,7 +268,8 @@ export function toDriftProfiles(drift: DriftEntry[]): DriftProfile[] {
     semanticDrift: d.latest_centroid_distance ?? undefined,
     toolCallDrift: d.latest_tool_drift ?? undefined,
     baselineSampleCount: d.baseline_size ?? 0,
-    currentSampleCount: 0,
+    // currentSampleCount is left absent: the API does not report how full the current
+    // window is (it used to be a hard-coded 0, printed as "Active Sample: 0").
     // The backend exposes distances, not the embedding coordinates a
     // scatter plot would need.
     points: [],
@@ -275,16 +296,21 @@ export function toDatasets(raw: unknown[]): Dataset[] {
   }));
 }
 
+/** One entry per experiment from GET /v1/experiments. For a result file the API sends the
+ *  file name, and the file's own timestamp, model and dataset when it has them (each may be
+ *  null). The file name is used as the id and the name, so each card says which file it is. */
 export function toExperiments(raw: unknown[]): Experiment[] {
   return (raw as Record<string, any>[]).map((e, i) => ({
-    id: String(e.run_id ?? e.experiment_id ?? i),
-    name: String(e.name ?? e.experiment_name ?? e.model ?? `run ${i + 1}`),
-    datasetId: String(e.dataset ?? ''),
-    datasetName: String(e.dataset ?? ''),
+    id: String(e.file ?? e.run_id ?? e.experiment_id ?? `run-${i + 1}`),
+    name: String(e.name ?? e.experiment_name ?? e.file ?? e.model ?? `run ${i + 1}`),
+    sourceFile: e.file ?? undefined,
+    model: e.model ?? e.model_name ?? undefined,
+    datasetId: String(e.dataset ?? e.dataset_version ?? ''),
+    datasetName: String(e.dataset ?? e.dataset_version ?? ''),
     evaluators: [],
     status: 'completed',
     createdAt: String(e.timestamp ?? e.created_at ?? ''),
-    // Scores, win rate and per-item diffs vary by result file and are not
-    // exposed in a single shape, so they are left absent.
+    // Scores, win rate, run count, insights and per-item diffs vary by result file and are
+    // not exposed in a single shape, so they are left absent; ExperimentsView prints a dash.
   }));
 }
