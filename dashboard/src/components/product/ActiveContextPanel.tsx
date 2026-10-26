@@ -573,10 +573,10 @@ export const ActiveContextPanel: React.FC<ActiveContextPanelProps> = ({
                     <button
                       onClick={() => onResolveIncident(selectedIncident.id)}
                       className="w-full mt-2 px-2.5 py-1.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/35 text-[11px] font-mono font-medium flex items-center justify-center space-x-1.5 transition-all active:scale-98"
-                      title="Mark selected incident as resolved (⌘⇧R)"
+                      title="Acknowledge the selected alert (⌘⇧R). It stays listed as investigating."
                     >
                       <Check className="w-3.5 h-3.5 text-emerald-400" />
-                      <span>Mark Resolved</span>
+                      <span>Acknowledge</span>
                       <kbd className="px-1.5 py-0.5 rounded text-[9px] bg-black/40 text-emerald-300/90 border border-emerald-500/30 ml-1">⌘⇧R</kbd>
                     </button>
                   )}

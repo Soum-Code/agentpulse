@@ -13,6 +13,8 @@ import {
   ChalkSurfacePreset,
 } from '../../types';
 import { UnifiedPaletteBar } from '../common/UnifiedPaletteBar';
+import { liveBadge } from '../../lib/liveBadge';
+import type { FeedStatus } from '../../lib/stateModel';
 import { User as FirebaseUser } from 'firebase/auth';
 
 interface ProductHeaderProps {
@@ -26,6 +28,8 @@ interface ProductHeaderProps {
   onOpenCommandPalette: () => void;
   onSwitchToPublic: () => void;
   isSimulatingLive: boolean;
+  /** How the last poll of the API went; the live pill reads "LIVE" only when it succeeded. */
+  feedStatus?: FeedStatus;
   onToggleLive: () => void;
   onOpenShortcutsModal?: () => void;
   isContextPanelOpen?: boolean;
@@ -63,6 +67,7 @@ export const ProductHeader: React.FC<ProductHeaderProps> = ({
   onOpenCommandPalette,
   onSwitchToPublic,
   isSimulatingLive,
+  feedStatus = 'ready' as FeedStatus,
   onToggleLive,
   onOpenShortcutsModal,
   isContextPanelOpen,
@@ -88,6 +93,9 @@ export const ProductHeader: React.FC<ProductHeaderProps> = ({
   chalkCustomColor,
   onSelectChalkCustomColor,
 }) => {
+  // What the live pill says: LIVE only while the last poll succeeded (see lib/liveBadge.ts)
+  const live = liveBadge(isSimulatingLive, feedStatus);
+
   // Derive effective agent name if trace is present but selectedAgent wasn't explicitly set
   const effectiveAgentName = selectedAgent?.name || selectedTrace?.agentName;
   const effectiveAgentId = selectedAgent?.id || selectedTrace?.agentId;
@@ -255,14 +263,19 @@ export const ProductHeader: React.FC<ProductHeaderProps> = ({
         <button
           onClick={onToggleLive}
           className={`flex items-center space-x-2 px-3 py-1 rounded-lg border text-[11px] font-mono transition-all tactile-press ${
-            isSimulatingLive
+            live.tone === 'live'
               ? 'liquid-glass-emerald text-emerald-200 shadow-[0_0_12px_rgba(16,185,129,0.2)]'
+              : live.tone === 'offline'
+              ? 'bg-rose-500/10 border-rose-500/40 text-rose-200'
+              : live.tone === 'connecting'
+              ? 'bg-amber-500/10 border-amber-500/30 text-amber-200'
               : 'bg-white/[0.03] border-white/[0.08] text-neutral-400 hover:text-neutral-200 hover:bg-white/[0.06]'
           }`}
-          title="Pause or resume the automatic refresh (every 10 s) from the AgentPulse API"
+          title={live.title}
         >
-          <Radio className={`w-3 h-3 ${isSimulatingLive ? 'text-emerald-400 phosphor-emerald animate-pulse' : 'text-neutral-500'}`} />
-          <span className="hidden sm:inline font-semibold">{isSimulatingLive ? 'LIVE · 10s' : 'REFRESH PAUSED'}</span>
+          {/* The green pulse is only for a feed that is really live */}
+          <Radio className={`w-3 h-3 ${live.tone === 'live' ? 'text-emerald-400 phosphor-emerald animate-pulse' : live.tone === 'offline' ? 'text-rose-400' : 'text-neutral-500'}`} />
+          <span className="hidden sm:inline font-semibold">{live.label}</span>
         </button>
 
         {/* Cmd+K Quick Trigger */}

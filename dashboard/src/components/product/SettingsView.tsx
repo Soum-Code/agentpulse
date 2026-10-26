@@ -94,9 +94,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const keyView = ingestionKeyView(activeProject);
   const [copyState, setCopyState] = useState<'idle' | 'copied' | 'failed'>('idle');
 
-  // Nothing on this page is written anywhere: the appearance controls live in the
-  // parent's memory, and the alert thresholds and webhook are server settings the
-  // API has no route to change. That is why there is no Save button.
+  // Appearance (palette, Calm mode, density) is remembered in this browser's localStorage by
+  // useAppTheme, so it is applied at once and needs no Save button. The alert thresholds and the
+  // webhook are server settings the API has no route to change, so they are read-only here.
   const densityWired = onChangeTextDensity !== undefined;
 
   // Live evaluation timing from this instance's own /v1/platform report. Read once
@@ -425,6 +425,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               </div>
               <p className="text-neutral-400 text-[11px] mt-0.5 font-sans">
                 Switches the console to a muted slate background and text colour
+                {!onToggleCalmMode && ' (available with the Dark palette only; switch to Dark to use it)'}
               </p>
             </div>
           </div>
@@ -434,7 +435,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             <button
               type="button"
               onClick={onToggleCalmMode}
-              className={`relative inline-flex h-7 w-13 shrink-0 cursor-pointer rounded-full border-2 transition-colors duration-200 ease-in-out focus:outline-none ${
+              // Calm mode is only offered with the Dark palette (App passes no handler otherwise)
+              disabled={!onToggleCalmMode}
+              className={`relative inline-flex h-7 w-13 shrink-0 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed rounded-full border-2 transition-colors duration-200 ease-in-out focus:outline-none ${
                 isCalmMode
                   ? 'bg-neutral-700 border-neutral-500'
                   : 'bg-white/[0.1] border-white/[0.18]'
@@ -511,7 +514,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         <div className="bg-white/[0.03] border border-white/[0.08] rounded-xl p-3 flex items-start space-x-2.5 text-[11px] font-sans text-neutral-300">
           <Eye className="w-4 h-4 text-neutral-400 shrink-0 mt-0.5" />
           <div className="leading-relaxed">
-            <span className="text-neutral-200 font-medium">Not saved:</span> this choice is held in the page&rsquo;s memory. Reloading resets it, and other tabs or devices do not follow it.
+            <span className="text-neutral-200 font-medium">Remembered in this browser:</span> this choice is kept in localStorage, so it survives a reload. Other browsers and devices do not follow it.
           </div>
         </div>
       </div>
@@ -758,8 +761,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         <div className="bg-white/[0.03] border border-white/[0.08] rounded-xl p-3 flex items-start space-x-2.5 text-[11px] font-sans text-neutral-300">
           <AlignJustify className="w-4 h-4 text-neutral-400 shrink-0 mt-0.5" />
           <div className="leading-relaxed">
-            <span className="text-neutral-200 font-medium">Not saved:</span> {densityWired
-              ? 'this choice is held in the page’s memory. Reloading resets it, and other tabs or devices do not follow it.'
+            <span className="text-neutral-200 font-medium">{densityWired ? 'Remembered in this browser:' : 'Not saved:'}</span> {densityWired
+              ? 'this choice is kept in localStorage, so it survives a reload. Other browsers and devices do not follow it.'
               : 'nothing applies a density yet, so the previews above are illustrations only.'}
           </div>
         </div>
@@ -854,7 +857,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         <div className="p-3 rounded-xl bg-amber-400/5 border border-amber-400/20 flex items-start space-x-2.5 text-[11px] font-sans text-neutral-200">
           <Shield className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
           <div>
-            <span className="text-amber-300 font-medium">Where this is stored:</span> Firestore holds your sign-in profile and this project list (name, environment, key). Spans and evaluations are stored by the AgentPulse API, not in Firestore. The Firestore security rules are not in this repository, so this page cannot confirm how access is restricted.
+            <span className="text-amber-300 font-medium">Where this is stored:</span> Firestore holds your sign-in profile and this project list (name, environment, key id and the non-secret key prefix). The ingestion key itself is not stored there: the API shows it once when the project is created, and this tab keeps it in memory only. Spans and evaluations are stored by the AgentPulse API, not in Firestore. The rules file (dashboard/firestore.rules) is in the repository but is not deployed by this app, so this page cannot confirm how access is restricted.
           </div>
         </div>
       </div>
@@ -923,14 +926,14 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         </div>
       </div>
 
-      {/* Nothing on this page is written anywhere, so there is no Save button. */}
+      {/* Appearance is applied and remembered at once (localStorage), so there is no Save button. */}
       <div className="text-neutral-400 text-[11px] pt-2">
         {isCalmMode ? 'Calm Mode on' : 'Calm Mode off'} ·{' '}
         <strong className={textDensity === 'compact' ? 'text-cyan-300' : 'text-emerald-300'}>
           {textDensity === 'compact' ? 'Compact density (0.88x)' : 'Comfortable density (1.0x)'}
         </strong>
         <span className="text-neutral-600"> | </span>
-        <span>Nothing on this page is saved: appearance lasts until you reload.</span>
+        <span>Appearance is remembered in this browser (localStorage); the alert settings above are server-side and read-only.</span>
       </div>
     </div>
   );

@@ -5,6 +5,14 @@ export const CHORD_WINDOW_MS = 1200;
 export const isChordFollowUp = (lastGPressAt: number, now: number): boolean =>
   lastGPressAt > 0 && now - lastGPressAt < CHORD_WINDOW_MS;
 
+/**
+ * True when the focused element is something Enter activates natively: a button, a link, or a menu item
+ * (or anything inside one). A page-level Enter shortcut must leave such a key press alone; otherwise its
+ * preventDefault() swallows the click and the control cannot be used from the keyboard.
+ */
+export const isActivatableTarget = (el: Element | null | undefined): boolean =>
+  !!el && typeof el.closest === 'function' && el.closest('button, a[href], [role="menuitem"], [role="button"]') !== null;
+
 /** True when the focused element is a field the user types or picks in, so a single-letter page shortcut must not fire. */
 export const isTypingTarget = (el: Element | null | undefined): boolean => {
   if (!el) return false;
