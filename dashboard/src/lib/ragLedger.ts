@@ -52,9 +52,18 @@ export function spanToLedgerRow(span: SpanDetail, settled: boolean): LedgerRow {
     groundingRisk: ev && present(ev.grounding_score)
       ? datum.measured(ev.grounding_score as number)
       : ev
-      ? datum.unmeasured('this span was evaluated without a grounding score (no evidence to compare against)')
+      ? datum.unmeasured('this span was evaluated without a grounding score (it needs both an input and an output text to compare)')
       : missing('the evaluator has not scored this span'),
-    stage: ev && ev.evaluation_stage ? datum.measured(ev.evaluation_stage) : ev ? datum.unmeasured('the evaluator recorded no stage') : missing('the evaluator has not scored this span'),
+    // The worker writes evaluation_stage 'skipped' when grounding had nothing to compare (it needs both an
+    // input and an output text, e.g. a span whose model call failed). That is "not scored", not a stage.
+    stage:
+      ev && ev.evaluation_stage === 'skipped'
+        ? datum.unmeasured('the evaluator skipped this span: grounding needs both an input and an output text')
+        : ev && ev.evaluation_stage
+        ? datum.measured(ev.evaluation_stage)
+        : ev
+        ? datum.unmeasured('the evaluator recorded no stage')
+        : missing('the evaluator has not scored this span'),
     verdict: ev?.grounding_verdict ?? null,
     toolClaimRisk: ev && present(ev.tool_claim_score)
       ? datum.measured(ev.tool_claim_score as number)
@@ -70,3 +79,17 @@ export function spanToLedgerRow(span: SpanDetail, settled: boolean): LedgerRow {
 export function allEvaluated(spans: SpanDetail[]): boolean {
   return spans.length > 0 && spans.every((s) => s.evaluation !== null);
 }
+
+export type AlertsReading = 'list' | 'none' | 'unknown-running' | 'unknown-timeout';
+
+/**
+ * How to describe the alerts of a trace. "None raised" is only true once every span has been scored: before
+ * that the evaluator may still raise one (review finding honesty-5: after a timeout with unscored spans the
+ * ledger said "None raised", which reads as "the evaluator found nothing").
+ */
+export function alertsReading(alertCount: number, spans: SpanDetail[], settled: boolean): AlertsReading {
+  if (alertCount > 0) return 'list';
+  if (allEvaluated(spans)) return 'none';
+  return settled ? 'unknown-timeout' : 'unknown-running';
+}
+
