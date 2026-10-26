@@ -221,6 +221,64 @@ describe('sendChatStream', () => {
     expect(turn.trace_id).toBe('t1');
     expect(turn.agents?.map((a) => a.agent)).toEqual(['retriever']);
   });
+
+  // A body whose reader hands out the given lines, then rejects with `error`, the way a
+  // connection cut mid-stream (or a Cancel) surfaces in fetch.
+  function cutStream(text: string, error: Error) {
+    const chunk = new TextEncoder().encode(text);
+    let sent = false;
+    const reader = {
+      read: () => {
+        if (!sent) {
+          sent = true;
+          return Promise.resolve({ done: false, value: chunk });
+        }
+        return Promise.reject(error);
+      },
+    };
+    return { ok: true, status: 200, statusText: '', body: { getReader: () => reader } };
+  }
+
+  const afterRetriever = lines([
+    { type: 'start', session_id: 's1', trace_id: 't1', agents: [] },
+    { type: 'retrieved', retrieved: ['A'], search_ms: 5 },
+    { type: 'agent_done', ...agent('retriever') },
+  ]);
+
+  it('keeps the trace id and the finished stages when the connection drops mid-stream', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(cutStream(afterRetriever, new TypeError('network error'))));
+    const turn = await new RagApiClient('').sendChatStream('q', 's1', () => {});
+    expect(turn.code).toBe('stream_ended');
+    expect(turn.trace_id).toBe('t1');
+    expect(turn.agents?.map((a) => a.agent)).toEqual(['retriever']);
+    expect(turn.retrieved).toEqual(['A']);
+    // A plain sentence, not the browser's own error text.
+    expect(turn.error).toContain('connection dropped');
+    expect(turn.error).not.toContain('network error');
+  });
+
+  it('reports a Cancel mid-stream as a stopped turn, with what had finished', async () => {
+    const abort = Object.assign(new Error('aborted'), { name: 'AbortError' });
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(cutStream(afterRetriever, abort)));
+    const turn = await new RagApiClient('').sendChatStream('q', 's1', () => {});
+    expect(turn.code).toBe('aborted');
+    expect(turn.error).toContain('You stopped this turn');
+    expect(turn.trace_id).toBe('t1');
+    expect(turn.agents?.map((a) => a.agent)).toEqual(['retriever']);
+  });
+
+  it('reports a Cancel before the service answered as a stopped turn, not a failure', async () => {
+    const abort = Object.assign(new Error('aborted'), { name: 'AbortError' });
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(abort));
+    const turn = await new RagApiClient('').sendChatStream('q', 's1', () => {});
+    expect(turn).toMatchObject({ code: 'aborted', agents: [] });
+    expect(turn.trace_id).toBeUndefined();
+  });
+
+  it('still throws when the service cannot be reached at all', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('fetch failed')));
+    await expect(new RagApiClient('').sendChatStream('q', 's1', () => {})).rejects.toThrow('fetch failed');
+  });
 });
 
 describe('error codes', () => {

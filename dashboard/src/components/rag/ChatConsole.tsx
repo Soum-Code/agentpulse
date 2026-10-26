@@ -302,7 +302,7 @@ export const ChatConsole: React.FC<ChatConsoleProps> = ({
                         </div>
                       ) : (
                         <div className="text-[10px] text-rose-400/80 mt-1.5">
-                          Completed {agents.length} of 3 agent stages before failure.{' '}
+                          Completed {agents.length} of 3 agent stages {resp?.code === 'aborted' ? 'before you stopped it' : 'before it ended'}.{' '}
                           {turn.traceId
                             ? "This turn's spans remain visible in AgentPulse telemetry."
                             : 'The service returned no trace id, so there is nothing to look up in AgentPulse.'}
@@ -615,6 +615,14 @@ export const ChatConsole: React.FC<ChatConsoleProps> = ({
             </button>
           </div>
         </div>
+
+        {/* Why Send is disabled, as visible text next to it: a placeholder alone is easy to miss,
+            and screen readers announce it only when the field is focused. */}
+        {blockedReason && !isInFlight && (
+          <div role="status" className="mt-2 px-2.5 py-1.5 rounded border border-amber-500/40 bg-amber-950/30 text-amber-200 text-[11px] font-sans">
+            {blockedReason}
+          </div>
+        )}
 
         <div className={`mt-2 flex items-center justify-between gap-3 text-[10px] ${theme.subtextColor} font-mono`}>
           <span className="truncate">Chat: {chatTarget} ➔ Observability: AgentPulse /v1</span>

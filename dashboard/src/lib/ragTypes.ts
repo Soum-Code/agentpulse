@@ -61,11 +61,25 @@ export interface TurnProgress {
   done: RagAgentExecution[];
 }
 
+/** One provider as GET /chat/health describes it: configured or not, and how its last calls
+ * went (an outcome word and an HTTP status, never an error body). */
+export interface ChatProviderStatus {
+  provider: string;
+  configured: boolean;
+  models: string[];
+  last_success: string | null;
+  last_error: { at: string; model: string; outcome: string; status: number | null } | null;
+  paused_for_seconds: number;
+}
+
 /** GET /chat/health. status is "ready" only when a turn would run now. */
 export interface ChatHealth {
   status: 'ready' | 'loading' | 'paused' | 'failed' | string;
+  /** True while a configured provider's last call failed (the chain still answers past it). */
+  degraded?: boolean;
   embedding?: string;
-  providers?: string[];
+  providers?: ChatProviderStatus[];
+  chain?: { provider: string; model: string }[];
   agents?: string[];
   message?: string;
   limits?: {
