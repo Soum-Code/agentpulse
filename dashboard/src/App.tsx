@@ -598,7 +598,7 @@ export default function App() {
             )}
 
             {productTab === 'performance' && (
-              <PerformanceView />
+              <PerformanceView onNavigateTab={setProductTab} paused={!isLive} />
             )}
 
             {productTab === 'settings' && (
