@@ -66,6 +66,15 @@ export function pickAllowed<T extends string>(stored: string | null, allowed: re
   return stored !== null && allowed.includes(stored) ? (stored as T) : fallback;
 }
 
+/**
+ * Calm mode (the grey "Deep Zen" look) only exists for the Dark palette. It forces a dark page, so
+ * with Chalk or Butter it left dark text on a dark page (review finding ux-tests-2). The choice is
+ * remembered, but it only takes effect while the Dark palette is active.
+ */
+export function effectiveCalm(storedCalm: boolean, palette: ColorPalette): boolean {
+  return storedCalm && palette === 'dark';
+}
+
 /** A stored colour as a clean "#rrggbb", otherwise `fallback`. */
 export function pickColor(stored: string | null, fallback: string): string {
   return normalizeHex(stored) ?? fallback;
@@ -86,8 +95,10 @@ export interface AppTheme {
   onSelectChalkPreset: (preset: ChalkSurfacePreset) => void;
   chalkCustomColor: string;
   onSelectChalkCustomColor: (hex: string) => void;
+  /** True only while Calm mode is on AND the Dark palette is active (see effectiveCalm). */
   isCalmMode: boolean;
-  onToggleCalmMode: () => void;
+  /** Undefined unless the Dark palette is active: Calm mode is not offered in Chalk or Butter. */
+  onToggleCalmMode?: () => void;
   textDensity: TextDensity;
   onChangeTextDensity: (density: TextDensity) => void;
 }
@@ -174,8 +185,8 @@ export function useAppTheme(): AppTheme {
       onSelectChalkPreset: setChalkSurface,
       chalkCustomColor,
       onSelectChalkCustomColor: selectChalkColor,
-      isCalmMode,
-      onToggleCalmMode,
+      isCalmMode: effectiveCalm(isCalmMode, palette),
+      onToggleCalmMode: palette === 'dark' ? onToggleCalmMode : undefined,
       textDensity,
       onChangeTextDensity: setTextDensity,
     }),

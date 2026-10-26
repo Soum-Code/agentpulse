@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useEscapeKey } from '../../utils/useEscapeKey';
 import {
   X,
   Plus,
@@ -47,6 +48,9 @@ export const ProjectSelectorModal: React.FC<ProjectSelectorModalProps> = ({
   // The last create/delete failure, shown in the modal (a failed delete means the key could not be revoked).
   const [error, setError] = useState<string | null>(null);
 
+  // Escape closes the dialog (it had no keyboard way out)
+  useEscapeKey(isOpen, onClose);
+
   if (!isOpen) return null;
 
   const handleCreateProject = async (e: React.FormEvent) => {
@@ -90,14 +94,21 @@ export const ProjectSelectorModal: React.FC<ProjectSelectorModalProps> = ({
 
   const copyApiKey = (key: string, id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    navigator.clipboard.writeText(key);
-    setCopiedKeyId(id);
-    setTimeout(() => setCopiedKeyId(null), 2000);
+    // Show "Copied!" only once the browser has really taken the text. The key is shown once and not
+    // stored, so a button that says Copied after a refused write would lose the only copy.
+    navigator.clipboard.writeText(key).then(
+      () => {
+        setError(null);
+        setCopiedKeyId(id);
+        setTimeout(() => setCopiedKeyId(null), 2000);
+      },
+      () => setError('The browser refused to copy the key. Select it and copy it by hand, then close this window.'),
+    );
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
-      <div className="relative w-full max-w-2xl rounded-3xl bg-[#0e1015] border border-white/10 p-6 sm:p-8 shadow-2xl text-white max-h-[90vh] flex flex-col">
+      <div role="dialog" aria-modal="true" aria-label="Telemetry projects" className="relative w-full max-w-2xl rounded-3xl bg-[#0e1015] border border-white/10 p-6 sm:p-8 shadow-2xl text-white max-h-[90vh] flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between pb-5 border-b border-white/10">
           <div className="flex items-center space-x-3">

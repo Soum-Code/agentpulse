@@ -45,30 +45,8 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
     sortedIncidents[0] ||
     incidents[0];
 
-  // Global keyboard shortcut: Cmd+Shift+R / Ctrl+Shift+R to mark currently selected incident as resolved
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      const activeEl = document.activeElement;
-      const isInputActive =
-        activeEl &&
-        (activeEl.tagName === 'INPUT' ||
-          activeEl.tagName === 'TEXTAREA' ||
-          (activeEl as HTMLElement).isContentEditable);
-
-      if (isInputActive) return;
-
-      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === 'r') {
-        e.preventDefault();
-        e.stopImmediatePropagation();
-        if (currentIncident && !resolvingId && !resolvedIds.has(currentIncident.id)) {
-          handleResolve(currentIncident.id);
-        }
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [currentIncident?.id, resolvingId, resolvedIds]);
+  // Cmd/Ctrl+Shift+R is handled once, in App.tsx, for the selected incident. This view used to listen for
+  // it too and fell back to the first incident, so a single key press could acknowledge two alerts.
 
   // Initial and update stagger animation using anime.js
   useEffect(() => {

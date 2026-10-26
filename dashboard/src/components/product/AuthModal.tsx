@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useEscapeKey } from '../../utils/useEscapeKey';
 import {
   X,
   Mail,
@@ -70,6 +71,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [displayName, setDisplayName] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // Escape closes the dialog (it had no keyboard way out)
+  useEscapeKey(isOpen, onClose);
 
   if (!isOpen) return null;
 
@@ -150,7 +154,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
-      <div className="relative w-full max-w-md rounded-3xl bg-[#0e1015] border border-white/10 p-6 sm:p-8 shadow-2xl text-white">
+      <div role="dialog" aria-modal="true" aria-label="Sign in" className="relative w-full max-w-md rounded-3xl bg-[#0e1015] border border-white/10 p-6 sm:p-8 shadow-2xl text-white">
         {/* Close Button */}
         <button
           onClick={onClose}

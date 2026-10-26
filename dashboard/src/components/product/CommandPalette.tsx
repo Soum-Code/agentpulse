@@ -461,6 +461,9 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
                     mass: 0.8
                   }
             }
+            role="dialog"
+            aria-modal="true"
+            aria-label="Command palette"
             className="relative w-full max-w-2xl liquid-glass-card border-glow-subtle rounded-2xl overflow-hidden shadow-2xl flex flex-col max-h-[82vh] z-10"
           >
             {/* Top Liquid Specular Reflection & Subtle Corner Radiance */}

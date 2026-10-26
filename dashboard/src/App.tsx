@@ -196,8 +196,11 @@ export default function App() {
       }
 
       // Cmd+Shift+R / Ctrl+Shift+R: acknowledge the incident that is selected (never a guessed one:
-      // this is a write to the alerts API).
+      // this is a write to the alerts API). Only in the console and not while typing: on the landing
+      // page, in the chat and in a text field the chord must stay the browser's hard reload, which a
+      // viewer needs after a redeploy to get past a cached bundle.
       if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === 'r') {
+        if (mode !== 'product' || isInputActive) return;
         e.preventDefault();
         const target = selectedIncidentRef.current;
         if (target) {
@@ -276,7 +279,7 @@ export default function App() {
           setIsContextPanelOpen(prev => !prev);
         } else if (k === 'z') {
           e.preventDefault();
-          theme.onToggleCalmMode();
+          theme.onToggleCalmMode?.(); // undefined outside the Dark palette: Calm mode is not offered there
         }
       }
     };
@@ -286,7 +289,7 @@ export default function App() {
       window.removeEventListener('keydown', handleKeyDown);
       clearTimeout(chordTimer);
     };
-  }, [isShortcutsHelpOpen, isCommandPaletteOpen, theme.onToggleCalmMode]);
+  }, [mode, isShortcutsHelpOpen, isCommandPaletteOpen, theme.onToggleCalmMode]);
 
   // The former synthetic telemetry pulse was removed: it fabricated traces,
   // latencies and evaluator evidence that never came from the backend.
@@ -440,6 +443,7 @@ export default function App() {
           onOpenProjectSelector={() => setIsProjectSelectorOpen(true)}
           onSwitchToPublic={() => setMode('public')}
           isSimulatingLive={isLive}
+          feedStatus={feed.status}
           onToggleLive={() => setIsLive(prev => !prev)}
           onOpenShortcutsModal={() => setIsShortcutsHelpOpen(true)}
           isContextPanelOpen={isContextPanelOpen}
