@@ -151,6 +151,7 @@ export const TracesView: React.FC<TracesViewProps> = ({
   const [copiedSpanPayload, setCopiedSpanPayload] = useState<string | null>(null);
   const [isCopyMenuOpen, setIsCopyMenuOpen] = useState(false);
   const copyMenuRef = useRef<HTMLDivElement>(null);
+  const copyButtonRef = useRef<HTMLButtonElement>(null);
   const filterButtonRef = useRef<HTMLButtonElement>(null);
   const filterDropdownRef = useRef<HTMLDivElement>(null);
   const [copiedTraceId, setCopiedTraceId] = useState<string | null>(null);
@@ -210,7 +211,14 @@ export const TracesView: React.FC<TracesViewProps> = ({
       if (!copyMenuRef.current?.contains(e.target as Node)) setIsCopyMenuOpen(false);
     };
     // Esc closes the menu too (its header says so).
-    const handleEscape = (e: KeyboardEvent) => e.key === 'Escape' && setIsCopyMenuOpen(false);
+    // stopPropagation: the window-level Esc handler would also clear the search box. Focus goes back to
+    // the trigger so a keyboard user is not stranded.
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      e.stopPropagation();
+      setIsCopyMenuOpen(false);
+      copyButtonRef.current?.focus();
+    };
     document.addEventListener('mousedown', handleClickOutsideCopy);
     document.addEventListener('keydown', handleEscape);
     return () => {
@@ -229,7 +237,12 @@ export const TracesView: React.FC<TracesViewProps> = ({
       }
     };
     // The popover's close button is titled "Close filter menu (Esc)", so Esc has to work.
-    const handleEscape = (e: KeyboardEvent) => e.key === 'Escape' && setIsFilterDropdownOpen(false);
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      e.stopPropagation(); // do not also clear the search box (window Esc handler)
+      setIsFilterDropdownOpen(false);
+      filterButtonRef.current?.focus();
+    };
     document.addEventListener('mousedown', handleClickOutside);
     document.addEventListener('keydown', handleEscape);
     return () => {
@@ -1366,11 +1379,12 @@ export const TracesView: React.FC<TracesViewProps> = ({
               </button>
               <button
                 onClick={() => setSortOrder(prev => prev === 'reverse-chronological' ? 'chronological' : 'reverse-chronological')}
-                title={`Sort order: ${sortOrder}. Click to toggle.`}
+                title={`Sort: ${TRACE_SORT_OPTIONS.find(o => o.id === sortOption)?.label ?? sortOption}. Click to switch between newest and oldest first.`}
                 className="text-[10px] text-neutral-400 hover:text-neutral-200 flex items-center space-x-1 px-1.5 py-0.5 rounded bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.06] transition-colors"
               >
                 <ArrowUpDown className="w-2.5 h-2.5 text-neutral-400" />
-                <span>{sortOrder === 'reverse-chronological' ? 'Newest First' : 'Oldest First'}</span>
+                {/* The label of the sort that is active (it said 'Newest First' under any other sort) */}
+                <span>{TRACE_SORT_OPTIONS.find(o => o.id === sortOption)?.shortLabel ?? (sortOrder === 'reverse-chronological' ? 'Newest First' : 'Oldest First')}</span>
               </button>
               <span className="text-[10px] text-neutral-500">
                 {filteredTraces.length} logs
@@ -1655,8 +1669,13 @@ export const TracesView: React.FC<TracesViewProps> = ({
                     </h3>
                     {/* Copy menu: the trace id (Y) or the whole trace as JSON (Shift+Y). Both entries call
                         the same handlers as the keyboard shortcuts. */}
+                    {/* Screen readers hear the result of a copy (the button text changes but is not announced) */}
+                    <span role="status" aria-live="polite" className="sr-only">
+                      {copiedTraceId === currentTrace.id ? 'Trace ID copied' : copiedLogTraceId === currentTrace.id ? 'Full trace log copied' : copiedSpanPayload ? 'Copied' : ''}
+                    </span>
                     <div className="relative inline-flex" ref={copyMenuRef}>
                       <button
+                        ref={copyButtonRef}
                         onClick={() => setIsCopyMenuOpen((prev) => !prev)}
                         className={`px-2.5 py-1 rounded-lg text-[11px] font-mono flex items-center space-x-1.5 transition-all border shrink-0 ${
                           copiedTraceId === currentTrace.id || copiedLogTraceId === currentTrace.id
@@ -1665,7 +1684,6 @@ export const TracesView: React.FC<TracesViewProps> = ({
                         }`}
                         title="Copy the trace ID or the full log to the clipboard (Shortcut: Y / Shift+Y)"
                         aria-label="Copy to Clipboard"
-                        aria-haspopup="true"
                         aria-expanded={isCopyMenuOpen}
                       >
                         {copiedTraceId === currentTrace.id || copiedLogTraceId === currentTrace.id ? (

@@ -1,7 +1,7 @@
 import React from 'react';
 import { ShieldAlert, ShieldCheck, ShieldQuestion } from 'lucide-react';
 import { PlatformStatus } from '../../lib/usePlatformStatus';
-import { serverErrorRate, summariseStatus } from '../../lib/platformStats';
+import { describeBanner, serverErrorRate, summariseStatus } from '../../lib/platformStats';
 import { API_START_HINT, Datum, datumFromFeed } from '../../lib/stateModel';
 import { DatumDisplay } from '../rag/DatumDisplay';
 
@@ -31,20 +31,15 @@ const Chip: React.FC<{ label: string; children: React.ReactNode }> = ({ label, c
  */
 export const SystemStatusBanner: React.FC<SystemStatusBannerProps> = ({ status }) => {
   const { platform, ready, evaluator } = status;
-  const feeds = [platform.feed, ready.feed, evaluator.feed];
-  const allPending = feeds.every((f) => f.status === 'pending');
-  const noneAnswered = feeds.every((f) => f.status === 'unreachable' || f.status === 'error');
+  const noneAnswered = [platform.feed, ready.feed, evaluator.feed].every((f) => f.status === 'unreachable' || f.status === 'error');
 
+  // The headline, level and detail all come from describeBanner (lib/platformStats.ts): the all-clear
+  // needs all three endpoints to have answered.
   const summary = summariseStatus({ platform: platform.data, ready: ready.data, evaluator: evaluator.data });
-  const level = allPending ? 'unknown' : noneAnswered ? 'bad' : summary.level;
-
-  const headline = allPending
-    ? 'SYSTEM STATUS: CHECKING'
-    : noneAnswered
-    ? 'SYSTEM STATUS: API UNREACHABLE'
-    : summary.level === 'ok'
-    ? 'SYSTEM STATUS: ALL SYSTEMS OPERATIONAL'
-    : `SYSTEM STATUS: ${summary.label.toUpperCase()}`;
+  const { level, headline, detail } = describeBanner(
+    { platform: platform.feed.status, ready: ready.feed.status, evaluator: evaluator.feed.status },
+    summary,
+  );
 
   const tone =
     level === 'ok'
@@ -86,13 +81,7 @@ export const SystemStatusBanner: React.FC<SystemStatusBannerProps> = ({ status }
           <div className="min-w-0">
             <h3 className="font-mono text-sm font-bold tracking-wider uppercase">{headline}</h3>
             <p className="text-xs font-mono text-neutral-300 mt-1 leading-relaxed">
-              {allPending
-                ? 'Waiting for the first answer from the health endpoints.'
-                : noneAnswered
-                ? `Start it with: ${API_START_HINT}`
-                : summary.reasons.length > 0
-                ? summary.reasons.join(' · ')
-                : 'No degradation reported by the platform check.'}
+              {noneAnswered ? `${detail} Start it with: ${API_START_HINT}` : detail}
             </p>
           </div>
         </div>
