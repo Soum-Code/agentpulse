@@ -1,0 +1,26 @@
+# Applies to builds whose context is the repository root. Only demo/chat.Dockerfile builds that
+# way (backend/ and dashboard/ are their own contexts, and deploy/huggingface/push_space.py
+# stages its own folder), so this lists what that image copies and leaves out everything else.
+#
+# An allowlist rather than a list of exclusions: the root holds .env with the real keys,
+# ./models (the 1.2 GB model cache), node_modules, the SQLite files and the .git folder, and
+# none of them may end up in the build context. A new file the chat image needs has to be
+# added here as well as to the Dockerfile; the build fails loudly if it is missing.
+**
+
+!backend/constraints.txt
+!backend/app/__init__.py
+!backend/app/services/__init__.py
+!backend/app/services/grounding.py
+!demo/chat.Dockerfile
+!demo/requirements-chat.txt
+!demo/chat_server.py
+!demo/chat_providers.py
+!demo/chat_guard.py
+!demo/workflows/__init__.py
+!demo/workflows/retrieval.py
+!sdk/src/
+
+# Not even inside the allowed folders.
+**/__pycache__
+**/*.pyc

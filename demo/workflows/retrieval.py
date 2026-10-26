@@ -18,6 +18,7 @@ and perform genuine top-k semantic search over structured document chunks.
 from __future__ import annotations
 
 import logging
+import os
 # Note: `time` is imported but not used in this file.
 import time
 # dataclass = a class that mostly just holds fields; asdict turns one into a plain dict.
@@ -132,17 +133,38 @@ def _stand_in_vector(text: str) -> np.ndarray:
     return vec
 
 
+# The model search() embeds with. The same default as backend/app/config.py, so the cache the
+# worker downloads into is the cache this reads from.
+EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
+
+
 # Loads the embedding model into this process unless it is already there. The demo entry points
 # (chat_server.py, multi_model_pipeline.py) call it once at start-up; without it search() quietly
 # uses the stand-in vectors above and picks documents near-randomly. The guard is needed:
 # load_models cannot run twice in one process (the second load leaves torch tensors on the
-# `meta` device, see SESSION_HANDOFF.md 15.3). It loads the NLI model too and, with the default
-# cache_dir, looks in ./models, so run from the folder that holds the model cache.
-def ensure_embedding_model() -> None:
-    from app.services.grounding import load_models, models_loaded
+# `meta` device, see SESSION_HANDOFF.md 15.3).
+#
+# The model cache is AGENTPULSE_MODEL_CACHE_DIR, the backend's own setting, and ./models when it
+# is not set, so a script run from the folder that holds the cache still finds it.
+#
+# embedding_only=True loads MiniLM and nothing else. load_models always loads the NLI model as
+# well, which roughly doubles the memory this process needs and is never used by search(); the
+# chat container has a memory limit that MiniLM fits in and the NLI model does not. grounding.py
+# has no embedding-only loader, so this fills the same module variable its get_embedding reads.
+# Raises if the model cannot be loaded, so the caller knows search() would be near-random.
+def ensure_embedding_model(embedding_only: bool = False) -> None:
+    from app.services import grounding
 
-    if not models_loaded()["embedding_model"]:
-        load_models(use_onnx=False, sync=True)
+    if grounding.models_loaded()["embedding_model"]:
+        return
+    cache_dir = os.getenv("AGENTPULSE_MODEL_CACHE_DIR") or "./models"
+    if not embedding_only:
+        grounding.load_models(use_onnx=False, sync=True, cache_dir=cache_dir)
+        return
+    from sentence_transformers import SentenceTransformer
+
+    grounding._embedding_model = SentenceTransformer(EMBEDDING_MODEL, cache_folder=cache_dir)
+    logger.info("Loaded embedding model %s from %s (embedding only).", EMBEDDING_MODEL, cache_dir)
 
 
 class LocalVectorIndex:

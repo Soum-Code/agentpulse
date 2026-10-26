@@ -45,6 +45,89 @@ services:
       - dashboard
     restart: unless-stopped
 
+  # The public live chat, demo/chat_server.py. Caddy sends /chat* here (see the Caddyfile).
+  #
+  # It is in the "chat" profile, so nothing builds or starts it unless the profile is named:
+  # a plain `up`, and deploy.sh, which recreates only the services it rebuilt, leave it alone,
+  # and nothing else depends on it. deploy/azure/README.md ("The live chat") has the commands
+  # to build, start, pause, stop and roll it back. Start it with --no-deps, so compose does not
+  # touch the backend while doing it.
+  chat:
+    profiles: ["chat"]
+    build:
+      context: .
+      dockerfile: demo/chat.Dockerfile
+    environment:
+      # Spans go straight to the backend over the compose network, not through Caddy, so they
+      # need no write password. The key is one issued through /v1/keys for the chat alone
+      # (README, "The live chat"), not the server's own AGENTPULSE_API_KEY, which can mint
+      # and revoke keys: the chat is the part of the stack open to anyone.
+      # It defaults to empty rather than `:?`: a required variable here would make every
+      # compose command fail, deploy.sh's included, until it is set. Empty instead makes the
+      # chat report "not set up" on /chat/health and refuse questions (demo/chat_server.py).
+      AGENTPULSE_ENDPOINT: http://backend:8000
+      AGENTPULSE_API_KEY: ${CHAT_AGENTPULSE_API_KEY:-}
+      # Provider keys, each optional: a provider whose key is empty is left out of the chain,
+      # and with none at all Pollinations (keyless) answers alone. Never put them in a file in
+      # the repository; .env on the VM only.
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      CEREBRAS_API_KEY: ${CEREBRAS_API_KEY:-}
+      NVIDIA_API_KEY: ${NVIDIA_API_KEY:-}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      # Only Caddy reaches this container (no port is published), so the private ranges Docker
+      # gives its networks are the proxies whose X-Forwarded-For is believed.
+      CHAT_TRUSTED_PROXIES: ${CHAT_TRUSTED_PROXIES:-172.16.0.0/12,192.168.0.0/16,10.0.0.0/8}
+      CHAT_CORS_ORIGINS: ${CHAT_CORS_ORIGINS:-https://${AGENTPULSE_SITE_ADDRESS:-localhost}}
+      # Empty means the default in demo/chat_server.py, chat_guard.py or chat_providers.py.
+      CHAT_PAUSED: ${CHAT_PAUSED:-}
+      CHAT_PROVIDERS: ${CHAT_PROVIDERS:-}
+      CHAT_IP_TURNS_PER_MINUTE: ${CHAT_IP_TURNS_PER_MINUTE:-}
+      CHAT_IP_TURNS_PER_DAY: ${CHAT_IP_TURNS_PER_DAY:-}
+      CHAT_DAILY_TURN_CAP: ${CHAT_DAILY_TURN_CAP:-}
+      CHAT_MAX_CONCURRENT_TURNS: ${CHAT_MAX_CONCURRENT_TURNS:-}
+      CHAT_MAX_INPUT_CHARS: ${CHAT_MAX_INPUT_CHARS:-}
+      CHAT_TURN_BUDGET_SECONDS: ${CHAT_TURN_BUDGET_SECONDS:-}
+      CHAT_CALL_TIMEOUT_SECONDS: ${CHAT_CALL_TIMEOUT_SECONDS:-}
+      CHAT_REASONING_EFFORT: ${CHAT_REASONING_EFFORT:-}
+      CHAT_GROQ_MODELS: ${CHAT_GROQ_MODELS:-}
+      CHAT_GROQ_RPM: ${CHAT_GROQ_RPM:-}
+      CHAT_CEREBRAS_MODELS: ${CHAT_CEREBRAS_MODELS:-}
+      CHAT_CEREBRAS_RPM: ${CHAT_CEREBRAS_RPM:-}
+      CHAT_NVIDIA_MODELS: ${CHAT_NVIDIA_MODELS:-}
+      CHAT_OPENROUTER_MODELS: ${CHAT_OPENROUTER_MODELS:-}
+    volumes:
+      # The model cache the worker downloads into, read-only: this reads MiniLM from it.
+      - ./models:/models:ro
+      # The kill switch: `touch chat-control/paused` pauses the chat, `rm` resumes it.
+      - ./chat-control:/control:ro
+    # Measured with this image: 378 MiB once MiniLM is loaded, 455 MiB at the peak of a turn.
+    # The limit stops a leak from taking memory the worker needs. No swap beyond it: past the
+    # limit the container is killed and restarted rather than slowing the whole VM down.
+    mem_limit: 900m
+    memswap_limit: 900m
+    # Nothing in it writes to its own files, so the image is mounted read-only.
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      # Healthy when ready or paused (a pause is the owner's choice, not a fault). /chat/health
+      # answers 503 for both "paused" and "loading", so the body decides. Loading MiniLM takes
+      # up to a minute or two after a start, hence start_period.
+      test: ["CMD", "python", "-c", "import http.client,json,sys; c=http.client.HTTPConnection('127.0.0.1',8100,timeout=5); c.request('GET','/chat/health'); sys.exit(0 if json.load(c.getresponse())['status'] in ('ready','paused') else 1)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 180s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: unless-stopped
+
 volumes:
   caddy_data:
   caddy_config:
