@@ -122,7 +122,13 @@ export const DatumDisplay: React.FC<DatumDisplayProps> = ({
   }
 
   if (format === 'stage') {
-    const isStage2 = String(val).toLowerCase() === 'stage2';
+    // The evaluator records 'stage2' (NLI model), 'stage1' (similarity fallback) or 'skipped' (no grounding
+    // result). Any other word is shown as it is. Everything that was not 'stage2' used to read "Stage 1
+    // (Embedding)", which labelled a skipped span as if the cheap stage had scored it.
+    const key = String(val).toLowerCase();
+    const isStage2 = key === 'stage2';
+    const label =
+      key === 'stage2' ? 'Stage 2 (NLI)' : key === 'stage1' ? 'Stage 1 (similarity fallback)' : key === 'skipped' ? 'Not scored' : String(val);
     return (
       <span
         className={`px-1.5 py-0.5 rounded text-[10px] font-mono border ${
@@ -131,7 +137,7 @@ export const DatumDisplay: React.FC<DatumDisplayProps> = ({
             : 'bg-neutral-900 text-neutral-400 border-white/10'
         } ${className}`}
       >
-        {isStage2 ? 'Stage 2 (NLI)' : 'Stage 1 (Embedding)'}
+        {label}
       </span>
     );
   }

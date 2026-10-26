@@ -368,7 +368,10 @@ const RagChatbotView: React.FC<RagChatbotAppProps> = ({
   };
 
   return (
-    <div className={`flex flex-col ${embedded ? 'h-full w-full' : 'h-screen w-screen'} ${theme.containerBg} ${theme.textColor} font-mono overflow-hidden transition-colors duration-200`}>
+    // In the Butter palette the RAG console is a dark amber surface (ragTheme.ts) inside a light page.
+    // data-keep-white tells the light-palette rules in index.css to keep light text on it, instead of
+    // recolouring the amber text dark (dark on dark).
+    <div data-keep-white={palette === 'butter' ? 'true' : undefined} className={`flex flex-col ${embedded ? 'h-full w-full' : 'h-screen w-screen'} ${theme.containerBg} ${theme.textColor} font-mono overflow-hidden transition-colors duration-200`}>
       {/* Primary Top Header */}
       <header className={`flex items-center justify-between px-3 sm:px-4 py-2 border-b ${theme.headerBorder} ${theme.headerBg} shrink-0 transition-colors`}>
         <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">

@@ -251,7 +251,7 @@ export const ShortcutsHelpModal: React.FC<ShortcutsHelpModalProps> = ({
             </div>
             <div className="space-y-2">
               <div className="shortcut-row-item flex items-center justify-between p-2 rounded-lg bg-emerald-500/[0.08] border border-emerald-500/25">
-                <span className="text-emerald-300 font-medium">Mark selected incident resolved</span>
+                <span className="text-emerald-300 font-medium">Acknowledge the selected incident</span>
                 <kbd className="px-2 py-0.5 rounded bg-black/70 border border-emerald-400/40 text-emerald-200 font-bold text-[11px]">⌘⇧R / Ctrl+Shift+R</kbd>
               </div>
 

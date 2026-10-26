@@ -34,6 +34,8 @@ export interface TelemetryState {
   /** The same answer as `loading`/`error`, in the five-state model: read numbers through
    *  datumFromFeed(feed, ...) so none is shown as 0 or blank while the API is down. */
   feed: Feed;
+  /** When the last SUCCESSFUL poll finished (ms since epoch); null until one has. */
+  lastOkAt: number | null;
   refresh: () => void;
 }
 
@@ -52,6 +54,7 @@ export function useTelemetry(paused = false): TelemetryState {
   const [error, setError] = useState<string | null>(null);
   // Why the last poll failed, classified as unreachable (no answer) or error (API said no).
   const [failure, setFailure] = useState<Feed | null>(null);
+  const [lastOkAt, setLastOkAt] = useState<number | null>(null);
   const [connected, setConnected] = useState(false);
   const [tick, setTick] = useState(0);
 
@@ -89,6 +92,7 @@ export function useTelemetry(paused = false): TelemetryState {
         setConnected(true);
         setError(null);
         setFailure(null);
+        setLastOkAt(Date.now());
         setLoading(false);
 
         const hydrated = await Promise.all(
@@ -155,6 +159,7 @@ export function useTelemetry(paused = false): TelemetryState {
     error,
     connected,
     feed,
+    lastOkAt,
     refresh,
   };
 }

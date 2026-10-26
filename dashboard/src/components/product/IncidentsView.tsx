@@ -45,30 +45,8 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
     sortedIncidents[0] ||
     incidents[0];
 
-  // Global keyboard shortcut: Cmd+Shift+R / Ctrl+Shift+R to mark currently selected incident as resolved
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      const activeEl = document.activeElement;
-      const isInputActive =
-        activeEl &&
-        (activeEl.tagName === 'INPUT' ||
-          activeEl.tagName === 'TEXTAREA' ||
-          (activeEl as HTMLElement).isContentEditable);
-
-      if (isInputActive) return;
-
-      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === 'r') {
-        e.preventDefault();
-        e.stopImmediatePropagation();
-        if (currentIncident && !resolvingId && !resolvedIds.has(currentIncident.id)) {
-          handleResolve(currentIncident.id);
-        }
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [currentIncident?.id, resolvingId, resolvedIds]);
+  // Cmd/Ctrl+Shift+R is handled once, in App.tsx, for the selected incident. This view used to listen for
+  // it too and fell back to the first incident, so a single key press could acknowledge two alerts.
 
   // Initial and update stagger animation using anime.js
   useEffect(() => {
@@ -343,11 +321,11 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
                   <button
                     onClick={(e) => handleResolve(currentIncident.id, e)}
                     disabled={resolvingId === currentIncident.id}
-                    title="Mark selected incident as resolved (⌘⇧R / Ctrl+Shift+R)"
+                    title="Acknowledge the selected alert (⌘⇧R / Ctrl+Shift+R). It stays listed as investigating."
                     className="px-3.5 py-1.5 rounded-lg bg-white hover:bg-neutral-100 text-neutral-950 text-xs font-mono font-semibold flex items-center space-x-1.5 transition-all shadow-sm tactile-press"
                   >
                     <Check className="w-3.5 h-3.5 text-emerald-600 phosphor-emerald" />
-                    <span>Mark Resolved</span>
+                    <span>Acknowledge</span>
                     <kbd className="hidden sm:inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono bg-black/10 text-neutral-900 border border-black/20 ml-1 font-semibold keycap-bevel">
                       ⌘⇧R
                     </kbd>

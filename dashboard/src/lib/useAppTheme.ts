@@ -22,6 +22,7 @@ import {
   DARK_PRESETS,
   applyThemeVariables,
   normalizeHex,
+  isLightColour,
 } from './colorPalettes';
 
 // localStorage keys. They are the same ones the landing page already used for the chalk surface,
@@ -66,9 +67,23 @@ export function pickAllowed<T extends string>(stored: string | null, allowed: re
   return stored !== null && allowed.includes(stored) ? (stored as T) : fallback;
 }
 
+/**
+ * Calm mode (the grey "Deep Zen" look) only exists for the Dark palette. It forces a dark page, so
+ * with Chalk or Butter it left dark text on a dark page (review finding ux-tests-2). The choice is
+ * remembered, but it only takes effect while the Dark palette is active.
+ */
+export function effectiveCalm(storedCalm: boolean, palette: ColorPalette): boolean {
+  return storedCalm && palette === 'dark';
+}
+
 /** A stored colour as a clean "#rrggbb", otherwise `fallback`. */
 export function pickColor(stored: string | null, fallback: string): string {
   return normalizeHex(stored) ?? fallback;
+}
+
+/** `colour` if it can be the page colour of a light palette, otherwise `fallback`. */
+export function pickLight(colour: string, fallback: string): string {
+  return isLightColour(colour) ? colour : fallback;
 }
 
 export interface AppTheme {
@@ -86,8 +101,10 @@ export interface AppTheme {
   onSelectChalkPreset: (preset: ChalkSurfacePreset) => void;
   chalkCustomColor: string;
   onSelectChalkCustomColor: (hex: string) => void;
+  /** True only while Calm mode is on AND the Dark palette is active (see effectiveCalm). */
   isCalmMode: boolean;
-  onToggleCalmMode: () => void;
+  /** Undefined unless the Dark palette is active: Calm mode is not offered in Chalk or Butter. */
+  onToggleCalmMode?: () => void;
   textDensity: TextDensity;
   onChangeTextDensity: (density: TextDensity) => void;
 }
@@ -101,11 +118,12 @@ export function useAppTheme(): AppTheme {
   const [butterPreset, setButterPreset] = useState<ButterSurfacePreset>(() =>
     pickAllowed(readStored(KEYS.butterPreset), BUTTER_IDS, 'canary-gold'),
   );
-  const [butterCustomColor, setButterCustomColor] = useState(() => pickColor(readStored(KEYS.butterColor), '#faf5e6'));
+  // A stored custom colour that is too dark for a light palette is ignored (it would make the cards unreadable).
+  const [butterCustomColor, setButterCustomColor] = useState(() => pickLight(pickColor(readStored(KEYS.butterColor), '#faf5e6'), '#faf5e6'));
   const [chalkSurface, setChalkSurface] = useState<ChalkSurfacePreset>(() =>
     pickAllowed(readStored(KEYS.chalkPreset), CHALK_IDS, 'classic-white'),
   );
-  const [chalkCustomColor, setChalkCustomColor] = useState(() => pickColor(readStored(KEYS.chalkColor), '#f6f8fb'));
+  const [chalkCustomColor, setChalkCustomColor] = useState(() => pickLight(pickColor(readStored(KEYS.chalkColor), '#f6f8fb'), '#f6f8fb'));
   const [isCalmMode, setIsCalmMode] = useState(() => readStored(KEYS.calm) === 'true');
   const [textDensity, setTextDensity] = useState<TextDensity>(() =>
     readStored(KEYS.density) === 'compact' ? 'compact' : 'comfortable',
@@ -174,8 +192,8 @@ export function useAppTheme(): AppTheme {
       onSelectChalkPreset: setChalkSurface,
       chalkCustomColor,
       onSelectChalkCustomColor: selectChalkColor,
-      isCalmMode,
-      onToggleCalmMode,
+      isCalmMode: effectiveCalm(isCalmMode, palette),
+      onToggleCalmMode: palette === 'dark' ? onToggleCalmMode : undefined,
       textDensity,
       onChangeTextDensity: setTextDensity,
     }),

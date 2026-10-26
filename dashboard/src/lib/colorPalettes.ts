@@ -223,6 +223,16 @@ export function normalizeHex(input: string | null | undefined): string | null {
   return null;
 }
 
+/**
+ * True when a colour is light enough to be the page colour of a light palette (Chalk, Butter).
+ * Their cards stay white and their text stays dark ink, so a dark custom page colour gave unreadable
+ * popovers and light-on-white text (review finding ux-tests-8). 0.4 is relative luminance (WCAG).
+ */
+export function isLightColour(hex: string): boolean {
+  const full = normalizeHex(hex);
+  return full !== null && getLuminance(full) >= 0.4;
+}
+
 /** Appends a two-digit hex alpha ("f0" = 94 %) to a hex colour after normalising it. */
 export function hexAlpha(hex: string, alphaSuffix: string): string {
   return `${normalizeHex(hex) ?? hex}${alphaSuffix}`;

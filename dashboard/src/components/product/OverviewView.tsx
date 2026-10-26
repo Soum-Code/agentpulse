@@ -121,7 +121,7 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
               </span>
             </div>
             <p className="text-xs text-neutral-300 font-mono mt-0.5">
-              Interact with the live 3-agent chat (Retriever &rarr; Verifier &rarr; Answerer) and watch AgentPulse evaluate grounding risk in real time.
+              Chat with the 3-agent pipeline (Retriever &rarr; Verifier &rarr; Answerer) and see AgentPulse score each span&rsquo;s grounding risk once the worker has evaluated it.
             </p>
           </div>
         </div>

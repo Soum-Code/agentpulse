@@ -110,9 +110,10 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
         id: `resolve-${selectedIncident.id}`,
         category: 'incidents',
         typeLabel: 'Action',
-        title: `Mark Incident "${selectedIncident.title}" as Resolved`,
-        subtitle: `Resolve active incident ${selectedIncident.id} (${selectedIncident.agentName})`,
-        badge: 'RESOLVE',
+        // Acknowledge, not resolve: it sets acknowledged=true on the alert, which stays listed
+        title: `Acknowledge incident "${selectedIncident.title}"`,
+        subtitle: `Acknowledge alert ${selectedIncident.id} (${selectedIncident.agentName})`,
+        badge: 'ACK',
         statusSemantic: 'rose',
         icon: CheckCircle2,
         action: () => {
@@ -461,6 +462,9 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
                     mass: 0.8
                   }
             }
+            role="dialog"
+            aria-modal="true"
+            aria-label="Command palette"
             className="relative w-full max-w-2xl liquid-glass-card border-glow-subtle rounded-2xl overflow-hidden shadow-2xl flex flex-col max-h-[82vh] z-10"
           >
             {/* Top Liquid Specular Reflection & Subtle Corner Radiance */}
