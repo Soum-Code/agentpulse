@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { CheckCircle2, AlertTriangle, ExternalLink } from 'lucide-react';
+import { CheckCircle2, AlertTriangle } from 'lucide-react';
 import {
   DesignMode,
   ProductTab,
@@ -44,6 +44,7 @@ import { initChalkMoteProximityListener } from './utils/chalkMoteProximity';
 import { AuthModal } from './components/product/AuthModal';
 import { ProjectSelectorModal } from './components/product/ProjectSelectorModal';
 import { RagChatbotApp } from './components/rag/RagChatbotApp';
+import { RagMonitorView } from './components/rag/RagMonitorView';
 import { auth, onAuthStateChanged, subscribeToUserProjects } from './lib/firebase';
 import type { User as FirebaseUser } from 'firebase/auth';
 
@@ -623,47 +624,13 @@ export default function App() {
             )}
 
             {productTab === 'rag-monitor' && (
-              <div className="w-full space-y-3">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-1">
-                  <div>
-                    <div className="flex items-center space-x-2">
-                      <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 phosphor-cyan animate-pulse" />
-                      <h2 className="text-base font-bold text-white uppercase tracking-tight font-mono">
-                        RAG Live Multi-Agent Monitor & Drift Verification
-                      </h2>
-                      <span className="text-[10px] px-2 py-0.5 rounded bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 font-mono font-semibold">
-                        LIVE STREAM
-                      </span>
-                    </div>
-                    <p className="text-xs text-neutral-400 font-mono mt-0.5">
-                      Sequential multi-agent chat execution, asynchronous NLI grounding entailment, and 32-span sliding window drift.
-                    </p>
-                  </div>
-
-                  <div className="flex items-center space-x-2">
-                    <button
-                      onClick={() => setMode('rag')}
-                      className="px-3 py-1.5 rounded-xl bg-cyan-500/15 border border-cyan-500/40 text-cyan-300 hover:bg-cyan-500/25 transition-all text-xs font-mono font-semibold flex items-center space-x-1.5 shadow-sm"
-                      title="Switch to Fullscreen Dedicated Split-Screen Monitor"
-                    >
-                      <ExternalLink className="w-3.5 h-3.5 text-cyan-400" />
-                      <span>Full-Screen View</span>
-                    </button>
-                  </div>
-                </div>
-
-                <div className="rounded-2xl border border-white/10 overflow-hidden shadow-2xl bg-[#06070a] h-[740px] max-h-[82vh]">
-                  <RagChatbotApp
-                    embedded={true}
-                    onOpenConsole={() => setProductTab('overview')}
-                    onSelectTab={(t) => setProductTab(t)}
-                    onToggleFullscreen={() => setMode('rag')}
-                    palette={palette}
-                    isCalmMode={isCalmMode}
-                    chalkSurface={chalkSurface}
-                  />
-                </div>
-              </div>
+              <RagMonitorView
+                onSelectTab={setProductTab}
+                onToggleFullscreen={() => setMode('rag')}
+                palette={palette}
+                isCalmMode={isCalmMode}
+                chalkSurface={chalkSurface}
+              />
             )}
             </AnimeTabTransitionContainer>
             </ViewErrorBoundary>
