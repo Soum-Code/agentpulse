@@ -1,22 +1,254 @@
 import React, { useEffect, useRef } from 'react';
 import * as THREE from 'three';
-import { ChalkSurfacePreset } from '../../types';
+import { ChalkSurfacePreset, DarkSurfacePreset, ButterSurfacePreset } from '../../types';
 
 interface LiquidBackgroundCanvasProps {
   palette: 'butter' | 'dark' | 'chalk';
+  darkPreset?: DarkSurfacePreset;
+  darkCustomColor?: string;
+  butterPreset?: ButterSurfacePreset;
+  butterCustomColor?: string;
   chalkSurface?: ChalkSurfacePreset;
   chalkCustomColor?: string;
   className?: string;
 }
 
+interface PaletteColorConfig {
+  baseColor: THREE.Color;
+  liquidColor1: THREE.Color;
+  liquidColor2: THREE.Color;
+  highlightColor: THREE.Color;
+  causticColor: THREE.Color;
+  contrast: number;
+  darkMix: number;
+}
+
+const getPaletteColors = (
+  pal: 'butter' | 'dark' | 'chalk',
+  darkPreset?: DarkSurfacePreset | string,
+  darkCustomColor?: string,
+  butterPreset?: ButterSurfacePreset | string,
+  butterCustomColor?: string,
+  chalkSurface?: ChalkSurfacePreset | string,
+  chalkCustomColor?: string
+): PaletteColorConfig => {
+  if (pal === 'butter') {
+    if (butterPreset === 'amber-honey') {
+      return {
+        baseColor: new THREE.Color(0xf7efe1),
+        liquidColor1: new THREE.Color(0xe07a10),
+        liquidColor2: new THREE.Color(0xb45309),
+        highlightColor: new THREE.Color(0xfffdfa),
+        causticColor: new THREE.Color(0xfed7aa),
+        contrast: 1.10,
+        darkMix: 0.10,
+      };
+    } else if (butterPreset === 'vanilla-creme') {
+      return {
+        baseColor: new THREE.Color(0xf6f2ea),
+        liquidColor1: new THREE.Color(0xd6c5b0),
+        liquidColor2: new THREE.Color(0x854d0e),
+        highlightColor: new THREE.Color(0xffffff),
+        causticColor: new THREE.Color(0xfef3c7),
+        contrast: 1.08,
+        darkMix: 0.11,
+      };
+    } else if (butterPreset === 'pistachio-mint') {
+      return {
+        baseColor: new THREE.Color(0xedf5ee),
+        liquidColor1: new THREE.Color(0xbbf7d0),
+        liquidColor2: new THREE.Color(0x15803d),
+        highlightColor: new THREE.Color(0xfbfffb),
+        causticColor: new THREE.Color(0x86efac),
+        contrast: 1.08,
+        darkMix: 0.10,
+      };
+    } else if (butterPreset === 'custom' && butterCustomColor) {
+      try {
+        const base = new THREE.Color(butterCustomColor);
+        return {
+          baseColor: base,
+          liquidColor1: base.clone().offsetHSL(0.02, 0.15, -0.08),
+          liquidColor2: base.clone().offsetHSL(-0.03, 0.25, -0.16),
+          highlightColor: new THREE.Color(0xffffff),
+          causticColor: base.clone().offsetHSL(0, 0.1, 0.1),
+          contrast: 1.10,
+          darkMix: 0.10,
+        };
+      } catch {}
+    }
+
+    // Buttermax Canary default - warm churned buttermilk
+    return {
+      baseColor: new THREE.Color(0xfaf5e6),
+      liquidColor1: new THREE.Color(0xf59e0b),
+      liquidColor2: new THREE.Color(0xd97706),
+      highlightColor: new THREE.Color(0xfffef7),
+      causticColor: new THREE.Color(0xfde68a),
+      contrast: 1.12,
+      darkMix: 0.08,
+    };
+  } else if (pal === 'chalk') {
+    if (chalkSurface === 'sepia-slate') {
+      return {
+        baseColor: new THREE.Color(0xf5efe4),
+        liquidColor1: new THREE.Color(0xe8ded0),
+        liquidColor2: new THREE.Color(0xd5c8b5),
+        highlightColor: new THREE.Color(0xfffdfa),
+        causticColor: new THREE.Color(0xf6ede0),
+        contrast: 1.06,
+        darkMix: 0.18,
+      };
+    } else if (chalkSurface === 'emerald-graphite') {
+      return {
+        baseColor: new THREE.Color(0xebf3ed),
+        liquidColor1: new THREE.Color(0xd8e8dc),
+        liquidColor2: new THREE.Color(0xc2d8c7),
+        highlightColor: new THREE.Color(0xfbfffb),
+        causticColor: new THREE.Color(0xd1fae5),
+        contrast: 1.05,
+        darkMix: 0.18,
+      };
+    } else if (chalkSurface === 'blueprint-mist') {
+      return {
+        baseColor: new THREE.Color(0xe7eff7),
+        liquidColor1: new THREE.Color(0xd4e4f5),
+        liquidColor2: new THREE.Color(0xb9d5f0),
+        highlightColor: new THREE.Color(0xffffff),
+        causticColor: new THREE.Color(0xbfdbfe),
+        contrast: 1.06,
+        darkMix: 0.18,
+      };
+    } else if (chalkSurface === 'custom' && chalkCustomColor) {
+      try {
+        const base = new THREE.Color(chalkCustomColor);
+        return {
+          baseColor: base,
+          liquidColor1: base.clone().offsetHSL(0.01, -0.05, -0.04),
+          liquidColor2: base.clone().offsetHSL(-0.02, -0.08, -0.08),
+          highlightColor: new THREE.Color(0xffffff),
+          causticColor: base.clone().offsetHSL(0, 0, 0.05),
+          contrast: 1.06,
+          darkMix: 0.20,
+        };
+      } catch {}
+    }
+
+    // Classic White default - studio alabaster
+    return {
+      baseColor: new THREE.Color(0xf6f8fb),
+      liquidColor1: new THREE.Color(0xe9eef5),
+      liquidColor2: new THREE.Color(0xdbe3ec),
+      highlightColor: new THREE.Color(0xffffff),
+      causticColor: new THREE.Color(0xdbeafe),
+      contrast: 1.05,
+      darkMix: 0.20,
+    };
+  } else {
+    // Dark Multi-color presets
+    if (darkPreset === 'midnight-sapphire') {
+      return {
+        baseColor: new THREE.Color(0x030712),
+        liquidColor1: new THREE.Color(0x0a1936),
+        liquidColor2: new THREE.Color(0x1e40af),
+        highlightColor: new THREE.Color(0xdbeafe),
+        causticColor: new THREE.Color(0x60a5fa),
+        contrast: 1.28,
+        darkMix: 0.42,
+      };
+    } else if (darkPreset === 'amethyst-abyss') {
+      return {
+        baseColor: new THREE.Color(0x06020f),
+        liquidColor1: new THREE.Color(0x1e0b38),
+        liquidColor2: new THREE.Color(0x581c87),
+        highlightColor: new THREE.Color(0xf3e8ff),
+        causticColor: new THREE.Color(0xc084fc),
+        contrast: 1.28,
+        darkMix: 0.42,
+      };
+    } else if (darkPreset === 'emerald-matrix') {
+      return {
+        baseColor: new THREE.Color(0x020d07),
+        liquidColor1: new THREE.Color(0x063321),
+        liquidColor2: new THREE.Color(0x059669),
+        highlightColor: new THREE.Color(0xd1fae5),
+        causticColor: new THREE.Color(0x34d399),
+        contrast: 1.26,
+        darkMix: 0.42,
+      };
+    } else if (darkPreset === 'custom' && darkCustomColor) {
+      try {
+        const base = new THREE.Color(darkCustomColor);
+        return {
+          baseColor: base,
+          liquidColor1: base.clone().offsetHSL(0.05, 0.2, 0.08),
+          liquidColor2: base.clone().offsetHSL(-0.05, 0.3, 0.15),
+          highlightColor: new THREE.Color(0xe0f2fe),
+          causticColor: base.clone().offsetHSL(0, 0.4, 0.3),
+          contrast: 1.25,
+          darkMix: 0.45,
+        };
+      } catch {}
+    }
+
+    // Obsidian Void Default
+    return {
+      baseColor: new THREE.Color(0x06070a),
+      liquidColor1: new THREE.Color(0x0c1322),
+      liquidColor2: new THREE.Color(0x162035),
+      highlightColor: new THREE.Color(0xe0f2fe),
+      causticColor: new THREE.Color(0x38bdf8),
+      contrast: 1.25,
+      darkMix: 0.45,
+    };
+  }
+};
+
 export const LiquidBackgroundCanvas: React.FC<LiquidBackgroundCanvasProps> = ({
   palette,
+  darkPreset = 'obsidian-void',
+  darkCustomColor = '#06070a',
+  butterPreset = 'canary-gold',
+  butterCustomColor = '#faf5e6',
   chalkSurface = 'classic-white',
-  chalkCustomColor = '#ffffff',
+  chalkCustomColor = '#f6f8fb',
   className = '',
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const animFrameId = useRef<number | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const uniformsRef = useRef<Record<string, any> | null>(null);
+
+  // Immediate shader uniform update effect (0ms lag, zero WebGL context teardown)
+  useEffect(() => {
+    if (!uniformsRef.current) return;
+    const colors = getPaletteColors(
+      palette,
+      darkPreset,
+      darkCustomColor,
+      butterPreset,
+      butterCustomColor,
+      chalkSurface,
+      chalkCustomColor
+    );
+    uniformsRef.current.u_base_color.value.copy(colors.baseColor);
+    uniformsRef.current.u_liquid_color1.value.copy(colors.liquidColor1);
+    uniformsRef.current.u_liquid_color2.value.copy(colors.liquidColor2);
+    uniformsRef.current.u_highlight_color.value.copy(colors.highlightColor);
+    uniformsRef.current.u_caustic_color.value.copy(colors.causticColor);
+    uniformsRef.current.u_contrast.value = colors.contrast;
+    uniformsRef.current.u_dark_mix.value = colors.darkMix;
+    uniformsRef.current.u_palette_mode.value =
+      palette === 'butter' ? 0.0 : palette === 'chalk' ? 1.0 : 2.0;
+  }, [
+    palette,
+    darkPreset,
+    darkCustomColor,
+    butterPreset,
+    butterCustomColor,
+    chalkSurface,
+    chalkCustomColor,
+  ]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -32,83 +264,15 @@ export const LiquidBackgroundCanvas: React.FC<LiquidBackgroundCanvasProps> = ({
       powerPreference: 'high-performance',
     });
 
-    // Color definitions per palette (Apple iOS refined glass style)
-    const getPaletteColors = (pal: 'butter' | 'dark' | 'chalk') => {
-      if (pal === 'butter') {
-        return {
-          baseColor: new THREE.Color(0xfed72a), // Buttermax signature canary yellow
-          liquidColor1: new THREE.Color(0xfbbf24), // Vibrant light amber
-          liquidColor2: new THREE.Color(0xd97706), // Warm deep honey
-          highlightColor: new THREE.Color(0xfffef0), // Translucent frosted white highlight
-          causticColor: new THREE.Color(0xffffff), // Pristine glass refraction specular
-          contrast: 1.15,
-          darkMix: 0.08,
-        };
-      } else if (pal === 'chalk') {
-        if (chalkSurface === 'sepia-slate') {
-          return {
-            baseColor: new THREE.Color(0xf5efe6), // Warm antique parchment
-            liquidColor1: new THREE.Color(0xebe2d3), // Gentle sepia linen wave
-            liquidColor2: new THREE.Color(0xdfd4c3), // Warm library stone shadow
-            highlightColor: new THREE.Color(0xfffdfa), // Luminous ivory highlight
-            causticColor: new THREE.Color(0xf6ede0), // Warm amber-sand refraction
-            contrast: 1.06,
-            darkMix: 0.18,
-          };
-        } else if (chalkSurface === 'emerald-graphite') {
-          return {
-            baseColor: new THREE.Color(0xeaf2ec), // Soft calming sage-emerald slate
-            liquidColor1: new THREE.Color(0xdcebe0), // Translucent seafoam silk wave
-            liquidColor2: new THREE.Color(0xc9dec7), // Gentle graphite-sage contour
-            highlightColor: new THREE.Color(0xfbfffb), // Clean chalk-white specular gleam
-            causticColor: new THREE.Color(0xd3e8dc), // Crystalline sage refraction
-            contrast: 1.05,
-            darkMix: 0.19,
-          };
-        } else if (chalkSurface === 'custom' && chalkCustomColor) {
-          try {
-            const base = new THREE.Color(chalkCustomColor);
-            const c1 = base.clone().offsetHSL(0.01, -0.05, -0.04);
-            const c2 = base.clone().offsetHSL(-0.02, -0.08, -0.08);
-            return {
-              baseColor: base,
-              liquidColor1: c1,
-              liquidColor2: c2,
-              highlightColor: new THREE.Color(0xffffff),
-              causticColor: base.clone().offsetHSL(0, 0, 0.05),
-              contrast: 1.06,
-              darkMix: 0.20,
-            };
-          } catch {
-            // fallback to alabaster
-          }
-        }
-
-        // Classic White default
-        return {
-          baseColor: new THREE.Color(0xfcfdfd), // Pure alabaster light studio base
-          liquidColor1: new THREE.Color(0xeef2f6), // Soft pearlescent silk wave
-          liquidColor2: new THREE.Color(0xe2e8f0), // Gentle slate-mist contour shadow (soft & light)
-          highlightColor: new THREE.Color(0xffffff), // Crisp titanium white specular gloss crest
-          causticColor: new THREE.Color(0xdbeafe), // Subtle crystalline ice-blue refraction
-          contrast: 1.05,
-          darkMix: 0.22,
-        };
-      } else {
-        // Dark / Obsidian Apple VisionOS glass
-        return {
-          baseColor: new THREE.Color(0x06070a), // Deep atmospheric void
-          liquidColor1: new THREE.Color(0x0f172a), // Translucent slate glass
-          liquidColor2: new THREE.Color(0x1e1b4b), // Subtle prismatic indigo
-          highlightColor: new THREE.Color(0xe0f2fe), // Luminous ice-blue glass top sheen
-          causticColor: new THREE.Color(0x38bdf8), // Electric cyan caustic
-          contrast: 1.25,
-          darkMix: 0.45,
-        };
-      }
-    };
-
-    const colors = getPaletteColors(palette);
+    const colors = getPaletteColors(
+      palette,
+      darkPreset,
+      darkCustomColor,
+      butterPreset,
+      butterCustomColor,
+      chalkSurface,
+      chalkCustomColor
+    );
 
     const initW = container.clientWidth || window.innerWidth || 1920;
     const initH = container.clientHeight || window.innerHeight || 1080;
@@ -129,6 +293,8 @@ export const LiquidBackgroundCanvas: React.FC<LiquidBackgroundCanvasProps> = ({
       u_dark_mix: { value: colors.darkMix },
       u_palette_mode: { value: palette === 'butter' ? 0.0 : palette === 'chalk' ? 1.0 : 2.0 },
     };
+
+    uniformsRef.current = uniforms;
 
     let cachedRect = container.getBoundingClientRect();
     const updateBounds = () => {
@@ -459,8 +625,9 @@ export const LiquidBackgroundCanvas: React.FC<LiquidBackgroundCanvasProps> = ({
       renderer.dispose();
       material.dispose();
       plane.geometry.dispose();
+      uniformsRef.current = null;
     };
-  }, [palette, chalkSurface, chalkCustomColor]);
+  }, []);
 
   return (
     <div
