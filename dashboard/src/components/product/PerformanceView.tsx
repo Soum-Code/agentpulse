@@ -223,7 +223,8 @@ export const PerformanceView: React.FC<PerformanceViewProps> = ({ onNavigateTab,
                 <XAxis dataKey="label" stroke="#94a3b8" tick={{ fontSize: 11 }} />
                 <YAxis stroke="#94a3b8" tick={{ fontSize: 11 }} unit=" ms" width={70} />
                 <Tooltip formatter={(v: number) => `${v} ms`} />
-                <Legend />
+                {/* the words in the page's text colour (recharts paints them in the bar colour, unreadable on light) */}
+                <Legend formatter={(value: string) => <span className="text-neutral-300">{value}</span>} />
                 <Bar dataKey="p50" name="p50" fill="#38bdf8" radius={[4, 4, 0, 0]} />
                 <Bar dataKey="p95" name="p95" fill="#f59e0b" radius={[4, 4, 0, 0]} />
               </BarChart>
