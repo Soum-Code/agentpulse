@@ -153,7 +153,7 @@ export const PerformanceView: React.FC<PerformanceViewProps> = ({ onNavigateTab,
         <Tile
           title="API latency p50"
           icon={<Clock className="w-4 h-4 text-emerald-400" />}
-          value={<DatumDisplay datum={d(() => apiC?.latency_ms?.p50, 'no request latency has been sampled yet')} format="latency" className="!text-white" />}
+          value={<DatumDisplay datum={d(() => apiC?.latency_ms?.p50, 'no request latency has been sampled yet')} format="latency" />}
           footer={
             <>
               <span>p95 <DatumDisplay datum={d(() => apiC?.latency_ms?.p95, 'not sampled yet')} format="latency" /></span>
@@ -164,7 +164,7 @@ export const PerformanceView: React.FC<PerformanceViewProps> = ({ onNavigateTab,
         <Tile
           title="Server errors (5xx)"
           icon={<Zap className="w-4 h-4 text-amber-400" />}
-          value={<DatumDisplay datum={errRate} format="percentage" className="!text-white" />}
+          value={<DatumDisplay datum={errRate} format="percentage" />}
           footer={
             <>
               <span><DatumDisplay datum={d(() => apiC?.server_errors_total, sinceStart)} format="count" /> errors</span>
@@ -177,7 +177,7 @@ export const PerformanceView: React.FC<PerformanceViewProps> = ({ onNavigateTab,
           icon={<Activity className="w-4 h-4 text-cyan-400" />}
           value={
             <>
-              <DatumDisplay datum={d(() => apiC?.requests_per_sec_1m, sinceStart)} className="!text-white" />
+              <DatumDisplay datum={d(() => (apiC?.requests_per_sec_1m != null ? Number(apiC.requests_per_sec_1m.toFixed(2)) : null), sinceStart)} />
               <span className="font-mono text-xs text-neutral-400 ml-1.5 font-normal">req/s</span>
             </>
           }
@@ -191,7 +191,7 @@ export const PerformanceView: React.FC<PerformanceViewProps> = ({ onNavigateTab,
         <Tile
           title="Evaluation queue"
           icon={<Layers className="w-4 h-4 text-purple-400" />}
-          value={<DatumDisplay datum={d(() => queue?.depth, 'the platform check reports no queue depth')} format="count" className="!text-white" />}
+          value={<DatumDisplay datum={d(() => queue?.depth, 'the platform check reports no queue depth')} format="count" />}
           footer={
             <>
               <span>limit <DatumDisplay datum={d(() => queue?.backlog_threshold, 'no threshold reported')} format="count" /></span>
