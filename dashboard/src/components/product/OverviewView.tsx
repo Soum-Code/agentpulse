@@ -128,7 +128,7 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
 
         <button
           onClick={() => onNavigateTab('rag-monitor')}
-          className="aetheris-send-button px-4 py-2 rounded-xl text-white font-mono text-xs font-semibold flex items-center space-x-2 shrink-0 self-start sm:self-center transition-all shadow-lg active:scale-95"
+          data-keep-white="true" className="aetheris-send-button px-4 py-2 rounded-xl text-white font-mono text-xs font-semibold flex items-center space-x-2 shrink-0 self-start sm:self-center transition-all shadow-lg active:scale-95"
         >
           <span>Open Live Chat Bot</span>
           <ArrowRight className="w-4 h-4" />
