@@ -11,6 +11,7 @@ import {
   applyThemeVariables,
   normalizeHex,
   hexAlpha,
+  isLightColour,
 } from './colorPalettes';
 
 describe('colorPalettes', () => {
@@ -246,6 +247,16 @@ describe('colorPalettes', () => {
       const m = getChalkTextMetrics('custom', '#eef');
       expect(m.isWcagAACompliant).toBe(true);
       expect(m.contrastRatioMuted).toBeGreaterThanOrEqual(4.5);
+    });
+  });
+
+  describe('isLightColour', () => {
+    it('accepts the page colours of the light palettes and rejects dark ones', () => {
+      for (const p of [...CHALK_PRESETS, ...BUTTER_PRESETS]) expect(isLightColour(p.bgHex)).toBe(true);
+      for (const p of DARK_PRESETS) expect(isLightColour(p.bgHex)).toBe(false);
+      expect(isLightColour('#101820')).toBe(false);
+      expect(isLightColour('#fff')).toBe(true);
+      expect(isLightColour('not a colour')).toBe(false);
     });
   });
 });

@@ -15,7 +15,7 @@ import { summarizeDrift, breakDownIncidents } from './lib/overviewStats';
 import { api } from './lib/api';
 import { CHORD_WINDOW_MS } from './utils/keyboard';
 import { loadFullTrace } from './lib/traceDetail';
-import { datumFromFeed } from './lib/stateModel';
+import { datumFromFeed, Feed } from './lib/stateModel';
 
 import { PublicExperience } from './components/public/PublicExperience';
 import { LiquidBackgroundCanvas } from './components/public/LiquidBackgroundCanvas';
@@ -23,7 +23,8 @@ import { LiquidBackgroundCanvas } from './components/public/LiquidBackgroundCanv
 import { ProductHeader } from './components/product/ProductHeader';
 import { FloatingDock } from './components/product/FloatingDock';
 import { CommandPalette } from './components/product/CommandPalette';
-import { FeedStatusPanel } from './components/product/FeedStatusPanel';
+import { FeedStatusPanel, StaleDataBanner } from './components/product/FeedStatusPanel';
+import { consoleGate } from './lib/consoleGate';
 import { ViewErrorBoundary } from './components/product/ViewErrorBoundary';
 import { OverviewView } from './components/product/OverviewView';
 import { AgentsView } from './components/product/AgentsView';
@@ -103,6 +104,7 @@ export default function App() {
     datasets,
     experiments,
     feed,
+    lastOkAt,
     refresh: refreshTelemetry,
   } = useTelemetry(!isLive);
 
@@ -116,6 +118,9 @@ export default function App() {
   const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(null);
   const [projects, setProjects] = useState<TelemetryProject[]>([]);
   const [activeProject, setActiveProject] = useState<TelemetryProject | null>(null);
+  // Whether the project list really arrived from Firestore. A rules or network failure used to be swallowed
+  // (the modal showed an empty list and a fixed 'Cloud Sync Active'); now it is kept and shown.
+  const [projectsFeed, setProjectsFeed] = useState<Feed>({ status: 'pending' });
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isProjectSelectorOpen, setIsProjectSelectorOpen] = useState(false);
 
@@ -142,16 +147,18 @@ export default function App() {
     if (!currentUser) {
       setProjects([]);
       setActiveProject(null);
+      setProjectsFeed({ status: 'pending' });
       return;
     }
     return subscribeToUserProjects(currentUser.uid, (projs) => {
+      setProjectsFeed({ status: 'ready' });
       setProjects(projs);
       setActiveProject((curr) =>
         curr && projs.some((p) => p.id === curr.id)
           ? projs.find((p) => p.id === curr.id) ?? null
           : projs[0] ?? null,
       );
-    });
+    }, (err) => setProjectsFeed({ status: 'error', message: err.message }));
   }, [currentUser]);
 
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
@@ -352,6 +359,8 @@ export default function App() {
   // telemetry, and APM, Settings and the RAG monitor have their own sources.
   const hasTelemetry = agents.length > 0 || traces.length > 0;
   const needsTelemetry = !['telemetry-lab', 'performance', 'settings', 'rag-monitor'].includes(productTab);
+  // What the feed's state does to the screen: a panel only until the first good poll, a stale banner after.
+  const gate = consoleGate(feed.status, needsTelemetry, lastOkAt !== null);
 
   const handleClearSelection = () => {
     setSelectedAgent(undefined);
@@ -455,16 +464,17 @@ export default function App() {
             {/* The views index into these collections directly, so hold them back until the
                 first poll resolves rather than rendering an empty shell that reads as "no
                 problems found". */}
-            <FeedStatusPanel feed={feed} onRetry={refreshTelemetry} />
+            {gate.blockWithPanel && <FeedStatusPanel feed={feed} onRetry={refreshTelemetry} />}
+            {gate.showStaleBanner && <StaleDataBanner feed={feed} lastOkAt={lastOkAt} onRetry={refreshTelemetry} />}
 
-            {feed.status === 'ready' && !hasTelemetry && needsTelemetry && (
+            {!gate.blockWithPanel && lastOkAt !== null && !hasTelemetry && needsTelemetry && (
               <div className="ios-liquid-card rounded-2xl p-10 text-center font-mono text-xs text-neutral-400">
                 Connected, but this instance has no telemetry yet. Send spans through the SDK
                 or run a scenario in the Telemetry Lab.
               </div>
             )}
 
-            {feed.status === 'ready' && (hasTelemetry || !needsTelemetry) && (
+            {!gate.blockWithPanel && (hasTelemetry || !needsTelemetry) && (
             <ViewErrorBoundary key={productTab} viewName={productTab.replace('-', ' ')}>
             <AnimeTabTransitionContainer activeTab={productTab}>
             {productTab === 'overview' && (
@@ -765,6 +775,7 @@ export default function App() {
         onClose={() => setIsProjectSelectorOpen(false)}
         currentUser={currentUser}
         projects={projects}
+        projectsFeed={projectsFeed}
         activeProject={activeProject}
         onSelectProject={(proj) => {
           setActiveProject(proj);

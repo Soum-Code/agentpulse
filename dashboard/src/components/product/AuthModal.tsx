@@ -189,12 +189,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-neutral-500">Telemetry Storage:</span>
-                <span className="text-white">Firestore Cloud Isolation</span>
+                <span className="text-neutral-500">Project list:</span>
+                <span className="text-white">Firestore (spans are stored by the AgentPulse API)</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-neutral-500">Security Rule:</span>
-                <span className="text-amber-300">User Scoped (RBAC)</span>
+                <span className="text-neutral-500">Access:</span>
+                <span className="text-amber-300">Projects are filtered by your user id; enforcement depends on the Firestore rules deployed for this project</span>
               </div>
             </div>
 

@@ -15,6 +15,7 @@ import {
   BUTTER_SWATCHES,
   getContrastRatio,
   normalizeHex,
+  isLightColour,
 } from '../../lib/colorPalettes';
 
 interface UnifiedPaletteBarProps {
@@ -62,6 +63,9 @@ export const UnifiedPaletteBar: React.FC<UnifiedPaletteBarProps> = ({
   const [isCustomOpen, setIsCustomOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const colorInputRef = useRef<HTMLInputElement>(null);
+  const customToggleRef = useRef<HTMLButtonElement>(null);
+  // Why the last custom colour was not applied (a dark colour in a light palette), shown under the fields.
+  const [customNote, setCustomNote] = useState<string | null>(null);
   // What the user is typing in the hex field. The app only receives a colour once the draft is a
   // complete valid hex; before that (e.g. "#a") nothing is applied, so the theme never flickers to
   // a fallback and the colour picker never gets an invalid value.
@@ -74,11 +78,21 @@ export const UnifiedPaletteBar: React.FC<UnifiedPaletteBarProps> = ({
         setIsCustomOpen(false);
       }
     };
+    // Escape closes the popover and puts the focus back on its toggle, so keyboard users are not stranded.
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.stopPropagation();
+        setIsCustomOpen(false);
+        customToggleRef.current?.focus();
+      }
+    };
     if (isCustomOpen) {
       document.addEventListener('mousedown', handleOutside);
+      document.addEventListener('keydown', handleEscape);
     }
     return () => {
       document.removeEventListener('mousedown', handleOutside);
+      document.removeEventListener('keydown', handleEscape);
     };
   }, [isCustomOpen]);
 
@@ -119,16 +133,31 @@ export const UnifiedPaletteBar: React.FC<UnifiedPaletteBarProps> = ({
     else onSelectChalkCustomColor(hex);
   };
 
+  // Applies a custom colour. Light palettes keep white cards and dark ink, so a dark page colour there
+  // would be unreadable: it is refused with a reason instead of applied.
+  const applyCustomColor = (hex: string): void => {
+    if (palette !== 'dark' && !isLightColour(hex)) {
+      setCustomNote(`${palette === 'chalk' ? 'Chalk' : 'Butter'} is a light palette: pick a lighter colour (a dark one would make the text unreadable).`);
+      return;
+    }
+    setCustomNote(null);
+    handleSelectPreset('custom');
+    handleCustomColorChange(hex);
+  };
+
+  // Back to the palette's default tint. The colour is reset FIRST because choosing a custom colour also
+  // switches the preset to 'custom'; resetting the preset last is what makes the default win.
   const handleResetCurrentPalette = () => {
+    setCustomNote(null);
     if (palette === 'dark') {
-      onSelectDarkPreset('obsidian-void');
       onSelectDarkCustomColor('#06070a');
+      onSelectDarkPreset('obsidian-void');
     } else if (palette === 'butter') {
-      onSelectButterPreset('canary-gold');
       onSelectButterCustomColor('#faf5e6');
+      onSelectButterPreset('canary-gold');
     } else {
-      onSelectChalkPreset('classic-white');
       onSelectChalkCustomColor('#f6f8fb');
+      onSelectChalkPreset('classic-white');
     }
   };
 
@@ -164,6 +193,7 @@ export const UnifiedPaletteBar: React.FC<UnifiedPaletteBarProps> = ({
           }`}
           title="Buttermax Canary Yellow Palette"
           aria-label="Switch to Butter Palette"
+          aria-pressed={palette === 'butter'}
         >
           <Sparkles className="w-3 h-3 text-amber-600" />
           <span>Butter</span>
@@ -180,6 +210,7 @@ export const UnifiedPaletteBar: React.FC<UnifiedPaletteBarProps> = ({
           }`}
           title="Obsidian Dark Palette"
           aria-label="Switch to Dark Palette"
+          aria-pressed={palette === 'dark'}
         >
           <Moon className="w-3 h-3 text-indigo-400" />
           <span>Dark</span>
@@ -199,6 +230,7 @@ export const UnifiedPaletteBar: React.FC<UnifiedPaletteBarProps> = ({
           }`}
           title="Studio Chalk Light Palette"
           aria-label="Switch to Chalk Palette"
+          aria-pressed={palette === 'chalk'}
         >
           <Sun className="w-3 h-3 text-amber-400" />
           <span className={palette === 'chalk' ? '!text-white font-bold' : ''}>Chalk</span>
@@ -249,7 +281,8 @@ export const UnifiedPaletteBar: React.FC<UnifiedPaletteBarProps> = ({
                   : 'text-neutral-400 hover:text-white hover:bg-white/[0.08]'
               }`}
               title={`${preset.name} — ${preset.subtitle}`}
-              aria-label={`Select ${preset.name}`}
+              aria-label={`${preset.label} tint: ${preset.name}`}
+              aria-pressed={isSelected}
             >
               <span
                 className="w-2 h-2 rounded-full border border-black/20 shrink-0"
@@ -264,6 +297,8 @@ export const UnifiedPaletteBar: React.FC<UnifiedPaletteBarProps> = ({
 
         {/* Custom Hex Picker Toggle */}
         <button
+          ref={customToggleRef}
+          aria-label="Custom colour"
           onClick={() => setIsCustomOpen(!isCustomOpen)}
           className={`px-2 py-0.5 rounded-full text-xs font-medium transition-all flex items-center space-x-1.5 cursor-pointer ${
             activePresetId === 'custom'
@@ -344,6 +379,7 @@ export const UnifiedPaletteBar: React.FC<UnifiedPaletteBarProps> = ({
               </div>
             </div>
             <button
+              aria-label="Close custom colour options"
               onClick={() => setIsCustomOpen(false)}
               className={`p-1 rounded-lg transition-colors cursor-pointer ${
                 palette === 'butter'
@@ -422,10 +458,8 @@ export const UnifiedPaletteBar: React.FC<UnifiedPaletteBarProps> = ({
                 ref={colorInputRef}
                 type="color"
                 value={activeCustomColor}
-                onChange={(e) => {
-                  handleSelectPreset('custom');
-                  handleCustomColorChange(e.target.value);
-                }}
+                aria-label="Pick a custom colour"
+                onChange={(e) => applyCustomColor(e.target.value)}
                 className="w-8 h-8 rounded-lg border cursor-pointer bg-transparent shrink-0"
                 title="Click to choose custom spectrum color"
               />
@@ -440,12 +474,10 @@ export const UnifiedPaletteBar: React.FC<UnifiedPaletteBarProps> = ({
                     // Apply only a complete colour (3 or 6 digits), normalised to #rrggbb.
                     const complete = typed.replace('#', '').length === 3 || typed.replace('#', '').length === 6;
                     const hex = complete ? normalizeHex(typed) : null;
-                    if (hex) {
-                      handleSelectPreset('custom');
-                      handleCustomColorChange(hex);
-                    }
+                    if (hex) applyCustomColor(hex);
                   }}
                   onBlur={() => setHexDraft(null)}
+                  aria-label="Custom colour hex value"
                   placeholder="#000000"
                   maxLength={7}
                   className={`w-full px-2.5 py-1 rounded-lg border font-mono text-xs uppercase focus:outline-none focus:ring-1 ${
@@ -474,6 +506,12 @@ export const UnifiedPaletteBar: React.FC<UnifiedPaletteBarProps> = ({
               <RotateCcw className="w-3.5 h-3.5" />
             </button>
           </div>
+
+          {customNote && (
+            <p role="status" className="mt-2 text-[10px] leading-snug text-rose-600">
+              {customNote}
+            </p>
+          )}
 
           {/* Contrast & Accessibility Indicator */}
           <div
