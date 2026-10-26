@@ -4,10 +4,9 @@ import { Agent } from '../../types';
 import { DRIFT_THRESHOLD } from '../../lib/adapters';
 import {
   DASH,
-  DRIFT_BASELINE_OUTPUTS,
-  DRIFT_CURRENT_WINDOW_OUTPUTS,
   distanceBarPct,
   driftStatusLabel,
+  driftWaitSentence,
   formatDistance,
   formatLatencyMs,
   formatSuccessRate,
@@ -136,7 +135,7 @@ export const AgentsView: React.FC<AgentsViewProps> = ({
                         : 'border-dashed border-white/[0.14] text-neutral-500 bg-transparent'
                     }`}
                   >
-                    {driftStatusLabel(agent.driftStatus)}
+                    {driftStatusLabel(agent)}
                   </span>
                 </div>
 
@@ -314,7 +313,7 @@ export const AgentsView: React.FC<AgentsViewProps> = ({
                         : 'text-emerald-400'
                     }`}
                   >
-                    {formatDistance(currentAgent.driftScore)} ({driftStatusLabel(currentAgent.driftStatus)})
+                    {formatDistance(currentAgent.driftScore)} ({driftStatusLabel(currentAgent)})
                   </span>
                 </div>
                 <div className="relative w-full h-1.5 bg-black/50 rounded-full overflow-hidden border border-white/[0.08]">
@@ -329,10 +328,11 @@ export const AgentsView: React.FC<AgentsViewProps> = ({
                   {/* Tick at the alert threshold. */}
                   <div className="absolute top-0 bottom-0 w-px bg-white/40" style={{ left: `${DRIFT_THRESHOLD * 100}%` }} />
                 </div>
+                {/* Says which pool is still filling (baseline or window), from the spans the
+                    drift detector has seen; it used to say "no baseline" in both cases. */}
                 {currentAgent.driftScore == null && (
                   <p className="text-[11px] font-mono text-neutral-500">
-                    No distance yet: it needs the agent&rsquo;s first {DRIFT_BASELINE_OUTPUTS} evaluated outputs as a
-                    baseline and its latest {DRIFT_CURRENT_WINDOW_OUTPUTS} as the current window.
+                    No distance yet. {driftWaitSentence(currentAgent)}
                   </p>
                 )}
               </div>

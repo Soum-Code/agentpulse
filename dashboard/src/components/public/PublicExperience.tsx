@@ -199,10 +199,14 @@ export const PublicExperience: React.FC<PublicExperienceProps> = ({ onEnterProdu
     {
       label: 'UNDERSTAND',
       subtitle: 'Behavioral & Centroid Drift Detection',
-      description: 'Detect semantic divergence using window_centroid_distance across rolling 20-sample baseline and 12-sample test windows. Offline diagnosis on real agent text: the first drift metric crossed the 0.30 threshold on 91.7% of 484 unchanged windows; the windowed metric crossed on 6.8% and caught 82.5% of injected content changes. This is not a live false-alarm rate.',
+      // The shipped detector's own figures (DRIFT_REAL_TEXT_DIAGNOSIS_REPORT.md 11.3, held-out
+      // column: 0.0152 false alarms, 0.9192 detection, 0.2454 coverage), the same as the drift
+      // section further down. The old "6.8% / 82.5%" were the 10.2 pooled-session prototype,
+      // not window_centroid_distance; 91.7% is the per-output metric it replaced (10.2, 6).
+      description: 'Detect semantic divergence with window_centroid_distance: the cosine distance between the mean embedding of an agent’s first 20 outputs and of its latest 12, alert above 0.30. Offline, on a held-out split of an external real-trace corpus, measured once: 1.5% false alarms on unchanged sessions long enough to report, and 91.9% of content changes caught; only 24.5% of sessions were long enough. The earlier per-output metric false-alarmed on 91.7% of unchanged windows. Not a live rate.',
       badge: 'MiniLM-L6-v2',
-      metric: '91.7% → 6.8%',
-      metricLabel: 'False alarms on unchanged traffic (offline, 484 windows)',
+      metric: '1.5% false alarms',
+      metricLabel: 'Held-out, offline; 24.5% of sessions report a distance',
       diagramTitle: 'Window Centroid Distance Matrix',
       features: ['MiniLM 384-dim dense vectors on local CPU', 'Evaluates once 32 spans are processed in rolling pool', 'Agent Stability Index (ASI 0-100) scoring']
     },
@@ -1854,8 +1858,10 @@ async def researcher_node(state):
                 ? 'bg-neutral-100 border border-neutral-300 text-neutral-800'
                 : 'bg-black/35 backdrop-blur-xl border border-white/12 text-neutral-200'
             }`}>
-              {/* "Discrepancy: 0.89" removed: an invented figure in a hand-written example. */}
-              "Warehouse catalog confirmed column is `tier_identifier_code`."
+              {/* Hand-written example of what the NLI check reports. It used to quote a warehouse
+                  catalog lookup ("Discrepancy: 0.89"), a check AgentPulse does not have; the card
+                  text above names the real signals. */}
+              "Evidence names the column `tier_identifier_code`; DeBERTa reads the output as contradicting it, so the grounding risk is high."
             </div>
           </div>
 

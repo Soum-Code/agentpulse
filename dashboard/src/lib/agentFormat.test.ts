@@ -6,6 +6,8 @@ import {
   agentSubtitle,
   distanceBarPct,
   driftStatusLabel,
+  driftWait,
+  driftWaitSentence,
   formatDistance,
   formatLatencyMs,
   formatSuccessRate,
@@ -76,9 +78,22 @@ describe('drift distance helpers', () => {
     expect(isOverDriftThreshold(undefined)).toBe(false);
   });
 
-  it('names a missing status "no baseline" rather than leaving the badge empty', () => {
-    expect(driftStatusLabel(undefined)).toBe('no baseline');
-    expect(driftStatusLabel('drift')).toBe('drift');
+  it('names which drift pool is still filling rather than leaving the badge empty', () => {
+    expect(driftStatusLabel({ driftStatus: 'drift' })).toBe('drift');
+    expect(driftStatusLabel({ driftSpansSeen: 3 })).toBe('baseline 3/20');
+    expect(driftStatusLabel({ driftSpansSeen: 19 })).toBe('baseline 19/20');
+    // At 20 spans the baseline should be full: what is missing is the window of 12.
+    expect(driftStatusLabel({ driftSpansSeen: 20 })).toBe('window filling');
+    expect(driftStatusLabel({})).toBe('no drift data');
+  });
+
+  it('explains the wait in one sentence for each case', () => {
+    expect(driftWait({ driftSpansSeen: 5 })).toBe('baseline');
+    expect(driftWait({ driftSpansSeen: 31 })).toBe('window');
+    expect(driftWait({})).toBe('unknown');
+    expect(driftWaitSentence({ driftSpansSeen: 5 })).toContain('5 of the first 20 outputs seen');
+    expect(driftWaitSentence({ driftSpansSeen: 31 })).toContain('latest 12 is still filling');
+    expect(driftWaitSentence({})).toContain('No drift record yet');
   });
 });
 
@@ -87,9 +102,10 @@ describe('rosterSummary', () => {
     const agents = [
       agent({ id: 'x', driftStatus: 'drift', driftScore: 0.9 }),
       agent({ id: 'y', driftStatus: 'normal', driftScore: 0.1 }),
-      agent({ id: 'z' }),
+      agent({ id: 'z', driftSpansSeen: 4 }),
+      agent({ id: 'w', driftSpansSeen: 26 }),
     ];
-    expect(rosterSummary(agents)).toBe('3 agents seen · 1 drifting · 1 with no drift baseline yet');
+    expect(rosterSummary(agents)).toBe('4 agents seen · 1 drifting · 1 still building a drift baseline · 1 with the drift window still filling');
   });
 
   it('says so when there are no agents', () => {

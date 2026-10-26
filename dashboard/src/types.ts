@@ -70,6 +70,10 @@ export interface Agent {
   /** 'drift' above the 0.30 threshold, 'normal' at or below it, undefined with no baseline.
    *  adapters.ts never produces 'deviation'; it stays in the union for older callers. */
   driftStatus?: 'normal' | 'deviation' | 'drift';
+  /** Spans the drift detector had seen, the latest included (baseline_size + 1 from GET
+   *  /v1/drift); undefined when the agent has no drift record. Tells "baseline still filling"
+   *  (under 20) apart from "window still filling" (20 or more). */
+  driftSpansSeen?: number;
   lastActive: string;
   tools?: string[];
 }
@@ -238,6 +242,10 @@ export interface Dataset {
 export interface Experiment {
   id: string;
   name: string;
+  /** The result file under experiments/results/ this entry was read from, when it is one. */
+  sourceFile?: string;
+  /** The `model` field of the result file, when it has one. */
+  model?: string;
   datasetId: string;
   datasetName: string;
   baselineModel?: string;

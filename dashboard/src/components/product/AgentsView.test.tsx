@@ -9,8 +9,9 @@ import { DriftView } from './DriftView';
 import { toAgents, toDriftProfiles, type DriftEntry } from '../../lib/adapters';
 import type { Agent as ApiAgent } from '../../lib/api';
 
-// Two agents as GET /v1/agents returns them: one with no latency and no drift record yet
-// (the case that printed NaNms on the live site), one that has drifted.
+// Three agents as GET /v1/agents returns them: one with no latency whose drift baseline is
+// still filling (the case that printed NaNms on the live site), one past its baseline whose
+// current window is still filling, and one that has drifted.
 const apiAgents = [
   {
     agent_id: 'fresh_agent',
@@ -38,11 +39,27 @@ const apiAgents = [
     avg_risk_score: 0.3,
     current_asi: 71.2,
   },
+  {
+    agent_id: 'window_agent',
+    agent_role: null,
+    pipeline_id: null,
+    first_seen: '2026-10-25T08:00:00',
+    last_seen: '2026-10-25T08:07:00',
+    total_spans: 25,
+    total_errors: 0,
+    error_rate: 0,
+    avg_latency_ms: 40,
+    avg_risk_score: 0.3,
+    current_asi: 95,
+  },
 ] as ApiAgent[];
 
 const drift: DriftEntry[] = [
-  { agent_id: 'fresh_agent', current_asi: null, latest_centroid_distance: null, latest_window_centroid_distance: null, latest_tool_drift: null, baseline_size: 0 },
+  // 3 spans seen (baseline_size counts the spans before the latest record).
+  { agent_id: 'fresh_agent', current_asi: null, latest_centroid_distance: 0.0, latest_window_centroid_distance: null, latest_tool_drift: null, baseline_size: 2 },
   { agent_id: 'drift_demo_agent', current_asi: 71.2, latest_centroid_distance: 0.61, latest_window_centroid_distance: 0.9731, latest_tool_drift: null, baseline_size: 31 },
+  // 25 spans seen: past the 20-output baseline, 5 of the 12 window outputs in.
+  { agent_id: 'window_agent', current_asi: 95, latest_centroid_distance: 0.1, latest_window_centroid_distance: null, latest_tool_drift: null, baseline_size: 24 },
 ];
 
 // Strip tags so the assertions read the visible text, as a visitor would.
@@ -86,13 +103,21 @@ describe('AgentsView with real-shaped data', () => {
     expect(out).toContain('— avg');
     expect(out).toContain('66.7% OK');
     expect(out).toContain('0.973 (drift)');
-    expect(out).toContain('2 agents seen · 1 drifting · 1 with no drift baseline yet');
+    expect(out).toContain('3 agents seen · 1 drifting · 1 still building a drift baseline · 1 with the drift window still filling');
   });
 
-  it('explains a missing drift distance instead of printing a blank', () => {
+  it('says the baseline is filling when fewer than 20 spans were seen', () => {
     const out = render(agents[0]);
-    expect(out).toContain('— (no baseline)');
-    expect(out).toContain('first 20 evaluated outputs');
+    expect(out).toContain('— (baseline 3/20)');
+    expect(out).toContain('3 of the first 20 outputs seen');
+  });
+
+  it('says the window, not the baseline, is missing once 20 spans were seen', () => {
+    // Regression: an agent with a full baseline was labelled "no baseline".
+    const out = render(agents[2]);
+    expect(out).toContain('— (window filling)');
+    expect(out).toContain('the current window of the latest 12 is still filling');
+    expect(out).not.toContain('no baseline');
   });
 
   it('no longer shows the typed-in header or the generated latency chart', () => {
