@@ -17,7 +17,12 @@ services:
       - AGENTPULSE_MODEL_CACHE_DIR=/models
       - AGENTPULSE_LOCAL_DEV_MODE=false
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/v1/health', timeout=5).status == 200 else 1)"]
+      # In short: healthy only when the database answers. /v1/health/ready is 200 when it
+      # does and 503 when it does not (the old /v1/health was 200 whenever the process was
+      # up, even with the database down). The urlopen call raises on a 503, so the script
+      # exits non-zero. deploy/azure/deploy.sh does not read this status; it does its own
+      # check of /v1/health.
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/v1/health/ready', timeout=5).status == 200 else 1)"]
       interval: 30s
       timeout: 10s
       retries: 3

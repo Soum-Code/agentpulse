@@ -6,7 +6,8 @@
 # A certificate cannot be issued for a bare IP address, so a DNS name is
 # required — on Azure the free *.cloudapp.azure.com name is enough.
 #
-# Reads (GET, HEAD) are public. Every other method needs a password: nginx adds
+# Reads (GET, HEAD) are public, except the API-key routes (the @keys block below). Every other
+# method needs a password: nginx adds
 # the server's AGENTPULSE_API_KEY to every /v1/ request, so without this check
 # anyone on the internet could ingest, resolve alerts, mint keys and add dataset
 # cases. AGENTPULSE_WRITE_USER and AGENTPULSE_WRITE_HASH (the output of
@@ -55,6 +56,27 @@
 		not expression `{http.request.method} == 'POST' && {http.request.uri.path} == '/v1/simulate'`
 	}
 	basic_auth @write bcrypt "AgentPulse writes" {
+		{$AGENTPULSE_WRITE_USER:writes-disabled} {$AGENTPULSE_WRITE_HASH:ZGlzYWJsZWQ=}
+	}
+
+	# The API-key routes are closed to readers too. In short: a path with a segment that is
+	# exactly "keys" (/v1/keys, /v1/keys/7, ...) asks for the write password whatever the
+	# method, GET and HEAD included. Why: nginx adds the server's AGENTPULSE_API_KEY to every
+	# /v1/ request, so a public GET /v1/keys?owner_id=<id> was answered as if the master key
+	# had asked, and listed that owner's keys (id, label, key prefix, dates). The match is an
+	# `expression` on {http.request.uri.path} for the same reason as the Telemetry Lab line
+	# above: `path` ignores case and merges slashes. The regex is case-insensitive and looks
+	# for a "keys" segment anywhere in the path, so /V1/keys, //v1/keys, /v1//keys, /v1/./keys,
+	# /v1/x/../keys, /v1/KEYS, /v1/%6beys (decoded to "keys" before it is compared) and
+	# /v1/keys/ all ask for the password. The backend routes only /v1/keys and /v1/keys/<id>
+	# (tests/test_caddyfile_keys.py shows that the other spellings are 404 there), and both
+	# have such a segment. A longer name does not match, so an agent called "turkeys" or a file
+	# called keys-abc.js is still a public read. Same user and hash as above, so one password
+	# opens both.
+	@keys {
+		expression `{http.request.uri.path}.matches('(?i)(^|/)keys(/|$)')`
+	}
+	basic_auth @keys bcrypt "AgentPulse writes" {
 		{$AGENTPULSE_WRITE_USER:writes-disabled} {$AGENTPULSE_WRITE_HASH:ZGlzYWJsZWQ=}
 	}
 

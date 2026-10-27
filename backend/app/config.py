@@ -15,9 +15,31 @@
 
 from __future__ import annotations
 
+import logging
 import os
 from dataclasses import dataclass
 from pathlib import Path
+
+logger = logging.getLogger("agentpulse.config")
+
+# The api_key default and the value shipped in .env.example. It is public (it is in this
+# repository), so a server that still uses it has no secret at all.
+PLACEHOLDER_API_KEY = "change-me-to-a-secure-key"
+
+
+# In short: a whole number from the environment, or the default when the variable is unset,
+# empty or not a number. A typo in a size limit must not stop the backend from starting (the
+# site would be down until someone found it); it is logged and the safe default is used. A
+# negative number becomes 0, which switches that limit off.
+def _limit_from_env(name: str, default: int) -> int:
+    raw = os.getenv(name)
+    if raw is None or not raw.strip():
+        return default
+    try:
+        return max(0, int(raw))
+    except ValueError:
+        logger.error("%s is not a whole number; using the default %d", name, default)
+        return default
 
 
 # A dataclass is a class where you list fields with default values and Python
@@ -43,12 +65,16 @@ class BackendConfig:
 
     # Security
     # The main shared secret callers send in the X-API-Key header (see middleware.py).
-    # Keys issued through /v1/keys also work. This default is only a placeholder:
-    # main.py logs a warning if it is still in use while local_dev_mode is off.
-    api_key: str = "change-me-to-a-secure-key"
+    # Keys issued through /v1/keys also work. This default is only a placeholder: with
+    # local_dev_mode off, main.py refuses to start while it is still in use
+    # (startup_security_problem below).
+    api_key: str = PLACEHOLDER_API_KEY
     # True = requests that only read (GET) need no key. See middleware.py. Note:
     # __post_init__ re-reads this from the environment and falls back to the text
-    # "true", so a value passed to the constructor is ignored.
+    # "true", so a value passed to the constructor is ignored. True is the default on
+    # purpose, for a plain local run; every deployment sets AGENTPULSE_LOCAL_DEV_MODE=false
+    # (docker-compose.yml, deploy/azure/deploy.sh), and /v1/health says so when it is on
+    # (dev_mode_reason below).
     local_dev_mode: bool = True
     # CORS = a browser rule about which website addresses may call this API from
     # JavaScript. None means "use the default list that __post_init__ sets".
@@ -117,6 +143,51 @@ class BackendConfig:
     # 0 or less = no deletion.
     retention_days: int = 30
 
+    # Size limits on what a caller may send (POST /v1/ingest and the live WebSocket). In short:
+    # the numbers below are the defaults; each can be changed with the environment variable
+    # named in the comment, and 0 (or less) switches that one limit off. A request over a limit
+    # is refused with 413 and {"detail": "<a plain sentence>"}; nothing is stored.
+    # Where the numbers come from (measured, 27 Oct 2026):
+    #  - The SDK's own ceilings (sdk/src/agentpulse/config.py, utils.py, integrations/): a text
+    #    field is cut at 2,000 characters plus "...[TRUNCATED]" (2,014), an error text at 500.
+    #    One span with every text field at that ceiling is 7,518 bytes of JSON; the typical
+    #    span (the Telemetry Lab, the benchmarks, the seed script) is about 740 bytes.
+    #  - The SDK sends everything it has buffered in one request every 100 ms, and keeps at
+    #    most 10,000 spans. The largest batch any script in this repo sends is 32 spans (the
+    #    Lab's drift scenario); 20 and 14 in deploy/huggingface/seed_demo.py.
+    # The backend writes the spans of one request one after another while it holds the write
+    # lock, so a huge batch would keep every other ingest waiting; that is what the span count
+    # is for. The body size is the overall ceiling on memory per request.
+    #
+    # AGENTPULSE_INGEST_MAX_BODY_BYTES: the largest request body of POST /v1/ingest. 10 MiB is
+    # 1,000 SDK worst-case spans (7.1 MiB) with room to spare. (The dashboard's nginx in front
+    # of the public site already refuses a body over 1 MB, its own default.)
+    ingest_max_body_bytes: int = 10 * 1024 * 1024
+    # AGENTPULSE_INGEST_MAX_SPANS: spans in one request. 1,000 is 30 times the largest batch in
+    # this repo (32) and a tenth of the SDK's 10,000-span buffer.
+    ingest_max_spans: int = 1000
+    # AGENTPULSE_INGEST_MAX_TEXT_CHARS: the long text fields of a span (input_summary,
+    # output_summary, error_message, tool_args, tool_result_summary). 10,000 is five times what
+    # the SDK ever sends; the NLI model reads at most 512 tokens of it anyway (grounding.py,
+    # MAX_NLI_TOKENS).
+    ingest_max_text_chars: int = 10_000
+    # AGENTPULSE_INGEST_MAX_LABEL_CHARS: the short fields (ids, agent_id, agent_role, pipeline_id,
+    # model, tool_name, status ...). The SDK's ids are at most 64 characters (schemas/events.py).
+    ingest_max_label_chars: int = 256
+    # AGENTPULSE_INGEST_MAX_METADATA_CHARS: the span's `metadata` object, counted as JSON text.
+    # The SDK writes one small key ("output_captured") into it.
+    ingest_max_metadata_chars: int = 16_384
+    # AGENTPULSE_WS_MAX_MESSAGE_BYTES: the largest message a client may SEND on /v1/ws/live. The
+    # only message the code understands is "ping" (4 bytes); 1,024 leaves room for a small
+    # JSON command. A bigger one closes the connection with code 1009 (message too big).
+    ws_max_message_bytes: int = 1024
+    # AGENTPULSE_WS_MAX_CONNECTIONS: open WebSocket connections in this process, all visitors
+    # together. One dashboard tab is one connection and each one costs a socket and a list entry.
+    ws_max_connections: int = 200
+    # AGENTPULSE_WS_MAX_CONNECTIONS_PER_IP: open connections for one visitor (an IPv6 visitor
+    # counts as its /64). Several tabs and several examiners behind one campus address fit in 20.
+    ws_max_connections_per_ip: int = 20
+
     def __post_init__(self) -> None:
         """Apply environment variable overrides, then create the folders we need.
 
@@ -147,6 +218,15 @@ class BackendConfig:
         self.alert_max_per_hour = int(os.getenv("AGENTPULSE_ALERT_MAX_PER_HOUR", str(self.alert_max_per_hour)))
         self.webhook_url = os.getenv("AGENTPULSE_WEBHOOK_URL", self.webhook_url)
         self.retention_days = int(os.getenv("AGENTPULSE_RETENTION_DAYS", str(self.retention_days)))
+        # The size limits: each is a plain whole number, 0 = off (see the comments on the fields).
+        self.ingest_max_body_bytes = _limit_from_env("AGENTPULSE_INGEST_MAX_BODY_BYTES", self.ingest_max_body_bytes)
+        self.ingest_max_spans = _limit_from_env("AGENTPULSE_INGEST_MAX_SPANS", self.ingest_max_spans)
+        self.ingest_max_text_chars = _limit_from_env("AGENTPULSE_INGEST_MAX_TEXT_CHARS", self.ingest_max_text_chars)
+        self.ingest_max_label_chars = _limit_from_env("AGENTPULSE_INGEST_MAX_LABEL_CHARS", self.ingest_max_label_chars)
+        self.ingest_max_metadata_chars = _limit_from_env("AGENTPULSE_INGEST_MAX_METADATA_CHARS", self.ingest_max_metadata_chars)
+        self.ws_max_message_bytes = _limit_from_env("AGENTPULSE_WS_MAX_MESSAGE_BYTES", self.ws_max_message_bytes)
+        self.ws_max_connections = _limit_from_env("AGENTPULSE_WS_MAX_CONNECTIONS", self.ws_max_connections)
+        self.ws_max_connections_per_ip = _limit_from_env("AGENTPULSE_WS_MAX_CONNECTIONS_PER_IP", self.ws_max_connections_per_ip)
         self.api_load_models = os.getenv(
             "AGENTPULSE_API_LOAD_MODELS", str(self.api_load_models)
         ).lower() in ("1", "true", "yes")
@@ -177,6 +257,35 @@ class BackendConfig:
         db_path = self.database_url.replace("sqlite+aiosqlite:///", "").replace("sqlite:///", "")
         if db_path.startswith("./"):
             Path(db_path).parent.mkdir(parents=True, exist_ok=True)
+
+
+# In short: the reason the backend must not start, or None when the security settings are
+# acceptable. Not in dev mode, the shared API key must not be the public placeholder: that
+# key is in the repository, so everybody would hold the master key. In dev mode nothing is
+# refused (a local run, the tests and the Hugging Face demo use it on purpose).
+def startup_security_problem(cfg: "BackendConfig") -> str | None:
+    if cfg.local_dev_mode or cfg.api_key != PLACEHOLDER_API_KEY:
+        return None
+    return (
+        "AGENTPULSE_LOCAL_DEV_MODE is off but AGENTPULSE_API_KEY is still the public "
+        f"placeholder ({PLACEHOLDER_API_KEY!r}). Anyone could use that key. Set "
+        "AGENTPULSE_API_KEY to a long random secret (for example: openssl rand -hex 24), "
+        "or set AGENTPULSE_LOCAL_DEV_MODE=true for a local run that is not exposed."
+    )
+
+
+# In short: why this process is in dev mode, as a sentence for /v1/health, or None when it is
+# not. It names the setting and what it allows, and never the key itself.
+def dev_mode_reason(cfg: "BackendConfig") -> str | None:
+    if not cfg.local_dev_mode:
+        return None
+    reason = (
+        "AGENTPULSE_LOCAL_DEV_MODE is on (its default): GET requests need no API key. "
+        "Set AGENTPULSE_LOCAL_DEV_MODE=false for anything other than a local run."
+    )
+    if cfg.api_key == PLACEHOLDER_API_KEY:
+        reason += " The API key is still the public placeholder, so writes are open to anyone too."
+    return reason
 
 
 # The app makes just this one object of the class, and every file imports this same

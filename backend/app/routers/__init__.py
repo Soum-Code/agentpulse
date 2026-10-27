@@ -25,7 +25,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 # wraps a model field so methods like .desc() and .in_() can be used on it.
 from sqlmodel import select, func, col
 
-from app.config import settings
+from app.config import dev_mode_reason, settings
 # get_session() opens a database session; use it as `async with get_session() as session:`.
 from app.database import get_session
 
@@ -734,6 +734,14 @@ async def health_check():
             "`models` describes THIS process. The API performs no inference; "
             "evaluator model state is under readiness.evaluator."
         ),
+        # In short: says out loud when this process runs in dev mode (reads need no API key).
+        # `dev_mode` is true or false; `dev_mode_reason` is a sentence naming the setting, or
+        # None when dev mode is off (as on the public deployment, which sets
+        # AGENTPULSE_LOCAL_DEV_MODE=false). It is kept out of `state` and `reasons` on purpose:
+        # a local run is not unhealthy, and anything that reads those two (a monitor, the
+        # deploy script's check) must see the same values as before.
+        "dev_mode": settings.local_dev_mode,
+        "dev_mode_reason": dev_mode_reason(settings),
     }
 
 
