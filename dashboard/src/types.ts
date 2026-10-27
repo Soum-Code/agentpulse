@@ -147,6 +147,8 @@ export interface Span {
   name: string;
   type: SpanType;
   status: SpanStatus;
+  /** False while the span has no evaluation row (not scored yet); undefined when not known. */
+  evaluated?: boolean;
   startOffsetMs: number;
   /** The span's latency_ms. Undefined when the SDK sent none: not recorded is not 0 ms. The
    *  waterfall reads it as `?? 0` only to lay a bar out; everything printed or exported keeps
@@ -265,8 +267,9 @@ export interface DriftProfile {
   semanticDrift?: number;
   /** latest_tool_drift: how evenly the agent spreads its calls over its tools (0 to 1). */
   toolCallDrift?: number;
-  /** baseline_size: how many of the agent's spans had been analysed before the latest record. */
-  baselineSampleCount: number;
+  /** baseline_size: how many of the agent's spans had been analysed before the latest record.
+   *  Undefined when the agent has no drift record yet (unknown, not 0). */
+  baselineSampleCount?: number;
   currentSampleCount?: number;
   points: DriftPoint[];
   driftReason: string;

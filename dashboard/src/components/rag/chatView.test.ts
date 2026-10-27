@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
+  evaluatorBadge,
   failoverNote,
   formatLatency,
   noticeTone,
@@ -101,5 +102,20 @@ describe('stageTimeSum', () => {
   });
   it('is unknown when any stage that ran has no time', () => {
     expect(stageTimeSum([exec({ latency_ms: 775 }), exec({ agent: 'verifier', latency_ms: Number.NaN })])).toBeNull();
+  });
+});
+
+describe('evaluatorBadge (S4)', () => {
+  it('is unknown, not offline, before the first answer and when the API cannot be reached', () => {
+    expect(evaluatorBadge(null, false)).toMatchObject({ tone: 'unknown', label: 'Evaluator: checking…' });
+    const down = evaluatorBadge(null, true);
+    expect(down.tone).toBe('unknown');
+    expect(down.label).not.toMatch(/offline/i);
+    expect(down.title).toMatch(/could not reach/i);
+  });
+
+  it('says offline only when the health answer has no live worker', () => {
+    expect(evaluatorBadge({ workers_alive: 0 }, false)).toMatchObject({ tone: 'err', label: 'Evaluator offline' });
+    expect(evaluatorBadge({ workers_alive: 2 }, false)).toMatchObject({ tone: 'ok', label: 'Worker alive (2)' });
   });
 });

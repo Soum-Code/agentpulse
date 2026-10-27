@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { CheckCircle2, AlertTriangle } from 'lucide-react';
 import {
   DesignMode,
@@ -14,7 +14,8 @@ import { useAppTheme } from './lib/useAppTheme';
 import { summarizeDrift, breakDownIncidents } from './lib/overviewStats';
 import { api } from './lib/api';
 import { CHORD_WINDOW_MS } from './utils/keyboard';
-import { loadFullTrace } from './lib/traceDetail';
+import { loadFullTrace, freshSelectedTrace } from './lib/traceDetail';
+import { curationLabel } from './lib/curation';
 import { datumFromFeed, Feed } from './lib/stateModel';
 
 import { PublicExperience } from './components/public/PublicExperience';
@@ -108,6 +109,10 @@ export default function App() {
     lastOkAt,
     refresh: refreshTelemetry,
   } = useTelemetry(!isLive);
+
+  // The selection as the latest poll has it, so a trace scored after it was clicked updates in
+  // the inspector and the context panel instead of keeping the snapshot (review S1).
+  const liveSelectedTrace = useMemo(() => freshSelectedTrace(traces, selectedTrace), [traces, selectedTrace]);
 
   // Sign-in and project selection.
   //
@@ -303,23 +308,30 @@ export default function App() {
   // latencies and evaluator evidence that never came from the backend.
 
   // Handler: curate a span into the benchmark dataset. Field names must match
-  const handleCurateToDataset = async (span: Span, trace: Trace) => {
+  // Resolves true only when the case was saved, so the buttons show success only then.
+  const handleCurateToDataset = async (span: Span, trace: Trace): Promise<boolean> => {
     try {
-      const risk = trace.groundingScore;
+      // No score yet means no label: refuse rather than file an unmeasured span as SUPPORTED (N4).
+      const label = curationLabel(trace.groundingScore);
+      if (!label) {
+        showToast({ title: 'Not curated: this trace has no risk score yet. Score it first.', isWarning: true }, 4500);
+        return false;
+      }
       await api.curateCase('AgentPulse Benchmark', {
         case_id: `curated_${span.id}`,
         input_query: span.prompt ?? trace.inputPreview ?? '',
         agent_claim: span.completion ?? trace.outputPreview ?? '',
         evidence: typeof span.toolOutput === 'string' ? span.toolOutput : undefined,
-        expected_classification: risk != null && risk > 0.5 ? 'REFUTED' : 'SUPPORTED',
-        is_failure: risk != null && risk > 0.5,
+        ...label,
         trace_id: trace.id,
         span_id: span.id,
         operator_notes: `Curated from trace ${trace.id} (agent ${span.agentLane ?? trace.agentId}).`,
       });
       refreshTelemetry();
+      return true;
     } catch (err) {
       console.warn('Curation failed:', err);
+      return false;
     }
   };
 
@@ -453,7 +465,7 @@ export default function App() {
           currentTab={productTab}
           onSelectTab={setProductTab}
           selectedAgent={selectedAgent}
-          selectedTrace={selectedTrace}
+          selectedTrace={liveSelectedTrace}
           selectedSpan={selectedSpan}
           selectedIncident={selectedIncident}
           onClearSelection={handleClearSelection}
@@ -540,7 +552,7 @@ export default function App() {
             {productTab === 'traces' && (
               <TracesView
                 traces={traces}
-                selectedTrace={selectedTrace}
+                selectedTrace={liveSelectedTrace}
                 selectedSpan={selectedSpan}
                 onSelectTrace={(trace) => {
                   setSelectedTrace(trace);
@@ -597,7 +609,7 @@ export default function App() {
             {productTab === 'replay' && (
               <ReplayView
                 traces={traces}
-                selectedTrace={selectedTrace}
+                selectedTrace={liveSelectedTrace}
                 onSelectTrace={(trace) => {
                   setSelectedTrace(trace);
                   setIsContextPanelOpen(true);
@@ -656,7 +668,7 @@ export default function App() {
               currentTab={productTab}
               onSelectTab={setProductTab}
               selectedAgent={selectedAgent}
-              selectedTrace={selectedTrace}
+              selectedTrace={liveSelectedTrace}
               selectedSpan={selectedSpan}
               selectedIncident={selectedIncident}
               onResolveIncident={handleResolveIncident}

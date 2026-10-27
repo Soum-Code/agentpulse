@@ -3,6 +3,7 @@ import { TrendingDown, Crosshair } from 'lucide-react';
 import { DriftProfile, Agent } from '../../types';
 import { DRIFT_THRESHOLD } from '../../lib/adapters';
 import {
+  DASH,
   DRIFT_BASELINE_OUTPUTS,
   DRIFT_CURRENT_WINDOW_OUTPUTS,
   distanceBarPct,
@@ -221,7 +222,8 @@ export const DriftView: React.FC<DriftViewProps> = ({
                         <td className={`py-2 pr-4 font-bold ${distanceTone(p.driftMagnitude)}`}>{formatDistance(p.driftMagnitude)}</td>
                         <td className="py-2 pr-4">{formatDistance(p.semanticDrift)}</td>
                         <td className="py-2 pr-4">{formatDistance(p.toolCallDrift)}</td>
-                        <td className="py-2 pr-4">{p.baselineSampleCount}</td>
+                        {/* No drift record yet: a dash, not 0 spans (review S3). */}
+                        <td className="py-2 pr-4">{p.baselineSampleCount ?? DASH}</td>
                       </tr>
                     ))}
                   </tbody>

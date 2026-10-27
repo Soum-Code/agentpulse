@@ -14,9 +14,12 @@ import { riskLabel, riskBadgeClasses, riskTextClasses } from '../../lib/riskTone
 import type { ColorPalette, ChalkSurfacePreset } from '../../types';
 import { getRagTheme } from './ragTheme';
 import { AgentLedger } from './AgentLedger';
+import { evaluatorBadge } from './chatView';
 
 interface MonitoringPanelProps {
   evaluatorReadiness: EvaluatorReadiness | null;
+  /** True when the last health check could not reach the API (readiness is then null). */
+  evaluatorUnreachable?: boolean;
   evaluatorLoading: boolean;
   onRefreshEvaluator: () => void;
   turns: ChatTurn[];
@@ -46,6 +49,7 @@ const CardTitle: React.FC<{ icon: React.ReactNode; title: string; children?: Rea
 
 export const MonitoringPanel: React.FC<MonitoringPanelProps> = ({
   evaluatorReadiness,
+  evaluatorUnreachable = false,
   evaluatorLoading,
   onRefreshEvaluator,
   turns,
@@ -73,8 +77,10 @@ export const MonitoringPanel: React.FC<MonitoringPanelProps> = ({
   const pendingTurns = turns.filter((t) => t.groundingStatus === 'pending');
   const totalErrors = turns.filter((t) => t.status === 'error' || t.errorMessage).length;
 
-  const workersAlive = evaluatorReadiness?.workers_alive ?? 0;
-  const isEvaluatorAlive = workersAlive > 0;
+  // Not checked yet or API unreachable is unknown (neutral), never "offline" (review S4).
+  const badge = evaluatorBadge(evaluatorReadiness, evaluatorUnreachable);
+  const badgeClass = { ok: 'rag-note-ok', err: 'rag-note-err', unknown: 'rag-well border rag-border rag-text' }[badge.tone];
+  const badgeDot = { ok: 'rag-ok-dot', err: 'rag-err-dot', unknown: 'bg-current opacity-50' }[badge.tone];
 
   return (
     <div className={`flex flex-col h-full min-h-0 ${theme.textColor} overflow-y-auto text-xs`}>
@@ -94,17 +100,11 @@ export const MonitoringPanel: React.FC<MonitoringPanelProps> = ({
         <div className="flex items-center gap-2 shrink-0">
           <div
             role="status"
-            className={`px-2.5 py-1 rounded-full flex items-center gap-1.5 text-[11px] font-semibold ${
-              isEvaluatorAlive ? 'rag-note-ok' : 'rag-note-err'
-            }`}
-            title={
-              isEvaluatorAlive
-                ? `${workersAlive} worker(s) registered and ready`
-                : 'No evaluator worker alive. Grounding evaluations will not run.'
-            }
+            className={`px-2.5 py-1 rounded-full flex items-center gap-1.5 text-[11px] font-semibold ${badgeClass}`}
+            title={badge.title}
           >
-            <span className={`w-2 h-2 rounded-full ${isEvaluatorAlive ? 'rag-ok-dot' : 'rag-err-dot'}`} aria-hidden="true" />
-            <span>{isEvaluatorAlive ? `Worker alive (${workersAlive})` : 'Evaluator offline'}</span>
+            <span className={`w-2 h-2 rounded-full ${badgeDot}`} aria-hidden="true" />
+            <span>{badge.label}</span>
           </div>
 
           <button
