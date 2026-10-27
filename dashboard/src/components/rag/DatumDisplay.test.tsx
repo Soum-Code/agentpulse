@@ -34,6 +34,7 @@ describe('DatumDisplay', () => {
 
   it('measured formats: latency, percentage, count, risk', () => {
     expect(html(<DatumDisplay datum={datum.measured(151.19)} format="latency" />)).toContain('151 ms');
+    expect(html(<DatumDisplay datum={datum.measured(3.24)} format="latency" />)).toContain('3.2 ms');
     expect(html(<DatumDisplay datum={datum.measured(0.1234)} format="percentage" />)).toContain('12.3%');
     expect(html(<DatumDisplay datum={datum.measured(12345)} format="count" />)).toContain('12,345');
     const risk = html(<DatumDisplay datum={datum.measured(0.82)} format="risk" />);

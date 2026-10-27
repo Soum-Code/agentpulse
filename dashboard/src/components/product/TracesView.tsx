@@ -34,9 +34,22 @@ import {
   CornerDownLeft,
   Radio,
   Sparkles,
-  Zap
+  Zap,
+  SlidersHorizontal,
+  Timer,
+  RotateCcw,
+  ClipboardCheck
 } from 'lucide-react';
 import { Trace, Span, EvaluatorResult, ChronologicalSortOrder } from '../../types';
+import {
+  TRACE_DURATION_PRESETS,
+  TRACE_SORT_OPTIONS,
+  TraceDurationPreset,
+  TraceSortOption,
+  TraceStatusFilter,
+  countTraces,
+  filterAndSortTraces,
+} from '../../lib/traceFilters';
 import {
   parseDateTimeToMs,
   getTimeDisplayInfo,
@@ -47,6 +60,7 @@ import {
 import {
   downloadTraceAsJson,
   downloadTracesAsCsv,
+  copyTextToClipboard,
   copyTraceIdToClipboard,
   copyTraceLogBodyToClipboard,
 } from '../../utils/traceExport';
@@ -85,6 +99,35 @@ interface TracesViewProps {
   onOpenShortcutsModal?: () => void;
 }
 
+/**
+ * A small "Copy" chip that flips to "Copied" for two seconds. Used beside each payload in the span
+ * inspector (span id, prompt, completion, tool arguments, tool output).
+ */
+const CopyChip: React.FC<{ label: string; title: string; copied: boolean; onCopy: (e: React.MouseEvent) => void }> = ({
+  label,
+  title,
+  copied,
+  onCopy,
+}) => (
+  <button
+    onClick={onCopy}
+    className="px-2 py-0.5 rounded text-[10px] font-mono flex items-center space-x-1 transition-all border shrink-0 bg-white/[0.04] hover:bg-white/[0.09] text-neutral-300 hover:text-white border-white/[0.1]"
+    title={title}
+  >
+    {copied ? (
+      <>
+        <Check className="w-2.5 h-2.5 text-emerald-300" />
+        <span className="text-[9px] text-emerald-300">Copied</span>
+      </>
+    ) : (
+      <>
+        <Copy className="w-2.5 h-2.5" />
+        <span className="text-[9px]">{label}</span>
+      </>
+    )}
+  </button>
+);
+
 export const TracesView: React.FC<TracesViewProps> = ({
   traces,
   selectedTrace,
@@ -97,8 +140,20 @@ export const TracesView: React.FC<TracesViewProps> = ({
 }) => {
   const [viewPerspective, setViewPerspective] = useState<'tree' | 'timeline' | 'flame' | 'evidence'>('tree');
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'success' | 'error' | 'warning'>('all');
-  const [sortOrder, setSortOrder] = useState<ChronologicalSortOrder>('reverse-chronological');
+  // Filters and sort (rules live in lib/traceFilters.ts)
+  const [statusFilter, setStatusFilter] = useState<TraceStatusFilter>('all');
+  const [durationPreset, setDurationPreset] = useState<TraceDurationPreset>('all');
+  const [customMinDuration, setCustomMinDuration] = useState('');
+  const [customMaxDuration, setCustomMaxDuration] = useState('');
+  const [sortOption, setSortOption] = useState<TraceSortOption>('timestamp-desc');
+  const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
+  // Which span payload was just copied ('span-id', 'prompt', ...), and whether the trace copy menu is open.
+  const [copiedSpanPayload, setCopiedSpanPayload] = useState<string | null>(null);
+  const [isCopyMenuOpen, setIsCopyMenuOpen] = useState(false);
+  const copyMenuRef = useRef<HTMLDivElement>(null);
+  const copyButtonRef = useRef<HTMLButtonElement>(null);
+  const filterButtonRef = useRef<HTMLButtonElement>(null);
+  const filterDropdownRef = useRef<HTMLDivElement>(null);
   const [copiedTraceId, setCopiedTraceId] = useState<string | null>(null);
   const [curatedSuccess, setCuratedSuccess] = useState(false);
   const [copiedLogTraceId, setCopiedLogTraceId] = useState<string | null>(null);
@@ -132,37 +187,105 @@ export const TracesView: React.FC<TracesViewProps> = ({
   const prevTraceIdRef = useRef<string | null>(null);
   const prevTracesCountRef = useRef<number>(traces.length);
 
-  const filteredTraces = useMemo(() => {
-    const list = traces.filter(t => {
-      if (filterAgentId && t.agentId !== filterAgentId) return false;
-      // The chip says 'success'; a trace's status for that is 'ok'
-      if (statusFilter !== 'all' && t.status !== (statusFilter === 'success' ? 'ok' : statusFilter)) return false;
-      if (searchQuery.trim() === '') return true;
-      const q = searchQuery.toLowerCase().trim();
-      return (
-        t.id.toLowerCase().includes(q) ||
-        t.agentName.toLowerCase().includes(q) ||
-        t.agentId.toLowerCase().includes(q) ||
-        t.status.toLowerCase().includes(q) ||
-        t.inputPreview.toLowerCase().includes(q) ||
-        (t.tags ?? []).some(tag => tag.toLowerCase().includes(q))
-      );
-    });
+  // The old two-way sort is kept as a derived value because the toolbar's toggle button and
+  // the keyboard code still think in "newest first / oldest first".
+  const sortOrder: ChronologicalSortOrder = sortOption === 'timestamp-asc' ? 'chronological' : 'reverse-chronological';
+  const setSortOrder = (next: ChronologicalSortOrder | ((prev: ChronologicalSortOrder) => ChronologicalSortOrder)) => {
+    const resolved = typeof next === 'function' ? next(sortOrder) : next;
+    setSortOption(resolved === 'chronological' ? 'timestamp-asc' : 'timestamp-desc');
+  };
 
-    return list.slice().sort((a, b) => {
-      const timeA = parseDateTimeToMs(a.timestamp);
-      const timeB = parseDateTimeToMs(b.timestamp);
-      if (timeA !== timeB) {
-        return sortOrder === 'chronological' ? timeA - timeB : timeB - timeA;
+  // Copies one span payload and shows "Copied" on its chip for two seconds.
+  const handleCopySpanText = async (text: string, identifier: string, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    if (await copyTextToClipboard(text)) {
+      setCopiedSpanPayload(identifier);
+      setTimeout(() => setCopiedSpanPayload((prev) => (prev === identifier ? null : prev)), 2000);
+    }
+  };
+
+  // Close the trace copy menu on a click outside it.
+  useEffect(() => {
+    if (!isCopyMenuOpen) return;
+    const handleClickOutsideCopy = (e: MouseEvent) => {
+      if (!copyMenuRef.current?.contains(e.target as Node)) setIsCopyMenuOpen(false);
+    };
+    // Esc closes the menu too (its header says so).
+    // stopPropagation: the window-level Esc handler would also clear the search box. Focus goes back to
+    // the trigger so a keyboard user is not stranded.
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      e.stopPropagation();
+      setIsCopyMenuOpen(false);
+      copyButtonRef.current?.focus();
+    };
+    document.addEventListener('mousedown', handleClickOutsideCopy);
+    document.addEventListener('keydown', handleEscape);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutsideCopy);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [isCopyMenuOpen]);
+
+  // Close the filter popover on a click outside it.
+  useEffect(() => {
+    if (!isFilterDropdownOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (!filterDropdownRef.current?.contains(target) && !filterButtonRef.current?.contains(target)) {
+        setIsFilterDropdownOpen(false);
       }
-      return sortOrder === 'chronological' ? a.id.localeCompare(b.id) : b.id.localeCompare(a.id);
-    });
-  }, [traces, filterAgentId, statusFilter, searchQuery, sortOrder]);
+    };
+    // The popover's close button is titled "Close filter menu (Esc)", so Esc has to work.
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      e.stopPropagation(); // do not also clear the search box (window Esc handler)
+      setIsFilterDropdownOpen(false);
+      filterButtonRef.current?.focus();
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleEscape);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [isFilterDropdownOpen]);
+
+  // How many traces each status and duration bracket holds, in the current agent scope.
+  const counts = useMemo(() => countTraces(traces, filterAgentId), [traces, filterAgentId]);
+  const statusCounts = counts.status;
+  const durationCounts = counts.duration;
+
+  // Number of filters that differ from the defaults (shown on the Filters button).
+  const activeFiltersCount =
+    (statusFilter !== 'all' ? 1 : 0) + (durationPreset !== 'all' ? 1 : 0) + (sortOption !== 'timestamp-desc' ? 1 : 0);
+
+  const handleResetFilters = () => {
+    setStatusFilter('all');
+    setDurationPreset('all');
+    setCustomMinDuration('');
+    setCustomMaxDuration('');
+    setSortOption('timestamp-desc');
+  };
+
+  const filteredTraces = useMemo(
+    () =>
+      filterAndSortTraces(traces, {
+        agentId: filterAgentId,
+        status: statusFilter,
+        durationPreset,
+        customMinDuration,
+        customMaxDuration,
+        search: searchQuery,
+        sort: sortOption,
+      }),
+    [traces, filterAgentId, statusFilter, durationPreset, customMinDuration, customMaxDuration, searchQuery, sortOption],
+  );
 
   // Reset to page 1 whenever filters or sort order change
   useEffect(() => {
     setCurrentPage(1);
-  }, [filterAgentId, statusFilter, searchQuery, sortOrder]);
+  }, [filterAgentId, statusFilter, durationPreset, customMinDuration, customMaxDuration, searchQuery, sortOption]);
 
   const totalPages = Math.max(1, Math.ceil(filteredTraces.length / PAGE_SIZE));
   const safePage = Math.min(Math.max(1, currentPage), totalPages);
@@ -776,16 +899,17 @@ export const TracesView: React.FC<TracesViewProps> = ({
           )}
         </div>
 
-        {/* Status Filter Chips & Result Counter */}
+        {/* Status Filter Chips, Filter Dropdown & Quick Sort */}
         <div className="flex flex-wrap items-center gap-2 shrink-0">
+          {/* Quick Status Chips */}
           <div className="flex items-center space-x-1 bg-[#08090b] border border-[#191b22] p-1 rounded-lg relative">
             {(
               [
-                { id: 'all', label: `All (${traces.length})` },
-                { id: 'success', label: 'Success', dotClass: 'bg-emerald-400 phosphor-emerald' },
-                { id: 'warning', label: 'Warning', dotClass: 'bg-amber-400 phosphor-amber' },
-                { id: 'error', label: 'Error', dotClass: 'bg-rose-400 phosphor-rose' },
-              ] as const
+                { id: 'all' as const, label: `All (${statusCounts.all})` },
+                { id: 'ok' as const, label: `OK (${statusCounts.ok})`, dotClass: 'bg-emerald-400 phosphor-emerald' },
+                { id: 'warning' as const, label: `Warning (${statusCounts.warning})`, dotClass: 'bg-amber-400 phosphor-amber' },
+                { id: 'error' as const, label: `Error (${statusCounts.error})`, dotClass: 'bg-rose-400 phosphor-rose' },
+              ]
             ).map((opt) => {
               const active = statusFilter === opt.id;
               return (
@@ -812,35 +936,386 @@ export const TracesView: React.FC<TracesViewProps> = ({
             })}
           </div>
 
-          {/* Sort by Dropdown */}
+          {/* Filter & Sort Dropdown Trigger & Popover */}
+          <div className="relative">
+            <button
+              ref={filterButtonRef}
+              onClick={() => setIsFilterDropdownOpen(prev => !prev)}
+              className={`flex items-center space-x-2 px-3 py-1.5 text-xs font-mono rounded-lg border transition-all duration-200 tactile-press ${
+                isFilterDropdownOpen || activeFiltersCount > 0
+                  ? 'bg-neutral-900 border-white/30 text-white shadow-sm ring-1 ring-white/10'
+                  : 'bg-[#08090b] border-[#191b22] text-neutral-300 hover:text-white hover:border-white/20'
+              }`}
+              title="Open filter dropdown: status, duration range & sort order"
+              aria-expanded={isFilterDropdownOpen}
+              aria-haspopup="dialog"
+            >
+              <Filter className="w-3.5 h-3.5 text-neutral-400" />
+              <span>Filters</span>
+              {activeFiltersCount > 0 && (
+                <span className="px-1.5 py-0.2 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-bold">
+                  {activeFiltersCount}
+                </span>
+              )}
+              <ChevronDown
+                className={`w-3.5 h-3.5 text-neutral-400 transition-transform duration-200 ${
+                  isFilterDropdownOpen ? 'rotate-180 text-white' : ''
+                }`}
+              />
+            </button>
+
+            {/* Filter Dropdown Popover */}
+            <AnimatePresence>
+              {isFilterDropdownOpen && (
+                <motion.div
+                  ref={filterDropdownRef}
+                  id="traces-filter-dropdown-popover"
+                  initial={{ opacity: 0, y: 8, scale: 0.98 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 6, scale: 0.98 }}
+                  transition={{ duration: 0.16, ease: 'easeOut' }}
+                  className="absolute right-0 top-full mt-2 w-84 sm:w-[420px] rounded-2xl glass-morphism-v2 border border-white/[0.15] bg-[#0c0d14]/98 shadow-[0_20px_50px_rgba(0,0,0,0.85)] backdrop-blur-2xl p-4 z-50 text-neutral-200 text-xs font-mono space-y-4"
+                >
+                  <div className="absolute inset-x-0 top-0 h-[1.5px] apple-liquid-specular pointer-events-none rounded-t-2xl" />
+
+                  {/* Popover Header */}
+                  <div className="flex items-center justify-between pb-2 border-b border-white/[0.08]">
+                    <div className="flex items-center space-x-2">
+                      <SlidersHorizontal className="w-4 h-4 text-emerald-400" />
+                      <span className="font-semibold text-white tracking-wide">Trace Filters & Sort</span>
+                      {activeFiltersCount > 0 && (
+                        <span className="text-[10px] px-1.5 py-0.2 rounded bg-emerald-950/80 text-emerald-300 border border-emerald-500/30">
+                          {activeFiltersCount} active
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      {activeFiltersCount > 0 && (
+                        <button
+                          onClick={handleResetFilters}
+                          className="text-[11px] text-neutral-400 hover:text-white flex items-center space-x-1 underline decoration-white/20 transition-colors"
+                          title="Reset status, duration, and sort filters"
+                        >
+                          <RotateCcw className="w-3 h-3" />
+                          <span>Reset</span>
+                        </button>
+                      )}
+                      <button
+                        onClick={() => setIsFilterDropdownOpen(false)}
+                        className="text-neutral-400 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors"
+                        title="Close filter menu (Esc)"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Section 1: Status Filter */}
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between text-[11px] font-semibold text-neutral-400 uppercase tracking-wider">
+                      <span className="flex items-center space-x-1.5">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-neutral-400" />
+                        <span>Trace Status</span>
+                      </span>
+                      <span className="text-[10px] lowercase text-neutral-500 font-normal">health filter</span>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+                      {(
+                        [
+                          { id: 'all' as const, label: 'All', count: statusCounts.all, dot: null },
+                          { id: 'ok' as const, label: 'OK', count: statusCounts.ok, dot: 'bg-emerald-400 phosphor-emerald' },
+                          { id: 'warning' as const, label: 'Warning', count: statusCounts.warning, dot: 'bg-amber-400 phosphor-amber' },
+                          { id: 'error' as const, label: 'Error', count: statusCounts.error, dot: 'bg-rose-400 phosphor-rose' },
+                        ]
+                      ).map(item => {
+                        const isSelected = statusFilter === item.id;
+                        return (
+                          <button
+                            key={item.id}
+                            onClick={() => setStatusFilter(item.id)}
+                            className={`px-2 py-1.5 rounded-lg border text-left flex items-center justify-between transition-all ${
+                              isSelected
+                                ? 'bg-white/15 border-white/40 text-white font-semibold shadow-inner'
+                                : 'bg-[#08090b] border-white/[0.08] text-neutral-400 hover:text-neutral-200 hover:border-white/20'
+                            }`}
+                          >
+                            <span className="flex items-center space-x-1.5 truncate">
+                              {item.dot && <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${item.dot}`} />}
+                              <span className="truncate">{item.label}</span>
+                            </span>
+                            <span className={`text-[10px] ml-1 shrink-0 ${isSelected ? 'text-white' : 'text-neutral-500'}`}>
+                              {item.count}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Section 2: Duration Range Filter */}
+                  <div className="space-y-1.5 pt-1">
+                    <div className="flex items-center justify-between text-[11px] font-semibold text-neutral-400 uppercase tracking-wider">
+                      <span className="flex items-center space-x-1.5">
+                        <Timer className="w-3.5 h-3.5 text-neutral-400" />
+                        <span>Duration Range</span>
+                      </span>
+                      <span className="text-[10px] lowercase text-neutral-500 font-normal">execution latency</span>
+                    </div>
+
+                    {/* A trace whose duration was never recorded (not opened yet, no end time) is in no
+                        bracket; say so, so a bracket's list is not read as complete. */}
+                    {durationCounts.unknown > 0 && (
+                      <p className="text-[10px] text-neutral-500 normal-case font-normal">
+                        {durationCounts.unknown} trace{durationCounts.unknown === 1 ? ' has' : 's have'} no recorded duration
+                        and {durationCounts.unknown === 1 ? 'is' : 'are'} left out of every bracket below.
+                      </p>
+                    )}
+
+                    {/* Preset Duration Buttons */}
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+                      {TRACE_DURATION_PRESETS.map(preset => {
+                        const isSelected = durationPreset === preset.id;
+                        const count =
+                          preset.id === 'all'
+                            ? durationCounts.all
+                            : preset.id === 'fast'
+                            ? durationCounts.fast
+                            : preset.id === 'moderate'
+                            ? durationCounts.moderate
+                            : preset.id === 'slow'
+                            ? durationCounts.slow
+                            : durationCounts.long;
+
+                        return (
+                          <button
+                            key={preset.id}
+                            onClick={() => {
+                              setDurationPreset(preset.id);
+                              if (preset.id !== 'custom') {
+                                setCustomMinDuration('');
+                                setCustomMaxDuration('');
+                              }
+                            }}
+                            className={`px-2 py-1.5 rounded-lg border text-left transition-all ${
+                              isSelected
+                                ? 'bg-white/15 border-white/40 text-white font-semibold shadow-inner'
+                                : 'bg-[#08090b] border-white/[0.08] text-neutral-400 hover:text-neutral-200 hover:border-white/20'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <span className="truncate">{preset.badge}</span>
+                              <span className={`text-[10px] ${isSelected ? 'text-white' : 'text-neutral-500'}`}>
+                                {count}
+                              </span>
+                            </div>
+                            <div className="text-[10px] text-neutral-500 truncate font-normal">
+                              {preset.sublabel}
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Custom Duration Input Box */}
+                    <div className="p-2.5 rounded-xl bg-[#08090b] border border-white/[0.08] space-y-1.5 mt-1">
+                      <div className="flex items-center justify-between text-[10px] text-neutral-400">
+                        <span>Custom Duration Range (ms):</span>
+                        {(customMinDuration !== '' || customMaxDuration !== '') && (
+                          <button
+                            onClick={() => {
+                              setCustomMinDuration('');
+                              setCustomMaxDuration('');
+                              setDurationPreset('all');
+                            }}
+                            className="text-[10px] text-neutral-500 hover:text-neutral-300 underline"
+                          >
+                            Clear custom
+                          </button>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="relative">
+                          <input
+                            type="number"
+                            min="0"
+                            step="50"
+                            placeholder="Min (e.g. 200)"
+                            value={customMinDuration}
+                            onChange={(e) => {
+                              setCustomMinDuration(e.target.value);
+                              setDurationPreset('custom');
+                            }}
+                            className="w-full bg-[#101117] border border-white/[0.1] rounded-lg px-2.5 py-1 text-xs text-neutral-200 placeholder-neutral-500 focus:outline-none focus:border-white/30"
+                          />
+                          <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-neutral-500 pointer-events-none">
+                            ms
+                          </span>
+                        </div>
+                        <div className="relative">
+                          <input
+                            type="number"
+                            min="0"
+                            step="50"
+                            placeholder="Max (e.g. 2500)"
+                            value={customMaxDuration}
+                            onChange={(e) => {
+                              setCustomMaxDuration(e.target.value);
+                              setDurationPreset('custom');
+                            }}
+                            className="w-full bg-[#101117] border border-white/[0.1] rounded-lg px-2.5 py-1 text-xs text-neutral-200 placeholder-neutral-500 focus:outline-none focus:border-white/30"
+                          />
+                          <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-neutral-500 pointer-events-none">
+                            ms
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Section 3: Sort Order */}
+                  <div className="space-y-1.5 pt-1">
+                    <div className="flex items-center justify-between text-[11px] font-semibold text-neutral-400 uppercase tracking-wider">
+                      <span className="flex items-center space-x-1.5">
+                        <ArrowUpDown className="w-3.5 h-3.5 text-neutral-400" />
+                        <span>Sort Traces By</span>
+                      </span>
+                      <span className="text-[10px] lowercase text-neutral-500 font-normal">triage ordering</span>
+                    </div>
+                    <div className="relative">
+                      <select
+                        value={sortOption}
+                        onChange={(e) => setSortOption(e.target.value as TraceSortOption)}
+                        className="w-full bg-[#08090b] border border-white/[0.1] rounded-lg px-3 py-2 text-xs font-mono text-neutral-200 focus:outline-none focus:border-white/30 cursor-pointer appearance-none pr-8"
+                      >
+                        {TRACE_SORT_OPTIONS.map(opt => (
+                          <option key={opt.id} value={opt.id} className="bg-[#0c0d14] text-white">
+                            {opt.label} — {opt.description}
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDown className="w-3.5 h-3.5 text-neutral-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    </div>
+                  </div>
+
+                  {/* Popover Footer */}
+                  <div className="pt-2 border-t border-white/[0.08] flex items-center justify-between">
+                    <div className="text-[11px] text-neutral-400">
+                      <span className="text-white font-semibold">{filteredTraces.length}</span> matching / {traces.length} traces
+                    </div>
+                    <button
+                      onClick={() => setIsFilterDropdownOpen(false)}
+                      className="px-3.5 py-1.5 rounded-lg bg-white text-neutral-950 font-semibold hover:bg-neutral-200 transition-colors tactile-press text-xs shadow-sm"
+                    >
+                      Apply & Close
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          {/* Quick Sort Dropdown on Toolbar */}
           <div className="flex items-center space-x-2 bg-[#08090b] border border-[#191b22] px-2.5 py-1.5 rounded-lg shadow-sm hover:border-white/20 transition-colors">
             <ArrowUpDown className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
             <label htmlFor="traces-sort-by-select" className="text-[11px] font-mono text-neutral-400 whitespace-nowrap">
-              Sort by:
+              Sort:
             </label>
             <div className="relative flex items-center">
               <select
                 id="traces-sort-by-select"
-                value={sortOrder}
-                onChange={(e) => setSortOrder(e.target.value as ChronologicalSortOrder)}
-                className="bg-transparent text-xs font-mono text-neutral-200 focus:outline-none cursor-pointer pr-5 py-0.5 appearance-none"
-                aria-label="Sort traces chronologically"
+                value={sortOption}
+                onChange={(e) => setSortOption(e.target.value as TraceSortOption)}
+                className="bg-transparent text-xs font-mono text-neutral-200 focus:outline-none cursor-pointer pr-5 py-0.5 appearance-none max-w-[130px] truncate"
+                aria-label="Sort traces by criteria"
               >
-                <option value="reverse-chronological" className="bg-[#0b0d13] text-white">
-                  Reverse-chronological (Newest first)
-                </option>
-                <option value="chronological" className="bg-[#0b0d13] text-white">
-                  Chronological (Oldest first)
-                </option>
+                {TRACE_SORT_OPTIONS.map(opt => (
+                  <option key={opt.id} value={opt.id} className="bg-[#0b0d13] text-white">
+                    {opt.shortLabel}
+                  </option>
+                ))}
               </select>
               <ChevronDown className="w-3 h-3 text-neutral-400 absolute right-0 pointer-events-none" />
             </div>
           </div>
 
+          {/* Result Counter */}
           <div className="text-[11px] font-mono text-neutral-400 px-2 py-1 bg-[#08090b] border border-[#191b22] rounded-lg">
             <span className="text-neutral-200 font-semibold">{filteredTraces.length}</span> of {traces.length} traces
           </div>
         </div>
+
+        {/* Active Filter Chips Bar */}
+        {activeFiltersCount > 0 && (
+          <div className="pt-2 border-t border-white/[0.06] flex flex-wrap items-center gap-2 text-xs font-mono">
+            <span className="text-neutral-500 text-[11px] uppercase tracking-wider flex items-center space-x-1">
+              <Filter className="w-3 h-3 text-neutral-400" />
+              <span>Active Filters:</span>
+            </span>
+
+            {/* Status Chip */}
+            {statusFilter !== 'all' && (
+              <span className="inline-flex items-center space-x-1.5 px-2 py-0.5 rounded-md bg-white/[0.06] border border-white/10 text-neutral-200">
+                <span className={`w-1.5 h-1.5 rounded-full ${
+                  statusFilter === 'ok' ? 'bg-emerald-400' : statusFilter === 'warning' ? 'bg-amber-400' : 'bg-rose-400'
+                }`} />
+                <span>Status: {statusFilter.toUpperCase()}</span>
+                <button
+                  onClick={() => setStatusFilter('all')}
+                  className="hover:text-white text-neutral-400 ml-0.5"
+                  title="Remove status filter"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            )}
+
+            {/* Duration Range Chip */}
+            {durationPreset !== 'all' && (
+              <span className="inline-flex items-center space-x-1.5 px-2 py-0.5 rounded-md bg-white/[0.06] border border-white/10 text-neutral-200">
+                <Timer className="w-3 h-3 text-neutral-400" />
+                <span>
+                  Duration:{' '}
+                  {durationPreset === 'custom'
+                    ? `${customMinDuration || 0}ms – ${customMaxDuration || '∞'}ms`
+                    : TRACE_DURATION_PRESETS.find(p => p.id === durationPreset)?.badge}
+                </span>
+                <button
+                  onClick={() => {
+                    setDurationPreset('all');
+                    setCustomMinDuration('');
+                    setCustomMaxDuration('');
+                  }}
+                  className="hover:text-white text-neutral-400 ml-0.5"
+                  title="Remove duration filter"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            )}
+
+            {/* Sort Chip */}
+            {sortOption !== 'timestamp-desc' && (
+              <span className="inline-flex items-center space-x-1.5 px-2 py-0.5 rounded-md bg-white/[0.06] border border-white/10 text-neutral-200">
+                <ArrowUpDown className="w-3 h-3 text-neutral-400" />
+                <span>Sort: {TRACE_SORT_OPTIONS.find(s => s.id === sortOption)?.shortLabel}</span>
+                <button
+                  onClick={() => setSortOption('timestamp-desc')}
+                  className="hover:text-white text-neutral-400 ml-0.5"
+                  title="Reset to newest first"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            )}
+
+            <button
+              onClick={handleResetFilters}
+              className="text-[11px] text-neutral-400 hover:text-white underline decoration-white/20 ml-1 transition-colors"
+            >
+              Reset all
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Main 2-Column Split: Trace List (Left) + Selected Trace Investigation View (Right) */}
@@ -904,11 +1379,12 @@ export const TracesView: React.FC<TracesViewProps> = ({
               </button>
               <button
                 onClick={() => setSortOrder(prev => prev === 'reverse-chronological' ? 'chronological' : 'reverse-chronological')}
-                title={`Sort order: ${sortOrder}. Click to toggle.`}
+                title={`Sort: ${TRACE_SORT_OPTIONS.find(o => o.id === sortOption)?.label ?? sortOption}. Click to switch between newest and oldest first.`}
                 className="text-[10px] text-neutral-400 hover:text-neutral-200 flex items-center space-x-1 px-1.5 py-0.5 rounded bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.06] transition-colors"
               >
                 <ArrowUpDown className="w-2.5 h-2.5 text-neutral-400" />
-                <span>{sortOrder === 'reverse-chronological' ? 'Newest First' : 'Oldest First'}</span>
+                {/* The label of the sort that is active (it said 'Newest First' under any other sort) */}
+                <span>{TRACE_SORT_OPTIONS.find(o => o.id === sortOption)?.shortLabel ?? (sortOrder === 'reverse-chronological' ? 'Newest First' : 'Oldest First')}</span>
               </button>
               <span className="text-[10px] text-neutral-500">
                 {filteredTraces.length} logs
@@ -1191,50 +1667,74 @@ export const TracesView: React.FC<TracesViewProps> = ({
                     <h3 className="text-sm font-semibold text-white font-mono">
                       {currentTrace.id} &nbsp;·&nbsp; {currentTrace.agentName}
                     </h3>
-                    <button
-                      onClick={() => handleCopyTraceId(currentTrace)}
-                      className={`px-2 py-0.5 rounded text-[10px] font-mono flex items-center space-x-1 transition-all border shrink-0 ${
-                        copiedTraceId === currentTrace.id
-                          ? 'bg-emerald-500/25 border-emerald-400 text-emerald-300'
-                          : 'bg-white/[0.06] border-white/[0.12] text-neutral-300 hover:text-white hover:bg-white/[0.14]'
-                      }`}
-                      title="Copy Trace ID (Press Y)"
-                      aria-label={`Copy Trace ID ${currentTrace.id}`}
-                    >
-                      {copiedTraceId === currentTrace.id ? (
-                        <>
-                          <Check className="w-2.5 h-2.5 text-emerald-300" />
-                          <span className="text-[9px] text-emerald-300">Copied</span>
-                        </>
-                      ) : (
-                        <>
-                          <Copy className="w-2.5 h-2.5" />
-                          <span className="text-[9px]">Copy ID</span>
-                        </>
+                    {/* Copy menu: the trace id (Y) or the whole trace as JSON (Shift+Y). Both entries call
+                        the same handlers as the keyboard shortcuts. */}
+                    {/* Screen readers hear the result of a copy (the button text changes but is not announced) */}
+                    <span role="status" aria-live="polite" className="sr-only">
+                      {copiedTraceId === currentTrace.id ? 'Trace ID copied' : copiedLogTraceId === currentTrace.id ? 'Full trace log copied' : copiedSpanPayload ? 'Copied' : ''}
+                    </span>
+                    <div className="relative inline-flex" ref={copyMenuRef}>
+                      <button
+                        ref={copyButtonRef}
+                        onClick={() => setIsCopyMenuOpen((prev) => !prev)}
+                        className={`px-2.5 py-1 rounded-lg text-[11px] font-mono flex items-center space-x-1.5 transition-all border shrink-0 ${
+                          copiedTraceId === currentTrace.id || copiedLogTraceId === currentTrace.id
+                            ? 'bg-emerald-950/60 border-emerald-500/50 text-emerald-300 shadow-sm'
+                            : 'bg-white/[0.06] hover:bg-white/[0.1] text-neutral-200 border-white/[0.12] hover:border-white/20'
+                        }`}
+                        title="Copy the trace ID or the full log to the clipboard (Shortcut: Y / Shift+Y)"
+                        aria-label="Copy to Clipboard"
+                        aria-expanded={isCopyMenuOpen}
+                      >
+                        {copiedTraceId === currentTrace.id || copiedLogTraceId === currentTrace.id ? (
+                          <>
+                            <ClipboardCheck className="w-3.5 h-3.5 text-emerald-400" />
+                            <span className="text-emerald-300 font-medium">
+                              {copiedTraceId === currentTrace.id ? 'Trace ID Copied!' : 'Log Body Copied!'}
+                            </span>
+                          </>
+                        ) : (
+                          <>
+                            <ClipboardCopy className="w-3.5 h-3.5 text-neutral-400" />
+                            <span>Copy to Clipboard</span>
+                            <ChevronDown className={`w-3 h-3 text-neutral-400 transition-transform duration-200 ${isCopyMenuOpen ? 'rotate-180' : ''}`} />
+                          </>
+                        )}
+                      </button>
+
+                      {isCopyMenuOpen && (
+                        <div className="absolute left-0 top-full mt-1.5 w-64 glass-morphism-v2 rounded-xl border border-white/[0.15] bg-[#0c0d12]/95 backdrop-blur-2xl shadow-2xl p-1.5 z-50 space-y-0.5">
+                          <button
+                            onClick={() => { handleCopyTraceId(currentTrace); setIsCopyMenuOpen(false); }}
+                            className="w-full text-left px-2.5 py-2 rounded-lg hover:bg-white/[0.08] text-neutral-200 hover:text-white flex items-start space-x-2.5 transition-colors"
+                          >
+                            <Copy className="w-4 h-4 text-neutral-400 shrink-0 mt-0.5" />
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center justify-between">
+                                <span className="font-semibold text-white">Copy Trace ID</span>
+                                <kbd className="text-[10px] px-1 rounded bg-black/60 border border-white/20 text-neutral-300">Y</kbd>
+                              </div>
+                              <p className="text-[10px] text-neutral-400 truncate mt-0.5">{currentTrace.id}</p>
+                            </div>
+                          </button>
+                          <button
+                            onClick={() => { handleCopyTraceLog(currentTrace); setIsCopyMenuOpen(false); }}
+                            className="w-full text-left px-2.5 py-2 rounded-lg hover:bg-white/[0.08] text-neutral-200 hover:text-white flex items-start space-x-2.5 transition-colors"
+                          >
+                            <FileText className="w-4 h-4 text-neutral-400 shrink-0 mt-0.5" />
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center justify-between">
+                                <span className="font-semibold text-white">Copy Full Log Body</span>
+                                <kbd className="text-[10px] px-1 rounded bg-black/60 border border-white/20 text-neutral-300">Shift+Y</kbd>
+                              </div>
+                              <p className="text-[10px] text-neutral-400 mt-0.5">
+                                Structured JSON with {currentTrace.spans.length} loaded span{currentTrace.spans.length === 1 ? '' : 's'}
+                              </p>
+                            </div>
+                          </button>
+                        </div>
                       )}
-                    </button>
-                    <button
-                      onClick={() => handleCopyTraceLog(currentTrace)}
-                      className={`px-2 py-0.5 rounded text-[10px] font-mono flex items-center space-x-1 transition-all border shrink-0 ${
-                        copiedLogTraceId === currentTrace.id
-                          ? 'bg-emerald-500/25 border-emerald-400 text-emerald-300'
-                          : 'bg-white/[0.06] border-white/[0.12] text-neutral-300 hover:text-white hover:bg-white/[0.14]'
-                      }`}
-                      title="Copy the whole trace as JSON (Press Shift+Y)"
-                      aria-label={`Copy the full log of trace ${currentTrace.id} as JSON`}
-                    >
-                      {copiedLogTraceId === currentTrace.id ? (
-                        <>
-                          <Check className="w-2.5 h-2.5 text-emerald-300" />
-                          <span className="text-[9px] text-emerald-300">Copied</span>
-                        </>
-                      ) : (
-                        <>
-                          <ClipboardCopy className="w-2.5 h-2.5" />
-                          <span className="text-[9px]">Copy log</span>
-                        </>
-                      )}
-                    </button>
+                    </div>
                   </div>
                 </div>
 
@@ -1632,9 +2132,15 @@ export const TracesView: React.FC<TracesViewProps> = ({
                       {currentSpan.name}
                     </span>
                   </div>
-                  <span className="text-xs font-mono text-neutral-400">
-                    ID: {currentSpan.id}
-                  </span>
+                  <div className="flex items-center space-x-2 text-xs font-mono text-neutral-400">
+                    <span>ID: {currentSpan.id}</span>
+                    <CopyChip
+                      label="Copy"
+                      title="Copy Span ID to clipboard"
+                      copied={copiedSpanPayload === 'span-id'}
+                      onCopy={(e) => handleCopySpanText(currentSpan.id, 'span-id', e)}
+                    />
+                  </div>
                 </div>
 
                 {/* Solid Scrolling Body */}
@@ -1655,9 +2161,17 @@ export const TracesView: React.FC<TracesViewProps> = ({
                   {/* Prompt & Completion */}
                   {currentSpan.prompt && (
                     <div className="space-y-2">
-                      <span className="text-neutral-400 uppercase tracking-wider text-[11px] block">
-                        Prompt Payload
-                      </span>
+                      <div className="flex items-center justify-between">
+                        <span className="text-neutral-400 uppercase tracking-wider text-[11px] block">
+                          Prompt Payload
+                        </span>
+                        <CopyChip
+                          label="Copy Payload"
+                          title="Copy prompt payload to clipboard"
+                          copied={copiedSpanPayload === 'prompt'}
+                          onCopy={(e) => handleCopySpanText(currentSpan.prompt!, 'prompt', e)}
+                        />
+                      </div>
                       <div className="p-3 bg-black rounded-lg border border-white/[0.06] text-neutral-300 whitespace-pre-wrap leading-relaxed">
                         {currentSpan.prompt}
                       </div>
@@ -1666,9 +2180,17 @@ export const TracesView: React.FC<TracesViewProps> = ({
 
                   {currentSpan.completion && (
                     <div className="space-y-2">
-                      <span className="text-neutral-400 uppercase tracking-wider text-[11px] block">
-                        Model Completion / Reasoning
-                      </span>
+                      <div className="flex items-center justify-between">
+                        <span className="text-neutral-400 uppercase tracking-wider text-[11px] block">
+                          Model Completion / Reasoning
+                        </span>
+                        <CopyChip
+                          label="Copy Payload"
+                          title="Copy model completion to clipboard"
+                          copied={copiedSpanPayload === 'completion'}
+                          onCopy={(e) => handleCopySpanText(currentSpan.completion!, 'completion', e)}
+                        />
+                      </div>
                       <div className="p-3 bg-black rounded-lg border border-white/[0.06] text-neutral-200 whitespace-pre-wrap leading-relaxed">
                         {currentSpan.completion}
                       </div>
@@ -1678,9 +2200,17 @@ export const TracesView: React.FC<TracesViewProps> = ({
                   {/* Tool Invocations */}
                   {currentSpan.toolArgs && (
                     <div className="space-y-2">
-                      <span className="text-neutral-400 uppercase tracking-wider text-[11px] block">
-                        Tool Invocations ({currentSpan.toolName})
-                      </span>
+                      <div className="flex items-center justify-between">
+                        <span className="text-neutral-400 uppercase tracking-wider text-[11px] block">
+                          Tool Invocations ({currentSpan.toolName})
+                        </span>
+                        <CopyChip
+                          label="Copy Payload"
+                          title="Copy tool arguments to clipboard"
+                          copied={copiedSpanPayload === 'toolArgs'}
+                          onCopy={(e) => handleCopySpanText(JSON.stringify(currentSpan.toolArgs, null, 2), 'toolArgs', e)}
+                        />
+                      </div>
                       <div className="p-3 bg-black rounded-lg border border-white/[0.06] text-neutral-300 overflow-x-auto">
                         <pre>{JSON.stringify(currentSpan.toolArgs, null, 2)}</pre>
                       </div>
@@ -1689,9 +2219,17 @@ export const TracesView: React.FC<TracesViewProps> = ({
 
                   {currentSpan.toolOutput && (
                     <div className="space-y-2">
-                      <span className="text-neutral-400 uppercase tracking-wider text-[11px] block">
-                        Tool Output Result
-                      </span>
+                      <div className="flex items-center justify-between">
+                        <span className="text-neutral-400 uppercase tracking-wider text-[11px] block">
+                          Tool Output Result
+                        </span>
+                        <CopyChip
+                          label="Copy Payload"
+                          title="Copy tool output result to clipboard"
+                          copied={copiedSpanPayload === 'toolOutput'}
+                          onCopy={(e) => handleCopySpanText(JSON.stringify(currentSpan.toolOutput, null, 2), 'toolOutput', e)}
+                        />
+                      </div>
                       <div className="p-3 bg-black rounded-lg border border-white/[0.06] text-neutral-200 overflow-x-auto">
                         <pre>{JSON.stringify(currentSpan.toolOutput, null, 2)}</pre>
                       </div>

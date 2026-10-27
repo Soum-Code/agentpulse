@@ -96,9 +96,10 @@ export const DatumDisplay: React.FC<DatumDisplayProps> = ({
   }
 
   if (format === 'latency') {
+    // One decimal under 10 ms so a 3.2 ms API call does not read as 3 ms.
     return (
       <span className={`font-mono tabular-nums text-neutral-200 ${className}`}>
-        {typeof val === 'number' && Number.isFinite(val) ? `${val.toFixed(0)} ms` : '—'}
+        {typeof val === 'number' && Number.isFinite(val) ? `${val.toFixed(val < 10 ? 1 : 0)} ms` : '—'}
       </span>
     );
   }

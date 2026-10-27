@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { useEscapeKey } from '../../utils/useEscapeKey';
 import {
   X,
@@ -74,8 +75,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
   // Escape closes the dialog (it had no keyboard way out)
   useEscapeKey(isOpen, onClose);
-
-  if (!isOpen) return null;
 
   const handleGoogleSignIn = async () => {
     setLoading(true);
@@ -153,16 +152,41 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
-      <div role="dialog" aria-modal="true" aria-label="Sign in" className="relative w-full max-w-md rounded-3xl bg-[#0e1015] border border-white/10 p-6 sm:p-8 shadow-2xl text-white">
-        {/* Close Button */}
-        <button
-          onClick={onClose}
-          className="absolute top-5 right-5 text-neutral-400 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors"
-          title="Close dialog"
-        >
-          <X className="w-5 h-5" />
-        </button>
+    // The owner's liquid-glass modal: the backdrop fades and the card springs in; AnimatePresence
+    // lets it animate out too, which is why the open check is here and not an early return.
+    <AnimatePresence>
+      {isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.24, ease: [0.16, 1, 0.3, 1] }}
+            onClick={onClose}
+            className="fixed inset-0 bg-black/75 backdrop-blur-md"
+          />
+          <motion.div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Sign in"
+            initial={{ opacity: 0, scale: 0.94, y: 16, filter: 'blur(4px)' }}
+            animate={{ opacity: 1, scale: 1, y: 0, filter: 'blur(0px)' }}
+            exit={{ opacity: 0, scale: 0.96, y: 12, filter: 'blur(4px)' }}
+            transition={{ type: 'spring', stiffness: 380, damping: 28, mass: 0.85 }}
+            className="relative w-full max-w-md rounded-3xl liquid-glass-card border-glow-subtle p-6 sm:p-8 shadow-2xl text-white overflow-hidden z-10"
+          >
+            {/* Top specular beam and corner radiance */}
+            <div className="absolute inset-x-0 top-0 h-[1.5px] apple-liquid-specular pointer-events-none" />
+            <div className="absolute -top-24 -right-24 w-60 h-60 bg-amber-400/10 rounded-full blur-3xl pointer-events-none" />
+            <div className="absolute -bottom-24 -left-24 w-52 h-52 bg-sky-400/5 rounded-full blur-3xl pointer-events-none" />
+            {/* Close Button */}
+            <button
+              onClick={onClose}
+              className="absolute top-5 right-5 text-neutral-400 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors z-20"
+              title="Close dialog"
+            >
+              <X className="w-5 h-5" />
+            </button>
 
         {currentUser ? (
           /* Profile & Sign Out View */
@@ -273,7 +297,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 className="w-full flex items-center justify-center space-x-2 py-2.5 rounded-xl bg-white/[0.05] hover:bg-white/10 text-neutral-300 font-mono text-xs border border-white/10 transition-all"
               >
                 <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-                <span>Instant Guest Sandbox (No Password Required)</span>
+                <span>Guest Sandbox Session</span>
               </button>
             </div>
 
@@ -367,7 +391,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             </div>
           </div>
         )}
-      </div>
-    </div>
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>
   );
 };
