@@ -174,6 +174,7 @@ class TurnState:
 # Raised when no provider answered one agent's step. It remembers which agent, and the
 # chain's own error (which attempts were made, and whether time ran out).
 class AgentFailure(RuntimeError):
+    # In short: remember which agent failed and why, and build the message from both.
     def __init__(self, agent: str, cause: ChainExhausted):
         super().__init__(f"{agent}: {cause}")
         self.agent = agent
@@ -208,6 +209,7 @@ def _failure(exc: AgentFailure, budget: float) -> tuple[int, str, str]:
 # the visitor disconnects before the first line is sent, the generator never starts and its
 # finally would never run, and the slot would stay taken for good.
 class _TurnStream(StreamingResponse):
+    # In short: a normal streaming response plus the function that frees the slot.
     def __init__(self, *args: Any, release: Callable[[], None], **kwargs: Any):
         super().__init__(*args, **kwargs)
         self._release = release

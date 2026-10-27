@@ -241,6 +241,8 @@ class SimulateGuard:
     IP whose last run is over an hour old is dropped on the next call.
     """
 
+    # In short: start with no runs counted. The clock can be replaced, which is how the tests
+    # move time forward without waiting an hour.
     def __init__(self, settings: SimulateSettings, clock: Callable[[], float] = time.time):
         self.settings = settings
         self._clock = clock

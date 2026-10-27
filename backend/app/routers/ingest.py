@@ -81,6 +81,7 @@ logger = logging.getLogger("agentpulse.router.ingest")
 _WRITE_LOCK = asyncio.Lock()
 
 
+# In short: a database session that only one request at a time can hold (see _WRITE_LOCK).
 @asynccontextmanager
 async def _write_session():
     async with _WRITE_LOCK, get_session() as session:
@@ -175,6 +176,7 @@ _LABEL_FIELDS = (
 # value is not copied into the reply. A limit of 0 is off. The body size is checked earlier, in
 # BodySizeLimitMiddleware. The numbers and where they come from: config.py.
 def check_ingest_limits(payload: "IngestPayload") -> None:
+    # In short: stop the request with 413 and the given sentence.
     def refuse(sentence: str) -> None:
         raise HTTPException(status_code=413, detail=sentence)
 
