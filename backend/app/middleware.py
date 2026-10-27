@@ -170,9 +170,13 @@ class BodySizeLimitMiddleware:
     # The paths it guards: POST /v1/ingest (and anything below it).
     PATH_PREFIX = "/v1/ingest"
 
+    # In short: keep the app this middleware wraps.
     def __init__(self, app):
         self.app = app
 
+    # In short: runs once per request. Anything that is not POST /v1/ingest goes straight
+    # through; an ingest request is refused with 413 if it announces, or turns out to carry,
+    # more bytes than the limit.
     async def __call__(self, scope, receive, send):
         limit = settings.ingest_max_body_bytes
         if scope["type"] != "http" or limit <= 0 or not scope["path"].startswith(self.PATH_PREFIX):
@@ -198,6 +202,8 @@ class BodySizeLimitMiddleware:
         # Check 2: count what really arrives.
         received = 0
 
+        # In short: hands the app the body chunk by chunk and adds up the bytes, so a request
+        # that lied about its length (or sent none) is still stopped at the limit.
         async def counting_receive():
             nonlocal received
             message = await receive()

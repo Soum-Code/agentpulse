@@ -193,6 +193,8 @@ export default function App() {
     let chordKey: string | null = null;
     let chordTimer: any = null;
 
+    // In short: runs on every key press anywhere on the page. Ctrl+K and Escape work even while
+    // typing; the single-key shortcuts (?, g then a letter) are skipped inside a text field.
     const handleKeyDown = (e: KeyboardEvent) => {
       const activeEl = document.activeElement;
       const isInputActive =
@@ -375,6 +377,7 @@ export default function App() {
   // What the feed's state does to the screen: a panel only until the first good poll, a stale banner after.
   const gate = consoleGate(feed.status, needsTelemetry, lastOkAt !== null);
 
+  // In short: forget the selected agent, trace, span and incident (the header breadcrumb empties).
   const handleClearSelection = () => {
     setSelectedAgent(undefined);
     setSelectedTrace(undefined);

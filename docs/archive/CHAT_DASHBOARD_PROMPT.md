@@ -1,3 +1,5 @@
+> **ARCHIVED 2026-10-27. Not the current design.** This was the 2026-10-01 master prompt for a frontend agent (AI Studio / Antigravity) before the public chat and the redo existed. The dashboard was redone after the owner's own design on 27 Oct (pull requests #101 to #103: five datum states, the palettes Dark, Chalk and Butter with tints, the app shell). The current rules are the code: `dashboard/src/index.css`, `dashboard/src/lib/datum.ts` and the components under `dashboard/src/components/`; the history is in `SESSION_HANDOFF.md` 29.17.1. Everything below is kept as the record of an earlier iteration, so its colours, fonts and component names are out of date.
+
 # Chat + Dashboard: master prompt and negative prompt
 
 Written 2026-10-01 for the frontend agent (AI Studio / Antigravity / any other).

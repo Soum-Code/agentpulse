@@ -34,6 +34,8 @@ import {
   type StageState,
 } from './chatView';
 
+// In short: what the page gives the chat: the turns so far, and the functions to send a question
+// and to cancel the one in flight.
 interface ChatConsoleProps {
   turns: ChatTurn[];
   onSendMessage: (message: string) => Promise<void>;
@@ -125,6 +127,7 @@ export const ChatConsole: React.FC<ChatConsoleProps> = ({
     }
   }, [isInFlight]);
 
+  // In short: open or close one turn's details (the three agent stages).
   const toggleExpand = (turnId: string) => {
     setExpandedTurns((prev) => ({
       ...prev,
@@ -132,6 +135,7 @@ export const ChatConsole: React.FC<ChatConsoleProps> = ({
     }));
   };
 
+  // In short: Enter sends the question; Shift+Enter makes a new line.
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -139,6 +143,8 @@ export const ChatConsole: React.FC<ChatConsoleProps> = ({
     }
   };
 
+  // In short: send the typed question, unless it is empty, a turn is already running or the chat
+  // is blocked (blockedReason says why), then clear the box.
   const handleSubmit = async () => {
     const trimmed = inputText.trim();
     if (!trimmed || isInFlight || blockedReason) return;
@@ -147,6 +153,7 @@ export const ChatConsole: React.FC<ChatConsoleProps> = ({
     await onSendMessage(trimmed);
   };
 
+  // In short: a sample question was clicked: put it in the box, do not send it yet.
   const handleSelectSample = (sample: string) => {
     if (isInFlight) return;
     setInputText(sample);
