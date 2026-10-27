@@ -14,6 +14,8 @@ import {
   Minimize2,
   Bot,
   TrendingDown,
+  MessageSquare,
+  Radio,
 } from 'lucide-react';
 import { ChatConsole } from './ChatConsole';
 import { MonitoringPanel } from './MonitoringPanel';
@@ -90,6 +92,9 @@ const RagChatbotView: React.FC<RagChatbotAppProps> = ({
   });
 
   const [agentDrift, setAgentDrift] = useState<Partial<Record<PipelineAgent, AgentDriftReading>>>({});
+
+  // Which pane shows below 1024 px, where the chat and the monitor take turns (see the switch below).
+  const [mobilePane, setMobilePane] = useState<'chat' | 'monitor'>('chat');
 
   // Modals
   const [isCorpusOpen, setIsCorpusOpen] = useState(false);
@@ -368,86 +373,76 @@ const RagChatbotView: React.FC<RagChatbotAppProps> = ({
   };
 
   return (
-    // In the Butter palette the RAG console is a dark amber surface (ragTheme.ts) inside a light page.
-    // data-keep-white tells the light-palette rules in index.css to keep light text on it, instead of
-    // recolouring the amber text dark (dark on dark).
-    <div data-keep-white={palette === 'butter' ? 'true' : undefined} className={`flex flex-col ${embedded ? 'h-full w-full' : 'h-screen w-screen'} ${theme.containerBg} ${theme.textColor} font-mono overflow-hidden transition-colors duration-200`}>
-      {/* Primary Top Header */}
-      <header className={`flex items-center justify-between px-3 sm:px-4 py-2 border-b ${theme.headerBorder} ${theme.headerBg} shrink-0 transition-colors`}>
+    // In short: .rag-root carries the chat's palette variables (index.css), so every part below
+    // follows the palette, its tint and the Chalk surface; data-rag-calm turns Calm mode on. Butter
+    // used to be a dark amber box here (with data-keep-white); it is light now, like the rest of the
+    // site. Full screen fills the visible height (100dvh, not 100vh, so mobile browsers do not jump).
+    <div
+      data-rag-calm={isCalmMode ? 'true' : undefined}
+      className={`rag-root rag-page flex flex-col ${embedded ? 'h-full w-full' : 'h-[100dvh] w-full rag-fullscreen'} ${theme.textColor} overflow-hidden`}
+    >
+      {/* Top bar (navigation layer: glass) */}
+      <header className={`flex items-center justify-between gap-2 px-3 sm:px-4 py-2 border-b ${theme.headerBg} shrink-0`}>
         <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
           {/* Back to Console Button when not embedded */}
           {!embedded && onOpenConsole && (
             <button
               onClick={onOpenConsole}
-              className={`px-2.5 py-1 rounded-lg ${theme.cardBg} border ${theme.cardBorder} ${theme.textColor} text-xs font-semibold flex items-center gap-1.5 transition-colors shrink-0`}
+              className="rag-chip px-3 py-1.5 text-[12px] font-medium flex items-center gap-1.5 shrink-0"
               title="Return to AgentPulse Console (Overview & Traces)"
             >
-              <ArrowLeft className="w-3.5 h-3.5" />
+              <ArrowLeft className="w-3.5 h-3.5" aria-hidden="true" />
               <span className="hidden sm:inline">Console</span>
+              <span className="sr-only sm:hidden">Back to the console</span>
             </button>
           )}
 
-          <div className="flex items-center gap-2 shrink-0">
-            <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 phosphor-cyan animate-pulse" />
-            <h1 className={`text-sm font-bold tracking-tight ${theme.textColor} uppercase`}>
-              AgentPulse
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="w-2 h-2 rounded-full rag-accent-dot shrink-0" aria-hidden="true" />
+            <h1 className={`text-[14px] font-semibold tracking-tight ${theme.textColor} truncate`}>
+              AgentPulse <span className={`font-medium ${theme.subtextColor}`}>RAG live monitor</span>
             </h1>
-            <span className={`text-[10px] px-2 py-0.5 rounded ${theme.codeBg} border ${theme.codeBorder} ${theme.accentText} font-semibold uppercase tracking-wider`}>
-              RAG Live Monitor
-            </span>
           </div>
 
           {/* Quick tab jumps when onSelectTab is provided */}
           {onSelectTab && (
-            <div className={`hidden xl:flex items-center gap-1.5 pl-3 border-l ${theme.divider} text-xs`}>
-              <span className={`${theme.subtextColor} text-[11px]`}>Jump to:</span>
-              <button
-                onClick={() => onSelectTab('overview')}
-                className={`px-2 py-0.5 rounded hover:${theme.cardBg} ${theme.subtextColor} hover:${theme.textColor} transition-colors`}
-              >
+            <nav aria-label="Jump to" className={`hidden xl:flex items-center gap-1 pl-3 border-l ${theme.divider} text-[12px]`}>
+              <span className={`${theme.subtextColor} text-[11px] mr-1`}>Jump to</span>
+              <button onClick={() => onSelectTab('overview')} className={`px-2 py-0.5 rounded-full ${theme.subtextColor} hover:opacity-80`}>
                 Overview
               </button>
-              <button
-                onClick={() => onSelectTab('traces')}
-                className={`px-2 py-0.5 rounded hover:${theme.cardBg} ${theme.subtextColor} hover:${theme.textColor} transition-colors flex items-center gap-1`}
-              >
-                <Activity className="w-3 h-3 text-emerald-400" />
+              <button onClick={() => onSelectTab('traces')} className={`px-2 py-0.5 rounded-full ${theme.subtextColor} hover:opacity-80 flex items-center gap-1`}>
+                <Activity className="w-3 h-3" aria-hidden="true" />
                 <span>Traces</span>
               </button>
-              <button
-                onClick={() => onSelectTab('agents')}
-                className={`px-2 py-0.5 rounded hover:${theme.cardBg} ${theme.subtextColor} hover:${theme.textColor} transition-colors flex items-center gap-1`}
-              >
-                <Bot className={`w-3 h-3 ${theme.accentText}`} />
+              <button onClick={() => onSelectTab('agents')} className={`px-2 py-0.5 rounded-full ${theme.subtextColor} hover:opacity-80 flex items-center gap-1`}>
+                <Bot className="w-3 h-3" aria-hidden="true" />
                 <span>Agents</span>
               </button>
-              <button
-                onClick={() => onSelectTab('drift')}
-                className={`px-2 py-0.5 rounded hover:${theme.cardBg} ${theme.subtextColor} hover:${theme.textColor} transition-colors flex items-center gap-1`}
-              >
-                <TrendingDown className="w-3 h-3 text-amber-400" />
+              <button onClick={() => onSelectTab('drift')} className={`px-2 py-0.5 rounded-full ${theme.subtextColor} hover:opacity-80 flex items-center gap-1`}>
+                <TrendingDown className="w-3 h-3" aria-hidden="true" />
                 <span>Drift</span>
               </button>
-            </div>
+            </nav>
           )}
 
           <div className={`hidden 2xl:flex items-center gap-2 pl-3 border-l ${theme.divider} text-[11px] ${theme.subtextColor} truncate`}>
             <span>Test:</span>
-            <span className={`${theme.subtextColor} italic font-sans truncate`}>
+            <span className="italic truncate">
               &ldquo;Is AgentPulse actually monitoring a live conversation, or does it only look like it is?&rdquo;
             </span>
           </div>
         </div>
 
         {/* Header Right Actions */}
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
           {/* Corpus Button */}
           <button
             onClick={() => setIsCorpusOpen(true)}
-            className={`px-2.5 py-1 rounded-lg ${theme.cardBg} border ${theme.cardBorder} hover:${theme.cardActiveBorder} text-xs ${theme.textColor} transition-colors flex items-center gap-1.5`}
+            className="rag-chip px-3 py-1.5 text-[12px] flex items-center gap-1.5"
             title="View the documents the RAG service can retrieve from"
           >
-            <BookOpen className={`w-3.5 h-3.5 ${theme.accentText}`} />
+            <BookOpen className={`w-3.5 h-3.5 ${theme.accentText}`} aria-hidden="true" />
             <span className="hidden sm:inline">Corpus ({corpusDocs ? corpusDocs.length : '—'})</span>
             <span className="sm:hidden">Docs</span>
           </button>
@@ -455,10 +450,11 @@ const RagChatbotView: React.FC<RagChatbotAppProps> = ({
           {/* Endpoints Settings Button */}
           <button
             onClick={() => setIsConnectionOpen(true)}
-            className={`px-2.5 py-1 rounded-lg ${theme.cardBg} border ${theme.cardBorder} hover:${theme.cardActiveBorder} text-xs ${theme.textColor} transition-colors flex items-center gap-1.5`}
+            className="rag-chip px-3 py-1.5 text-[12px] flex items-center gap-1.5"
             title="Configure RAG and AgentPulse endpoints"
+            aria-label="Endpoints"
           >
-            <Server className={`w-3.5 h-3.5 ${theme.accentText}`} />
+            <Server className={`w-3.5 h-3.5 ${theme.accentText}`} aria-hidden="true" />
             <span className="hidden sm:inline">Endpoints</span>
           </button>
 
@@ -466,10 +462,11 @@ const RagChatbotView: React.FC<RagChatbotAppProps> = ({
           {onToggleFullscreen && (
             <button
               onClick={onToggleFullscreen}
-              className={`p-1.5 rounded-lg ${theme.cardBg} border ${theme.cardBorder} hover:${theme.cardActiveBorder} ${theme.textColor} text-xs transition-colors`}
+              className="rag-chip p-2"
               title="Toggle Fullscreen"
+              aria-label={embedded ? 'Open the chat full screen' : 'Leave full screen'}
             >
-              {embedded ? <Maximize2 className="w-3.5 h-3.5" /> : <Minimize2 className="w-3.5 h-3.5" />}
+              {embedded ? <Maximize2 className="w-3.5 h-3.5" aria-hidden="true" /> : <Minimize2 className="w-3.5 h-3.5" aria-hidden="true" />}
             </button>
           )}
 
@@ -477,21 +474,55 @@ const RagChatbotView: React.FC<RagChatbotAppProps> = ({
           {!embedded && onOpenConsole && (
             <button
               onClick={onOpenConsole}
-              className={`px-3 py-1 rounded-lg ${theme.accentBg} border ${theme.accentBorder} ${theme.accentText} text-xs font-semibold transition-colors flex items-center gap-1.5`}
+              className="rag-chip hidden md:flex px-3 py-1.5 text-[12px] font-semibold items-center gap-1.5"
               title="Open the full AgentPulse Observability Console"
             >
-              <Terminal className="w-3.5 h-3.5" />
+              <Terminal className={`w-3.5 h-3.5 ${theme.accentText}`} aria-hidden="true" />
               <span>Full Console</span>
-              <ExternalLink className={`w-3 h-3 ${theme.accentText}`} />
+              <ExternalLink className={`w-3 h-3 ${theme.accentText}`} aria-hidden="true" />
             </button>
           )}
         </div>
       </header>
 
-      {/* Main Split Screen Layout */}
-      <main className="flex-1 flex flex-col md:flex-row min-h-0 overflow-hidden">
-        {/* Left: Chat Stream (~55%) */}
-        <div className="w-full md:w-[55%] h-full flex flex-col min-h-0">
+      {/* In short: below 1024 px the chat and the monitor no longer share one short frame (the chat
+          got about a third of it). A segmented switch shows one at a time at full height. Both stay
+          mounted, so the monitor keeps polling exactly as before; only which one is visible changes. */}
+      <div className={`lg:hidden px-3 py-2 border-b ${theme.headerBg} shrink-0`}>
+        <div role="tablist" aria-label="Show" className="rag-segment grid grid-cols-2 p-0.5 text-[13px] font-medium">
+          <button
+            role="tab"
+            id="rag-tab-chat"
+            aria-controls="rag-pane-chat"
+            aria-selected={mobilePane === 'chat'}
+            onClick={() => setMobilePane('chat')}
+            className="py-2 rounded-full flex items-center justify-center gap-1.5"
+          >
+            <MessageSquare className="w-3.5 h-3.5" aria-hidden="true" />
+            Chat
+          </button>
+          <button
+            role="tab"
+            id="rag-tab-monitor"
+            aria-controls="rag-pane-monitor"
+            aria-selected={mobilePane === 'monitor'}
+            onClick={() => setMobilePane('monitor')}
+            className="py-2 rounded-full flex items-center justify-center gap-1.5"
+          >
+            <Radio className="w-3.5 h-3.5" aria-hidden="true" />
+            Monitor
+          </button>
+        </div>
+      </div>
+
+      {/* Chat (left, ~55%) and monitor (right, ~45%) side by side from 1024 px */}
+      <main className="flex-1 flex flex-col lg:flex-row min-h-0 overflow-hidden">
+        <div
+          id="rag-pane-chat"
+          role="tabpanel"
+          aria-labelledby="rag-tab-chat"
+          className={`${mobilePane === 'chat' ? 'flex' : 'hidden'} lg:flex w-full lg:w-[55%] flex-1 lg:flex-none min-h-0 flex-col`}
+        >
           <ChatConsole
             turns={turns}
             onSendMessage={handleSendMessage}
@@ -512,8 +543,12 @@ const RagChatbotView: React.FC<RagChatbotAppProps> = ({
           />
         </div>
 
-        {/* Right: Monitoring & Drift Panel (~45%) */}
-        <div className={`w-full md:w-[45%] h-full flex flex-col min-h-0 ${theme.containerBg}`}>
+        <div
+          id="rag-pane-monitor"
+          role="tabpanel"
+          aria-labelledby="rag-tab-monitor"
+          className={`${mobilePane === 'monitor' ? 'flex' : 'hidden'} lg:flex w-full lg:w-[45%] flex-1 lg:flex-none min-h-0 flex-col`}
+        >
           <MonitoringPanel
             evaluatorReadiness={evaluatorReadiness}
             evaluatorLoading={evaluatorLoading}
