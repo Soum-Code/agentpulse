@@ -34,7 +34,8 @@ export interface DriftEntry {
   latest_centroid_distance: number | null;
   latest_window_centroid_distance?: number | null;
   latest_tool_drift?: number | null;
-  baseline_size?: number;
+  // Null when the agent has no drift record yet (unknown, not 0 spans).
+  baseline_size?: number | null;
 }
 
 // Matches AGENTPULSE_DRIFT_THRESHOLD in backend/app/config.py. Exported so the Agents and
@@ -52,8 +53,9 @@ function agentStatus(agent: ApiAgent, drift?: DriftEntry): AgentStatus {
 }
 
 // How many of the agent's spans the drift detector had seen, the latest included. baseline_size
-// is the count before the latest record, hence + 1. GET /v1/drift answers baseline_size 0 with
-// both distances null for an agent that has no drift record at all: that is unknown, not 1.
+// is the count before the latest record, hence + 1. GET /v1/drift answers baseline_size null for
+// an agent that has no drift record at all (older backends sent 0 with both distances null):
+// that is unknown, not 1.
 // The count includes spans with no output text, which add nothing to the embedding pools, so
 // "20 or more" means the baseline should be full, not that it certainly is.
 function driftSpansSeen(d?: DriftEntry): number | undefined {
@@ -183,6 +185,8 @@ export function toSpans(spans: SpanDetail[], traceId: string): Span[] {
       name: s.event_type || s.agent_id,
       type: spanType(s),
       status: spanStatus(s),
+      // No evaluation row yet means the worker has not scored this span (traceStatus.ts).
+      evaluated: s.evaluation != null,
       startOffsetMs: Number.isFinite(start) ? start - t0 : 0,
       // Not recorded stays undefined (it was `?? 0`, which printed "0ms"); only the waterfall
       // turns it into 0, and only to place a bar.
@@ -302,7 +306,8 @@ export function toDriftProfiles(drift: DriftEntry[]): DriftProfile[] {
     driftMagnitude: d.latest_window_centroid_distance ?? undefined,
     semanticDrift: d.latest_centroid_distance ?? undefined,
     toolCallDrift: d.latest_tool_drift ?? undefined,
-    baselineSampleCount: d.baseline_size ?? 0,
+    // No drift record yet is unknown, shown as a dash, not "0 spans" (review S3).
+    baselineSampleCount: d.baseline_size ?? undefined,
     // currentSampleCount is left absent: the API does not report how full the current
     // window is (it used to be a hard-coded 0, printed as "Active Sample: 0").
     // The backend exposes distances, not the embedding coordinates a

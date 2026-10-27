@@ -79,6 +79,8 @@ const RagChatbotView: React.FC<RagChatbotAppProps> = ({
   // What the chat service says about itself: its limits and providers. Null until it answers.
   const [chatHealth, setChatHealth] = useState<ChatHealth | null>(null);
   const [evaluatorReadiness, setEvaluatorReadiness] = useState<EvaluatorReadiness | null>(null);
+  // The last health check could not reach the API: the worker state is unknown, not "0 alive".
+  const [evaluatorUnreachable, setEvaluatorUnreachable] = useState(false);
   const [evaluatorLoading, setEvaluatorLoading] = useState(false);
   const [apiAgents, setApiAgents] = useState<ApiAgent[]>([]);
 
@@ -126,15 +128,11 @@ const RagChatbotView: React.FC<RagChatbotAppProps> = ({
     try {
       const evalReady = await api.getEvaluatorReadiness();
       setEvaluatorReadiness(evalReady);
+      setEvaluatorUnreachable(false);
     } catch {
-      setEvaluatorReadiness({
-        ready: false,
-        workers_alive: 0,
-        workers_registered: 0,
-        workers_stale: 0,
-        degraded: true,
-        reasons: ['Unable to reach AgentPulse API on /v1/health/evaluator'],
-      });
+      // No answer is not "0 workers": keep the readiness unknown (null) and say why (review S4).
+      setEvaluatorReadiness(null);
+      setEvaluatorUnreachable(true);
     } finally {
       setEvaluatorLoading(false);
     }
@@ -551,6 +549,7 @@ const RagChatbotView: React.FC<RagChatbotAppProps> = ({
         >
           <MonitoringPanel
             evaluatorReadiness={evaluatorReadiness}
+            evaluatorUnreachable={evaluatorUnreachable}
             evaluatorLoading={evaluatorLoading}
             onRefreshEvaluator={checkHealth}
             turns={turns}
@@ -596,10 +595,8 @@ const RagChatbotView: React.FC<RagChatbotAppProps> = ({
           checkHealth();
         }}
         ragStatus={ragStatus}
-        evaluatorStatus={{
-          ready: evaluatorReadiness?.ready ?? false,
-          workers_alive: evaluatorReadiness?.workers_alive ?? 0,
-        }}
+        // Null until a health answer arrives: the modal then says unknown, not "no workers".
+        evaluatorStatus={evaluatorReadiness ? { ready: evaluatorReadiness.ready, workers_alive: evaluatorReadiness.workers_alive } : null}
         palette={palette}
         isCalmMode={isCalmMode}
         chalkSurface={chalkSurface}

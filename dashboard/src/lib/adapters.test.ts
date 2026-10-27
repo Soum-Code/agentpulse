@@ -361,7 +361,8 @@ describe('toTrace', () => {
 describe('toTrace status', () => {
   const row = (over: Partial<TraceListItem> = {}): TraceListItem =>
     ({ trace_id: 't1', service_name: 'svc', start_time: '2026-09-14T10:00:00', end_time: null, status: 'completed', ...over }) as TraceListItem;
-  const okSpans = () => toSpans([span()], 't1');
+  // A clean span the evaluator has scored (an unscored one keeps the trace unknown, M1).
+  const okSpans = () => toSpans([span({ evaluation: { overall_risk_score: 0.1 } as any })], 't1');
 
   it('is unknown, not ok, while the trace is only a list entry', () => {
     // Regression: a list entry used to be 'ok' because the API's "completed" fell through the
@@ -372,6 +373,12 @@ describe('toTrace status', () => {
 
   it('is ok only once the alerts are loaded and nothing is wrong', () => {
     expect(toTrace(row(), okSpans(), []).status).toBe('ok');
+  });
+
+  it('is unknown while a span has no evaluation row yet, even with no alerts (M1)', () => {
+    const unscored = toSpans([span({ evaluation: null as any })], 't1');
+    expect(unscored[0].evaluated).toBe(false);
+    expect(toTrace(row(), unscored, []).status).toBe('unknown');
   });
 
   it('is error for a HIGH alert on a trace whose spans all succeeded', () => {
@@ -498,6 +505,13 @@ describe('toDriftProfiles', () => {
     ]);
     expect(p.driftReason).toMatch(/have not filled/i);
     expect(p.driftMagnitude).toBeUndefined();
+  });
+
+  it('leaves the spans-before-latest count unknown when there is no drift record (S3)', () => {
+    const base = { agent_id: 'researcher', current_asi: null, latest_centroid_distance: null };
+    expect(toDriftProfiles([{ ...base, baseline_size: null }])[0].baselineSampleCount).toBeUndefined();
+    expect(toDriftProfiles([base])[0].baselineSampleCount).toBeUndefined();
+    expect(toDriftProfiles([{ ...base, baseline_size: 14 }])[0].baselineSampleCount).toBe(14);
   });
 
   it('does not invent a current-window size', () => {

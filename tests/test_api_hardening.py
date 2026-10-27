@@ -55,3 +55,25 @@ class TestApiSurface:
         assert client.get(f"{path}?limit=0", headers=self.ENV).status_code == 422
         assert client.get(f"{path}?limit=201", headers=self.ENV).status_code == 422
         assert client.get(f"{path}?limit=1", headers=self.ENV).status_code == 200
+
+
+    def test_drift_reports_no_baseline_size_for_an_agent_without_a_drift_record(self, client):
+        """Review S3: an agent with no DriftRecord used to report baseline_size 0, which the
+        Drift view printed as "0 spans before latest". Unknown is null, not 0."""
+        import asyncio
+        import uuid
+
+        from app.database import get_session
+        from app.models import AgentRecord
+
+        agent_id = f"no-drift-{uuid.uuid4().hex[:8]}"
+
+        async def seed():
+            async with get_session() as session:
+                session.add(AgentRecord(agent_id=agent_id, total_spans=15))
+                await session.commit()
+
+        asyncio.run(seed())
+        rows = client.get("/v1/drift", headers=self.ENV).json()["agents"]
+        mine = next(r for r in rows if r["agent_id"] == agent_id)
+        assert mine["baseline_size"] is None
