@@ -3950,11 +3950,13 @@ No key, token, password or hash is in this subsection. The second leader chat wr
 
 ### 29.18 LIVE STATE (rolling; kept on branch `handoff/live`, merged into main once a day)
 
-For a cloud session taking over when the local weekly limit runs out: read 29.16 and 29.17 first, then this. No key, token, password or hash here.
+For a cloud session taking over when the local limits run out: read 29.16 and 29.17 first, then this. No key, token, password or hash here.
 
-**Updated 2026-10-27 ~04:40 UTC.** `main` = `664ef9f`, live and healthy (VM HEAD 664ef9f). Running sessions, each will open ONE PR into main, none merged yet:
-- `followup-backend-hardening` (Follow-up A): close public `GET /v1/keys` (Caddy password for `/v1/keys*`, `check_caddy_paths.sh` cases), size limits on `/v1/ingest` and the WebSocket, refuse the placeholder key outside dev mode, healthcheck on `/v1/health/ready`. After merge the leader must `caddy validate` + recreate Caddy on the VM (cloud sessions cannot: no VM access).
-- `followup-dashboard-honesty` (Follow-up B): trace status for HIGH alerts, no zero-fill of unknown latency/tokens, AgentsView guards (`dashboard/src/lib/adapters.ts`, traceFilters, AgentsView, OverviewView).
-- `rag-chat-ui-refine`: audit with taste-skill, refine only the RAG chat (`dashboard/src/components/rag/**`) with the Apple Liquid Glass/HIG skills; behaviour unchanged; contrast 0 failures in Dark/Chalk/Butter; PR by 29 Oct.
-Merging needs the owner's yes in a card (the auto-mode check refuses `gh pr merge` otherwise). After each merge: wait for deploy-azure, check `/v1/health/ready`, `/chat/health`, the live bundle, and the page in a browser.
-Then: 30-31 Oct end-to-end test of every feature on the live site + comment-only pass; 1 Nov freeze, final handoff, release tag; ~2 Nov raise `AGENTPULSE_SIMULATE_IP_PER_HOUR`/`_PER_DAY` (20/60) in the VM `.env` + backend recreate.
+**Updated 2026-10-27 ~04:10 UTC** (5-hour usage window 82%, resets 07:30 UTC; weekly 84%, resets Sun 1 Nov 04:00 UTC). `main` = `664ef9f`, live and healthy (VM HEAD 664ef9f: frontend redo #101-#103, Telemetry Lab #105, Lab 429 sentence #106, handoff 29.17 #107; chat answers through Groq in ~1.6 s, NVIDIA/OpenRouter/Pollinations as backups, Cerebras not set because it needs a payment method).
+
+Open pull requests, NOT reviewed by the leader yet, NOT merged:
+- [#108](https://github.com/Soum-Code/agentpulse/pull/108) `claude/happy-pare-5385ba` (Follow-up B, session idle, CLEAN): trace status from alerts (a trace with HIGH alerts no longer shows ok), unknown latency/tokens stay unknown instead of 0, AgentsView guards. dashboard/ only; a merge deploys the dashboard.
+- [#109](https://github.com/Soum-Code/agentpulse/pull/109) `claude/infallible-wilson-6f1f40` (Follow-up A, session idle, CI was still running): closes public `GET /v1/keys`, size limits on `/v1/ingest` and the WebSocket, fail-closed start with the placeholder key, readiness healthcheck. Touches backend and `deploy/azure/Caddyfile`: after merge and a green deploy the leader must run `caddy validate` and recreate Caddy on the VM (commands in deploy/azure/README.md, "The live chat" step 5); a cloud session cannot (no VM access), so only review it there.
+Running: `rag-chat-ui-refine` (branch `claude/rag-chat-refine-aed352`): taste-skill audit of the site, then Apple Liquid Glass/HIG refinement of ONLY `dashboard/src/components/rag/**`; behaviour unchanged; contrast 0 failures in Dark/Chalk/Butter; PR expected by 29 Oct.
+
+How to continue: read each PR's diff in full, check CI, merge only with the owner's yes (the auto-mode check refuses `gh pr merge` otherwise), one at a time, and after each merge wait for deploy-azure and check `/v1/health/ready`, `/chat/health`, the live bundle and the page in a browser. Then: 30-31 Oct end-to-end test of every feature on the live site + a comment-only pass; 1 Nov freeze, final handoff, release tag; ~2 Nov raise `AGENTPULSE_SIMULATE_IP_PER_HOUR`/`_PER_DAY` (20/60) in the VM `.env` + backend recreate.
