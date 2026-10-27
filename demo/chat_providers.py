@@ -80,7 +80,9 @@ logger = logging.getLogger("agentpulse.chat")
 #               https://inference-docs.cerebras.ai/models/overview: gpt-oss-120b and
 #               qwen-3.8-27b are the two shared-inference models
 #               https://inference-docs.cerebras.ai/support/rate-limits: free trial, both
-#               models 5 RPM, 30K uncached TPM, 1M TPD
+#               models 5 RPM, 30K uncached TPM, 1M TPD (published on 2026-10-25; on 2026-10-27
+#               the console said API access needs a payment method first, so the "free" label
+#               does not hold without a card and the live deployment leaves this key unset)
 #               https://inference-docs.cerebras.ai/capabilities/reasoning: reasoning_effort
 #               low|medium|high for gpt-oss-120b, "none" turns qwen-3.8-27b's thinking off
 #   nvidia      https://integrate.api.nvidia.com/v1/models lists google/gemma-4-31b-it; the
