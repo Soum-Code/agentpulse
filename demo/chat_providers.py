@@ -173,6 +173,7 @@ def _env_float(env: dict[str, str], name: str, default: float) -> float:
         return default
 
 
+# In short: a whole number from the environment, or the default when it is unset or not a number.
 def _env_int(env: dict[str, str], name: str, default: int) -> int:
     try:
         return int(env.get(name) or default)
@@ -254,6 +255,8 @@ class Attempt:
         return out
 
 
+# In short: one successful model reply: the text, the token counts, who answered, and every
+# attempt made on the way (including the failed ones).
 @dataclass
 class Completion:
     text: str
@@ -267,6 +270,7 @@ class Completion:
 # Raised when no model in the chain answered. out_of_time is True when the turn's deadline,
 # not the last provider, is what stopped it.
 class ChainExhausted(RuntimeError):
+    # In short: keep the attempts and the reason, and write both into the message.
     def __init__(self, attempts: list[Attempt], out_of_time: bool = False):
         self.attempts = attempts
         self.out_of_time = out_of_time
@@ -359,6 +363,9 @@ class ProviderChain:
     provider (Pollinations' anonymous tier) refuses a second request while one is running.
     """
 
+    # In short: set up the chain: the routes in order, the time limits, and one record per route
+    # of its recent requests and its pause. The last two arguments (clock, sleep) exist so the
+    # tests can fake time.
     def __init__(
         self,
         routes: list[Route],
