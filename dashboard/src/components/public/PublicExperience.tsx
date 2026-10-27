@@ -1573,9 +1573,15 @@ async def researcher_node(state):
               </div>
 
               {/* Trajectory Divergence Line */}
+              {/* In short: the arrowhead is a marker on the line. A polygon cannot take percent
+                  coordinates, so the old one logged an SVG error on every visit. */}
               <svg className="absolute inset-0 w-full h-full pointer-events-none">
-                <line x1="38%" y1="52%" x2="68%" y2="35%" stroke="#f43f5e" strokeWidth="2.5" strokeDasharray="5 5" />
-                <polygon points="68%,35 63%,31 63%,39" fill="#f43f5e" />
+                <defs>
+                  <marker id="drift-arrowhead" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto" markerUnits="userSpaceOnUse">
+                    <path d="M0,0 L10,5 L0,10 z" fill="#f43f5e" />
+                  </marker>
+                </defs>
+                <line x1="38%" y1="52%" x2="68%" y2="35%" stroke="#f43f5e" strokeWidth="2.5" strokeDasharray="5 5" markerEnd="url(#drift-arrowhead)" />
               </svg>
 
               {/* Drifted Cluster */}

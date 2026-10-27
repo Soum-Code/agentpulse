@@ -1,3 +1,5 @@
+> **ARCHIVED 2026-10-27. Not the current design.** This was a prompt to replace a hard-coded trace waterfall; the Traces view has since been rebuilt on real data. The dashboard was redone after the owner's own design on 27 Oct (pull requests #101 to #103: five datum states, the palettes Dark, Chalk and Butter with tints, the app shell). The current rules are the code: `dashboard/src/index.css`, `dashboard/src/lib/datum.ts` and the components under `dashboard/src/components/`; the history is in `SESSION_HANDOFF.md` 29.17.1. Everything below is kept as the record of an earlier iteration, so its colours, fonts and component names are out of date.
+
 You are implementing a real, working replacement for two fake/hardcoded components in **AgentPulse**, a multi-agent LLM observability dashboard (React + TypeScript + Tailwind CSS v3, dark-mode-only). Repo: https://github.com/Soum-Code/agentpulse (private).
 
 ## The problem

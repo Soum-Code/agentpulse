@@ -1,3 +1,5 @@
+> **ARCHIVED 2026-10-27. Not the current design.** This was the prompt and token list of the pre-redo dashboard (React 18, Tailwind v3, IBM Plex Sans, dark only). The dashboard was redone after the owner's own design on 27 Oct (pull requests #101 to #103: five datum states, the palettes Dark, Chalk and Butter with tints, the app shell). The current rules are the code: `dashboard/src/index.css`, `dashboard/src/lib/datum.ts` and the components under `dashboard/src/components/`; the history is in `SESSION_HANDOFF.md` 29.17.1. Everything below is kept as the record of an earlier iteration, so its colours, fonts and component names are out of date.
+
 <role>
 You are an expert frontend engineer, UI/UX designer, visual design specialist, and typography expert, integrating a design system into an existing production codebase. Match the codebase's real conventions, real component structure, and real hard constraints below — do not propose a generic redesign that ignores them.
 

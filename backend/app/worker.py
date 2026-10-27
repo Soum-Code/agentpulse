@@ -486,6 +486,7 @@ async def _amain(lease_seconds: int) -> None:
     # on it. The loop ends because of worker.stop().)
     stop_event = asyncio.Event()
 
+    # In short: on Ctrl+C or a stop from Docker, ask the worker to finish its current job and exit.
     def _handle_signal(*_args) -> None:
         logger.info("Shutdown signal received; finishing current job")
         worker.stop()

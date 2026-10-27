@@ -4,6 +4,10 @@ Eight to ten minutes, for a technical review. Every number here is measured and
 every step was run end to end against the deployed instance before this file was
 written.
 
+Updated 2026-10-27: the Telemetry Lab needs no key any more (a visitor may run 6 scenarios an
+hour), and the public RAG chat uses real LLMs, so sections 3.5 and 4 below say which part is a
+fixture and which is not. The five-minute chat walk-through is in [`DEMO_GUIDE.md`](DEMO_GUIDE.md).
+
 If you only remember one thing to say, make it the trade in section 1. It is the
 thing that makes the rest of the project make sense.
 
@@ -23,15 +27,11 @@ authorized-domains list (Authentication → Settings → Authorized domains).
 Nothing in the demo needs an account — open the console directly.
 
 Have two browser tabs ready: the public page, and the console on **Overview**.
-Also have a terminal open with the instance's API key exported, because section 4
-fires the scenarios from there:
-
-```bash
-export KEY=...        # AGENTPULSE_API_KEY from the VM's .env
-```
-
-Rehearse one scenario before the room fills. The alert should appear in the
-Incidents view within about 25 seconds.
+Rehearse one scenario before the room fills (it counts against your 6 an hour). The alert
+should appear in the Incidents view within about 10 seconds: one run on 2026-10-27 was
+fully scored when read after 10 s (`docs/E2E_TEST_2026-10-27.md`). An alert type is raised
+once per agent in 15 minutes, so a repeat run inside that time shows scores and no new
+alert (the Lab page says so).
 
 ---
 
@@ -88,7 +88,9 @@ client = pulse.instrument_llm(OpenAI())
 Someone will ask whether a real LLM is involved. Answer it before they ask;
 being caught on it is much worse than volunteering it.
 
-**No model generates the agent text anywhere in this project.**
+**In the Telemetry Lab and the demo pipelines no model generates the agent text. In the
+public RAG chat (`demo/chat_server.py`) real LLMs do** (Groq first, then NVIDIA, OpenRouter,
+Pollinations; see `DEMO_GUIDE.md`). The rest of this section is about the Lab.
 
 - `POST /v1/simulate` writes the spans of one scenario, and their texts are
   string literals in `backend/app/routers/ingest.py`: five spans for `clean`,
@@ -110,7 +112,7 @@ split, with one caveat to say out loud: 5 of its 30 cases are copies of dev case
 
 Say it like this:
 
-> The agent outputs are fixtures. The judgement is real.
+> The Lab's agent outputs are fixtures. The judgement is real.
 >
 > AgentPulse is the observability layer, not the agent. It does not need to
 > generate the text in order to evaluate it — and fixtures are better for a demo,
@@ -136,7 +138,7 @@ If the console is unavailable, the same thing from a terminal:
 
 ```bash
 curl -s -X POST https://agentpulse.centralindia.cloudapp.azure.com/v1/simulate \
-  -H "X-API-Key: $KEY" -H "Content-Type: application/json" \
+  -H "Content-Type: application/json" \
   -d '{"scenario":"tool_mismatch","query":"Retrieval claim check"}'
 ```
 
@@ -146,7 +148,7 @@ While it runs:
 > claim it found 10 papers. The tool actually returned 3. Nothing will error, and
 > the output will look completely normal.
 
-Switch to **Incidents**. The alert lands in roughly 20 to 25 seconds.
+Switch to **Incidents**. The alert lands within about 10 seconds (the 2026-10-27 test).
 
 > There it is. `TOOL_CLAIM_MISMATCH`, mismatch rate 1.0.
 >
