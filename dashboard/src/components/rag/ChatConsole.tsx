@@ -28,6 +28,7 @@ import {
   prefersReducedMotion,
   providerAndModel,
   stageState,
+  stageTimeSum,
   unavailableReason,
   type StageState,
 } from './chatView';
@@ -333,7 +334,8 @@ export const ChatConsole: React.FC<ChatConsoleProps> = ({
                             }
                           >
                             {resp?.total_ms != null ? 'Turn' : 'Total'}:{' '}
-                            {formatLatency(resp?.total_ms ?? agents.reduce((sum, a) => sum + (a.latency_ms || 0), 0))}
+                            {/* The service's own total, else the sum of reported stage times; a dash when unknown, never 0 */}
+                            {formatLatency(resp?.total_ms ?? stageTimeSum(agents))}
                           </span>
                         </div>
 

@@ -42,6 +42,14 @@ export function unavailableReason(status: { ok: boolean; status: string; message
   return `The chat service is not reachable right now (${status.status}); it may be restarting. This page checks again every few seconds.`;
 }
 
+// In short: the sum of the stage times the service reported, used when it did not send the turn's
+// own total. Null (shown as a dash) when no stage ran or any stage that ran has no time: before
+// 27 Oct a missing time counted as 0, so a refused turn read "Total: 0ms", an unknown shown as zero.
+export function stageTimeSum(agents: RagAgentExecution[]): number | null {
+  if (agents.length === 0 || agents.some((a) => a.latency_ms == null || !Number.isFinite(a.latency_ms))) return null;
+  return agents.reduce((sum, a) => sum + a.latency_ms, 0);
+}
+
 export type NoticeTone = 'warn' | 'err';
 
 // In short: how loud a turn that did not complete is drawn. A refusal (a visitor or site limit, a

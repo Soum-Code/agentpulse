@@ -5,6 +5,7 @@ import {
   noticeTone,
   providerAndModel,
   stageState,
+  stageTimeSum,
   unavailableReason,
 } from './chatView';
 import type { RagAgentExecution, TurnProgress } from '../../lib/ragTypes';
@@ -87,5 +88,18 @@ describe('stageState', () => {
   });
   it('never calls a stage done before its agent_done arrived', () => {
     expect(stageState(progress({}), 'answerer')).toBe('waiting');
+  });
+});
+
+describe('stageTimeSum', () => {
+  it('adds the stage times when every stage that ran reported one', () => {
+    expect(stageTimeSum([exec({ latency_ms: 775 }), exec({ agent: 'verifier', latency_ms: 446 })])).toBe(1221);
+  });
+  it('is unknown, not 0, when no stage ran (a refused turn)', () => {
+    expect(stageTimeSum([])).toBeNull();
+    expect(formatLatency(stageTimeSum([]))).toBe('—');
+  });
+  it('is unknown when any stage that ran has no time', () => {
+    expect(stageTimeSum([exec({ latency_ms: 775 }), exec({ agent: 'verifier', latency_ms: Number.NaN })])).toBeNull();
   });
 });
