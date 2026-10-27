@@ -1,12 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { ingestionKeyView } from './ingestionKey';
+import { ingestionKeyView, keyPrefixOf } from './ingestionKey';
 
 // Shape of what POST /v1/keys returns: ap_live_<12 hex>_<url-safe secret>.
 const ISSUED = 'ap_live_0123456789ab_Zm9vYmFyLWJhei1xdXV4X3F1dXg';
 
 describe('ingestionKeyView', () => {
   it('shows a key with the shape the API issues', () => {
-    expect(ingestionKeyView({ apiKey: ISSUED })).toEqual({ key: ISSUED, reason: null });
+    expect(ingestionKeyView({ apiKey: ISSUED })).toEqual({ key: ISSUED, masked: null, reason: null });
   });
 
   it('accepts a secret that itself contains "_" and "-"', () => {
@@ -50,5 +50,26 @@ describe('ingestionKeyView', () => {
 
   it('trims surrounding whitespace before showing a real key', () => {
     expect(ingestionKeyView({ apiKey: `  ${ISSUED}\n` }).key).toBe(ISSUED);
+  });
+
+  it('after a reload shows only the non-secret prefix and says the key was shown once', () => {
+    const view = ingestionKeyView({ keyPrefix: '0123456789ab' });
+    expect(view.key).toBeNull();
+    expect(view.masked).toBe('ap_live_0123456789ab_…');
+    expect(view.reason).toMatch(/shown once/);
+  });
+
+  it('prefers the full key to the prefix while the session still has it', () => {
+    const view = ingestionKeyView({ apiKey: ISSUED, keyPrefix: '0123456789ab' });
+    expect(view.key).toBe(ISSUED);
+    expect(view.masked).toBeNull();
+  });
+
+  it('keyPrefixOf takes the 12-hex lookup part and refuses anything not issued', () => {
+    expect(keyPrefixOf(ISSUED)).toBe('0123456789ab');
+    expect(keyPrefixOf(`  ${ISSUED}  `)).toBe('0123456789ab');
+    expect(keyPrefixOf('ap_live_my-project_k3j9x2ab')).toBeNull();
+    expect(keyPrefixOf('')).toBeNull();
+    expect(keyPrefixOf(undefined)).toBeNull();
   });
 });

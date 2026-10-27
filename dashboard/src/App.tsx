@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { CheckCircle2, AlertTriangle, ExternalLink } from 'lucide-react';
 import {
   DesignMode,
   ProductTab,
@@ -6,17 +7,15 @@ import {
   Trace,
   Span,
   Incident,
-  DriftProfile,
-  Dataset,
-  Experiment,
-  ColorPalette,
-  ChalkSurfacePreset
+  TelemetryProject,
 } from './types';
 import { useTelemetry } from './lib/useTelemetry';
+import { useAppTheme } from './lib/useAppTheme';
 import { summarizeDrift, breakDownIncidents } from './lib/overviewStats';
 import { api } from './lib/api';
 import { CHORD_WINDOW_MS } from './utils/keyboard';
 import { loadFullTrace } from './lib/traceDetail';
+import { datumFromFeed, Feed } from './lib/stateModel';
 
 import { PublicExperience } from './components/public/PublicExperience';
 import { LiquidBackgroundCanvas } from './components/public/LiquidBackgroundCanvas';
@@ -24,6 +23,9 @@ import { LiquidBackgroundCanvas } from './components/public/LiquidBackgroundCanv
 import { ProductHeader } from './components/product/ProductHeader';
 import { FloatingDock } from './components/product/FloatingDock';
 import { CommandPalette } from './components/product/CommandPalette';
+import { FeedStatusPanel, StaleDataBanner } from './components/product/FeedStatusPanel';
+import { consoleGate } from './lib/consoleGate';
+import { ViewErrorBoundary } from './components/product/ViewErrorBoundary';
 import { OverviewView } from './components/product/OverviewView';
 import { AgentsView } from './components/product/AgentsView';
 import { TracesView } from './components/product/TracesView';
@@ -37,26 +39,32 @@ import { PerformanceView } from './components/product/PerformanceView';
 import { SettingsView } from './components/product/SettingsView';
 import { ShortcutsHelpModal } from './components/product/ShortcutsHelpModal';
 import { ActiveContextPanel } from './components/product/ActiveContextPanel';
-import { initLiquidCardSpringListener } from './utils/liquidHoverAnime';
+import { AnimeTabTransitionContainer } from './components/product/AnimeTabTransitionContainer';
+import { initLiquidCardSpringListener, triggerCardEntranceAnimation } from './utils/liquidHoverAnime';
 import { initChalkMoteProximityListener } from './utils/chalkMoteProximity';
 import { AuthModal } from './components/product/AuthModal';
 import { ProjectSelectorModal } from './components/product/ProjectSelectorModal';
 import { RagChatbotApp } from './components/rag/RagChatbotApp';
 import { auth, onAuthStateChanged, subscribeToUserProjects } from './lib/firebase';
 import type { User as FirebaseUser } from 'firebase/auth';
-import type { TelemetryProject } from './types';
-import { ExternalLink } from 'lucide-react';
+
+/** A short message shown in the corner after a keyboard action (acknowledge an incident). */
+interface Toast {
+  title: string;
+  isWarning?: boolean;
+}
 
 export default function App() {
   // 'public' is the marketing page, 'product' is the console.
   // 'rag' is the fullscreen dedicated RAG monitor & drift verification split-screen.
-  // 'public' is the marketing landing page.
   const [mode, setMode] = useState<DesignMode>('public');
-  const [palette, setPalette] = useState<ColorPalette>('dark');
-  const [isCalmMode, setIsCalmMode] = useState<boolean>(false);
-  const [chalkSurface, setChalkSurface] = useState<ChalkSurfacePreset>('classic-white');
-
   const [productTab, setProductTab] = useState<ProductTab>('overview');
+
+  // Palette, surface presets, Calm mode and text density (remembered in localStorage).
+  const theme = useAppTheme();
+  const { palette, isCalmMode, chalkSurface, textDensity } = theme;
+  const activePreset =
+    palette === 'dark' ? theme.darkPreset : palette === 'butter' ? theme.butterPreset : chalkSurface;
 
   // Context-Preserving selection states (The Most Important UX Pattern: Agent A ↳ Trace 483 ↳ Span 7)
   const [selectedAgent, setSelectedAgent] = useState<Agent | undefined>(undefined);
@@ -83,6 +91,10 @@ export default function App() {
   const [isContextPanelOpen, setIsContextPanelOpen] = useState(true);
   const [isContextPanelPinned, setIsContextPanelPinned] = useState(true);
 
+  // The header's live toggle. On = the console re-reads the API every 10 s; off = it stops until
+  // the toggle is switched back (or Retry is pressed). It does not generate any data.
+  const [isLive, setIsLive] = useState(true);
+
   // Core telemetry, polled from the running AgentPulse instance.
   const {
     agents,
@@ -91,29 +103,29 @@ export default function App() {
     driftProfiles,
     datasets,
     experiments,
-    loading: telemetryLoading,
-    error: telemetryError,
-    connected,
+    feed,
+    lastOkAt,
     refresh: refreshTelemetry,
-  } = useTelemetry();
+  } = useTelemetry(!isLive);
 
   // Sign-in and project selection.
   //
   // Firebase handles identity; the AgentPulse backend does not know about users
   // and is not being asked to. What it does know about is keys: creating a
   // project calls POST /v1/keys with the Firebase uid as its owner, and the key
-  // that comes back is one the API will actually accept. Before this, the
-  // console generated a key-shaped string locally, showed it with a copy
-  // button, and every use of it returned 401.
+  // that comes back is one the API will actually accept. The key is shown once
+  // and never stored (see lib/firebase.ts).
   const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(null);
   const [projects, setProjects] = useState<TelemetryProject[]>([]);
   const [activeProject, setActiveProject] = useState<TelemetryProject | null>(null);
+  // Whether the project list really arrived from Firestore. A rules or network failure used to be swallowed
+  // (the modal showed an empty list and a fixed 'Cloud Sync Active'); now it is kept and shown.
+  const [projectsFeed, setProjectsFeed] = useState<Feed>({ status: 'pending' });
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isProjectSelectorOpen, setIsProjectSelectorOpen] = useState(false);
 
   // Pointer-driven card spring and chalk-dust dispersion. Both attach one
-  // document-level listener and return their own teardown; the components they
-  // drive arrived with the frontend merge.
+  // document-level listener and return their own teardown.
   useEffect(() => {
     const cleanupLiquid = initLiquidCardSpringListener();
     const cleanupChalkMotes = initChalkMoteProximityListener();
@@ -123,30 +135,54 @@ export default function App() {
     };
   }, []);
 
+  // Cards of the new view slide in one after another when the tab (or mode) changes.
+  useEffect(() => {
+    const timer = setTimeout(() => triggerCardEntranceAnimation(null, true), 45);
+    return () => clearTimeout(timer);
+  }, [productTab, mode]);
+
   useEffect(() => onAuthStateChanged(auth, setCurrentUser), []);
 
   useEffect(() => {
     if (!currentUser) {
       setProjects([]);
       setActiveProject(null);
+      setProjectsFeed({ status: 'pending' });
       return;
     }
     return subscribeToUserProjects(currentUser.uid, (projs) => {
+      setProjectsFeed({ status: 'ready' });
       setProjects(projs);
       setActiveProject((curr) =>
         curr && projs.some((p) => p.id === curr.id)
           ? projs.find((p) => p.id === curr.id) ?? null
           : projs[0] ?? null,
       );
-    });
+    }, (err) => setProjectsFeed({ status: 'error', message: err.message }));
   }, [currentUser]);
 
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [isShortcutsHelpOpen, setIsShortcutsHelpOpen] = useState(false);
+  const [toast, setToast] = useState<Toast | null>(null);
 
-  const [isSimulatingLive, setIsSimulatingLive] = useState(true);
+  // Show a toast for a few seconds; a newer toast replaces an older one and restarts the timer.
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const showToast = (next: Toast, ms = 3200) => {
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    setToast(next);
+    toastTimer.current = setTimeout(() => setToast(null), ms);
+  };
+  useEffect(() => () => {
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+  }, []);
 
-  // Global Keyboard shortcut listener (Cmd+K, ?, chord navigation 'g' + key)
+  // The keyboard listener is attached once per modal state, so it reads the selected incident
+  // through a ref instead of re-attaching on every selection.
+  const selectedIncidentRef = useRef(selectedIncident);
+  selectedIncidentRef.current = selectedIncident;
+  const acknowledgeRef = useRef<(id: string) => void>(() => {});
+
+  // Global Keyboard shortcut listener (Cmd+K, Cmd+Shift+R, ?, chord navigation 'g' + key)
   useEffect(() => {
     let chordKey: string | null = null;
     let chordTimer: any = null;
@@ -163,6 +199,22 @@ export default function App() {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
         setIsCommandPaletteOpen(prev => !prev);
+        return;
+      }
+
+      // Cmd+Shift+R / Ctrl+Shift+R: acknowledge the incident that is selected (never a guessed one:
+      // this is a write to the alerts API). Only in the console and not while typing: on the landing
+      // page, in the chat and in a text field the chord must stay the browser's hard reload, which a
+      // viewer needs after a redeploy to get past a cached bundle.
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === 'r') {
+        if (mode !== 'product' || isInputActive) return;
+        e.preventDefault();
+        const target = selectedIncidentRef.current;
+        if (target) {
+          acknowledgeRef.current(target.id);
+        } else {
+          showToast({ title: 'No incident selected. Select one in Overview or Incidents first.', isWarning: true }, 3000);
+        }
         return;
       }
 
@@ -232,6 +284,9 @@ export default function App() {
         } else if (k === 'c') {
           e.preventDefault();
           setIsContextPanelOpen(prev => !prev);
+        } else if (k === 'z') {
+          e.preventDefault();
+          theme.onToggleCalmMode?.(); // undefined outside the Dark palette: Calm mode is not offered there
         }
       }
     };
@@ -241,7 +296,7 @@ export default function App() {
       window.removeEventListener('keydown', handleKeyDown);
       clearTimeout(chordTimer);
     };
-  }, [isShortcutsHelpOpen, isCommandPaletteOpen]);
+  }, [mode, isShortcutsHelpOpen, isCommandPaletteOpen, theme.onToggleCalmMode]);
 
   // The former synthetic telemetry pulse was removed: it fabricated traces,
   // latencies and evaluator evidence that never came from the backend.
@@ -283,19 +338,29 @@ export default function App() {
   // Lab shows an unreachable API as an error.
   const handleReadScenario = (traceId: string) => api.getScenarioResult(traceId);
 
-  // Handler: acknowledge an incident against the alerts API.
+  // Handler: acknowledge an incident against the alerts API (PATCH /v1/alerts/{id}). The toast
+  // reports what the API said, not what was hoped for.
   const handleResolveIncident = async (incidentId: string) => {
+    const title = incidents.find((i) => i.id === incidentId)?.title ?? `alert ${incidentId}`;
     try {
       await api.acknowledgeAlert(Number(incidentId));
+      setSelectedIncident((curr) => (curr?.id === incidentId ? undefined : curr));
+      showToast({ title: `Acknowledged: ${title}` });
       refreshTelemetry();
     } catch (err) {
       console.warn('Acknowledge failed:', err);
+      showToast({ title: `Could not acknowledge: ${err instanceof Error ? err.message : title}`, isWarning: true }, 4500);
     }
   };
+  acknowledgeRef.current = handleResolveIncident;
 
-  // The Telemetry Lab is how an empty instance gets its first telemetry, so it is shown even
-  // when there is none yet (the empty-state message below points the reader to it).
+  // Views that read the agent/trace lists show the "no telemetry yet" notice on an empty instance.
+  // The others do not depend on them: the Telemetry Lab is how an empty instance gets its first
+  // telemetry, and APM, Settings and the RAG monitor have their own sources.
   const hasTelemetry = agents.length > 0 || traces.length > 0;
+  const needsTelemetry = !['telemetry-lab', 'performance', 'settings', 'rag-monitor'].includes(productTab);
+  // What the feed's state does to the screen: a panel only until the first good poll, a stale banner after.
+  const gate = consoleGate(feed.status, needsTelemetry, lastOkAt !== null);
 
   const handleClearSelection = () => {
     setSelectedAgent(undefined);
@@ -303,6 +368,11 @@ export default function App() {
     setSelectedSpan(undefined);
     setSelectedIncident(undefined);
   };
+
+  // The dock badges are counts of real alerts and drifting agents. They are read through the
+  // feed: while it is pending or down the badge is hidden instead of showing a made-up 0.
+  const incidentBadge = datumFromFeed(feed, () => breakDownIncidents(incidents).active, 'no alerts feed');
+  const driftBadge = datumFromFeed(feed, () => summarizeDrift(agents).drifting, 'no drift feed');
 
   if (mode === 'rag') {
     return (
@@ -336,20 +406,38 @@ export default function App() {
       />
     );
   }
-  const appBgClass = isCalmMode
-    ? 'bg-[#0e1219] text-[#E2E8F0]'
-    : palette === 'butter'
-    ? 'bg-[#FAF6EF] text-[#2C2825]'
-    : palette === 'chalk'
-    ? 'bg-[#18191B] text-[#E0E2EC]'
-    : 'bg-[#06070a] text-[#F5F5F7]';
 
   return (
-    <div className={`min-h-screen ${appBgClass} selection:bg-neutral-800 selection:text-white flex flex-col relative overflow-x-hidden transition-colors duration-200`}>
-      <LiquidBackgroundCanvas palette={palette} chalkSurface={chalkSurface} className="fixed inset-0 pointer-events-none opacity-45 z-0" />
+    <div
+      data-density={textDensity}
+      data-palette={palette}
+      data-palette-preset={activePreset}
+      data-chalk-surface={palette === 'chalk' ? chalkSurface : undefined}
+      className={`min-h-screen ${
+        palette === 'butter'
+          ? 'palette-butter bg-[var(--butter-surface-bg,#faf5e6)] text-neutral-950 selection:bg-amber-300 selection:text-black'
+          : palette === 'chalk'
+          ? 'palette-chalk bg-[var(--chalk-surface-bg,#f6f8fb)] text-neutral-900 selection:bg-neutral-300 selection:text-black'
+          : 'palette-dark bg-[var(--dark-surface-bg,#06070a)] text-[#F5F5F7] selection:bg-neutral-800 selection:text-white'
+      } flex flex-col relative overflow-x-hidden transition-colors duration-200 ${
+        isCalmMode ? 'calm-mode-zen' : ''
+      } ${textDensity === 'compact' ? 'density-compact' : 'density-comfortable'}`}
+    >
+      {/* Interactive liquid background that follows the palette and preset */}
+      <LiquidBackgroundCanvas
+        palette={palette}
+        darkPreset={theme.darkPreset}
+        darkCustomColor={theme.darkCustomColor}
+        butterPreset={theme.butterPreset}
+        butterCustomColor={theme.butterCustomColor}
+        chalkSurface={chalkSurface}
+        chalkCustomColor={theme.chalkCustomColor}
+        className="fixed inset-0 pointer-events-none opacity-45 z-0"
+      />
 
       <div className="relative z-10 flex flex-col min-h-screen">
         <ProductHeader
+          {...theme}
           currentTab={productTab}
           onSelectTab={setProductTab}
           selectedAgent={selectedAgent}
@@ -363,51 +451,32 @@ export default function App() {
           onOpenAuth={() => setIsAuthModalOpen(true)}
           onOpenProjectSelector={() => setIsProjectSelectorOpen(true)}
           onSwitchToPublic={() => setMode('public')}
-          onSwitchToRag={() => setMode('rag')}
-          isSimulatingLive={isSimulatingLive}
-          onToggleLive={() => setIsSimulatingLive(prev => !prev)}
+          isSimulatingLive={isLive}
+          feedStatus={feed.status}
+          onToggleLive={() => setIsLive(prev => !prev)}
           onOpenShortcutsModal={() => setIsShortcutsHelpOpen(true)}
           isContextPanelOpen={isContextPanelOpen}
           onToggleContextPanel={() => setIsContextPanelOpen(prev => !prev)}
-          palette={palette}
-          onSelectPalette={setPalette}
-          isCalmMode={isCalmMode}
-          onToggleCalmMode={() => setIsCalmMode(prev => !prev)}
         />
 
         <div className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-28 flex flex-col lg:flex-row gap-6 items-start">
           <main className="flex-1 min-w-0 w-full">
-            {/* The views index into these collections directly, so hold them
-                back until the first poll resolves rather than rendering an
-                empty shell that reads as "no problems found". */}
-            {telemetryLoading && (
-              <div className="ios-liquid-card rounded-2xl p-10 text-center font-mono text-xs text-neutral-400">
-                Loading telemetry from AgentPulse...
-              </div>
-            )}
+            {/* The views index into these collections directly, so hold them back until the
+                first poll resolves rather than rendering an empty shell that reads as "no
+                problems found". */}
+            {gate.blockWithPanel && <FeedStatusPanel feed={feed} onRetry={refreshTelemetry} />}
+            {gate.showStaleBanner && <StaleDataBanner feed={feed} lastOkAt={lastOkAt} onRetry={refreshTelemetry} />}
 
-            {!telemetryLoading && telemetryError && (
-              <div className="ios-liquid-card rounded-2xl p-10 text-center font-mono text-xs space-y-2">
-                <p className="text-rose-300">Cannot reach AgentPulse.</p>
-                <p className="text-neutral-400">{telemetryError}</p>
-                <button
-                  onClick={refreshTelemetry}
-                  className="mt-3 px-4 py-2 rounded-xl bg-white/10 text-neutral-100 hover:bg-white/20"
-                >
-                  Retry
-                </button>
-              </div>
-            )}
-
-            {!telemetryLoading && !telemetryError && !hasTelemetry && productTab !== 'telemetry-lab' && (
+            {!gate.blockWithPanel && lastOkAt !== null && !hasTelemetry && needsTelemetry && (
               <div className="ios-liquid-card rounded-2xl p-10 text-center font-mono text-xs text-neutral-400">
                 Connected, but this instance has no telemetry yet. Send spans through the SDK
                 or run a scenario in the Telemetry Lab.
               </div>
             )}
 
-            {!telemetryLoading && !telemetryError && (hasTelemetry || productTab === 'telemetry-lab') && (
-            <>
+            {!gate.blockWithPanel && (hasTelemetry || !needsTelemetry) && (
+            <ViewErrorBoundary key={productTab} viewName={productTab.replace('-', ' ')}>
+            <AnimeTabTransitionContainer activeTab={productTab}>
             {productTab === 'overview' && (
               <OverviewView
                 agents={agents}
@@ -549,7 +618,7 @@ export default function App() {
             {productTab === 'settings' && (
               <SettingsView
                 isCalmMode={isCalmMode}
-                onToggleCalmMode={() => setIsCalmMode(prev => !prev)}
+                onToggleCalmMode={theme.onToggleCalmMode}
                 currentUser={currentUser}
                 activeProject={activeProject}
                 onOpenProjectSelector={() => setIsProjectSelectorOpen(true)}
@@ -600,7 +669,8 @@ export default function App() {
                 </div>
               </div>
             )}
-            </>
+            </AnimeTabTransitionContainer>
+            </ViewErrorBoundary>
             )}
           </main>
 
@@ -612,6 +682,7 @@ export default function App() {
               selectedTrace={selectedTrace}
               selectedSpan={selectedSpan}
               selectedIncident={selectedIncident}
+              onResolveIncident={handleResolveIncident}
               onClearSelection={handleClearSelection}
               onSelectAgent={setSelectedAgent}
               onSelectTrace={setSelectedTrace}
@@ -630,8 +701,8 @@ export default function App() {
         onSelectTab={setProductTab}
         onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
         onOpenShortcutsModal={() => setIsShortcutsHelpOpen(true)}
-        incidentCount={breakDownIncidents(incidents).active}
-        driftWarningCount={summarizeDrift(agents).drifting}
+        incidentCount={incidentBadge.status === 'measured' ? incidentBadge.value : 0}
+        driftWarningCount={driftBadge.status === 'measured' ? driftBadge.value : 0}
       />
 
       <CommandPalette
@@ -650,16 +721,48 @@ export default function App() {
           setSelectedIncident(incident);
           setProductTab('incidents');
         }}
+        selectedIncident={selectedIncident}
+        onResolveIncident={handleResolveIncident}
         agents={agents}
         traces={traces}
         incidents={incidents}
         onSwitchToPublic={() => setMode('public')}
+        isCalmMode={isCalmMode}
+        onToggleCalmMode={theme.onToggleCalmMode}
+        textDensity={textDensity}
+        onChangeTextDensity={theme.onChangeTextDensity}
+        palette={palette}
+        onSelectPalette={theme.onSelectPalette}
       />
 
       <ShortcutsHelpModal
         isOpen={isShortcutsHelpOpen}
         onClose={() => setIsShortcutsHelpOpen(false)}
       />
+
+      {/* Corner feedback after an incident is acknowledged (button, palette or Cmd+Shift+R) */}
+      {toast && (
+        <div className="fixed top-20 right-6 z-50 pointer-events-none animate-in fade-in slide-in-from-top-3 duration-200" role="status">
+          <div className={`px-4 py-2.5 rounded-xl border backdrop-blur-xl shadow-2xl flex items-center space-x-3 font-mono text-xs ${
+            toast.isWarning
+              ? 'bg-amber-950/85 border-amber-500/40 text-amber-200'
+              : 'bg-[#0a1f18]/90 border-emerald-500/50 text-emerald-200 shadow-[0_0_25px_rgba(16,185,129,0.25)]'
+          }`}>
+            {toast.isWarning ? (
+              <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
+            ) : (
+              <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+            )}
+            <div>
+              <div className="font-semibold text-white flex items-center space-x-2">
+                <span>{toast.isWarning ? 'Notice' : 'Incident acknowledged'}</span>
+                <kbd className="px-1.5 py-0.5 text-[9px] rounded bg-white/10 text-white/90 border border-white/20">⌘⇧R</kbd>
+              </div>
+              <div className="text-[11px] opacity-90 truncate max-w-sm mt-0.5">{toast.title}</div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <AuthModal
         isOpen={isAuthModalOpen}
@@ -672,6 +775,7 @@ export default function App() {
         onClose={() => setIsProjectSelectorOpen(false)}
         currentUser={currentUser}
         projects={projects}
+        projectsFeed={projectsFeed}
         activeProject={activeProject}
         onSelectProject={(proj) => {
           setActiveProject(proj);

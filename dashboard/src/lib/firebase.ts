@@ -25,6 +25,7 @@ import {
   addDoc,
   deleteDoc,
   updateDoc,
+  deleteField,
   serverTimestamp,
   Firestore
 } from 'firebase/firestore';
@@ -36,6 +37,8 @@ import {
 const firebaseConfigJson: Record<string, string | undefined> = {};
 import { TelemetryProject } from '../types';
 import { api } from './api';
+import { keyPrefixOf } from './ingestionKey';
+import { projectFromDoc } from './projectDoc';
 
 // Fallback config matching provisioned project
 export const firebaseConfig = {
@@ -136,7 +139,15 @@ export async function logOut(): Promise<void> {
 
 /**
  * Project Management in Firestore
+ *
+ * What is stored: name, description, environment, owner, counters, and two NON-secret identifiers
+ * of the project's ingest key (keyId, keyPrefix). What is never stored: the key itself. The API
+ * shows the full key exactly once, at creation, and keeps only a hash; this file keeps that one
+ * copy in `sessionKeys`, in memory, for as long as the tab lives. A reload loses it, on purpose.
+ * firestore.rules refuses a write that carries an `apiKey` field, as a second line of defence.
  */
+const sessionKeys = new Map<string, string>();
+
 export async function createTelemetryProject(
   userId: string,
   projectData: {
@@ -145,35 +156,46 @@ export async function createTelemetryProject(
     environment: 'production' | 'staging' | 'development';
   }
 ): Promise<TelemetryProject> {
-  // The key comes from the backend, which is the only thing that can issue one
-  // it will later accept.
-  //
-  // This used to be `Math.random().toString(36)` formatted to look like a
-  // credential. It was displayed with a copy button and rejected with 401 the
-  // moment anyone used it, because the API had never heard of it -- a key that
-  // looks real and is not is worse than no key at all.
+  // The key comes from the backend, which is the only thing that can issue one it will later accept.
+  // (An earlier version generated a key-shaped string in the browser; the API rejected it with 401.)
   const issued = await api.createApiKey(userId, projectData.name);
-  const apiKey = issued.key;
+  // The API's own `prefix` field is a display string ("ap_live_<hex>..."); the 12-hex lookup part
+  // is cut from the key itself.
+  const keyPrefix = keyPrefixOf(issued.key) ?? undefined;
 
-  const docRef = await addDoc(collection(db, 'projects'), {
-    name: projectData.name,
-    description: projectData.description || '',
-    environment: projectData.environment,
-    ownerId: userId,
-    apiKey,
-    createdAt: new Date().toISOString(),
-    agentCount: 0,
-    traceCount: 0
-  });
+  const createdAt = new Date().toISOString();
+  let docId: string;
+  try {
+    const docRef = await addDoc(collection(db, 'projects'), {
+      name: projectData.name,
+      description: projectData.description || '',
+      environment: projectData.environment,
+      ownerId: userId,
+      keyId: issued.id,
+      keyPrefix,
+      createdAt,
+      agentCount: 0,
+      traceCount: 0
+    });
+    docId = docRef.id;
+  } catch (err) {
+    // The key now exists on the API with nothing pointing at it, and the only copy is about to be
+    // lost. Revoke it so it cannot become an orphaned live credential.
+    await api.revokeApiKey(userId, issued.id).catch(() => undefined);
+    throw err;
+  }
 
+  sessionKeys.set(docId, issued.key);
   return {
-    id: docRef.id,
+    id: docId,
     name: projectData.name,
     description: projectData.description,
     environment: projectData.environment,
     ownerId: userId,
-    apiKey,
-    createdAt: new Date().toISOString(),
+    apiKey: issued.key,
+    keyId: issued.id,
+    keyPrefix,
+    createdAt,
     agentCount: 0,
     traceCount: 0
   };
@@ -189,18 +211,22 @@ export function subscribeToUserProjects(
     q,
     (snapshot) => {
       const projs: TelemetryProject[] = snapshot.docs.map((docSnap) => {
-        const d = docSnap.data();
-        return {
-          id: docSnap.id,
-          name: d.name || 'Untitled Project',
-          description: d.description || '',
-          environment: d.environment || 'production',
-          ownerId: d.ownerId,
-          apiKey: d.apiKey || `ap_live_${docSnap.id}`,
-          createdAt: d.createdAt || new Date().toISOString(),
-          agentCount: d.agentCount || 0,
-          traceCount: d.traceCount || 0
-        };
+        const { project, legacyKey } = projectFromDoc(
+          docSnap.id,
+          docSnap.data(),
+          sessionKeys.get(docSnap.id)
+        );
+        if (legacyKey) {
+          // A document written by an older version holds the key in plaintext. Keep it for this
+          // session and remove it from Firestore, leaving the prefix so the project still shows
+          // which key it uses. Failure is harmless: the scrub is retried on the next snapshot.
+          sessionKeys.set(docSnap.id, legacyKey);
+          updateDoc(docSnap.ref, {
+            apiKey: deleteField(),
+            keyPrefix: keyPrefixOf(legacyKey)
+          }).catch((err) => console.warn('Could not remove the stored key from the project:', err));
+        }
+        return project;
       });
       callback(projs);
     },
@@ -211,6 +237,31 @@ export function subscribeToUserProjects(
   );
 }
 
+/**
+ * Deletes a project and revokes its ingest key, so deleting a project really ends the access it
+ * granted. The key is revoked FIRST: if revoking fails the project is kept (and the error thrown),
+ * rather than deleted with a live key nothing can reach any more.
+ */
 export async function deleteTelemetryProject(projectId: string): Promise<void> {
-  await deleteDoc(doc(db, 'projects', projectId));
+  const ref = doc(db, 'projects', projectId);
+  const snap = await getDoc(ref);
+  if (snap.exists()) {
+    const { project } = projectFromDoc(projectId, snap.data());
+    let keyId = project.keyId;
+    if (keyId === undefined && project.keyPrefix) {
+      // Projects created before keyId was stored: find the key by its public prefix.
+      const { keys } = await api.listApiKeys(project.ownerId);
+      keyId = keys.find((k) => k.prefix === `ap_live_${project.keyPrefix}…`)?.id;
+    }
+    if (keyId !== undefined) {
+      try {
+        await api.revokeApiKey(project.ownerId, keyId);
+      } catch (err) {
+        // 404 = the API has no such key for this owner (already gone): nothing left to revoke.
+        if ((err as { status?: number }).status !== 404) throw err;
+      }
+    }
+  }
+  sessionKeys.delete(projectId);
+  await deleteDoc(ref);
 }

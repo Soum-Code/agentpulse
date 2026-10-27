@@ -14,35 +14,56 @@
 
 const ISSUED_KEY_SHAPE = /^ap_live_[0-9a-f]{12}_[A-Za-z0-9_-]+$/;
 
+/** The 12-hex public part of an issued key, or null when the text is not an issued key. */
+export function keyPrefixOf(key: string | null | undefined): string | null {
+  const trimmed = key?.trim();
+  if (!trimmed || !ISSUED_KEY_SHAPE.test(trimmed)) return null;
+  return trimmed.split('_')[2];
+}
+
 export interface IngestionKeyView {
   /** The key to display and copy, or null when there is none to show. */
   key: string | null;
+  /** The non-secret form "ap_live_<prefix>_...", for a key that exists but cannot be shown again. */
+  masked: string | null;
   /** Why there is no key; null when there is one. */
   reason: string | null;
 }
 
 export function ingestionKeyView(
-  project: { apiKey?: string | null } | null | undefined,
+  project: { apiKey?: string | null; keyPrefix?: string | null } | null | undefined,
 ): IngestionKeyView {
   if (!project) {
     return {
       key: null,
+      masked: null,
       reason: 'No project selected. Sign in and pick or create a project to get an ingestion key.',
     };
   }
   const stored = project.apiKey?.trim();
+  if (!stored && project.keyPrefix) {
+    // The normal case after a reload: the API issued a key, showed it once, and nothing stores it.
+    return {
+      key: null,
+      masked: `ap_live_${project.keyPrefix}_…`,
+      reason:
+        'This key was shown once, when the project was created, and is not stored anywhere, so it cannot be shown again. Create a new project to get a new key.',
+    };
+  }
   if (!stored) {
     return {
       key: null,
+      masked: null,
       reason: 'No key is stored for this project. Create a new project to have the API issue one.',
     };
   }
   if (!ISSUED_KEY_SHAPE.test(stored)) {
     return {
       key: null,
+      masked: null,
       reason:
         'The key stored for this project was not issued by the AgentPulse API, so the API will not recognise it. Create a new project to get a working key.',
     };
   }
-  return { key: stored, reason: null };
+  return { key: stored, masked: null, reason: null };
 }

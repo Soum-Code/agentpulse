@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useEscapeKey } from '../../utils/useEscapeKey';
 import {
   X,
   Plus,
@@ -15,7 +16,9 @@ import {
   ExternalLink
 } from 'lucide-react';
 import { TelemetryProject } from '../../types';
+import type { Feed } from '../../lib/stateModel';
 import { createTelemetryProject, deleteTelemetryProject } from '../../lib/firebase';
+import { ingestionKeyView } from '../../lib/ingestionKey';
 import { User as FirebaseUser } from 'firebase/auth';
 
 interface ProjectSelectorModalProps {
@@ -23,6 +26,8 @@ interface ProjectSelectorModalProps {
   onClose: () => void;
   currentUser: FirebaseUser | null;
   projects: TelemetryProject[];
+  /** How the Firestore project list is doing: pending until the first snapshot, error if it was refused. */
+  projectsFeed?: Feed;
   activeProject: TelemetryProject | null;
   onSelectProject: (project: TelemetryProject) => void;
   onOpenAuth: () => void;
@@ -33,6 +38,7 @@ export const ProjectSelectorModal: React.FC<ProjectSelectorModalProps> = ({
   onClose,
   currentUser,
   projects,
+  projectsFeed,
   activeProject,
   onSelectProject,
   onOpenAuth
@@ -43,6 +49,11 @@ export const ProjectSelectorModal: React.FC<ProjectSelectorModalProps> = ({
   const [environment, setEnvironment] = useState<'production' | 'staging' | 'development'>('production');
   const [loading, setLoading] = useState(false);
   const [copiedKeyId, setCopiedKeyId] = useState<string | null>(null);
+  // The last create/delete failure, shown in the modal (a failed delete means the key could not be revoked).
+  const [error, setError] = useState<string | null>(null);
+
+  // Escape closes the dialog (it had no keyboard way out)
+  useEscapeKey(isOpen, onClose);
 
   if (!isOpen) return null;
 
@@ -55,6 +66,7 @@ export const ProjectSelectorModal: React.FC<ProjectSelectorModalProps> = ({
     if (!projectName.trim()) return;
 
     setLoading(true);
+    setError(null);
     try {
       const newProj = await createTelemetryProject(currentUser.uid, {
         name: projectName.trim(),
@@ -67,6 +79,7 @@ export const ProjectSelectorModal: React.FC<ProjectSelectorModalProps> = ({
       setProjectDescription('');
     } catch (err) {
       console.error('Failed to create project in Firestore:', err);
+      setError(err instanceof Error ? err.message : 'Could not create the project.');
     } finally {
       setLoading(false);
     }
@@ -79,19 +92,27 @@ export const ProjectSelectorModal: React.FC<ProjectSelectorModalProps> = ({
       await deleteTelemetryProject(projectId);
     } catch (err) {
       console.error('Failed to delete project:', err);
+      setError(err instanceof Error ? `Project not deleted: ${err.message}` : 'Project not deleted.');
     }
   };
 
   const copyApiKey = (key: string, id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    navigator.clipboard.writeText(key);
-    setCopiedKeyId(id);
-    setTimeout(() => setCopiedKeyId(null), 2000);
+    // Show "Copied!" only once the browser has really taken the text. The key is shown once and not
+    // stored, so a button that says Copied after a refused write would lose the only copy.
+    navigator.clipboard.writeText(key).then(
+      () => {
+        setError(null);
+        setCopiedKeyId(id);
+        setTimeout(() => setCopiedKeyId(null), 2000);
+      },
+      () => setError('The browser refused to copy the key. Select it and copy it by hand, then close this window.'),
+    );
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
-      <div className="relative w-full max-w-2xl rounded-3xl bg-[#0e1015] border border-white/10 p-6 sm:p-8 shadow-2xl text-white max-h-[90vh] flex flex-col">
+      <div role="dialog" aria-modal="true" aria-label="Telemetry projects" className="relative w-full max-w-2xl rounded-3xl bg-[#0e1015] border border-white/10 p-6 sm:p-8 shadow-2xl text-white max-h-[90vh] flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between pb-5 border-b border-white/10">
           <div className="flex items-center space-x-3">
@@ -117,6 +138,11 @@ export const ProjectSelectorModal: React.FC<ProjectSelectorModalProps> = ({
 
         {/* Content Area */}
         <div className="py-6 flex-1 overflow-y-auto space-y-6 scrollbar-none">
+          {error && (
+            <div role="alert" className="p-3 rounded-xl bg-rose-950/50 border border-rose-500/40 text-xs font-mono text-rose-200">
+              {error}
+            </div>
+          )}
           {!currentUser ? (
             /* Unauthenticated Prompt */
             <div className="p-6 rounded-2xl bg-amber-400/10 border border-amber-400/30 text-center space-y-4">
@@ -231,7 +257,11 @@ export const ProjectSelectorModal: React.FC<ProjectSelectorModalProps> = ({
                 <div className="p-8 rounded-2xl bg-white/[0.02] border border-white/[0.06] text-center space-y-3">
                   <Folder className="w-8 h-8 text-neutral-500 mx-auto" />
                   <p className="text-xs font-mono text-neutral-400">
-                    No custom projects yet. Create one to generate your scoped ingestion API key.
+                    {projectsFeed?.status === 'error'
+                      ? `The project list could not be read from Firestore: ${projectsFeed.message ?? 'no details'}`
+                      : projectsFeed?.status === 'pending'
+                      ? 'Loading your projects...'
+                      : 'No custom projects yet. Create one to generate your scoped ingestion API key.'}
                   </p>
                   <button
                     onClick={() => setIsCreating(true)}
@@ -304,29 +334,45 @@ export const ProjectSelectorModal: React.FC<ProjectSelectorModalProps> = ({
                           </button>
                         </div>
 
-                        {/* Scoped API Key Bar */}
-                        <div className="mt-3 pt-3 border-t border-white/[0.08] flex items-center justify-between font-mono text-xs">
-                          <div className="flex items-center space-x-2 text-neutral-400 truncate max-w-[70%]">
-                            <Key className="w-3.5 h-3.5 text-amber-300 shrink-0" />
-                            <span className="text-[11px] truncate text-neutral-300">{proj.apiKey}</span>
-                          </div>
-                          <button
-                            onClick={(e) => copyApiKey(proj.apiKey, proj.id, e)}
-                            className="flex items-center space-x-1 text-[10px] font-mono text-neutral-400 hover:text-white px-2 py-1 rounded bg-white/5 hover:bg-white/10 border border-white/10 transition-colors"
-                          >
-                            {copiedKeyId === proj.id ? (
-                              <>
-                                <CheckCheck className="w-3 h-3 text-emerald-400" />
-                                <span className="text-emerald-400">Copied!</span>
-                              </>
-                            ) : (
-                              <>
-                                <Copy className="w-3 h-3" />
-                                <span>Copy Key</span>
-                              </>
-                            )}
-                          </button>
-                        </div>
+                        {/* Scoped API Key Bar. The full key exists only in the session that created the
+                            project (the API shows it once, nothing stores it); otherwise only the
+                            non-secret prefix is shown and there is nothing to copy. */}
+                        {(() => {
+                          const keyView = ingestionKeyView(proj);
+                          return (
+                            <div className="mt-3 pt-3 border-t border-white/[0.08] flex items-center justify-between font-mono text-xs">
+                              <div className="flex items-center space-x-2 text-neutral-400 truncate max-w-[70%]">
+                                <Key className="w-3.5 h-3.5 text-amber-300 shrink-0" />
+                                <span
+                                  className="text-[11px] truncate text-neutral-300"
+                                  title={keyView.reason ?? undefined}
+                                >
+                                  {keyView.key ?? keyView.masked ?? '—'}
+                                </span>
+                              </div>
+                              {keyView.key ? (
+                                <button
+                                  onClick={(e) => copyApiKey(keyView.key as string, proj.id, e)}
+                                  className="flex items-center space-x-1 text-[10px] font-mono text-neutral-400 hover:text-white px-2 py-1 rounded bg-white/5 hover:bg-white/10 border border-white/10 transition-colors"
+                                >
+                                  {copiedKeyId === proj.id ? (
+                                    <>
+                                      <CheckCheck className="w-3 h-3 text-emerald-400" />
+                                      <span className="text-emerald-400">Copied!</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Copy className="w-3 h-3" />
+                                      <span>Copy Key</span>
+                                    </>
+                                  )}
+                                </button>
+                              ) : (
+                                <span className="text-[10px] text-neutral-500">shown once</span>
+                              )}
+                            </div>
+                          );
+                        })()}
                       </div>
                     );
                   })}
@@ -338,8 +384,17 @@ export const ProjectSelectorModal: React.FC<ProjectSelectorModalProps> = ({
 
         {/* Footer info */}
         <div className="pt-4 border-t border-white/10 flex items-center justify-between text-[11px] font-mono text-neutral-400">
-          <span>Database: Firestore Multi-Tenant</span>
-          <span className="text-emerald-400">Cloud Sync Active</span>
+          <span>Project list: Firestore, one list per signed-in user</span>
+          {/* Shown only after a snapshot really arrived (it used to be a fixed green label) */}
+          {!currentUser ? (
+            <span className="text-neutral-500">Sign in to sync</span>
+          ) : projectsFeed?.status === 'ready' ? (
+            <span className="text-emerald-400">Cloud Sync Active</span>
+          ) : projectsFeed?.status === 'error' ? (
+            <span className="text-rose-400">Cloud sync failed</span>
+          ) : (
+            <span className="text-amber-300">Connecting...</span>
+          )}
         </div>
       </div>
     </div>

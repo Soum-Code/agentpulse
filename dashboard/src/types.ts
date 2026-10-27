@@ -13,7 +13,45 @@ import type { GroundingVerdict } from './lib/api';
 
 export type DesignMode = 'rag' | 'public' | 'product';
 export type ColorPalette = 'butter' | 'dark' | 'chalk';
-export type ChalkSurfacePreset = 'classic-white' | 'sepia-slate' | 'emerald-graphite' | 'custom';
+/** Surface presets per palette. Each has four named presets plus 'custom' (a user-picked colour). */
+export type ChalkSurfacePreset = 'classic-white' | 'sepia-slate' | 'emerald-graphite' | 'blueprint-mist' | 'custom';
+export type DarkSurfacePreset = 'obsidian-void' | 'midnight-sapphire' | 'amethyst-abyss' | 'emerald-matrix' | 'custom';
+export type ButterSurfacePreset = 'canary-gold' | 'amber-honey' | 'vanilla-creme' | 'pistachio-mint' | 'custom';
+
+export type AnySurfacePreset = ChalkSurfacePreset | DarkSurfacePreset | ButterSurfacePreset;
+
+/** One selectable surface in colorPalettes.ts: the hexes that become CSS variables, plus display text. */
+export interface SurfacePresetConfig {
+  id: string;
+  name: string;
+  label: string;
+  subtitle: string;
+  bgHex: string;
+  cardHex: string;
+  borderHex: string;
+  accentHex: string;
+  tag: string;
+  // Chalk presets only: the ink colour and its three tuned opacities (see getChalkTextMetrics).
+  textBaseRgb?: string;
+  textOpacityPrimary?: number;
+  textOpacitySecondary?: number;
+  textOpacityMuted?: number;
+}
+
+/** WCAG reading of a chalk surface: the tuned text colours and the contrast ratio each one reaches. */
+export interface ChalkTextMetrics {
+  baseRgb: string;
+  opacityPrimary: number;
+  opacitySecondary: number;
+  opacityMuted: number;
+  textPrimary: string;
+  textSecondary: string;
+  textMuted: string;
+  contrastRatioPrimary: number;
+  contrastRatioSecondary: number;
+  contrastRatioMuted: number;
+  isWcagAACompliant: boolean;
+}
 
 export interface ChalkSurfaceConfig {
   id: ChalkSurfacePreset;
@@ -282,7 +320,15 @@ export interface TelemetryProject {
   name: string;
   description?: string;
   ownerId: string;
-  apiKey: string;
+  /**
+   * The full ingest key. Present only in the browser session that created the project: the API
+   * shows it once and Firestore never stores it (see lib/firebase.ts), so after a reload it is
+   * undefined and only keyPrefix remains.
+   */
+  apiKey?: string;
+  /** The API's id for the key (what revoke needs) and its public 12-hex lookup part. Not secrets. */
+  keyId?: number;
+  keyPrefix?: string;
   environment: 'production' | 'staging' | 'development';
   createdAt: string;
   agentCount?: number;
