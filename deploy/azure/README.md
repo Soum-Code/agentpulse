@@ -216,7 +216,15 @@ F="-f docker-compose.yml -f deploy/azure/docker-compose.azure.yml --profile chat
 
 All optional. A provider without its key is skipped, and Pollinations, which needs no key, is
 always the last provider, so the chat answers even with none of these set (slowly: about 90 s
-a question, see Limits). With the Groq and Cerebras keys a question takes a few seconds.
+a question, see Limits). With a Groq key a question takes a few seconds (measured on the live
+site on 2026-10-27: 1.6 s for the three agent calls, Groq `gpt-oss-20b`).
+
+**Cerebras (checked 2026-10-27):** its console said "API access isn't active yet. Add a payment
+method to start running requests and claim $5 in free credits." The owner did not add a card, so
+this deployment does not set `CEREBRAS_API_KEY` and the chain skips Cerebras. The "free trial"
+figures cited for it in `demo/chat_providers.py` were the published ones on 2026-10-25; they do
+not apply without a payment method. Live providers on this deployment: Groq, NVIDIA, OpenRouter
+and Pollinations.
 
 ```
 GROQ_API_KEY=<from console.groq.com, API Keys>
@@ -384,7 +392,7 @@ has 120 s (`CHAT_TURN_BUDGET_SECONDS`).
 | provider | model(s) | key | free-tier limit used as the default |
 |---|---|---|---|
 | Groq | `openai/gpt-oss-20b`, reasoning low | `GROQ_API_KEY` | 30 requests/min, 1,000/day, 8K tokens/min, 200K/day |
-| Cerebras | `gpt-oss-120b`, then `qwen-3.8-27b` | `CEREBRAS_API_KEY` | 5 requests/min and 1M tokens/day, per model |
+| Cerebras | `gpt-oss-120b`, then `qwen-3.8-27b` | `CEREBRAS_API_KEY` | 5 requests/min and 1M tokens/day, per model (published 2026-10-25; the console now needs a payment method, so it is not set here) |
 | NVIDIA | `google/gemma-4-31b-it` | `NVIDIA_API_KEY` | not published; no local limit |
 | OpenRouter | `google/gemma-4-31b-it:free` | `OPENROUTER_API_KEY` | 20/min, 50/day under 10 credits |
 | Pollinations | `openai-fast` (gpt-oss-20b) | none | one reply every 30 s per IP; 32 s used |
@@ -397,7 +405,7 @@ model moves on at once. Free tiers change: the models (`CHAT_<P>_MODELS`), base 
 
 Every visitor shares the VM's one IP, so Pollinations alone answers one call every 32 s: a
 question then takes about 90 s and two visitors queue behind each other. That is the fallback,
-not the plan; set the Groq and Cerebras keys.
+not the plan; set the Groq key (NVIDIA and OpenRouter are the backups).
 
 ### Limits
 
@@ -433,6 +441,13 @@ requests a day.
 
 So the daily cap uses about a quarter of the two providers' combined daily tokens. Five
 examiners at 40 questions each use 200, still under the cap of 300.
+
+**Correction, 2026-10-27:** the arithmetic above assumed a Cerebras key, which this deployment
+does not have (it needs a payment method). Without it only Groq's quota is a published figure
+(about 117 questions a day at the worst case). Questions beyond that fall to NVIDIA (rate limit
+not published), then OpenRouter (50 requests a day without bought credits, about 16 questions) and
+then Pollinations (one reply every 32 s per IP, about 90 s a question). The daily cap still bounds
+the load, but 300 questions a day are no longer shown to fit inside free quotas.
 
 ### Memory
 
