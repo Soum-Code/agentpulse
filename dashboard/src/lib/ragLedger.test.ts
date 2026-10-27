@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { SpanDetail } from './api';
-import { allEvaluated, alertsReading, spanToLedgerRow } from './ragLedger';
+import { TURN_AGENTS, allEvaluated, alertsReading, spanToLedgerRow } from './ragLedger';
 
 function span(over: Partial<SpanDetail> = {}): SpanDetail {
   return {
@@ -86,6 +86,24 @@ describe('skipped evaluations', () => {
     expect(row.stage.status).toBe('unmeasured');
     expect(row.stage.reason).toMatch(/skipped/);
     expect(row.groundingRisk.status).toBe('unmeasured');
+  });
+});
+
+describe('waiting for every agent of the turn (PR #110 follow-up)', () => {
+  const retriever = span({ span_id: 'r', agent_id: 'retriever', evaluation: evaluated() });
+  const verifier = span({ span_id: 'v', agent_id: 'verifier', evaluation: evaluated() });
+  const answerer = span({ span_id: 'a', agent_id: 'answerer', evaluation: evaluated() });
+
+  it('is not "none raised" while the answerer span has not arrived', () => {
+    expect(allEvaluated([retriever, verifier], TURN_AGENTS)).toBe(false);
+    expect(alertsReading(0, [retriever, verifier], false, TURN_AGENTS)).toBe('unknown-running');
+    expect(alertsReading(0, [retriever, verifier], true, TURN_AGENTS)).toBe('unknown-timeout');
+  });
+
+  it('is "none raised" once every agent the turn reported has a scored span', () => {
+    expect(alertsReading(0, [retriever, verifier, answerer], false, TURN_AGENTS)).toBe('none');
+    // A turn that stopped at the verifier reported two agents; two scored spans are then all of it.
+    expect(alertsReading(0, [retriever, verifier], false, ['retriever', 'verifier'])).toBe('none');
   });
 });
 
