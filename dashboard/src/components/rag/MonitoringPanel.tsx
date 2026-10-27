@@ -16,6 +16,7 @@ import type { EvaluatorReadiness, Agent as ApiAgent } from '../../lib/api';
 import { riskTone, riskLabel, riskBadgeClasses, riskTextClasses, riskDotClasses } from '../../lib/riskTone';
 import type { ColorPalette, ChalkSurfacePreset } from '../../types';
 import { getRagTheme } from './ragTheme';
+import { AgentLedger } from './AgentLedger';
 
 interface MonitoringPanelProps {
   evaluatorReadiness: EvaluatorReadiness | null;
@@ -310,6 +311,9 @@ export const MonitoringPanel: React.FC<MonitoringPanelProps> = ({
             </div>
           )}
         </div>
+
+        {/* The owner's agent ledger: one row per span of the selected turn, on DatumDisplay */}
+        <AgentLedger traceId={activeTurn?.traceId} theme={theme} />
 
         {/* Drift Panel — The Crucial Component */}
         <div className={`p-4 rounded-xl ${theme.cardBg} border ${theme.cardBorder} relative`}>

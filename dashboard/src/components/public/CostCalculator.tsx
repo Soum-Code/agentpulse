@@ -84,10 +84,10 @@ export const CostCalculator: React.FC<CostCalculatorProps> = ({ palette }) => {
           palette === 'butter'
             ? 'bg-emerald-300 border-2 border-neutral-950 shadow-[4px_4px_0px_#000000] text-neutral-950'
             : palette === 'chalk'
-            ? 'bg-emerald-50 border border-emerald-300 shadow-sm text-neutral-900'
+            ? 'chalk-tactile-card border border-emerald-300/80 shadow-md text-neutral-900'
             : 'bg-emerald-500/15 backdrop-blur-xl border border-emerald-500/40 shadow-[0_12px_32px_rgba(16,185,129,0.2),inset_0_1px_1px_rgba(255,255,255,0.3)] text-white'
         }`}>
-          <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-emerald-300/60 to-transparent" />
+          <div className={`absolute inset-x-0 top-0 h-[1.5px] pointer-events-none ${palette === 'chalk' ? 'chalk-specular' : 'bg-gradient-to-r from-transparent via-emerald-300/60 to-transparent'}`} />
           <div className={`w-12 h-12 rounded-xl flex items-center justify-center shadow-inner group-hover:scale-105 transition-transform ${
             palette === 'butter'
               ? 'bg-neutral-950 border border-neutral-950 text-emerald-300'
@@ -173,10 +173,10 @@ export const CostCalculator: React.FC<CostCalculatorProps> = ({ palette }) => {
           palette === 'butter'
             ? 'bg-rose-100/90 border-2 border-neutral-950 shadow-[4px_4px_0px_#000000] text-neutral-950'
             : palette === 'chalk'
-            ? 'bg-rose-50/80 border border-rose-200 shadow-sm text-neutral-900'
+            ? 'chalk-tactile-card border border-rose-300/80 shadow-md text-neutral-900'
             : 'bg-red-950/20 backdrop-blur-xl border border-red-500/30 shadow-[0_12px_32px_rgba(239,68,68,0.1),inset_0_1px_1px_rgba(255,255,255,0.1)] text-white'
         }`}>
-          <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-red-400/50 to-transparent" />
+          <div className={`absolute inset-x-0 top-0 h-[1.5px] pointer-events-none ${palette === 'chalk' ? 'chalk-specular' : 'bg-gradient-to-r from-transparent via-red-400/50 to-transparent'}`} />
           <div className="flex items-center justify-between">
             <span className={`text-xs font-mono font-bold uppercase ${
               palette === 'butter' ? 'text-rose-950' : palette === 'chalk' ? 'text-rose-900' : 'text-red-400'
@@ -240,10 +240,10 @@ export const CostCalculator: React.FC<CostCalculatorProps> = ({ palette }) => {
           palette === 'butter'
             ? 'bg-emerald-100/90 border-2 border-neutral-950 shadow-[4px_4px_0px_#000000] text-neutral-950'
             : palette === 'chalk'
-            ? 'bg-emerald-50/80 border border-emerald-200 shadow-sm text-neutral-900'
+            ? 'chalk-tactile-card border border-emerald-300/80 shadow-md text-neutral-900'
             : 'bg-emerald-950/25 backdrop-blur-xl border border-emerald-500/45 shadow-[0_12px_32px_rgba(16,185,129,0.16),inset_0_1px_1.5px_rgba(255,255,255,0.25)] text-white'
         }`}>
-          <div className="absolute inset-x-0 top-0 h-[1.5px] bg-gradient-to-r from-transparent via-emerald-400/70 to-transparent" />
+          <div className={`absolute inset-x-0 top-0 h-[1.5px] pointer-events-none ${palette === 'chalk' ? 'chalk-specular' : 'bg-gradient-to-r from-transparent via-emerald-400/70 to-transparent'}`} />
           <div className="flex items-center justify-between">
             <span className={`text-xs font-mono font-bold uppercase flex items-center ${
               palette === 'butter' ? 'text-emerald-950' : palette === 'chalk' ? 'text-emerald-900' : 'text-emerald-300'

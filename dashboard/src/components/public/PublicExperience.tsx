@@ -47,10 +47,11 @@ import { EnterpriseArchDiagram } from './EnterpriseArchDiagram';
 import { AnimeAgentSwarmRadar } from './AnimeAgentSwarmRadar';
 import { AnimeSignalMesh } from './AnimeSignalMesh';
 import { AnimeInteractiveCounter } from './AnimeInteractiveCounter';
-import { ChalkSurfacePicker } from './ChalkSurfacePicker';
+import { UnifiedPaletteBar } from '../common/UnifiedPaletteBar';
 import { ChalkTactileAnnotation, PresetAnnotation } from './ChalkTactileAnnotation';
 import { playChalkTapSound, setChalkAudioMuted, getIsChalkAudioMuted } from '../../utils/chalkAudio';
-import { ChalkSurfacePreset } from '../../types';
+import { ColorPalette, ChalkSurfacePreset, DarkSurfacePreset, ButterSurfacePreset } from '../../types';
+import { CHALK_PRESETS } from '../../lib/colorPalettes';
 
 import { User as FirebaseUser } from 'firebase/auth';
 
@@ -58,9 +59,49 @@ interface PublicExperienceProps {
   onEnterProduct: () => void;
   currentUser?: FirebaseUser | null;
   onOpenAuth?: () => void;
+  // Theme state from App (useAppTheme), so the landing page and the console share one palette.
+  // Each pair is optional: without it the page keeps its own state, as it did before.
+  palette?: ColorPalette;
+  onSelectPalette?: (palette: ColorPalette) => void;
+  darkPreset?: DarkSurfacePreset;
+  onSelectDarkPreset?: (preset: DarkSurfacePreset) => void;
+  darkCustomColor?: string;
+  onSelectDarkCustomColor?: (hex: string) => void;
+  butterPreset?: ButterSurfacePreset;
+  onSelectButterPreset?: (preset: ButterSurfacePreset) => void;
+  butterCustomColor?: string;
+  onSelectButterCustomColor?: (hex: string) => void;
+  chalkSurface?: ChalkSurfacePreset;
+  onSelectChalkPreset?: (preset: ChalkSurfacePreset) => void;
+  chalkCustomColor?: string;
+  onSelectChalkCustomColor?: (hex: string) => void;
 }
 
-export const PublicExperience: React.FC<PublicExperienceProps> = ({ onEnterProduct, currentUser, onOpenAuth }) => {
+/** A value controlled by the parent when it passes one, otherwise held here. */
+function useControlled<T>(prop: T | undefined, setter: ((v: T) => void) | undefined, initial: T): [T, (v: T) => void] {
+  const [internal, setInternal] = useState<T>(initial);
+  return [prop ?? internal, setter ?? setInternal];
+}
+
+export const PublicExperience: React.FC<PublicExperienceProps> = ({
+  onEnterProduct,
+  currentUser,
+  onOpenAuth,
+  palette: propPalette,
+  onSelectPalette,
+  darkPreset: propDarkPreset,
+  onSelectDarkPreset,
+  darkCustomColor: propDarkCustomColor,
+  onSelectDarkCustomColor,
+  butterPreset: propButterPreset,
+  onSelectButterPreset,
+  butterCustomColor: propButterCustomColor,
+  onSelectButterCustomColor,
+  chalkSurface: propChalkSurface,
+  onSelectChalkPreset,
+  chalkCustomColor: propChalkCustomColor,
+  onSelectChalkCustomColor,
+}) => {
   const [connectOpen, setConnectOpen] = useState(false);
   const [activeStoryStep, setActiveStoryStep] = useState<number>(0);
   const [pipCopied, setPipCopied] = useState(false);
@@ -69,33 +110,14 @@ export const PublicExperience: React.FC<PublicExperienceProps> = ({ onEnterProdu
   const [isWipingLoopCard, setIsWipingLoopCard] = useState(false);
   const [selectedSdkFramework, setSelectedSdkFramework] = useState<'python' | 'langgraph'>('python');
   
-  // Palette mode: 'butter' (Iconic Buttermax canary yellow & deep black), 'dark' (Cyber obsidian), 'chalk' (Studio light)
-  const [palette, setPalette] = useState<'butter' | 'dark' | 'chalk'>('dark');
-
-  // Chalk surface preset & custom color
-  const [chalkSurface, setChalkSurface] = useState<ChalkSurfacePreset>(() => {
-    try {
-      const saved = localStorage.getItem('agentpulse_chalk_surface');
-      if (saved && (saved === 'classic-white' || saved === 'sepia-slate' || saved === 'emerald-graphite' || saved === 'custom')) {
-        return saved as ChalkSurfacePreset;
-      }
-    } catch {
-      // ignore
-    }
-    return 'classic-white';
-  });
-
-  const [chalkCustomColor, setChalkCustomColor] = useState<string>(() => {
-    try {
-      const saved = localStorage.getItem('agentpulse_chalk_custom_color');
-      if (saved && /^#[0-9A-Fa-f]{6}$/.test(saved)) {
-        return saved;
-      }
-    } catch {
-      // ignore
-    }
-    return '#ffffff';
-  });
+  // Palette, tint presets and custom colours (shared with the console through App)
+  const [palette, setPalette] = useControlled<ColorPalette>(propPalette, onSelectPalette, 'dark');
+  const [darkPreset, setDarkPreset] = useControlled<DarkSurfacePreset>(propDarkPreset, onSelectDarkPreset, 'obsidian-void');
+  const [darkCustomColor, setDarkCustomColor] = useControlled(propDarkCustomColor, onSelectDarkCustomColor, '#06070a');
+  const [butterPreset, setButterPreset] = useControlled<ButterSurfacePreset>(propButterPreset, onSelectButterPreset, 'canary-gold');
+  const [butterCustomColor, setButterCustomColor] = useControlled(propButterCustomColor, onSelectButterCustomColor, '#faf5e6');
+  const [chalkSurface, setChalkSurface] = useControlled<ChalkSurfacePreset>(propChalkSurface, onSelectChalkPreset, 'classic-white');
+  const [chalkCustomColor, setChalkCustomColor] = useControlled(propChalkCustomColor, onSelectChalkCustomColor, '#f6f8fb');
 
   // Chalk tactile annotations & handwritten highlights state
   const [chalkAnnotationsActive, setChalkAnnotationsActive] = useState<boolean>(true);
@@ -116,25 +138,8 @@ export const PublicExperience: React.FC<PublicExperienceProps> = ({ onEnterProdu
     }
   };
 
-  const handleSelectChalkPreset = (preset: ChalkSurfacePreset) => {
-    setChalkSurface(preset);
-    try {
-      localStorage.setItem('agentpulse_chalk_surface', preset);
-    } catch {
-      // ignore
-    }
-  };
-
-  const handleSelectChalkCustomColor = (hex: string) => {
-    setChalkSurface('custom');
-    setChalkCustomColor(hex);
-    try {
-      localStorage.setItem('agentpulse_chalk_surface', 'custom');
-      localStorage.setItem('agentpulse_chalk_custom_color', hex);
-    } catch {
-      // ignore
-    }
-  };
+  // The floating chalk dock picks a surface; useAppTheme remembers it.
+  const handleSelectChalkPreset = (preset: ChalkSurfacePreset) => setChalkSurface(preset);
 
   const handleCopyPip = (textToCopy = 'pip install git+https://github.com/Soum-Code/agentpulse.git#subdirectory=sdk') => {
     navigator.clipboard.writeText(textToCopy);
@@ -276,25 +281,9 @@ async def researcher_node(state):
     //                           published action
   };
 
-  const customChalkStyle = (palette === 'chalk' && chalkSurface === 'custom' && chalkCustomColor) ? ({
-    '--chalk-surface-bg': chalkCustomColor,
-    '--chalk-header-bg': `${chalkCustomColor}f0`,
-    '--chalk-header-gradient': `linear-gradient(180deg, ${chalkCustomColor} 0%, ${chalkCustomColor}e6 100%)`,
-    '--chalk-card-bg': chalkCustomColor,
-    '--chalk-card-gradient': `linear-gradient(180deg, ${chalkCustomColor} 0%, ${chalkCustomColor}f5 100%)`,
-    '--chalk-border': 'rgba(0, 0, 0, 0.12)',
-    '--chalk-border-hover': 'rgba(0, 0, 0, 0.22)',
-    '--chalk-grid-dot': 'rgba(0, 0, 0, 0.16)',
-    '--chalk-grid-line': 'rgba(0, 0, 0, 0.07)',
-    '--chalk-mote-1': 'rgba(0, 0, 0, 0.25)',
-    '--chalk-mote-2': 'rgba(0, 0, 0, 0.2)',
-    '--chalk-mote-3': 'rgba(0, 0, 0, 0.15)',
-  } as React.CSSProperties) : undefined;
-
   return (
     <div
       data-chalk-surface={palette === 'chalk' ? chalkSurface : undefined}
-      style={customChalkStyle}
       className={`min-h-screen relative overflow-x-hidden transition-colors duration-300 selection:bg-neutral-950 selection:text-yellow-300 ${
         palette === 'butter'
           ? 'text-neutral-950'
@@ -304,7 +293,15 @@ async def researcher_node(state):
       }`}
     >
       {/* Interactive 3D Liquid Flowing Canvas Background */}
-      <LiquidBackgroundCanvas palette={palette} chalkSurface={chalkSurface} chalkCustomColor={chalkCustomColor} />
+      <LiquidBackgroundCanvas
+        palette={palette}
+        darkPreset={darkPreset}
+        darkCustomColor={darkCustomColor}
+        butterPreset={butterPreset}
+        butterCustomColor={butterCustomColor}
+        chalkSurface={chalkSurface}
+        chalkCustomColor={chalkCustomColor}
+      />
 
       {/* Tactile Architectural Paper Grid Overlay for Chalk Mode */}
       {palette === 'chalk' && (
@@ -355,67 +352,32 @@ async def researcher_node(state):
 
         {/* Center/Right Nav & Theme Palette Switcher */}
         <div className="flex items-center space-x-3 sm:space-x-4">
-          {/* Chalk Surface Customization (Presets & Custom Color Picker) */}
-          {palette === 'chalk' && (
-            <ChalkSurfacePicker
-              currentPreset={chalkSurface}
-              customColor={chalkCustomColor}
-              onSelectPreset={handleSelectChalkPreset}
-              onSelectCustomColor={handleSelectChalkCustomColor}
-            />
-          )}
-
-          {/* Palette Switcher */}
-          <div
-            className={`flex items-center p-1 rounded-full border text-xs font-mono ${
-              palette === 'butter'
-                ? 'bg-black text-white border-black shadow-sm'
-                : palette === 'chalk'
-                ? 'bg-neutral-100 border-neutral-300 text-neutral-800 shadow-sm'
-                : 'bg-white/[0.05] border-white/[0.12] text-neutral-300'
-            }`}
-          >
-            <button
-              onClick={() => setPalette('butter')}
-              className={`px-2.5 py-1 rounded-full transition-all flex items-center space-x-1 font-bold ${
-                palette === 'butter'
-                  ? 'bg-amber-300 text-black shadow-xs font-black'
-                  : palette === 'chalk'
-                  ? 'text-neutral-600 hover:text-neutral-950'
-                  : 'text-neutral-400 hover:text-white'
-              }`}
-              title="Buttermax Canary Yellow Palette"
-            >
-              <Sparkles className="w-3 h-3 text-amber-500" />
-              <span>Butter</span>
-            </button>
-            <button
-              onClick={() => setPalette('dark')}
-              className={`px-2.5 py-1 rounded-full transition-all flex items-center space-x-1 ${
-                palette === 'dark'
-                  ? 'bg-white text-black font-bold shadow-xs'
-                  : palette === 'chalk'
-                  ? 'text-neutral-600 hover:text-neutral-950'
-                  : 'text-neutral-400 hover:text-white'
-              }`}
-              title="Obsidian Dark Palette"
-            >
-              <Moon className="w-3 h-3" />
-              <span>Dark</span>
-            </button>
-            <button
-              onClick={() => setPalette('chalk')}
-              className={`px-2.5 py-1 rounded-full transition-all flex items-center space-x-1 ${
-                palette === 'chalk'
-                  ? 'bg-neutral-900 text-white font-bold shadow-xs'
-                  : 'text-neutral-400 hover:text-white'
-              }`}
-              title="Studio Chalk Light Palette"
-            >
-              <Sun className="w-3 h-3" />
-              <span>Chalk</span>
-            </button>
-          </div>
+          {/* Palette, tint presets and custom colour (same bar as the console header) */}
+          <UnifiedPaletteBar
+            palette={palette}
+            onSelectPalette={setPalette}
+            darkPreset={darkPreset}
+            onSelectDarkPreset={setDarkPreset}
+            darkCustomColor={darkCustomColor}
+            onSelectDarkCustomColor={(hex) => {
+              setDarkPreset('custom');
+              setDarkCustomColor(hex);
+            }}
+            butterPreset={butterPreset}
+            onSelectButterPreset={setButterPreset}
+            butterCustomColor={butterCustomColor}
+            onSelectButterCustomColor={(hex) => {
+              setButterPreset('custom');
+              setButterCustomColor(hex);
+            }}
+            chalkSurface={chalkSurface}
+            onSelectChalkPreset={setChalkSurface}
+            chalkCustomColor={chalkCustomColor}
+            onSelectChalkCustomColor={(hex) => {
+              setChalkSurface('custom');
+              setChalkCustomColor(hex);
+            }}
+          />
 
           <nav className="hidden lg:flex items-center space-x-5 text-xs font-medium">
             <a
@@ -1244,10 +1206,10 @@ async def researcher_node(state):
               palette === 'butter'
                 ? 'bg-[#FAF5E8] text-neutral-950 border-2 border-neutral-950 shadow-[6px_6px_0px_#000000]'
                 : palette === 'chalk'
-                ? 'bg-white text-slate-900 border border-slate-300 shadow-xl'
+                ? 'chalk-tactile-card text-slate-900 shadow-xl'
                 : 'liquid-glass-card border-glow-subtle text-white'
             }`}>
-              <div className="absolute inset-x-0 top-0 h-[1px] apple-liquid-specular pointer-events-none" />
+              <div className={`absolute inset-x-0 top-0 h-[1.5px] pointer-events-none ${palette === 'chalk' ? 'chalk-specular' : 'apple-liquid-specular'}`} />
               <div className={`flex items-center justify-between pb-3 border-b ${
                 palette === 'butter' ? 'border-neutral-950' : palette === 'chalk' ? 'border-slate-200' : 'border-white/[0.08]'
               }`}>
@@ -1273,7 +1235,7 @@ async def researcher_node(state):
                   palette === 'butter'
                     ? 'bg-white border-neutral-950 text-neutral-950 shadow-[2px_2px_0px_#000000]'
                     : palette === 'chalk'
-                    ? 'bg-slate-50 border-slate-200 text-slate-900'
+                    ? 'chalk-tactile-card border-white/80 text-slate-900 shadow-sm'
                     : 'bg-white/[0.04] border-white/[0.08] text-neutral-300'
                 }`}>
                   <span className={palette === 'butter' ? 'font-bold' : palette === 'chalk' ? 'text-slate-700 font-medium' : 'text-neutral-300'}>Evaluation rate, 1 worker</span>
@@ -1285,7 +1247,7 @@ async def researcher_node(state):
                   palette === 'butter'
                     ? 'bg-white border-neutral-950 text-neutral-950 shadow-[2px_2px_0px_#000000]'
                     : palette === 'chalk'
-                    ? 'bg-slate-50 border-slate-200 text-slate-900'
+                    ? 'chalk-tactile-card border-white/80 text-slate-900 shadow-sm'
                     : 'bg-white/[0.04] border-white/[0.08] text-neutral-300'
                 }`}>
                   <span className={palette === 'butter' ? 'font-bold' : palette === 'chalk' ? 'text-slate-700 font-medium' : 'text-neutral-300'}>{loopPhases[activeLoopStep].metricLabel}</span>
@@ -1295,7 +1257,7 @@ async def researcher_node(state):
                   palette === 'butter'
                     ? 'bg-white border-neutral-950 text-neutral-950 shadow-[2px_2px_0px_#000000]'
                     : palette === 'chalk'
-                    ? 'bg-slate-50 border-slate-200 text-slate-900'
+                    ? 'chalk-tactile-card border-white/80 text-slate-900 shadow-sm'
                     : 'bg-white/[0.04] border-white/[0.08] text-neutral-300'
                 }`}>
                   <span className={palette === 'butter' ? 'font-bold' : palette === 'chalk' ? 'text-slate-700 font-medium' : 'text-neutral-300'}>Verification Model</span>
@@ -1364,12 +1326,12 @@ async def researcher_node(state):
                     ? palette === 'butter'
                       ? 'bg-black text-white border-2 border-black shadow-[6px_6px_0px_#000000] -translate-x-1'
                       : palette === 'chalk'
-                      ? 'bg-neutral-900 text-white border-neutral-900 shadow-lg'
+                      ? 'chalk-tactile-card border-neutral-400 text-neutral-950 font-semibold shadow-md ring-1 ring-neutral-400/30'
                       : 'apple-liquid-dock border-white/40 text-white shadow-[0_0_24px_rgba(255,255,255,0.06)]'
                     : palette === 'butter'
                     ? 'bg-white text-black border-2 border-black shadow-[2px_2px_0px_#000000] hover:shadow-[4px_4px_0px_#000000]'
                     : palette === 'chalk'
-                    ? 'bg-white text-neutral-700 border-neutral-200 hover:border-neutral-400'
+                    ? 'chalk-tactile-card text-neutral-700 hover:text-neutral-950 shadow-sm'
                     : 'bg-white/[0.03] border-white/[0.08] text-neutral-400 hover:text-neutral-100 hover:bg-white/[0.06] hover:border-white/20'
                 }`}
               >
@@ -2163,7 +2125,7 @@ async def researcher_node(state):
             palette === 'butter'
               ? 'border-2 border-neutral-950 bg-white'
               : palette === 'chalk'
-              ? 'border border-neutral-200 bg-white'
+              ? 'chalk-tactile-card text-neutral-900 shadow-xl'
               : 'apple-liquid-dock border-white/[0.1]'
           }`}
         >
@@ -2439,54 +2401,34 @@ async def researcher_node(state):
           aria-label="Chalk surface and tactile annotation bar"
           className="fixed bottom-6 right-6 z-40 hidden sm:flex items-center gap-2 p-2 rounded-full ios-ultra-thin-chalk border border-neutral-300 shadow-xl text-xs font-mono select-none"
         >
-          {/* Surface Presets */}
+          {/* Surface presets: one button per chalk preset */}
           <div className="flex items-center gap-1 border-r border-neutral-300 pr-2">
             <span className="text-[10px] uppercase font-bold text-neutral-500 px-1.5 flex items-center gap-1">
               <span
                 className="w-2.5 h-2.5 rounded-full border border-neutral-400 shrink-0"
                 style={{
                   backgroundColor:
-                    chalkSurface === 'classic-white'
-                      ? '#ffffff'
-                      : chalkSurface === 'sepia-slate'
-                      ? '#f5efe6'
-                      : chalkSurface === 'emerald-graphite'
-                      ? '#eaf2ec'
-                      : chalkCustomColor,
+                    chalkSurface === 'custom'
+                      ? chalkCustomColor
+                      : CHALK_PRESETS.find((p) => p.id === chalkSurface)?.bgHex ?? '#ffffff',
                 }}
               />
               Surface:
             </span>
-            <button
-              onClick={() => handleSelectChalkPreset('classic-white')}
-              className={`px-2 py-0.5 rounded-full text-[11px] font-medium transition-all ${
-                chalkSurface === 'classic-white'
-                  ? 'bg-neutral-900 text-white font-bold shadow-xs'
-                  : 'text-neutral-700 hover:text-black hover:bg-black/5'
-              }`}
-            >
-              White
-            </button>
-            <button
-              onClick={() => handleSelectChalkPreset('sepia-slate')}
-              className={`px-2 py-0.5 rounded-full text-[11px] font-medium transition-all ${
-                chalkSurface === 'sepia-slate'
-                  ? 'bg-[#4a3828] text-[#fef9f0] font-bold shadow-xs'
-                  : 'text-[#5d4632] hover:text-[#281c12] hover:bg-[#5d4632]/10'
-              }`}
-            >
-              Sepia
-            </button>
-            <button
-              onClick={() => handleSelectChalkPreset('emerald-graphite')}
-              className={`px-2 py-0.5 rounded-full text-[11px] font-medium transition-all ${
-                chalkSurface === 'emerald-graphite'
-                  ? 'bg-[#1b4332] text-[#e8f5ec] font-bold shadow-xs'
-                  : 'text-[#2d5a45] hover:text-[#0b2416] hover:bg-[#2d5a45]/10'
-              }`}
-            >
-              Emerald
-            </button>
+            {CHALK_PRESETS.map((preset) => (
+              <button
+                key={preset.id}
+                onClick={() => handleSelectChalkPreset(preset.id as ChalkSurfacePreset)}
+                title={`${preset.name}: ${preset.subtitle}`}
+                className={`px-2 py-0.5 rounded-full text-[11px] font-medium transition-all ${
+                  chalkSurface === preset.id
+                    ? 'bg-neutral-900 text-white font-bold shadow-xs'
+                    : 'text-neutral-700 hover:text-black hover:bg-black/5'
+                }`}
+              >
+                {preset.label}
+              </button>
+            ))}
           </div>
 
           {/* Chalk & Marker Annotations Toggle */}
