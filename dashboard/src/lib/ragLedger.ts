@@ -75,9 +75,18 @@ export function spanToLedgerRow(span: SpanDetail, settled: boolean): LedgerRow {
   };
 }
 
-/** True when every span has an evaluation, i.e. there is nothing left to wait for. */
-export function allEvaluated(spans: SpanDetail[]): boolean {
-  return spans.length > 0 && spans.every((s) => s.evaluation !== null);
+/** The three agents a chat turn runs, in order; what to wait for while the chat has not said which ran. */
+export const TURN_AGENTS = ['retriever', 'verifier', 'answerer'] as const;
+
+/**
+ * True when every span has an evaluation and every agent in `expectedAgents` has a span, i.e. there is
+ * nothing left to wait for. The spans arrive one by one, so the retriever and verifier can both be
+ * scored before the answerer's span exists; without the expected agents that read as "all done" and the
+ * ledger printed "None raised." too early.
+ */
+export function allEvaluated(spans: SpanDetail[], expectedAgents: readonly string[] = []): boolean {
+  if (spans.length === 0 || !spans.every((s) => s.evaluation !== null)) return false;
+  return expectedAgents.every((agent) => spans.some((s) => s.agent_id === agent));
 }
 
 export type AlertsReading = 'list' | 'none' | 'unknown-running' | 'unknown-timeout';
@@ -87,9 +96,15 @@ export type AlertsReading = 'list' | 'none' | 'unknown-running' | 'unknown-timeo
  * that the evaluator may still raise one (review finding honesty-5: after a timeout with unscored spans the
  * ledger said "None raised", which reads as "the evaluator found nothing").
  */
-export function alertsReading(alertCount: number, spans: SpanDetail[], settled: boolean): AlertsReading {
+export function alertsReading(
+  alertCount: number,
+  spans: SpanDetail[],
+  settled: boolean,
+  expectedAgents: readonly string[] = [],
+): AlertsReading {
   if (alertCount > 0) return 'list';
-  if (allEvaluated(spans)) return 'none';
+  // "None" also needs every expected agent's span to be here, not only the ones that arrived.
+  if (allEvaluated(spans, expectedAgents)) return 'none';
   return settled ? 'unknown-timeout' : 'unknown-running';
 }
 

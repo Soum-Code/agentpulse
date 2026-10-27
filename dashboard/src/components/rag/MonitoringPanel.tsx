@@ -280,7 +280,12 @@ export const MonitoringPanel: React.FC<MonitoringPanelProps> = ({
         </div>
 
         {/* The owner's agent ledger: one row per span of the selected turn, on DatumDisplay */}
-        <AgentLedger traceId={activeTurn?.traceId} theme={theme} />
+        {/* The stages the chat reported for this turn: the ledger waits for each one's span. */}
+        <AgentLedger
+          traceId={activeTurn?.traceId}
+          expectedAgents={activeTurn?.response?.agents?.map((a) => a.agent)}
+          theme={theme}
+        />
 
         {/* Drift: read from AgentPulse, shown as "not available" until the 32-span window is full */}
         <div className={`p-4 rounded-2xl border ${theme.cardBg}`}>
