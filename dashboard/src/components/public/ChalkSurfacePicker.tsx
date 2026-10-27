@@ -201,11 +201,12 @@ export const ChalkSurfacePicker: React.FC<ChalkSurfacePickerProps> = ({
       {isOpen && (
         <div
           id="chalk-surface-customizer-popover"
-          className="absolute top-full right-0 mt-2 w-80 sm:w-96 rounded-2xl bg-white border border-neutral-300 shadow-2xl p-4 z-50 animate-in fade-in-0 zoom-in-95 duration-150 text-neutral-900"
+          className="absolute top-full right-0 mt-2 w-80 sm:w-96 rounded-2xl chalk-tactile-card border border-neutral-300 shadow-2xl p-4 z-50 animate-in fade-in-0 zoom-in-95 duration-150 text-neutral-900 relative overflow-hidden"
           style={{
             boxShadow: '0 20px 45px -10px rgba(15, 23, 42, 0.2), 0 0 0 1px rgba(0, 0, 0, 0.06)'
           }}
         >
+          <div className="absolute inset-x-0 top-0 h-[1.5px] chalk-specular pointer-events-none rounded-t-2xl" />
           {/* Header */}
           <div className="flex items-center justify-between pb-3 border-b border-neutral-200">
             <div className="flex items-center space-x-2">

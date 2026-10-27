@@ -1,6 +1,20 @@
 import React from 'react';
 import { ChevronRight, Radio, Search, ExternalLink, X, Keyboard, PanelRight, Moon, Sun, Layers, User, LogIn, ChevronDown, Sparkles } from 'lucide-react';
-import { ProductTab, Agent, Trace, Span, Incident, TelemetryProject, ColorPalette } from '../../types';
+import {
+  ProductTab,
+  Agent,
+  Trace,
+  Span,
+  Incident,
+  TelemetryProject,
+  ColorPalette,
+  DarkSurfacePreset,
+  ButterSurfacePreset,
+  ChalkSurfacePreset,
+} from '../../types';
+import { UnifiedPaletteBar } from '../common/UnifiedPaletteBar';
+import { liveBadge } from '../../lib/liveBadge';
+import type { FeedStatus } from '../../lib/stateModel';
 import { User as FirebaseUser } from 'firebase/auth';
 
 interface ProductHeaderProps {
@@ -13,20 +27,33 @@ interface ProductHeaderProps {
   onClearSelection: () => void;
   onOpenCommandPalette: () => void;
   onSwitchToPublic: () => void;
-  onSwitchToRag?: () => void;
   isSimulatingLive: boolean;
+  /** How the last poll of the API went; the live pill reads "LIVE" only when it succeeded. */
+  feedStatus?: FeedStatus;
   onToggleLive: () => void;
   onOpenShortcutsModal?: () => void;
   isContextPanelOpen?: boolean;
   onToggleContextPanel?: () => void;
   isCalmMode?: boolean;
   onToggleCalmMode?: () => void;
-  palette?: ColorPalette;
-  onSelectPalette?: (p: ColorPalette) => void;
   currentUser?: FirebaseUser | null;
   activeProject?: TelemetryProject | null;
   onOpenAuth?: () => void;
   onOpenProjectSelector?: () => void;
+  palette: ColorPalette;
+  onSelectPalette: (palette: ColorPalette) => void;
+  darkPreset: DarkSurfacePreset;
+  onSelectDarkPreset: (preset: DarkSurfacePreset) => void;
+  darkCustomColor: string;
+  onSelectDarkCustomColor: (hex: string) => void;
+  butterPreset: ButterSurfacePreset;
+  onSelectButterPreset: (preset: ButterSurfacePreset) => void;
+  butterCustomColor: string;
+  onSelectButterCustomColor: (hex: string) => void;
+  chalkSurface: ChalkSurfacePreset;
+  onSelectChalkPreset: (preset: ChalkSurfacePreset) => void;
+  chalkCustomColor: string;
+  onSelectChalkCustomColor: (hex: string) => void;
 }
 
 export const ProductHeader: React.FC<ProductHeaderProps> = ({
@@ -39,21 +66,36 @@ export const ProductHeader: React.FC<ProductHeaderProps> = ({
   onClearSelection,
   onOpenCommandPalette,
   onSwitchToPublic,
-  onSwitchToRag,
   isSimulatingLive,
+  feedStatus = 'ready' as FeedStatus,
   onToggleLive,
   onOpenShortcutsModal,
   isContextPanelOpen,
   onToggleContextPanel,
   isCalmMode = false,
   onToggleCalmMode,
-  palette = 'dark',
-  onSelectPalette,
   currentUser,
   activeProject,
   onOpenAuth,
-  onOpenProjectSelector
+  onOpenProjectSelector,
+  palette,
+  onSelectPalette,
+  darkPreset,
+  onSelectDarkPreset,
+  darkCustomColor,
+  onSelectDarkCustomColor,
+  butterPreset,
+  onSelectButterPreset,
+  butterCustomColor,
+  onSelectButterCustomColor,
+  chalkSurface,
+  onSelectChalkPreset,
+  chalkCustomColor,
+  onSelectChalkCustomColor,
 }) => {
+  // What the live pill says: LIVE only while the last poll succeeded (see lib/liveBadge.ts)
+  const live = liveBadge(isSimulatingLive, feedStatus);
+
   // Derive effective agent name if trace is present but selectedAgent wasn't explicitly set
   const effectiveAgentName = selectedAgent?.name || selectedTrace?.agentName;
   const effectiveAgentId = selectedAgent?.id || selectedTrace?.agentId;
@@ -96,7 +138,11 @@ export const ProductHeader: React.FC<ProductHeaderProps> = ({
           className="text-neutral-400 hover:text-white capitalize transition-colors shrink-0 px-1.5 py-0.5 rounded hover:bg-white/[0.06]"
           title={`Active view: ${currentTab}. Click to return to Overview.`}
         >
-          {currentTab === 'performance' ? 'Performance Metrics (APM)' : currentTab.replace('-', ' ')}
+          {currentTab === 'rag-monitor'
+            ? 'Aetheris Iris (Flagship Prism)'
+            : currentTab === 'performance'
+            ? 'Performance Metrics (APM)'
+            : currentTab.replace('-', ' ')}
         </button>
 
         {/* Hierarchy Level 1: Agent */}
@@ -198,34 +244,38 @@ export const ProductHeader: React.FC<ProductHeaderProps> = ({
 
       {/* Right Controls */}
       <div className="flex items-center space-x-2.5 shrink-0 z-10">
+        {/* Quick Jump to Flagship Live RAG Chat (Aetheris Iris) */}
         <button
-          onClick={() => {
-            onClearSelection();
-            onSelectTab('rag-monitor');
-          }}
-          className={`flex items-center space-x-1.5 px-2.5 py-1 rounded-lg transition-all text-xs font-mono font-semibold ${
+          onClick={() => onSelectTab('rag-monitor')}
+          className={`flex items-center space-x-1.5 px-3 py-1 rounded-lg border text-xs font-mono transition-all tactile-press ${
             currentTab === 'rag-monitor'
-              ? 'bg-cyan-500/25 border border-cyan-400 text-cyan-200 shadow-[0_0_12px_rgba(6,182,212,0.3)]'
-              : 'bg-cyan-500/15 border border-cyan-500/40 text-cyan-300 hover:bg-cyan-500/25'
+              ? 'bg-purple-500/25 text-purple-200 border-purple-400/50 shadow-[0_0_14px_rgba(168,85,247,0.35)] ring-1 ring-purple-400/30 font-semibold'
+              : 'aetheris-pill-button text-purple-300 hover:text-white hover:border-purple-400/50'
           }`}
-          title="Open RAG Live Multi-Agent Monitor"
+          title="Open Flagship Live RAG Chatbot & Instrument Panel (Aetheris Iris)"
         >
-          <span className="w-2 h-2 rounded-full bg-cyan-400 phosphor-cyan" />
-          <span>RAG Live Monitor</span>
+          <Sparkles className="w-3.5 h-3.5 text-purple-400 animate-pulse" />
+          <span className="font-semibold">Live RAG Chat</span>
+          <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 shadow-[0_0_6px_#67e8f9] animate-pulse" />
         </button>
 
-        {/* Live Simulator Pulsar */}
+        {/* Live refresh toggle: pauses or resumes the 10 s polling of the AgentPulse API */}
         <button
           onClick={onToggleLive}
           className={`flex items-center space-x-2 px-3 py-1 rounded-lg border text-[11px] font-mono transition-all tactile-press ${
-            isSimulatingLive
+            live.tone === 'live'
               ? 'liquid-glass-emerald text-emerald-200 shadow-[0_0_12px_rgba(16,185,129,0.2)]'
+              : live.tone === 'offline'
+              ? 'bg-rose-500/10 border-rose-500/40 text-rose-200'
+              : live.tone === 'connecting'
+              ? 'bg-amber-500/10 border-amber-500/30 text-amber-200'
               : 'bg-white/[0.03] border-white/[0.08] text-neutral-400 hover:text-neutral-200 hover:bg-white/[0.06]'
           }`}
-          title="Toggle live synthetic telemetry stream"
+          title={live.title}
         >
-          <Radio className={`w-3 h-3 ${isSimulatingLive ? 'text-emerald-400 phosphor-emerald animate-pulse' : 'text-neutral-500'}`} />
-          <span className="hidden sm:inline font-semibold">{isSimulatingLive ? 'LIVE INGESTION' : 'STREAM PAUSED'}</span>
+          {/* The green pulse is only for a feed that is really live */}
+          <Radio className={`w-3 h-3 ${live.tone === 'live' ? 'text-emerald-400 phosphor-emerald animate-pulse' : live.tone === 'offline' ? 'text-rose-400' : 'text-neutral-500'}`} />
+          <span className="hidden sm:inline font-semibold">{live.label}</span>
         </button>
 
         {/* Cmd+K Quick Trigger */}
@@ -240,6 +290,25 @@ export const ProductHeader: React.FC<ProductHeaderProps> = ({
             ⌘K
           </kbd>
         </button>
+
+        {/* Unified Color Palette & Multi-Color Presets Switcher */}
+        <UnifiedPaletteBar
+          palette={palette}
+          onSelectPalette={onSelectPalette}
+          darkPreset={darkPreset}
+          onSelectDarkPreset={onSelectDarkPreset}
+          darkCustomColor={darkCustomColor}
+          onSelectDarkCustomColor={onSelectDarkCustomColor}
+          butterPreset={butterPreset}
+          onSelectButterPreset={onSelectButterPreset}
+          butterCustomColor={butterCustomColor}
+          onSelectButterCustomColor={onSelectButterCustomColor}
+          chalkSurface={chalkSurface}
+          onSelectChalkPreset={onSelectChalkPreset}
+          chalkCustomColor={chalkCustomColor}
+          onSelectChalkCustomColor={onSelectChalkCustomColor}
+          compact={true}
+        />
 
         {/* Active Context Panel Toggle */}
         {onToggleContextPanel && (
@@ -258,48 +327,6 @@ export const ProductHeader: React.FC<ProductHeaderProps> = ({
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 phosphor-emerald animate-pulse" />
             )}
           </button>
-        )}
-
-        {/* Palette Switcher (Dark / Butter / Chalk) */}
-        {onSelectPalette && (
-          <div className="flex items-center p-0.5 rounded-lg border border-white/10 bg-white/[0.04] text-[11px] font-mono">
-            <button
-              onClick={() => onSelectPalette('dark')}
-              className={`px-2 py-1 rounded-md transition-all flex items-center gap-1 ${
-                palette === 'dark' && !isCalmMode
-                  ? 'bg-white/15 text-white font-semibold shadow-xs'
-                  : 'text-neutral-400 hover:text-white'
-              }`}
-              title="Obsidian Dark Theme"
-            >
-              <Moon className="w-3 h-3 text-cyan-400" />
-              <span className="hidden xl:inline">Dark</span>
-            </button>
-            <button
-              onClick={() => onSelectPalette('butter')}
-              className={`px-2 py-1 rounded-md transition-all flex items-center gap-1 ${
-                palette === 'butter'
-                  ? 'bg-amber-400 text-black font-bold shadow-xs'
-                  : 'text-neutral-400 hover:text-amber-300'
-              }`}
-              title="Buttermax Canary Theme"
-            >
-              <Sparkles className="w-3 h-3 text-amber-400" />
-              <span className="hidden xl:inline">Butter</span>
-            </button>
-            <button
-              onClick={() => onSelectPalette('chalk')}
-              className={`px-2 py-1 rounded-md transition-all flex items-center gap-1 ${
-                palette === 'chalk'
-                  ? 'bg-slate-100 text-slate-900 font-bold shadow-xs'
-                  : 'text-neutral-400 hover:text-white'
-              }`}
-              title="Studio Chalk Light Theme"
-            >
-              <Sun className="w-3 h-3 text-amber-300" />
-              <span className="hidden xl:inline">Chalk</span>
-            </button>
-          </div>
         )}
 
         {/* Calm Mode (Deep Zen Theme) Toggle */}

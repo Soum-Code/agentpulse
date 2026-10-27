@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { animate, spring } from 'animejs';
+import { motion, AnimatePresence } from 'motion/react';
 import { prefersReducedMotion } from '../../utils/liquidHoverAnime';
 import { agentSubtitle } from '../../lib/agentFormat';
 import {
@@ -27,7 +27,7 @@ import {
   Type,
   Gauge
 } from 'lucide-react';
-import { ProductTab, Agent, Trace, Incident, TextDensity } from '../../types';
+import { ProductTab, Agent, Trace, Incident, TextDensity, ColorPalette } from '../../types';
 
 interface CommandPaletteProps {
   isOpen: boolean;
@@ -48,6 +48,8 @@ interface CommandPaletteProps {
   onToggleCalmMode?: () => void;
   textDensity?: TextDensity;
   onChangeTextDensity?: (density: TextDensity) => void;
+  palette?: ColorPalette;
+  onSelectPalette?: (palette: ColorPalette) => void;
 }
 
 type FilterCategory = 'all' | 'agents' | 'traces' | 'incidents' | 'drift' | 'experiments' | 'settings';
@@ -68,93 +70,20 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
   isCalmMode = false,
   onToggleCalmMode,
   textDensity = 'comfortable',
-  onChangeTextDensity
+  onChangeTextDensity,
+  palette = 'dark',
+  onSelectPalette,
 }) => {
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState<FilterCategory>('all');
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
-  const modalRef = useRef<HTMLDivElement>(null);
-  const backdropRef = useRef<HTMLDivElement>(null);
-  const specularRef = useRef<HTMLDivElement>(null);
-  const isClosingRef = useRef(false);
-
-  const handleCloseAnimated = () => {
-    if (isClosingRef.current) return;
-    isClosingRef.current = true;
-    const reducedMotion = prefersReducedMotion();
-
-    if (modalRef.current) {
-      animate(modalRef.current, {
-        opacity: [1, 0],
-        scale: reducedMotion ? 1 : [1, 0.94],
-        translateY: reducedMotion ? 0 : [0, -12],
-        duration: reducedMotion ? 120 : 170,
-        ease: 'easeInQuad',
-        complete: () => {
-          onClose();
-          isClosingRef.current = false;
-        }
-      });
-      if (backdropRef.current) {
-        animate(backdropRef.current, {
-          opacity: [1, 0],
-          duration: reducedMotion ? 120 : 170,
-          ease: 'easeInQuad',
-        });
-      }
-    } else {
-      onClose();
-      isClosingRef.current = false;
-    }
-  };
 
   useEffect(() => {
     if (isOpen) {
-      isClosingRef.current = false;
-      const reducedMotion = prefersReducedMotion();
       setTimeout(() => inputRef.current?.focus(), 40);
       setSelectedIndex(0);
       setCategory('all');
-
-      // 1. Smooth Backdrop Fade
-      if (backdropRef.current) {
-        animate(backdropRef.current, {
-          opacity: [0, 1],
-          duration: reducedMotion ? 140 : 300,
-          ease: 'easeOutQuad',
-        });
-      }
-
-      // 2. Liquid Glass Scale-Up Entrance with spring physics
-      if (modalRef.current) {
-        if (reducedMotion) {
-          animate(modalRef.current, {
-            opacity: [0, 1],
-            duration: 140,
-            ease: 'easeOutQuad',
-          });
-        } else {
-          animate(modalRef.current, {
-            opacity: [0, 1],
-            scale: [0.93, 1],
-            translateY: [-16, 0],
-            duration: 480,
-            ease: spring({ bounce: 0.16, duration: 480 }),
-          });
-        }
-      }
-
-      // 3. Specular Beam Shimmer
-      if (specularRef.current && !reducedMotion) {
-        animate(specularRef.current, {
-          opacity: [0, 1, 0.4],
-          scaleX: [0.7, 1],
-          duration: 550,
-          delay: 70,
-          ease: 'easeOutCubic',
-        });
-      }
     } else {
       setQuery('');
     }
@@ -181,9 +110,10 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
         id: `resolve-${selectedIncident.id}`,
         category: 'incidents',
         typeLabel: 'Action',
-        title: `Mark Incident "${selectedIncident.title}" as Resolved`,
-        subtitle: `Resolve active incident ${selectedIncident.id} (${selectedIncident.agentName})`,
-        badge: 'RESOLVE',
+        // Acknowledge, not resolve: it sets acknowledged=true on the alert, which stays listed
+        title: `Acknowledge incident "${selectedIncident.title}"`,
+        subtitle: `Acknowledge alert ${selectedIncident.id} (${selectedIncident.agentName})`,
+        badge: 'ACK',
         statusSemantic: 'rose',
         icon: CheckCircle2,
         action: () => {
@@ -270,7 +200,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
       // Subtitles say what each view shows. Overview has no percentiles or cost, Drift has no
       // 3D view or golden baseline, Incidents no root cause, Experiments no product comparison.
       { tab: 'overview', title: 'System Overview', sub: 'Spans ingested, open alerts, drifting agents & the agent roster', cat: 'all', icon: Activity },
-      { tab: 'rag-monitor', title: 'RAG Live Multi-Agent Monitor', sub: 'Live chat, sequential retriever/verifier/answerer & drift test', cat: 'all', icon: Radio },
+      { tab: 'rag-monitor', title: 'Aetheris (Flagship RAG Prism)', sub: 'Live multi-agent stimulus, grounding risk & drift observation', cat: 'all', icon: Sparkles },
       { tab: 'performance', title: 'Performance Metrics (APM)', sub: 'API latency percentiles, ingestion counters, queue and worker state', cat: 'all', icon: Gauge },
       { tab: 'agents', title: 'Agent Roster', sub: 'Per-agent latency (moving avg), success rate & drift distance', cat: 'agents', icon: Bot },
       { tab: 'traces', title: 'Trace Investigation & Tree', sub: 'Span waterfall with evaluator scores and alerts', cat: 'traces', icon: Activity },
@@ -315,6 +245,55 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
           onClose();
         },
         shortcutHint: '↵ Toggle Theme'
+      });
+    }
+
+    // Surface Color Palette Commands
+    if (onSelectPalette) {
+      list.push({
+        id: 'palette-butter',
+        category: 'settings',
+        typeLabel: 'Palette',
+        title: 'Switch to Buttermax Canary Palette',
+        subtitle: 'Canary gold, toasted amber honey, French vanilla, and matcha cream',
+        badge: palette === 'butter' ? 'ACTIVE' : 'BUTTER',
+        statusSemantic: 'amber',
+        icon: Sparkles,
+        action: () => {
+          onSelectPalette('butter');
+          onClose();
+        },
+        shortcutHint: '↵ Apply'
+      });
+      list.push({
+        id: 'palette-dark',
+        category: 'settings',
+        typeLabel: 'Palette',
+        title: 'Switch to Cyber Obsidian Palette',
+        subtitle: 'Pure void, oceanic sapphire, imperial amethyst nebula, and cyber jade',
+        badge: palette === 'dark' ? 'ACTIVE' : 'DARK',
+        statusSemantic: 'neutral',
+        icon: Moon,
+        action: () => {
+          onSelectPalette('dark');
+          onClose();
+        },
+        shortcutHint: '↵ Apply'
+      });
+      list.push({
+        id: 'palette-chalk',
+        category: 'settings',
+        typeLabel: 'Palette',
+        title: 'Switch to Studio Chalk Light Palette',
+        subtitle: 'Alabaster paper, antique sepia slate, sage emerald, and blueprint cyan',
+        badge: palette === 'chalk' ? 'ACTIVE' : 'CHALK',
+        statusSemantic: 'neutral',
+        icon: Sparkles,
+        action: () => {
+          onSelectPalette('chalk');
+          onClose();
+        },
+        shortcutHint: '↵ Apply'
       });
     }
 
@@ -414,10 +393,10 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
       e.preventDefault();
       if (filteredItems[selectedIndex]) {
         filteredItems[selectedIndex].action();
-        handleCloseAnimated();
+        onClose();
       }
     } else if (e.key === 'Escape') {
-      handleCloseAnimated();
+      onClose();
     } else if (e.key === 'Tab') {
       e.preventDefault();
       // Cycle category
@@ -437,52 +416,90 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
     { id: 'settings', label: 'Settings' }
   ];
 
-  if (!isOpen) return null;
+  const isReducedMotion = typeof window !== 'undefined' && prefersReducedMotion();
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-16 sm:pt-24 p-4">
-      {/* Backdrop with subtle monochrome blur */}
-      <div
-        ref={backdropRef}
-        onClick={handleCloseAnimated}
-        className="fixed inset-0 bg-black/80 backdrop-blur-md opacity-0"
-      />
-
-      {/* Apple-Inspired Liquid Glass Command Surface */}
-      <div
-        ref={modalRef}
-        className="relative w-full max-w-2xl ios-liquid-card border-glow-subtle rounded-2xl overflow-hidden shadow-2xl flex flex-col max-h-[82vh] opacity-0 z-10"
-      >
-        {/* Top Liquid Specular Reflection */}
-        <div
-          ref={specularRef}
-          className="absolute inset-x-0 top-0 h-[1.5px] apple-liquid-specular pointer-events-none opacity-0"
-        />
-
-        {/* Top Search Bar Toolbar */}
-        <div className="flex items-center px-4 py-3.5 border-b border-white/[0.12] bg-white/[0.03] backdrop-blur-xl">
-          <Search className="w-4 h-4 text-neutral-400 mr-3 shrink-0" />
-          <input
-            ref={inputRef}
-            type="text"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Type command, agent name, trace ID, incident, or drift..."
-            className="w-full bg-transparent text-sm text-[#F5F5F7] placeholder-neutral-500 focus:outline-none font-mono tracking-tight"
+    <AnimatePresence>
+      {isOpen && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center pt-16 sm:pt-24 p-4">
+          {/* Backdrop with subtle frosted monochrome blur */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+            onClick={onClose}
+            className="fixed inset-0 bg-black/80 backdrop-blur-md"
           />
-          {query && (
-            <button
-              onClick={() => setQuery('')}
-              className="text-neutral-500 hover:text-white p-1 mr-1"
-            >
-              <X className="w-3.5 h-3.5" />
-            </button>
-          )}
-          <kbd className="text-[10px] font-mono text-neutral-400 bg-white/[0.05] border border-white/[0.1] px-1.5 py-0.5 rounded ml-2 shrink-0">
-            ESC
-          </kbd>
-        </div>
+
+          {/* Apple-Inspired Liquid Glass Command Surface */}
+          <motion.div
+            initial={{
+              opacity: 0,
+              scale: isReducedMotion ? 1 : 0.94,
+              y: isReducedMotion ? 0 : -20,
+              filter: isReducedMotion ? 'none' : 'blur(4px)'
+            }}
+            animate={{
+              opacity: 1,
+              scale: 1,
+              y: 0,
+              filter: 'blur(0px)'
+            }}
+            exit={{
+              opacity: 0,
+              scale: isReducedMotion ? 1 : 0.96,
+              y: isReducedMotion ? 0 : -14,
+              filter: isReducedMotion ? 'none' : 'blur(4px)'
+            }}
+            transition={
+              isReducedMotion
+                ? { duration: 0.15 }
+                : {
+                    type: 'spring',
+                    stiffness: 420,
+                    damping: 32,
+                    mass: 0.8
+                  }
+            }
+            role="dialog"
+            aria-modal="true"
+            aria-label="Command palette"
+            className="relative w-full max-w-2xl liquid-glass-card border-glow-subtle rounded-2xl overflow-hidden shadow-2xl flex flex-col max-h-[82vh] z-10"
+          >
+            {/* Top Liquid Specular Reflection & Subtle Corner Radiance */}
+            <motion.div
+              initial={{ opacity: 0, scaleX: 0.4 }}
+              animate={{ opacity: [0, 1, 0.55], scaleX: 1 }}
+              transition={{ duration: 0.65, ease: 'easeOut', delay: 0.08 }}
+              className="absolute inset-x-0 top-0 h-[1.5px] apple-liquid-specular pointer-events-none"
+            />
+            <div className="absolute -top-24 -right-24 w-60 h-60 bg-amber-400/10 rounded-full blur-3xl pointer-events-none" />
+
+            {/* Top Search Bar Toolbar */}
+            <div className="flex items-center px-4 py-3.5 border-b border-white/[0.12] bg-white/[0.03] backdrop-blur-xl relative z-10">
+              <Search className="w-4 h-4 text-neutral-400 mr-3 shrink-0" />
+              <input
+                ref={inputRef}
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Type command, agent name, trace ID, incident, or drift..."
+                className="w-full bg-transparent text-sm text-[#F5F5F7] placeholder-neutral-500 focus:outline-none font-mono tracking-tight"
+              />
+              {query && (
+                <button
+                  onClick={() => setQuery('')}
+                  className="text-neutral-500 hover:text-white p-1 mr-1"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+              <kbd className="text-[10px] font-mono text-neutral-400 bg-white/[0.05] border border-white/[0.1] px-1.5 py-0.5 rounded ml-2 shrink-0">
+                ESC
+              </kbd>
+            </div>
 
         {/* Quick Filter Category Chips (Raycast Philosophy: Minimum Movement) */}
         <div className="flex items-center space-x-1 px-4 py-2 border-b border-white/[0.06] bg-[#0c0d11] overflow-x-auto scrollbar-none text-[11px] font-mono">
@@ -524,7 +541,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
                   key={`${item.id}-${idx}`}
                   onClick={() => {
                     item.action();
-                    handleCloseAnimated();
+                    onClose();
                   }}
                   onMouseEnter={() => setSelectedIndex(idx)}
                   className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl cursor-pointer transition-colors ${
@@ -617,7 +634,9 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
             {filteredItems.length} available {filteredItems.length === 1 ? 'action' : 'actions'}
           </div>
         </div>
-      </div>
-    </div>
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>
   );
 };
