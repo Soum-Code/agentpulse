@@ -234,6 +234,8 @@ export const TelemetryLabView: React.FC<TelemetryLabViewProps> = ({ onRunScenari
             </label>
             <textarea
               rows={2}
+              // The API refuses a query over 500 characters (the route is public), so stop it here.
+              maxLength={500}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               className="w-full bg-white/[0.03] border border-white/[0.10] rounded-xl p-3 text-neutral-200 focus:outline-none focus:border-white/30 leading-relaxed font-mono text-xs"
