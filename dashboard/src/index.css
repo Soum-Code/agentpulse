@@ -2562,6 +2562,15 @@ body.palette-dark {
 }
 .rag-chip:hover:not(:disabled) { border-color: color-mix(in srgb, var(--rag-accent) 50%, var(--rag-border)); }
 .rag-chip:disabled { opacity: 0.45; cursor: not-allowed; }
+/* In short: a chip that is switched on (the selected trace) takes the accent. */
+.rag-chip[aria-pressed="true"] {
+  background-color: color-mix(in srgb, var(--rag-accent) 12%, transparent);
+  border-color: color-mix(in srgb, var(--rag-accent) 50%, transparent);
+  color: var(--rag-accent-text);
+  font-weight: 600;
+}
+/* In short: a list row or card that is a button shows the accent on its border under the pointer. */
+.rag-hover-accent:hover { border-color: color-mix(in srgb, var(--rag-accent) 50%, var(--rag-border)); }
 .rag-primary {
   background-color: var(--rag-primary-bg);
   color: var(--rag-on-primary);
