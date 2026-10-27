@@ -26,6 +26,7 @@ import type {
   TraceAlert,
 } from '../types';
 import { verdictLabel, verdictTooltip } from './riskTone';
+import { deriveTraceStatus, isHighSeverity } from './traceStatus';
 
 export interface DriftEntry {
   agent_id: string;
@@ -80,9 +81,9 @@ export function toAgents(apiAgents: ApiAgent[], drift: DriftEntry[]): Agent[] {
       // three views printed it raw.
       successRate: Math.round((1 - a.error_rate) * 1000) / 10,
       lastActive: a.last_seen,
-      // Lifetime span count, not a 24h trace window; the card is labelled
-      // 'Spans Ingested' to match what this actually is.
-      totalTraces24h: a.total_spans,
+      // Lifetime span count, not a 24h trace window; the field is named totalSpans and the
+      // card is labelled 'Spans Ingested' to match what this actually is.
+      totalSpans: a.total_spans,
       // Null until an agent's baseline and current drift windows both fill.
       driftScore: window ?? undefined,
       driftStatus:
@@ -101,10 +102,18 @@ function spanType(span: SpanDetail): SpanType {
   return 'agent';
 }
 
+// In short: the span's own status first, then what the evaluator found.
 function spanStatus(span: SpanDetail): SpanStatus {
-  if (span.status?.toUpperCase() === 'ERROR') return 'error';
+  // The backend counts every status other than "success" as an error (ingest.py, and the
+  // agents' error_rate), so a span that says "failed" or "timeout" is an error here too. The
+  // SDK only ever sends "success" or "error"; the raw /v1/ingest endpoint accepts any text.
+  const status = span.status?.toLowerCase();
+  if (status && status !== 'success') return 'error';
   const risk = span.evaluation?.overall_risk_score;
   if (risk != null && risk > 0.5) return 'warning';
+  // The NLI model concluded the output contradicts its evidence. Its score can sit at or below
+  // 0.5 when the model is unsure between classes, but the verdict itself is the finding.
+  if (span.evaluation?.grounding_verdict === 'contradicted') return 'warning';
   return 'ok';
 }
 
@@ -156,11 +165,13 @@ export function toSpans(spans: SpanDetail[], traceId: string): Span[] {
 
   return spans.map((s) => {
     const start = Date.parse(s.start_time);
+    // A side the SDK did not report stays undefined (it is not 0 tokens); total sums the
+    // sides that were reported, which is all it can honestly say.
     const tokens =
       s.tokens_in != null || s.tokens_out != null
         ? {
-            prompt: s.tokens_in ?? 0,
-            completion: s.tokens_out ?? 0,
+            prompt: s.tokens_in ?? undefined,
+            completion: s.tokens_out ?? undefined,
             total: (s.tokens_in ?? 0) + (s.tokens_out ?? 0),
           }
         : undefined;
@@ -173,10 +184,9 @@ export function toSpans(spans: SpanDetail[], traceId: string): Span[] {
       type: spanType(s),
       status: spanStatus(s),
       startOffsetMs: Number.isFinite(start) ? start - t0 : 0,
-      // durationMs stays a number because the waterfall lays bars out with it; latencyMs keeps
-      // "not recorded" apart from 0 so the views print a dash instead of "0ms".
-      durationMs: s.latency_ms ?? 0,
-      latencyMs: s.latency_ms ?? undefined,
+      // Not recorded stays undefined (it was `?? 0`, which printed "0ms"); only the waterfall
+      // turns it into 0, and only to place a bar.
+      durationMs: s.latency_ms ?? undefined,
       agentLane: s.agent_id,
       model: s.model ?? undefined,
       prompt: s.input_summary ?? undefined,
@@ -205,29 +215,53 @@ function toTraceAlert(a: AlertItem): TraceAlert {
   };
 }
 
+// How long the trace took: the API's end_time minus start_time, else the end of the span that
+// finishes last. Undefined when neither exists (a list entry with no end_time, or spans that
+// recorded no latency), and for a non-positive result, which is not a measurement: the filters
+// (hasDuration) already treat 0 ms as unknown, so the data now says the same.
+function traceDuration(t: TraceListItem, spans: Span[]): number | undefined {
+  let ms: number | undefined;
+  if (t.end_time && t.start_time) {
+    const wall = Date.parse(t.end_time) - Date.parse(t.start_time);
+    if (Number.isFinite(wall)) ms = wall;
+  }
+  if (ms === undefined) {
+    const timed = spans.filter((s) => s.durationMs !== undefined);
+    if (timed.length > 0) ms = timed.reduce((acc, s) => Math.max(acc, s.startOffsetMs + (s.durationMs as number)), 0);
+  }
+  return ms !== undefined && ms > 0 ? ms : undefined;
+}
+
+// Tokens over the spans that reported any. Undefined when none did; a real total of 0 stays 0.
+function traceTokens(spans: Span[]): number | undefined {
+  const reported = spans.filter((s) => s.tokens !== undefined);
+  return reported.length > 0 ? reported.reduce((acc, s) => acc + (s.tokens as { total: number }).total, 0) : undefined;
+}
+
+// Which agents a trace's spans came from. Several agents is the normal case for a pipeline (the
+// Telemetry Lab runs three), and naming the trace after the first span's agent alone hid the rest.
+function traceAgents(t: TraceListItem, spans: Span[]): { agentId: string; agentName: string; agentIds?: string[] } {
+  const ids = [...new Set(spans.map((s) => s.agentLane).filter((a): a is string => !!a))];
+  if (ids.length === 0) return { agentId: t.service_name, agentName: t.service_name };
+  // agentId stays the first span's agent: views find the agent card with it.
+  return { agentId: ids[0], agentName: ids.length > 1 ? `multi-agent (${ids.length})` : ids[0], agentIds: ids };
+}
+
 /** Pass `alerts` only when the trace detail was loaded. Without it the trace is a list entry:
- *  its alerts and drift flag are unknown, not empty and not false. */
+ *  its alerts and drift flag are unknown, not empty and not false, and its status is
+ *  'unknown' unless the list already shows a problem (see traceStatus.ts). */
 export function toTrace(
   t: TraceListItem,
   spans: Span[] = [],
   alerts?: AlertItem[],
 ): Trace {
-  const duration =
-    t.end_time && t.start_time
-      ? Math.max(0, Date.parse(t.end_time) - Date.parse(t.start_time))
-      : spans.reduce((acc, s) => Math.max(acc, s.startOffsetMs + s.durationMs), 0);
-
-  const totalTokens = spans.reduce((acc, s) => acc + (s.tokens?.total ?? 0), 0);
-  const status = t.status?.toUpperCase();
-
   return {
     id: t.trace_id,
-    agentId: spans[0]?.agentLane ?? t.service_name,
-    agentName: spans[0]?.agentLane ?? t.service_name,
+    ...traceAgents(t, spans),
     rootSpanId: spans[0]?.id ?? '',
-    status: status === 'ERROR' ? 'error' : status === 'RUNNING' ? 'warning' : 'ok',
-    durationMs: duration,
-    totalTokens: totalTokens || undefined,
+    status: deriveTraceStatus({ apiStatus: t.status, spans, alerts }),
+    durationMs: traceDuration(t, spans),
+    totalTokens: traceTokens(spans),
     timestamp: t.start_time,
     inputPreview: spans[0]?.prompt ?? '',
     outputPreview: spans[spans.length - 1]?.completion ?? '',
@@ -245,7 +279,8 @@ export function toIncidents(alerts: AlertItem[]): Incident[] {
     return {
       id: String(a.id),
       title: a.alert_type.replace(/_/g, ' '),
-      severity: sev === 'critical' || sev === 'high' ? 'critical' : sev === 'medium' || sev === 'warning' ? 'warning' : 'info',
+      // HIGH and CRITICAL are the same two words traceStatus.ts turns into an 'error' trace.
+      severity: isHighSeverity(sev) ? 'critical' : sev === 'medium' || sev === 'warning' ? 'warning' : 'info',
       agentId: a.agent_id ?? '',
       agentName: a.agent_id ?? 'unknown',
       traceId: a.trace_id ?? '',

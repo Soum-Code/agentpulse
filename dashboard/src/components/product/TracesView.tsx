@@ -67,6 +67,8 @@ import {
 import { isTypingTarget, isChordFollowUp, isActivatableTarget } from '../../utils/keyboard';
 import { formatLatencyMs } from '../../lib/agentFormat';
 import { loadFullTrace, loadFullTraces } from '../../lib/traceDetail';
+import { barPlacement } from '../../lib/traceLayout';
+import { traceStatusTitle } from '../../lib/traceStatus';
 import type { GroundingVerdict } from '../../lib/api';
 import { riskTextClasses, verdictBadgeClasses, verdictLabel, verdictTooltip } from '../../lib/riskTone';
 
@@ -909,6 +911,11 @@ export const TracesView: React.FC<TracesViewProps> = ({
                 { id: 'ok' as const, label: `OK (${statusCounts.ok})`, dotClass: 'bg-emerald-400 phosphor-emerald' },
                 { id: 'warning' as const, label: `Warning (${statusCounts.warning})`, dotClass: 'bg-amber-400 phosphor-amber' },
                 { id: 'error' as const, label: `Error (${statusCounts.error})`, dotClass: 'bg-rose-400 phosphor-rose' },
+                // Traces whose spans and alerts are not loaded yet. Shown only when there are some
+                // (or the filter is on), so it is never folded into OK and never clutters a full list.
+                ...(statusCounts.unknown > 0 || statusFilter === 'unknown'
+                  ? [{ id: 'unknown' as const, label: `Unknown (${statusCounts.unknown})`, dotClass: 'border border-dashed border-neutral-400' }]
+                  : []),
               ]
             ).map((opt) => {
               const active = statusFilter === opt.id;
@@ -1019,13 +1026,16 @@ export const TracesView: React.FC<TracesViewProps> = ({
                       </span>
                       <span className="text-[10px] lowercase text-neutral-500 font-normal">health filter</span>
                     </div>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-1.5">
                       {(
                         [
                           { id: 'all' as const, label: 'All', count: statusCounts.all, dot: null },
                           { id: 'ok' as const, label: 'OK', count: statusCounts.ok, dot: 'bg-emerald-400 phosphor-emerald' },
                           { id: 'warning' as const, label: 'Warning', count: statusCounts.warning, dot: 'bg-amber-400 phosphor-amber' },
                           { id: 'error' as const, label: 'Error', count: statusCounts.error, dot: 'bg-rose-400 phosphor-rose' },
+                          ...(statusCounts.unknown > 0 || statusFilter === 'unknown'
+                            ? [{ id: 'unknown' as const, label: 'Unknown', count: statusCounts.unknown, dot: 'border border-dashed border-neutral-400' }]
+                            : []),
                         ]
                       ).map(item => {
                         const isSelected = statusFilter === item.id;
@@ -1256,7 +1266,7 @@ export const TracesView: React.FC<TracesViewProps> = ({
             {statusFilter !== 'all' && (
               <span className="inline-flex items-center space-x-1.5 px-2 py-0.5 rounded-md bg-white/[0.06] border border-white/10 text-neutral-200">
                 <span className={`w-1.5 h-1.5 rounded-full ${
-                  statusFilter === 'ok' ? 'bg-emerald-400' : statusFilter === 'warning' ? 'bg-amber-400' : 'bg-rose-400'
+                  statusFilter === 'ok' ? 'bg-emerald-400' : statusFilter === 'warning' ? 'bg-amber-400' : statusFilter === 'error' ? 'bg-rose-400' : 'border border-dashed border-neutral-400'
                 }`} />
                 <span>Status: {statusFilter.toUpperCase()}</span>
                 <button
@@ -1468,7 +1478,9 @@ export const TracesView: React.FC<TracesViewProps> = ({
                                   ? 'bg-rose-400 animate-pulse shadow-[0_0_8px_rgba(244,63,94,0.8)]'
                                   : trace.status === 'warning'
                                   ? 'bg-amber-400 shadow-[0_0_8px_rgba(245,158,11,0.6)]'
-                                  : 'bg-neutral-300'
+                                  : trace.status === 'ok'
+                                  ? 'bg-neutral-300'
+                                  : 'border border-dashed border-neutral-400'
                               }`}
                             />
                             <span className="break-all">{trace.id}</span>
@@ -1501,6 +1513,7 @@ export const TracesView: React.FC<TracesViewProps> = ({
                           <div className="flex items-center space-x-1.5">
                             {hasDiscrepancy && (
                               <span
+                                title={traceStatusTitle(trace.status)}
                                 className={`text-[9px] px-1.5 py-0.2 rounded border font-semibold uppercase ${
                                   trace.status === 'error'
                                     ? 'bg-rose-950/80 border-rose-800 text-rose-300'
@@ -1508,6 +1521,15 @@ export const TracesView: React.FC<TracesViewProps> = ({
                                 }`}
                               >
                                 {trace.status}
+                              </span>
+                            )}
+                            {/* The detail (spans, alerts) is not loaded: say so, instead of looking like OK. */}
+                            {trace.status === 'unknown' && (
+                              <span
+                                title={traceStatusTitle(trace.status)}
+                                className="text-[9px] px-1.5 py-0.2 rounded border border-dashed border-white/20 text-neutral-400 uppercase"
+                              >
+                                unknown
                               </span>
                             )}
                             {isSelected && (
@@ -1527,8 +1549,10 @@ export const TracesView: React.FC<TracesViewProps> = ({
                         </div>
 
                         <div className="flex items-center justify-between text-[11px] font-mono text-neutral-400 pt-2 border-t border-white/[0.06]">
-                          <span className="truncate max-w-[120px] text-neutral-300">{trace.agentName.split(' ')[0]}</span>
-                          <span>{trace.durationMs}ms</span>
+                          {/* The whole name: 'multi-agent (3)' lost its count when cut at the first space. */}
+                          <span className="truncate max-w-[120px] text-neutral-300" title={trace.agentIds?.join(', ') ?? trace.agentName}>{trace.agentName}</span>
+                          {/* A dash when the trace has no recorded duration, not "0ms". */}
+                          <span>{formatLatencyMs(trace.durationMs)}</span>
                           <span>{trace.totalTokens != null ? `${trace.totalTokens}t` : '—'}</span>
                         </div>
                       </motion.div>
@@ -1605,7 +1629,7 @@ export const TracesView: React.FC<TracesViewProps> = ({
               
               {/* Agent Crumb */}
               <span className="text-neutral-300 bg-white/[0.04] px-2 py-0.5 rounded border border-white/[0.08] shrink-0">
-                Agent: <span className="text-white font-medium">{currentTrace.agentName}</span>
+                Agent: <span className="text-white font-medium" title={currentTrace.agentIds?.join(', ')}>{currentTrace.agentName}</span>
               </span>
 
               <ChevronRight className="w-3.5 h-3.5 text-neutral-600 shrink-0" />
@@ -1762,7 +1786,7 @@ export const TracesView: React.FC<TracesViewProps> = ({
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-4 font-mono text-xs">
                 <div>
                   <span className="text-neutral-500 block text-[10px]">TOTAL DURATION</span>
-                  <span className="text-white font-semibold mt-0.5 block">{currentTrace.durationMs} ms</span>
+                  <span className="text-white font-semibold mt-0.5 block">{formatLatencyMs(currentTrace.durationMs)}</span>
                 </div>
                 <div>
                   <span className="text-neutral-500 block text-[10px]">TOTAL TOKENS</span>
@@ -1948,8 +1972,8 @@ export const TracesView: React.FC<TracesViewProps> = ({
                           </div>
 
                           <div className="flex items-center space-x-4 text-neutral-400 group-hover:text-neutral-200 transition-colors duration-250">
-                            {/* latencyMs, not durationMs: an unrecorded latency is a dash, not "0ms". */}
-                            <span>{formatLatencyMs(span.latencyMs)}</span>
+                            {/* An unrecorded latency is a dash, not "0ms". */}
+                            <span>{formatLatencyMs(span.durationMs)}</span>
                             {span.tokens && <span>{span.tokens.total}t</span>}
                           </div>
                         </div>
@@ -1966,14 +1990,15 @@ export const TracesView: React.FC<TracesViewProps> = ({
                 <div className="absolute inset-x-0 top-0 h-[1.5px] apple-liquid-specular pointer-events-none" />
                 <div className="text-xs font-mono text-neutral-400 uppercase tracking-wider pb-2 border-b border-white/[0.08] flex items-center justify-between">
                   <span>Horizontal Agent Execution Lanes</span>
-                  <span>Total Duration: {currentTrace.durationMs}ms</span>
+                  <span>Total Duration: {formatLatencyMs(currentTrace.durationMs)}</span>
                 </div>
 
                 <div className="space-y-3 pt-2">
                   {currentTrace.spans.map((span) => {
                     const isSelected = currentSpan?.id === span.id;
-                    const leftPct = Math.min((span.startOffsetMs / currentTrace.durationMs) * 100, 95);
-                    const widthPct = Math.max((span.durationMs / currentTrace.durationMs) * 100, 6);
+                    // A bar needs the trace's duration and the span's latency; without either it is a
+                    // faded marker at the span's start (see lib/traceLayout.ts).
+                    const { leftPct, widthPct, measured } = barPlacement(span.startOffsetMs, span.durationMs, currentTrace.durationMs);
 
                     return (
                       <div
@@ -1990,14 +2015,15 @@ export const TracesView: React.FC<TracesViewProps> = ({
                             {span.agentLane || span.name} &nbsp;·&nbsp; <span className="text-neutral-400 text-[11px] group-hover:text-neutral-200 transition-colors duration-250">{span.name}</span>
                           </span>
                           <span className="text-[11px] text-neutral-400 group-hover:text-neutral-200 transition-colors duration-250">
-                            +{span.startOffsetMs}ms ({formatLatencyMs(span.latencyMs)})
+                            +{span.startOffsetMs}ms ({formatLatencyMs(span.durationMs)})
                           </span>
                         </div>
 
                         {/* Waterfall bar */}
                         <div className="h-3.5 bg-black rounded relative overflow-hidden border border-white/[0.08] group-hover:border-white/30 transition-colors duration-250">
                           <div
-                            className={`absolute top-0 bottom-0 rounded transition-all duration-250 ${
+                            title={measured ? undefined : 'Latency not recorded: this marks where the span starts, not how long it ran'}
+                            className={`absolute top-0 bottom-0 rounded transition-all duration-250 ${measured ? '' : 'opacity-40'} ${
                               span.status === 'error'
                                 ? 'bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.6)]'
                                 : span.status === 'warning'
@@ -2030,8 +2056,8 @@ export const TracesView: React.FC<TracesViewProps> = ({
                     // Share of the trace's duration; none when the span's latency was not recorded or
                     // the trace has no duration (dividing by 0 printed "NaN%").
                     const pct =
-                      span.latencyMs != null && currentTrace.durationMs > 0
-                        ? Math.round((span.latencyMs / currentTrace.durationMs) * 100)
+                      span.durationMs != null && currentTrace.durationMs > 0
+                        ? Math.round((span.durationMs / currentTrace.durationMs) * 100)
                         : null;
 
                     return (
@@ -2049,7 +2075,7 @@ export const TracesView: React.FC<TracesViewProps> = ({
                           <span className="font-semibold text-neutral-200 group-hover:text-white transition-colors duration-250">{span.name}</span>
                         </div>
                         <div className="flex items-center space-x-3 text-neutral-400 group-hover:text-neutral-200 transition-colors duration-250 shrink-0">
-                          <span>{formatLatencyMs(span.latencyMs)}{pct != null ? ` (${pct}%)` : ''}</span>
+                          <span>{formatLatencyMs(span.durationMs)}{pct != null ? ` (${pct}%)` : ''}</span>
                         </div>
                       </div>
                     );

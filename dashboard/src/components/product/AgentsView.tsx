@@ -142,7 +142,7 @@ export const AgentsView: React.FC<AgentsViewProps> = ({
                 {/* The 60-minute latency sparkline that sat here was drawn from Math.random()
                     (utils/latencyTelemetry.ts, now deleted): the API has no latency history. */}
                 <div className="mt-2.5 pt-2.5 border-t border-white/[0.06] flex items-center justify-between text-[11px] font-mono text-neutral-400">
-                  <span className="text-neutral-300 font-medium">{agent.totalTraces24h.toLocaleString()} spans ingested</span>
+                  <span className="text-neutral-300 font-medium">{agent.totalSpans.toLocaleString()} spans ingested</span>
                   <span className="text-neutral-300 font-medium">{formatLatencyMs(agent.latencyAvgMs)} avg</span>
                   <span className={isLowSuccess(agent.successRate) ? 'text-rose-400 font-bold' : 'text-emerald-400 font-bold'}>
                     {formatSuccessRate(agent.successRate)} OK
@@ -253,7 +253,7 @@ export const AgentsView: React.FC<AgentsViewProps> = ({
                   </div>
                   <div className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.08]">
                     <span className="text-neutral-400 block text-[10px] uppercase font-semibold">Spans ingested</span>
-                    <span className="text-white font-bold text-sm mt-1 block">{currentAgent.totalTraces24h.toLocaleString()}</span>
+                    <span className="text-white font-bold text-sm mt-1 block">{currentAgent.totalSpans.toLocaleString()}</span>
                   </div>
                   <div className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.08]">
                     <span className="text-neutral-400 block text-[10px] uppercase font-semibold">Last seen</span>

@@ -122,8 +122,84 @@ describe('countTraces', () => {
       trace('c', { durationMs: 2000, agentId: 'a2', status: 'warning' }),
     ];
     const all = countTraces(list);
-    expect(all.status).toEqual({ all: 3, ok: 1, warning: 1, error: 1 });
+    expect(all.status).toEqual({ all: 3, ok: 1, warning: 1, error: 1, unknown: 0 });
     expect(all.duration).toMatchObject({ all: 3, fast: 1, slow: 1, unknown: 1 });
     expect(countTraces(list, 'a2').status.all).toBe(1);
+  });
+});
+
+describe('traces with no recorded duration (durationMs undefined)', () => {
+  // adapters.ts now leaves durationMs undefined instead of 0.
+  const noDuration = (id: string, over: Partial<Trace> = {}) => trace(id, { durationMs: undefined, ...over });
+
+  it('has no duration, matches only All, and is in no bracket', () => {
+    const t = noDuration('x');
+    expect(hasDuration(t)).toBe(false);
+    expect(matchesDuration(t, 'all')).toBe(true);
+    for (const p of ['fast', 'moderate', 'slow', 'long'] as const) expect(matchesDuration(t, p), p).toBe(false);
+    expect(matchesDuration(t, 'custom', '', '')).toBe(false);
+    expect(countTraces([t]).duration).toMatchObject({ all: 1, fast: 0, moderate: 0, slow: 0, long: 0, unknown: 1 });
+  });
+
+  it('sorts last in both directions, mixed with 0, and two of them by time without NaN', () => {
+    const list = [
+      noDuration('u-old', { timestamp: '2026-10-01T08:00:00Z' }),
+      trace('zero', { durationMs: 0, timestamp: '2026-10-01T09:00:00Z' }),
+      trace('slow', { durationMs: 3000, timestamp: '2026-10-01T10:00:00Z' }),
+      noDuration('u-new', { timestamp: '2026-10-01T11:00:00Z' }),
+      trace('fast', { durationMs: 100, timestamp: '2026-10-01T12:00:00Z' }),
+    ];
+    // Unknown ones (undefined and 0) after every measured one; among themselves newest first.
+    expect(ids(filterAndSortTraces(list, { ...base, sort: 'duration-desc' }))).toEqual(['slow', 'fast', 'u-new', 'zero', 'u-old']);
+    expect(ids(filterAndSortTraces(list, { ...base, sort: 'duration-asc' }))).toEqual(['fast', 'slow', 'u-new', 'zero', 'u-old']);
+  });
+});
+
+describe('unknown status', () => {
+  const list = [
+    trace('ok1', { status: 'ok', timestamp: '2026-10-01T10:00:00Z' }),
+    trace('unk1', { status: 'unknown', timestamp: '2026-10-01T11:00:00Z' }),
+    trace('err1', { status: 'error', timestamp: '2026-10-01T09:00:00Z' }),
+    trace('unk2', { status: 'unknown', timestamp: '2026-10-01T12:00:00Z' }),
+    trace('warn1', { status: 'warning', timestamp: '2026-10-01T08:00:00Z' }),
+  ];
+
+  it('can be filtered for, and is not part of OK', () => {
+    expect(ids(filterAndSortTraces(list, { ...base, status: 'unknown' }))).toEqual(['unk2', 'unk1']);
+    expect(ids(filterAndSortTraces(list, { ...base, status: 'ok' }))).toEqual(['ok1']);
+  });
+
+  it('is counted on its own', () => {
+    expect(countTraces(list).status).toEqual({ all: 5, ok: 1, warning: 1, error: 1, unknown: 2 });
+  });
+
+  it('comes after OK in status priority', () => {
+    expect(ids(filterAndSortTraces(list, { ...base, sort: 'status-priority' }))).toEqual(['err1', 'warn1', 'ok1', 'unk2', 'unk1']);
+  });
+
+  it('is found by searching for the word', () => {
+    expect(ids(filterAndSortTraces(list, { ...base, search: 'unknown' }))).toEqual(['unk2', 'unk1']);
+  });
+});
+
+describe('multi-agent traces', () => {
+  const multi = trace('m1', { agentId: 'planner', agentName: 'multi-agent (3)', agentIds: ['planner', 'retriever', 'answerer'] });
+  const single = trace('s1', { agentId: 'retriever', agentName: 'retriever', agentIds: ['retriever'] });
+  const entry = trace('e1', { agentId: 'svc', agentName: 'svc' });
+  const list = [multi, single, entry];
+
+  it('belongs to every agent that has a span in it, not only the first span\'s', () => {
+    expect(ids(filterAndSortTraces(list, { ...base, agentId: 'retriever' }))).toEqual(['s1', 'm1']);
+    expect(ids(filterAndSortTraces(list, { ...base, agentId: 'answerer' }))).toEqual(['m1']);
+    expect(ids(filterAndSortTraces(list, { ...base, agentId: 'planner' }))).toEqual(['m1']);
+    expect(countTraces(list, 'retriever').status.all).toBe(2);
+  });
+
+  it('still matches a list entry by its service name', () => {
+    expect(ids(filterAndSortTraces(list, { ...base, agentId: 'svc' }))).toEqual(['e1']);
+  });
+
+  it('is found by searching for any of its agents', () => {
+    expect(ids(filterAndSortTraces(list, { ...base, search: 'answerer' }))).toEqual(['m1']);
   });
 });

@@ -96,6 +96,11 @@ describe('toAgents', () => {
     expect(toAgents([agent({ error_rate: 0.25 })], [])[0].successRate).toBe(75);
   });
 
+  it('names the lifetime span count totalSpans, not a 24h trace count', () => {
+    expect(toAgents([agent({ total_spans: 42 })], [])[0].totalSpans).toBe(42);
+    expect((toAgents([agent()], [])[0] as unknown as Record<string, unknown>).totalTraces24h).toBeUndefined();
+  });
+
   it('rounds the success rate to one decimal', () => {
     // (1 - 0.1667) * 100 is 83.33000000000001 in floating point, and three views printed
     // it raw. The API rounds error_rate to four decimals; one decimal of percent is enough.
@@ -193,11 +198,44 @@ describe('toIncidents', () => {
 describe('toSpans', () => {
   it('keeps an unrecorded latency apart from 0', () => {
     // The drift scenario's spans carry no latency_ms, and the Traces view printed "0ms" for
-    // each. durationMs stays 0 for the waterfall layout; latencyMs is what gets printed.
+    // each. durationMs used to be `?? 0` here (with a second field, latencyMs, for printing);
+    // it is now the one field, and it stays undefined when nothing was recorded.
     const [none, some] = toSpans([span({ span_id: 'a', latency_ms: null }), span({ span_id: 'b', latency_ms: 12.5 })], 't1');
-    expect(none.latencyMs).toBeUndefined();
-    expect(none.durationMs).toBe(0);
-    expect(some.latencyMs).toBe(12.5);
+    expect(none.durationMs).toBeUndefined();
+    expect(some.durationMs).toBe(12.5);
+    // A latency that really is 0 is a measurement and is kept.
+    expect(toSpans([span({ latency_ms: 0 })], 't1')[0].durationMs).toBe(0);
+  });
+
+  it('counts any status other than success as an error, as the backend does', () => {
+    // ingest.py: "Any other value counts as an error for the agent's error count."
+    for (const status of ['failed', 'timeout', 'FAILED']) {
+      expect(toSpans([span({ status })], 't1')[0].status, status).toBe('error');
+    }
+    expect(toSpans([span({ status: 'success' })], 't1')[0].status).toBe('ok');
+    expect(toSpans([span({ status: 'SUCCESS' })], 't1')[0].status).toBe('ok');
+  });
+
+  it('warns on a contradicted verdict even when the risk score is at or below 0.5', () => {
+    const evaluation = (verdict: string | null, risk: number) =>
+      ({ grounding_score: risk, tool_claim_score: null, overall_risk_score: risk, label: 'low_risk', evaluation_stage: 'stage2', grounding_verdict: verdict }) as SpanDetail['evaluation'];
+    expect(toSpans([span({ evaluation: evaluation('contradicted', 0.43) })], 't1')[0].status).toBe('warning');
+    // The other two verdicts stay ok at a low score: 'unverifiable' is not a failure (riskTone.ts).
+    expect(toSpans([span({ evaluation: evaluation('unverifiable', 0.3) })], 't1')[0].status).toBe('ok');
+    expect(toSpans([span({ evaluation: evaluation('supported', 0.05) })], 't1')[0].status).toBe('ok');
+    expect(toSpans([span({ evaluation: evaluation(null, 0.6) })], 't1')[0].status).toBe('warning');
+  });
+
+  it('does not turn a token side that was not reported into 0', () => {
+    const [onlyIn] = toSpans([span({ tokens_in: 5, tokens_out: null })], 't1');
+    expect(onlyIn.tokens?.prompt).toBe(5);
+    expect(onlyIn.tokens?.completion).toBeUndefined();
+    expect(onlyIn.tokens?.total).toBe(5);
+    const [onlyOut] = toSpans([span({ tokens_in: null, tokens_out: 7 })], 't1');
+    expect(onlyOut.tokens?.prompt).toBeUndefined();
+    expect(onlyOut.tokens?.completion).toBe(7);
+    // A reported 0 is a measurement.
+    expect(toSpans([span({ tokens_in: 0, tokens_out: 0 })], 't1')[0].tokens).toEqual({ prompt: 0, completion: 0, total: 0 });
   });
 
   it('measures offsets from the earliest span, not from the first in the array', () => {
@@ -317,6 +355,115 @@ describe('toTrace', () => {
   it('leaves the grounding score absent when the trace has no risk score', () => {
     const t = { trace_id: 't1', service_name: 'svc', start_time: '2026-09-14T10:00:00' } as TraceListItem;
     expect(toTrace(t, [], []).groundingScore).toBeUndefined();
+  });
+});
+
+describe('toTrace status', () => {
+  const row = (over: Partial<TraceListItem> = {}): TraceListItem =>
+    ({ trace_id: 't1', service_name: 'svc', start_time: '2026-09-14T10:00:00', end_time: null, status: 'completed', ...over }) as TraceListItem;
+  const okSpans = () => toSpans([span()], 't1');
+
+  it('is unknown, not ok, while the trace is only a list entry', () => {
+    // Regression: a list entry used to be 'ok' because the API's "completed" fell through the
+    // old ternary to 'ok', whatever alerts the trace had.
+    expect(toTrace(row()).status).toBe('unknown');
+    expect(toTrace(row(), okSpans()).status).toBe('unknown');
+  });
+
+  it('is ok only once the alerts are loaded and nothing is wrong', () => {
+    expect(toTrace(row(), okSpans(), []).status).toBe('ok');
+  });
+
+  it('is error for a HIGH alert on a trace whose spans all succeeded', () => {
+    // The Telemetry Lab's hallucination scenario: clean span status, HIGH alerts.
+    const a = alert({ severity: 'HIGH' });
+    expect(toTrace(row(), okSpans(), [a]).status).toBe('error');
+    expect(toTrace(row(), okSpans(), [alert({ severity: 'high' })]).status).toBe('error');
+    expect(toTrace(row(), okSpans(), [alert({ severity: 'CRITICAL' })]).status).toBe('error');
+    // Acknowledged or resolved does not undo what the detector found.
+    expect(toTrace(row(), okSpans(), [alert({ severity: 'HIGH', acknowledged: true, resolved: true })]).status).toBe('error');
+  });
+
+  it('is warning for an alert below HIGH, and for a risky span', () => {
+    expect(toTrace(row(), okSpans(), [alert({ severity: 'MEDIUM', alert_type: 'DRIFT_DETECTED' })]).status).toBe('warning');
+    const risky = toSpans([span({ evaluation: { grounding_score: 0.6, tool_claim_score: null, overall_risk_score: 0.6, label: 'medium_risk', evaluation_stage: 'stage2' } })], 't1');
+    expect(toTrace(row(), risky, []).status).toBe('warning');
+  });
+
+  it('is error when a span failed, with no alert needed', () => {
+    const failed = toSpans([span({ status: 'error' })], 't1');
+    expect(toTrace(row(), failed, []).status).toBe('error');
+  });
+
+  it('keeps what the list row already shows, with no alerts loaded', () => {
+    expect(toTrace(row({ status: 'error' })).status).toBe('error');
+    expect(toTrace(row({ status: 'ERROR' })).status).toBe('error');
+    // A trace still running is not finished, as before.
+    expect(toTrace(row({ status: 'running' })).status).toBe('warning');
+    expect(toTrace(row({ status: 'running' }), okSpans(), [alert({ severity: 'HIGH' })]).status).toBe('error');
+  });
+});
+
+describe('toTrace measurements', () => {
+  const row = (over: Partial<TraceListItem> = {}): TraceListItem =>
+    ({ trace_id: 't1', service_name: 'svc', start_time: '2026-09-14T10:00:00', end_time: null, status: 'completed', ...over }) as TraceListItem;
+
+  it('leaves the duration undefined when the API gave no end time and no span a latency', () => {
+    expect(toTrace(row()).durationMs).toBeUndefined();
+    const noLatency = toSpans([span({ latency_ms: null })], 't1');
+    expect(toTrace(row(), noLatency, []).durationMs).toBeUndefined();
+  });
+
+  it('measures the duration from end_time, else from the span that ends last', () => {
+    expect(toTrace(row({ end_time: '2026-09-14T10:00:02' })).durationMs).toBe(2000);
+    const spans = toSpans(
+      [
+        span({ span_id: 'a', start_time: '2026-09-14T10:00:00.000Z', latency_ms: 100 }),
+        span({ span_id: 'b', start_time: '2026-09-14T10:00:00.500Z', latency_ms: 300 }),
+      ],
+      't1',
+    );
+    expect(toTrace(row(), spans, []).durationMs).toBe(800);
+  });
+
+  it('does not report a zero or negative wall time as a duration', () => {
+    expect(toTrace(row({ end_time: '2026-09-14T10:00:00' })).durationMs).toBeUndefined();
+    expect(toTrace(row({ end_time: '2026-09-14T09:59:00' })).durationMs).toBeUndefined();
+    expect(toTrace(row({ end_time: 'not a date' })).durationMs).toBeUndefined();
+  });
+
+  it('sums tokens over the spans that reported any, and keeps a real 0', () => {
+    expect(toTrace(row(), toSpans([span()], 't1'), []).totalTokens).toBeUndefined();
+    const some = toSpans([span({ span_id: 'a', tokens_in: 4, tokens_out: 6 }), span({ span_id: 'b' })], 't1');
+    expect(toTrace(row(), some, []).totalTokens).toBe(10);
+    const zero = toSpans([span({ tokens_in: 0, tokens_out: 0 })], 't1');
+    expect(toTrace(row(), zero, []).totalTokens).toBe(0);
+  });
+
+  it('names a multi-agent trace after all its agents, not the first span\'s', () => {
+    const spans = toSpans(
+      [
+        span({ span_id: 'a', agent_id: 'planner' }),
+        span({ span_id: 'b', agent_id: 'retriever' }),
+        span({ span_id: 'c', agent_id: 'planner' }),
+        span({ span_id: 'd', agent_id: 'answerer' }),
+      ],
+      't1',
+    );
+    const t = toTrace(row(), spans, []);
+    expect(t.agentName).toBe('multi-agent (3)');
+    // agentId stays the first span's agent: the views find the agent card with it.
+    expect(t.agentId).toBe('planner');
+    expect(t.agentIds).toEqual(['planner', 'retriever', 'answerer']);
+  });
+
+  it('keeps the agent name for a one-agent trace, and the service name before the spans load', () => {
+    const one = toTrace(row(), toSpans([span({ agent_id: 'planner' })], 't1'), []);
+    expect(one.agentName).toBe('planner');
+    expect(one.agentIds).toEqual(['planner']);
+    const entry = toTrace(row());
+    expect(entry.agentName).toBe('svc');
+    expect(entry.agentIds).toBeUndefined();
   });
 });
 
