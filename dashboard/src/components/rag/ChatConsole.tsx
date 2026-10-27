@@ -156,7 +156,7 @@ export const ChatConsole: React.FC<ChatConsoleProps> = ({
       {/* Header bar (navigation layer: glass) */}
       <div className={`flex items-center justify-between gap-3 px-4 py-2.5 border-b ${theme.headerBg}`}>
         <div className="flex items-baseline gap-2 min-w-0">
-          <h2 className={`text-[13px] font-semibold tracking-tight ${theme.textColor}`}>Chat</h2>
+          <h2 className={`text-[13px] font-semibold ${theme.textColor}`}>Chat</h2>
           <span className={`text-[11px] ${theme.subtextColor} truncate`}>
             session <span className={`${theme.accentText} font-mono`}>{sessionId.substring(0, 10)}</span>
           </span>

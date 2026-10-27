@@ -35,7 +35,7 @@ export const CorpusModal: React.FC<CorpusModalProps> = ({
         <div className={`flex items-center justify-between pb-4 border-b ${theme.divider}`}>
           <div className="flex items-center gap-2">
             <BookOpen className={`w-4 h-4 ${theme.accentText}`} />
-            <span className={`text-sm font-semibold tracking-tight ${theme.textColor}`}>
+            <span className={`text-sm font-semibold ${theme.textColor}`}>
               RAG Reference Corpus
             </span>
             <span className={`px-2 py-0.5 rounded text-[11px] ${theme.codeBg} ${theme.accentText} border ${theme.codeBorder}`}>

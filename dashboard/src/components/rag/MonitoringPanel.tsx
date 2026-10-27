@@ -38,7 +38,7 @@ const CardTitle: React.FC<{ icon: React.ReactNode; title: string; children?: Rea
   <div className="flex items-center justify-between gap-2 pb-2.5 border-b rag-divider">
     <div className="flex items-center gap-2 min-w-0">
       {icon}
-      <h3 className="text-[13px] font-semibold tracking-tight rag-text">{title}</h3>
+      <h3 className="text-[13px] font-semibold rag-text">{title}</h3>
     </div>
     {children}
   </div>
@@ -83,7 +83,7 @@ export const MonitoringPanel: React.FC<MonitoringPanelProps> = ({
         <div className="min-w-0">
           <div className="flex items-center gap-2">
             <Radio className={`w-4 h-4 ${theme.accentText}`} aria-hidden="true" />
-            <h2 className={`text-[13px] font-semibold tracking-tight ${theme.textColor}`}>Signal verification monitor</h2>
+            <h2 className={`text-[13px] font-semibold ${theme.textColor}`}>Signal verification monitor</h2>
           </div>
           <span className={`text-[11px] ${theme.subtextColor} mt-0.5 block`}>
             Target signals: <strong className={theme.textColor}>Grounding</strong> &amp; <strong className={theme.textColor}>Drift</strong> only

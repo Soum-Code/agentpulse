@@ -95,7 +95,7 @@ export const AgentLedger: React.FC<AgentLedgerProps> = ({ traceId, theme }) => {
       <div className={`flex items-center justify-between gap-2 pb-2.5 border-b ${theme.divider}`}>
         <div className="flex items-center gap-2">
           <Layers className={`w-4 h-4 ${theme.accentText}`} aria-hidden="true" />
-          <h3 className={`text-[13px] font-semibold tracking-tight ${theme.textColor}`}>Agent ledger (this turn)</h3>
+          <h3 className={`text-[13px] font-semibold ${theme.textColor}`}>Agent ledger (this turn)</h3>
         </div>
         <div className="flex items-center gap-2">
           <span className={`text-[11px] ${theme.subtextColor} font-mono`}>risk: 0 safe · 1 risky</span>

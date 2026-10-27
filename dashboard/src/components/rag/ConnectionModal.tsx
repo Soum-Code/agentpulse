@@ -62,7 +62,7 @@ export const ConnectionModal: React.FC<ConnectionModalProps> = ({
         <div className={`flex items-center justify-between pb-4 border-b ${theme.divider}`}>
           <div className="flex items-center gap-2">
             <Server className={`w-4 h-4 ${theme.accentText}`} />
-            <span className={`text-sm font-semibold tracking-tight ${theme.textColor}`}>
+            <span className={`text-sm font-semibold ${theme.textColor}`}>
               Pipeline Service Endpoints
             </span>
           </div>
