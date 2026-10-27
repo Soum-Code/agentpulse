@@ -90,36 +90,35 @@ export const AgentLedger: React.FC<AgentLedgerProps> = ({ traceId, theme }) => {
   const failing = feed.status === 'unreachable' || feed.status === 'error';
 
   return (
-    <div className={`p-4 rounded-xl ${theme.cardBg} border ${theme.cardBorder} relative`}>
-      <div className={`flex items-center justify-between pb-2 border-b ${theme.divider}`}>
+    // In short: the same 16 px card and sentence-case title as the other monitor cards.
+    <div className={`p-4 rounded-2xl border ${theme.cardBg}`}>
+      <div className={`flex items-center justify-between gap-2 pb-2.5 border-b ${theme.divider}`}>
         <div className="flex items-center gap-2">
-          <Layers className={`w-4 h-4 ${theme.accentText}`} />
-          <span className={`text-[11px] font-semibold uppercase tracking-wider ${theme.textColor}`}>
-            Agent Ledger (this turn)
-          </span>
+          <Layers className={`w-4 h-4 ${theme.accentText}`} aria-hidden="true" />
+          <h3 className={`text-[13px] font-semibold ${theme.textColor}`}>Agent ledger (this turn)</h3>
         </div>
         <div className="flex items-center gap-2">
-          <span className={`text-[10px] ${theme.subtextColor} font-mono`}>risk: 0 safe · 1 risky</span>
+          <span className={`text-[11px] ${theme.subtextColor} font-mono`}>risk: 0 safe · 1 risky</span>
           {traceId && (
             <button
               type="button"
               onClick={() => setReload((n) => n + 1)}
               title="Read the trace again"
               aria-label="Refresh the agent ledger"
-              className={`p-1 rounded ${theme.subtextColor} hover:opacity-80`}
+              className="rag-chip p-1.5"
             >
-              <RefreshCw className="w-3 h-3" />
+              <RefreshCw className="w-3 h-3" aria-hidden="true" />
             </button>
           )}
         </div>
       </div>
 
       {!traceId ? (
-        <div className={`py-6 text-center ${theme.subtextColor} text-[11px]`}>
+        <div className={`py-6 text-center ${theme.subtextColor} text-[12px]`}>
           Send a message: each agent's span appears here once AgentPulse has ingested it.
         </div>
       ) : rows.length === 0 ? (
-        <div className="py-4 text-[11px] font-mono">
+        <div className="py-4 text-[12px] font-mono">
           <DatumDisplay
             datum={
               feed.status === 'pending' || feed.status === 'ready'
@@ -135,16 +134,16 @@ export const AgentLedger: React.FC<AgentLedgerProps> = ({ traceId, theme }) => {
         <div className="mt-3 space-y-3">
           {/* The rows stay on screen when a later read fails; this says the numbers may be old. */}
           {failing && (
-            <div role="status" className="text-[11px] font-mono text-rose-400">
+            <div role="status" className="text-[12px] font-mono rag-err-text">
               Could not refresh ({feed.message ?? 'no answer'}); showing the last rows read. Retrying.
             </div>
           )}
           {rows.map((row) => {
             const label = verdictLabel(row.verdict);
             return (
-              <div key={row.spanId} className={`p-3 rounded-lg ${theme.codeBg} border ${theme.codeBorder} space-y-2`}>
-                <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono">
-                  <span className={`font-semibold ${theme.textColor} uppercase`}>{row.role}</span>
+              <div key={row.spanId} className={`p-3 rounded-xl ${theme.codeBg} space-y-2`}>
+                <div className="flex flex-wrap items-center justify-between gap-2 text-[12px] font-mono">
+                  <span className={`font-semibold ${theme.textColor} capitalize font-sans`}>{row.role}</span>
                   <span className={`${theme.subtextColor} flex items-center gap-3`}>
                     {row.model && <span>{row.model}</span>}
                     <DatumDisplay datum={row.latencyMs} format="latency" />
@@ -154,14 +153,14 @@ export const AgentLedger: React.FC<AgentLedgerProps> = ({ traceId, theme }) => {
                   </span>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-2 text-[11px]">
+                <div className="flex flex-wrap items-center gap-2 text-[12px]">
                   <span className={theme.subtextColor}>Grounding</span>
                   <DatumDisplay datum={row.groundingRisk} format="risk" />
                   <DatumDisplay datum={row.stage} format="stage" />
                   {label && (
                     <span
                       title={verdictTooltip(row.verdict) ?? undefined}
-                      className={`px-2 py-0.5 rounded border text-[10px] font-mono uppercase ${verdictBadgeClasses(row.verdict)}`}
+                      className={`px-2 py-0.5 rounded-full border text-[11px] font-mono uppercase ${verdictBadgeClasses(row.verdict)}`}
                     >
                       {label}
                     </span>
@@ -175,8 +174,8 @@ export const AgentLedger: React.FC<AgentLedgerProps> = ({ traceId, theme }) => {
                 </div>
 
                 {(row.evidence || row.claim) && (
-                  <details className="text-[11px]">
-                    <summary className={`cursor-pointer ${theme.subtextColor}`}>Evidence and claim the evaluator compared</summary>
+                  <details className="text-[12px]">
+                    <summary className={`cursor-pointer rounded-md ${theme.subtextColor}`}>Evidence and claim the evaluator compared</summary>
                     <div className="mt-1.5 grid gap-1.5">
                       {row.evidence && (
                         <p className={theme.textColor}>
@@ -197,8 +196,8 @@ export const AgentLedger: React.FC<AgentLedgerProps> = ({ traceId, theme }) => {
             );
           })}
 
-          <div className={`pt-2 border-t ${theme.divider} text-[11px]`}>
-            <div className={`uppercase font-semibold text-[10px] ${theme.subtextColor} mb-1`}>Alerts on this trace</div>
+          <div className={`pt-2.5 border-t ${theme.divider} text-[12px]`}>
+            <div className={`font-medium text-[11px] ${theme.subtextColor} mb-1`}>Alerts on this trace</div>
             {alertsNow === 'list' ? (
               <ul className="space-y-1">
                 {alerts.map((a) => (

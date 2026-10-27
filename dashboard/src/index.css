@@ -2376,3 +2376,284 @@ body.palette-dark {
 :is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) .ios-liquid-label {
   color: #475569 !important;
 }
+
+/* ==========================================================================
+   RAG chat surfaces (components/rag/**), refined 27 Oct 2026 to match the console.
+   In short: every colour of the chat comes from the CSS variables below, set once per palette on
+   .rag-root, so the chat follows the palette, its tint (Sapphire, Amethyst, Matrix) and the Chalk
+   surface presets like the other views do. Two layers, after Apple's Liquid Glass rules:
+   - the navigation layer (header bar, composer, the mobile Chat/Monitor switch) is glass: a web
+     approximation with backdrop-filter, not Apple's material, with a solid fallback;
+   - the content layer (messages, monitor cards, ledger rows) is solid cards like ios-liquid-card,
+     never glass, and never glass on glass.
+   Only the primary action (Send) gets a solid accent fill. Contrast of every value was measured in
+   the browser (see the PR body).
+   ========================================================================== */
+
+/* In short: the Dark palette's values; the light palettes override them below. */
+.rag-root {
+  --rag-page: var(--dark-surface-bg, #06070a);
+  --rag-bar: rgba(10, 12, 18, 0.62);
+  --rag-surface: var(--dark-card-bg, rgba(13, 17, 23, 0.75));
+  --rag-well: rgba(255, 255, 255, 0.035);
+  --rag-input: rgba(6, 8, 12, 0.72);
+  --rag-border: var(--dark-border, rgba(255, 255, 255, 0.12));
+  --rag-divider: rgba(255, 255, 255, 0.08);
+  --rag-text: #f5f5f7;
+  --rag-text-2: #a1a1aa;
+  --rag-text-3: #8e8e96;
+  --rag-accent: var(--dark-accent, #38bdf8);
+  --rag-accent-text: color-mix(in srgb, var(--rag-accent) 72%, #ffffff);
+  --rag-primary-bg: var(--rag-accent);
+  --rag-on-primary: #06070a;
+  --rag-user-bg: color-mix(in srgb, var(--rag-accent) 16%, rgba(13, 17, 23, 0.92));
+  --rag-user-border: color-mix(in srgb, var(--rag-accent) 38%, transparent);
+  --rag-user-text: #f5f5f7;
+  --rag-highlight: inset 0 1px 0 0 rgba(255, 255, 255, 0.09);
+  --rag-shadow: 0 18px 40px -18px rgba(0, 0, 0, 0.75);
+  --rag-ok-text: #6ee7b7;
+  --rag-ok-bg: rgba(16, 185, 129, 0.12);
+  --rag-ok-border: rgba(16, 185, 129, 0.35);
+  --rag-warn-text: #fcd34d;
+  --rag-warn-bg: rgba(245, 158, 11, 0.10);
+  --rag-warn-border: rgba(245, 158, 11, 0.36);
+  --rag-err-text: #fda4af;
+  --rag-err-bg: rgba(244, 63, 94, 0.10);
+  --rag-err-border: rgba(244, 63, 94, 0.38);
+  color: var(--rag-text);
+  font-family: var(--font-sans);
+}
+
+/* In short: Calm mode (Dark only) is monochrome: the accent turns zinc. */
+.rag-root[data-rag-calm="true"] {
+  --rag-accent: #d4d4d8;
+  --rag-accent-text: #e4e4e7;
+}
+
+/* In short: Chalk. Surface, card and border come from the Chalk preset tokens, so Sepia, Emerald and
+   Blueprint carry into the chat; the accent text is the preset accent darkened to stay above 4.5:1. */
+:is([data-palette="chalk"], .palette-chalk) .rag-root {
+  --rag-page: var(--chalk-surface-bg, #f6f8fb);
+  --rag-bar: var(--chalk-header-bg, rgba(255, 255, 255, 0.9));
+  --rag-surface: var(--chalk-card-bg, #ffffff);
+  --rag-well: color-mix(in srgb, var(--chalk-surface-bg, #f6f8fb) 75%, #ffffff);
+  --rag-input: #ffffff;
+  --rag-border: var(--chalk-border, #cbd5e1);
+  --rag-divider: color-mix(in srgb, var(--chalk-border, #cbd5e1) 70%, transparent);
+  --rag-text: #0f172a;
+  --rag-text-2: #475569;
+  --rag-text-3: #536175;
+  --rag-accent: var(--chalk-accent, #0284c7);
+  --rag-accent-text: color-mix(in srgb, var(--rag-accent) 78%, #000000);
+  --rag-primary-bg: #0f172a;
+  --rag-on-primary: #ffffff;
+  --rag-user-bg: #0f172a;
+  --rag-user-border: #0f172a;
+  --rag-user-text: #ffffff;
+  --rag-highlight: inset 0 1px 0 0 rgba(255, 255, 255, 0.9);
+  --rag-shadow: 0 12px 28px -16px var(--chalk-shadow-3, rgba(15, 23, 42, 0.11));
+  --rag-ok-text: #047857;
+  --rag-ok-bg: #ecfdf5;
+  --rag-ok-border: #a7f3d0;
+  --rag-warn-text: #92400e;
+  --rag-warn-bg: #fffbeb;
+  --rag-warn-border: #fcd34d;
+  --rag-err-text: #be123c;
+  --rag-err-bg: #fff1f2;
+  --rag-err-border: #fecdd3;
+}
+
+/* In short: Butter is a light palette on the rest of the site, so the chat is light too (it used to
+   be a dark amber box inside the light page). The user's bubble and Send take the yellow of the
+   site's selected-tab pill, with dark text. */
+:is([data-palette="butter"], .palette-butter) .rag-root {
+  --rag-page: var(--butter-surface-bg, #faf5e6);
+  --rag-bar: var(--butter-header-bg, rgba(252, 248, 237, 0.9));
+  --rag-surface: var(--butter-card-bg, #ffffff);
+  --rag-well: color-mix(in srgb, var(--butter-surface-bg, #faf5e6) 60%, #ffffff);
+  --rag-input: #ffffff;
+  --rag-border: var(--butter-border, rgba(217, 119, 6, 0.22));
+  --rag-divider: color-mix(in srgb, var(--butter-border, rgba(217, 119, 6, 0.22)) 70%, transparent);
+  --rag-text: #1c1917;
+  --rag-text-2: #57534e;
+  --rag-text-3: #57534e;
+  --rag-accent: var(--butter-accent, #d97706);
+  --rag-accent-text: color-mix(in srgb, var(--rag-accent) 70%, #000000);
+  --rag-primary-bg: #fde047;
+  --rag-on-primary: #1c1917;
+  --rag-user-bg: #fde047;
+  --rag-user-border: rgba(161, 98, 7, 0.35);
+  --rag-user-text: #1c1917;
+  --rag-highlight: inset 0 1px 0 0 rgba(255, 255, 255, 0.9);
+  --rag-shadow: 0 12px 28px -16px var(--butter-shadow-3, rgba(180, 83, 9, 0.12));
+  --rag-ok-text: #047857;
+  --rag-ok-bg: #ecfdf5;
+  --rag-ok-border: #a7f3d0;
+  --rag-warn-text: #92400e;
+  --rag-warn-bg: #fffbeb;
+  --rag-warn-border: #fcd34d;
+  --rag-err-text: #be123c;
+  --rag-err-bg: #fff1f2;
+  --rag-err-border: #fecdd3;
+}
+
+/* In short: the page under the chat. Full screen in Dark adds the console's faint top light. */
+.rag-page { background-color: var(--rag-page); }
+.rag-root.rag-fullscreen {
+  background-image:
+    radial-gradient(ellipse 80% 50% at 50% -15%, rgba(120, 140, 180, 0.08) 0%, transparent 70%),
+    radial-gradient(circle 600px at 85% 20%, color-mix(in srgb, var(--rag-accent) 5%, transparent) 0%, transparent 70%);
+}
+:is([data-palette="chalk"], .palette-chalk, [data-palette="butter"], .palette-butter) .rag-root.rag-fullscreen {
+  background-image: none;
+}
+
+/* In short: the navigation layer. Glass (blur + translucency + a 1 px top highlight) for the header
+   bar, the composer and the mobile switch only. */
+.rag-bar {
+  background-color: var(--rag-bar);
+  backdrop-filter: blur(24px) saturate(170%);
+  -webkit-backdrop-filter: blur(24px) saturate(170%);
+  border-color: var(--rag-divider);
+  box-shadow: var(--rag-highlight);
+}
+
+/* In short: the content layer. Solid cards in the console's look: a hairline border, a soft shadow
+   and the same 1 px top highlight (the component sets the 16 px corners). */
+.rag-card {
+  background-color: var(--rag-surface);
+  border-color: var(--rag-border);
+  box-shadow: var(--rag-highlight), var(--rag-shadow);
+}
+.rag-well { background-color: var(--rag-well); }
+.rag-input { background-color: var(--rag-input); }
+.rag-border { border-color: var(--rag-border); }
+.rag-divider { border-color: var(--rag-divider); }
+.rag-text { color: var(--rag-text); }
+.rag-text-2 { color: var(--rag-text-2); }
+.rag-text-3 { color: var(--rag-text-3); }
+.rag-accent-text { color: var(--rag-accent-text); }
+.rag-accent-soft { background-color: color-mix(in srgb, var(--rag-accent) 12%, transparent); }
+.rag-accent-border { border-color: color-mix(in srgb, var(--rag-accent) 42%, transparent); }
+.rag-accent-dot { background-color: var(--rag-accent); }
+.rag-placeholder::placeholder { color: var(--rag-text-3); opacity: 1; }
+.rag-card-selected {
+  border-color: color-mix(in srgb, var(--rag-accent) 60%, transparent);
+  box-shadow: var(--rag-highlight), 0 0 0 1px color-mix(in srgb, var(--rag-accent) 30%, transparent), var(--rag-shadow);
+}
+
+/* In short: message bubbles. The user's is the accent (tinted in Dark, solid in the light palettes),
+   the assistant's is a content card; the corner nearest the speaker is tighter, like a chat app. */
+.rag-bubble-user {
+  background-color: var(--rag-user-bg);
+  border: 1px solid var(--rag-user-border);
+  color: var(--rag-user-text);
+  border-radius: 18px 18px 6px 18px;
+}
+.rag-bubble-assistant { border-radius: 18px 18px 18px 6px; }
+
+/* In short: capsule controls (header buttons, chips) and the one tinted primary button. */
+.rag-chip {
+  background-color: var(--rag-well);
+  border: 1px solid var(--rag-border);
+  color: var(--rag-text);
+  border-radius: 9999px;
+  transition: border-color 0.2s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.rag-chip:hover:not(:disabled) { border-color: color-mix(in srgb, var(--rag-accent) 50%, var(--rag-border)); }
+.rag-chip:disabled { opacity: 0.45; cursor: not-allowed; }
+/* In short: a chip that is switched on (the selected trace) takes the accent. */
+.rag-chip[aria-pressed="true"] {
+  background-color: color-mix(in srgb, var(--rag-accent) 12%, transparent);
+  border-color: color-mix(in srgb, var(--rag-accent) 50%, transparent);
+  color: var(--rag-accent-text);
+  font-weight: 600;
+}
+/* In short: a list row or card that is a button shows the accent on its border under the pointer. */
+.rag-hover-accent:hover { border-color: color-mix(in srgb, var(--rag-accent) 50%, var(--rag-border)); }
+.rag-primary {
+  background-color: var(--rag-primary-bg);
+  color: var(--rag-on-primary);
+  border-radius: 9999px;
+  transition: filter 0.15s ease, transform 0.08s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.rag-primary:hover:not(:disabled) { filter: brightness(1.08); }
+.rag-primary:active:not(:disabled) { transform: scale(0.97); }
+.rag-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* In short: notices. ok = green, warn = amber (a limit, a pause, a cold start: wait and it passes),
+   err = rose (something failed). Each notice also has a written title, so colour is never the only
+   signal. */
+.rag-note-ok { background-color: var(--rag-ok-bg); border: 1px solid var(--rag-ok-border); color: var(--rag-ok-text); }
+.rag-note-warn { background-color: var(--rag-warn-bg); border: 1px solid var(--rag-warn-border); color: var(--rag-warn-text); }
+.rag-note-err { background-color: var(--rag-err-bg); border: 1px solid var(--rag-err-border); color: var(--rag-err-text); }
+.rag-ok-text { color: var(--rag-ok-text); }
+.rag-warn-text { color: var(--rag-warn-text); }
+.rag-err-text { color: var(--rag-err-text); }
+.rag-ok-dot { background-color: var(--rag-ok-text); }
+.rag-warn-dot { background-color: var(--rag-warn-text); }
+.rag-err-dot { background-color: var(--rag-err-text); }
+
+/* In short: a keyboard focus ring everyone can see, on every control of the chat. The composer shows
+   it around the whole field (its textarea has no outline of its own). */
+.rag-root :is(button, a, summary, [tabindex="0"]):focus-visible {
+  outline: 2px solid var(--rag-accent);
+  outline-offset: 2px;
+}
+.rag-composer { border-color: var(--rag-border); }
+.rag-composer:focus-within {
+  border-color: var(--rag-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--rag-accent) 25%, transparent);
+}
+.rag-composer textarea:focus { outline: none; }
+
+/* In short: the mobile Chat/Monitor switch: a capsule with the selected segment as a raised pill. */
+.rag-segment {
+  background-color: var(--rag-well);
+  border: 1px solid var(--rag-border);
+  border-radius: 9999px;
+}
+.rag-segment [aria-selected="true"] {
+  background-color: var(--rag-surface);
+  color: var(--rag-text);
+  box-shadow: var(--rag-highlight), 0 2px 8px -2px rgba(0, 0, 0, 0.25);
+}
+.rag-segment [aria-selected="false"] { color: var(--rag-text-2); }
+
+/* In short: the "Aetheris Iris" frame of the console tab, Dark palette only. Its glass let the bright
+   liquid canvas show through at about 92 %, so the grey subtitle and the small pill dropped to
+   1.5-4.3:1 over the blue (measured). Apple's rule for Regular glass over bright content is a dimming
+   layer; this adds one under the same gradient. Chalk and Butter keep their own light frame. */
+:is([data-palette="dark"], .palette-dark) [data-rag-frame].aetheris-iris-glass {
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.07) 0%, rgba(200, 160, 255, 0.03) 50%, rgba(120, 80, 240, 0.05) 100%),
+    rgba(8, 9, 16, 0.82) !important;
+}
+
+/* In short: the frame around the chat in the console tab, with the palette's border. */
+.rag-frame-inner { border-color: rgba(255, 255, 255, 0.10); }
+:is([data-palette="chalk"], .palette-chalk) .rag-frame-inner { border-color: var(--chalk-border, #cbd5e1); }
+:is([data-palette="butter"], .palette-butter) .rag-frame-inner { border-color: var(--butter-border, rgba(217, 119, 6, 0.22)); }
+
+/* In short: motion with a purpose only (a new message arrives, a stage is running), and none at all
+   when the visitor asks for reduced motion. */
+@keyframes rag-enter {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes rag-spin { to { transform: rotate(360deg); } }
+@keyframes rag-breathe { 50% { opacity: 0.45; } }
+@media (prefers-reduced-motion: no-preference) {
+  .rag-enter { animation: rag-enter 0.28s cubic-bezier(0.16, 1, 0.3, 1) both; }
+  .rag-spin { animation: rag-spin 0.9s linear infinite; }
+  .rag-breathe { animation: rag-breathe 1.6s ease-in-out infinite; }
+}
+
+/* In short: glass falls back to a solid bar where blur is missing or the visitor asks for less
+   transparency, so text never sits on a busy background. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .rag-bar { background-color: var(--rag-page); }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .rag-bar { background-color: var(--rag-page); backdrop-filter: none; -webkit-backdrop-filter: none; }
+}
