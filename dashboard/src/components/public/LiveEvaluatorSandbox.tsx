@@ -123,12 +123,12 @@ export const LiveEvaluatorSandbox: React.FC<LiveEvaluatorSandboxProps> = ({ pale
         palette === 'butter'
           ? 'ios-ultra-thin-butter border-2 border-neutral-950 text-neutral-950 shadow-[8px_8px_0px_#000000]'
           : palette === 'chalk'
-          ? 'ios-ultra-thin-chalk border border-neutral-200 text-neutral-900 shadow-xl'
+          ? 'chalk-tactile-card border border-neutral-200 text-neutral-900 shadow-xl'
           : 'liquid-glass-card border-glow-subtle text-white'
       }`}
     >
       {/* Specular Top Bevel & Optical Radiance */}
-      <div className="absolute inset-x-0 top-0 h-[1.5px] apple-liquid-specular pointer-events-none" />
+      <div className={`absolute inset-x-0 top-0 h-[1.5px] pointer-events-none ${palette === 'chalk' ? 'chalk-specular' : 'apple-liquid-specular'}`} />
       <div className="absolute -top-32 -right-32 w-80 h-80 bg-cyan-400/10 rounded-full blur-3xl pointer-events-none" />
 
       <div className={`flex flex-col lg:flex-row lg:items-center justify-between gap-6 pb-6 border-b relative z-10 ${
@@ -174,12 +174,12 @@ export const LiveEvaluatorSandbox: React.FC<LiveEvaluatorSandboxProps> = ({ pale
                   ? palette === 'butter'
                     ? 'bg-neutral-950 text-amber-300 font-black shadow-[2px_2px_0px_#000000]'
                     : palette === 'chalk'
-                    ? 'bg-neutral-900 text-white font-bold shadow-sm'
+                    ? 'chalk-tactile-card border-neutral-900 text-neutral-950 font-bold shadow-md ring-1 ring-neutral-400/30'
                     : 'bg-amber-300 text-neutral-950 font-bold shadow-[0_0_12px_rgba(245,158,11,0.4)]'
                   : palette === 'butter'
                   ? 'bg-white border-2 border-neutral-950 text-neutral-950 font-bold hover:bg-neutral-100 shadow-[2px_2px_0px_#000000]'
                   : palette === 'chalk'
-                  ? 'bg-neutral-100 border border-neutral-200 text-neutral-700 hover:bg-neutral-200'
+                  ? 'chalk-tactile-card text-neutral-700 hover:text-neutral-950 shadow-xs'
                   : 'bg-white/[0.08] backdrop-blur-md border border-white/10 text-neutral-300 hover:text-white hover:bg-white/[0.15]'
               }`}
             >
@@ -209,7 +209,7 @@ export const LiveEvaluatorSandbox: React.FC<LiveEvaluatorSandboxProps> = ({ pale
                 palette === 'butter'
                   ? 'bg-white border-2 border-neutral-950 text-neutral-950 placeholder:text-neutral-500 focus:border-neutral-950 shadow-[2px_2px_0px_#000000]'
                   : palette === 'chalk'
-                  ? 'bg-white border border-neutral-300 text-neutral-900 placeholder:text-neutral-400 focus:border-neutral-900 shadow-sm'
+                  ? 'chalk-tactile-card border border-neutral-300/80 text-neutral-900 placeholder:text-neutral-500 focus:border-neutral-900 shadow-xs'
                   : 'bg-black/40 backdrop-blur-md border border-white/15 text-neutral-200 focus:border-amber-400/80 shadow-inner'
               }`}
               placeholder="Enter system prompt, retrieved chunks, or verified tools..."
@@ -233,7 +233,7 @@ export const LiveEvaluatorSandbox: React.FC<LiveEvaluatorSandboxProps> = ({ pale
                 palette === 'butter'
                   ? 'bg-white border-2 border-neutral-950 text-neutral-950 placeholder:text-neutral-500 focus:border-neutral-950 shadow-[2px_2px_0px_#000000]'
                   : palette === 'chalk'
-                  ? 'bg-white border border-neutral-300 text-neutral-900 placeholder:text-neutral-400 focus:border-neutral-900 shadow-sm'
+                  ? 'chalk-tactile-card border border-neutral-300/80 text-neutral-900 placeholder:text-neutral-500 focus:border-neutral-900 shadow-xs'
                   : 'bg-black/40 backdrop-blur-md border border-white/15 text-neutral-200 focus:border-amber-400/80 shadow-inner'
               }`}
               placeholder="Enter LLM response, generated answer, or tool execution arguments..."
@@ -248,7 +248,7 @@ export const LiveEvaluatorSandbox: React.FC<LiveEvaluatorSandboxProps> = ({ pale
                 palette === 'butter'
                   ? 'bg-neutral-950 hover:bg-neutral-900 text-amber-300 shadow-[3px_3px_0px_#000000] border-2 border-neutral-950'
                   : palette === 'chalk'
-                  ? 'bg-neutral-900 hover:bg-black text-white shadow-md'
+                  ? 'chalk-tactile-card text-neutral-950 hover:bg-neutral-100/90 font-bold border-neutral-400/80 shadow-md ring-1 ring-neutral-400/30'
                   : 'bg-amber-400 hover:bg-amber-300 text-neutral-950 shadow-[0_4px_16px_rgba(245,158,11,0.3)]'
               }`}
             >
@@ -280,10 +280,10 @@ export const LiveEvaluatorSandbox: React.FC<LiveEvaluatorSandboxProps> = ({ pale
           palette === 'butter'
             ? 'bg-white border-2 border-neutral-950 shadow-[4px_4px_0px_#000000] text-neutral-950'
             : palette === 'chalk'
-            ? 'bg-white border border-neutral-200 shadow-md text-neutral-900'
+            ? 'chalk-tactile-card shadow-lg text-neutral-900'
             : 'bg-black/45 backdrop-blur-xl border border-white/15 shadow-[0_12px_32px_rgba(0,0,0,0.5),inset_0_1px_1px_rgba(255,255,255,0.15)] text-white'
         }`}>
-          <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+          <div className={`absolute inset-x-0 top-0 h-[1.5px] pointer-events-none ${palette === 'chalk' ? 'chalk-specular' : 'bg-gradient-to-r from-transparent via-white/20 to-transparent'}`} />
           <div>
             <div className={`flex items-center justify-between border-b pb-3 ${
               palette === 'butter' ? 'border-neutral-950' : palette === 'chalk' ? 'border-neutral-200' : 'border-white/10'
@@ -308,7 +308,7 @@ export const LiveEvaluatorSandbox: React.FC<LiveEvaluatorSandboxProps> = ({ pale
                   palette === 'butter'
                     ? 'bg-rose-100 border-2 border-neutral-950 text-neutral-950 shadow-[2px_2px_0px_#000000]'
                     : palette === 'chalk'
-                    ? 'bg-rose-50 border-rose-300 text-neutral-900'
+                    ? 'chalk-tactile-card border-rose-300/80 text-neutral-900 shadow-sm'
                     : 'bg-red-500/15 border-red-500/40 text-white'
                 }`}>
                   <AlertTriangle className={`w-5 h-5 shrink-0 mt-0.5 ${
@@ -332,7 +332,7 @@ export const LiveEvaluatorSandbox: React.FC<LiveEvaluatorSandboxProps> = ({ pale
                   palette === 'butter'
                     ? 'bg-emerald-100 border-2 border-neutral-950 text-neutral-950 shadow-[2px_2px_0px_#000000]'
                     : palette === 'chalk'
-                    ? 'bg-emerald-50 border-emerald-300 text-neutral-900'
+                    ? 'chalk-tactile-card border-emerald-300/80 text-neutral-900 shadow-sm'
                     : 'bg-emerald-500/15 border-emerald-500/40 text-white'
                 }`}>
                   <CheckCircle className={`w-5 h-5 shrink-0 mt-0.5 ${

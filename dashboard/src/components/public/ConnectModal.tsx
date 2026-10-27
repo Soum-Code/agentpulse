@@ -14,26 +14,49 @@ export const ConnectModal: React.FC<ConnectModalProps> = ({
   onVerified,
 }) => {
   const [step, setStep] = useState<'input' | 'verifying' | 'success'>('input');
-  const [endpoint, setEndpoint] = useState('https://telemetry.agentpulse.internal/v1');
-  const [apiKey, setApiKey] = useState('ap_live_948f10283c79a8e01');
+  // Defaults are the page's own origin (this site proxies the API) and no key: a key is issued by the
+  // API when a project is created (Settings), never made up here.
+  const [endpoint, setEndpoint] = useState(typeof window !== 'undefined' ? window.location.origin : '');
+  const [apiKey, setApiKey] = useState('');
+  const [verifyError, setVerifyError] = useState<string | null>(null);
+  // The dashboard's own server (nginx) adds the shared key to every API request, so a call to it succeeds
+  // whatever key was typed: the success step must not claim the key was accepted.
+  const sameOrigin = typeof window !== 'undefined' && endpoint.trim().replace(/\/+$/, '') === window.location.origin;
   const [copied, setCopied] = useState(false);
 
   const handleCopySnippet = () => {
-    navigator.clipboard.writeText(`import agentpulse
+    navigator.clipboard.writeText(`from agentpulse import AgentPulse
 
-pulse = agentpulse.init(
-    api_key="${apiKey}",
-    endpoint="${endpoint}"
+pulse = AgentPulse(
+    endpoint="${endpoint}",
+    api_key="${apiKey || '<your-ingest-key>'}",
 )`);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleVerify = () => {
+  // Really asks the API: GET /v1/metrics needs a valid key, so a 200 means the endpoint is reachable and
+  // the key is accepted. (This used to wait 1.4 s and report success whatever was typed.)
+  const handleVerify = async () => {
     setStep('verifying');
-    setTimeout(() => {
+    setVerifyError(null);
+    try {
+      const base = endpoint.trim().replace(/\/+$/, '');
+      const response = await fetch(`${base}/v1/metrics`, {
+        headers: apiKey.trim() ? { 'X-API-Key': apiKey.trim() } : {},
+      });
+      if (!response.ok) {
+        throw new Error(
+          response.status === 401 || response.status === 403
+            ? 'The API rejected this key (HTTP ' + response.status + ').'
+            : 'The API answered HTTP ' + response.status + '.',
+        );
+      }
       setStep('success');
-    }, 1400);
+    } catch (err) {
+      setVerifyError(err instanceof Error && err.message.startsWith('The API') ? err.message : 'Could not reach that endpoint.');
+      setStep('input');
+    }
   };
 
   const handleComplete = () => {
@@ -108,6 +131,7 @@ pulse = agentpulse.init(
                   <input
                     type="text"
                     value={apiKey}
+                    placeholder="ap_live_..."
                     onChange={(e) => setApiKey(e.target.value)}
                     className="w-full bg-black/40 backdrop-blur-md border border-white/15 rounded-xl px-3.5 py-2.5 text-sm font-mono text-neutral-200 focus:outline-none focus:border-amber-400/80 shadow-inner transition-colors"
                   />
@@ -139,6 +163,12 @@ client = pulse.instrument_llm(OpenAI())`}
                   </pre>
                 </div>
 
+                {verifyError && (
+                  <p role="alert" className="text-xs font-mono text-rose-300 bg-rose-950/40 border border-rose-500/30 rounded-lg px-3 py-2">
+                    {verifyError}
+                  </p>
+                )}
+
                 <div className="pt-3 flex items-center justify-end space-x-3">
                   <button
                     onClick={onClose}
@@ -150,7 +180,7 @@ client = pulse.instrument_llm(OpenAI())`}
                     onClick={handleVerify}
                     className="flex items-center space-x-2 px-5 py-2 text-xs font-semibold bg-amber-400 hover:bg-amber-300 text-neutral-950 rounded-xl transition-all shadow-[0_4px_16px_rgba(245,158,11,0.3)] active:scale-95"
                   >
-                    <span>Verify Handshake</span>
+                    <span>Verify connection</span>
                     <ArrowRight className="w-3.5 h-3.5" />
                   </button>
                 </div>
@@ -161,8 +191,8 @@ client = pulse.instrument_llm(OpenAI())`}
               <div className="py-12 flex flex-col items-center justify-center space-y-4 text-center">
                 <div className="w-10 h-10 rounded-full border-2 border-neutral-700 border-t-neutral-100 animate-spin" />
                 <div>
-                  <h4 className="text-sm font-medium text-neutral-200">Listening for Agent Telemetry Packets</h4>
-                  <p className="text-xs text-neutral-500 mt-1 font-mono">POST /v1/ingest &nbsp;·&nbsp; validating SpanInput signature</p>
+                  <h4 className="text-sm font-medium text-neutral-200">Calling the API</h4>
+                  <p className="text-xs text-neutral-500 mt-1 font-mono">GET {endpoint.trim().replace(/\/+$/, '')}/v1/metrics</p>
                 </div>
               </div>
             )}
@@ -173,10 +203,18 @@ client = pulse.instrument_llm(OpenAI())`}
                   <CheckCircle2 className="w-6 h-6" />
                 </div>
                 <div>
-                  <h4 className="text-base font-semibold text-white">Agent Handshake Verified</h4>
+                  <h4 className="text-base font-semibold text-white">API reachable</h4>
+                  {/* Only what the check proved: one GET answered 200. No agent connected and no span was received. */}
                   <p className="text-xs text-neutral-400 mt-1 max-w-sm">
-                    Received initial heartbeat from <span className="text-neutral-200 font-mono">agent-arbitrage-alpha</span>. Zero schema dropouts detected.
+                    <span className="text-neutral-200 font-mono">{endpoint.trim().replace(/\/+$/, '')}</span> answered GET /v1/metrics (HTTP 200).
+                    No agent has connected and no span has been received yet.
                   </p>
+                  {sameOrigin && (
+                    <p className="text-xs text-amber-300 mt-2 max-w-sm">
+                      This endpoint is the dashboard&rsquo;s own server. It adds its own key to every request, so the key
+                      you typed was not checked here.
+                    </p>
+                  )}
                 </div>
                 <div className="w-full pt-4">
                   <button
