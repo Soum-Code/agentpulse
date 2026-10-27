@@ -30,7 +30,8 @@ export const RagMonitorView: React.FC<RagMonitorViewProps> = ({
   isCalmMode,
   chalkSurface,
 }) => (
-  <div className="space-y-5 pb-20 aetheris-iris-glass aetheris-spatial-glow rounded-3xl p-3 sm:p-6 border border-purple-500/30 shadow-2xl relative">
+  // data-rag-frame names the frame for the contrast audit script (see the PR body).
+  <div data-rag-frame="" className="space-y-5 pb-20 aetheris-iris-glass aetheris-spatial-glow rounded-3xl p-3 sm:p-6 border border-purple-500/30 shadow-2xl relative">
     {/* Specular rim along the top edge of the frame */}
     <div className="absolute inset-x-0 top-0 h-[2px] aetheris-iris-specular pointer-events-none rounded-t-3xl" />
 
@@ -62,16 +63,18 @@ export const RagMonitorView: React.FC<RagMonitorViewProps> = ({
 
       <button
         onClick={onToggleFullscreen}
-        className="px-3 py-1.5 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] border border-white/10 text-xs font-mono text-neutral-200 flex items-center space-x-1.5 transition-colors self-start md:self-center"
+        className="px-3.5 py-1.5 rounded-full bg-white/[0.06] hover:bg-white/[0.12] border border-white/10 text-xs font-medium text-neutral-200 flex items-center space-x-1.5 whitespace-nowrap transition-colors self-start md:self-center"
         title="Open the full-screen split view"
       >
-        <ExternalLink className="w-3.5 h-3.5" />
+        <ExternalLink className="w-3.5 h-3.5" aria-hidden="true" />
         <span>Full-Screen View</span>
       </button>
     </div>
 
-    {/* Chat + instrument panel (all behaviour of the public chat lives in RagChatbotApp) */}
-    <div className="rounded-2xl border border-white/10 overflow-hidden shadow-2xl bg-[#06070a] h-[740px] max-h-[82vh]">
+    {/* Chat + instrument panel (all behaviour of the public chat lives in RagChatbotApp). In short:
+        the chat paints its own palette background now, so this box only clips it, with the
+        palette's border (rag-frame-inner in index.css) instead of a hard-coded black. */}
+    <div className="rag-frame-inner rounded-2xl border overflow-hidden shadow-2xl h-[740px] max-h-[82dvh]">
       <RagChatbotApp
         embedded={true}
         onOpenConsole={() => onSelectTab('overview')}
