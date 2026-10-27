@@ -26,6 +26,8 @@ import {
   Maximize2
 } from 'lucide-react';
 import { Agent, Trace, Span, Incident, ProductTab } from '../../types';
+import { copyTextToClipboard } from '../../utils/traceExport';
+import { traceStatusTitle } from '../../lib/traceStatus';
 
 interface ActiveContextPanelProps {
   currentTab: ProductTab;
@@ -65,9 +67,11 @@ export const ActiveContextPanel: React.FC<ActiveContextPanelProps> = ({
   const [copiedTraceId, setCopiedTraceId] = useState(false);
   const [curatedSuccess, setCuratedSuccess] = useState(false);
 
-  const handleCopyTraceIdOnly = (e: React.MouseEvent, traceId: string) => {
+  const handleCopyTraceIdOnly = async (e: React.MouseEvent, traceId: string) => {
     e.stopPropagation();
-    navigator.clipboard.writeText(traceId);
+    // copyTextToClipboard has the textarea fallback and reports failure, so "Copied" is not shown
+    // for a copy the browser refused.
+    if (!(await copyTextToClipboard(traceId))) return;
     setCopiedTraceId(true);
     setTimeout(() => setCopiedTraceId(false), 2000);
   };
@@ -83,7 +87,7 @@ export const ActiveContextPanel: React.FC<ActiveContextPanelProps> = ({
   // Investigation depth level (1 to 4)
   const depthLevel = (selectedAgent ? 1 : 0) + (selectedTrace ? 1 : 0) + (selectedSpan ? 1 : 0) + (selectedIncident ? 1 : 0);
 
-  const handleCopyInvestigationReport = () => {
+  const handleCopyInvestigationReport = async () => {
     const report = [
       `=== AGENTPULSE INVESTIGATION CONTEXT ===`,
       `Timestamp: ${new Date().toISOString()}`,
@@ -93,14 +97,14 @@ export const ActiveContextPanel: React.FC<ActiveContextPanelProps> = ({
       selectedIncident ? `Incident: [${selectedIncident.severity.toUpperCase()}] ${selectedIncident.id} - "${selectedIncident.title}"` : null,
       // Tokens and cost are optional on a trace (adapters.ts has no cost source); calling
       // .toFixed on the missing cost threw, so the copy button failed whenever a trace was open.
-      selectedTrace ? `Trace: ${selectedTrace.id} | Duration: ${selectedTrace.durationMs}ms | Tokens: ${selectedTrace.totalTokens ?? DASH} | Status: ${selectedTrace.status.toUpperCase()} | Cost: ${selectedTrace.cost != null ? `$${selectedTrace.cost.toFixed(4)}` : DASH}` : null,
-      selectedSpan ? `Span: ${selectedSpan.id} (${selectedSpan.name}) | Type: ${selectedSpan.type} | Duration: ${formatLatencyMs(selectedSpan.latencyMs)}` : null,
+      selectedTrace ? `Trace: ${selectedTrace.id} | Duration: ${formatLatencyMs(selectedTrace.durationMs)} | Tokens: ${selectedTrace.totalTokens ?? DASH} | Status: ${selectedTrace.status.toUpperCase()} | Cost: ${selectedTrace.cost != null ? `$${selectedTrace.cost.toFixed(4)}` : DASH}` : null,
+      selectedSpan ? `Span: ${selectedSpan.id} (${selectedSpan.name}) | Type: ${selectedSpan.type} | Duration: ${formatLatencyMs(selectedSpan.durationMs)}` : null,
       selectedSpan?.prompt ? `Span Prompt Preview: ${selectedSpan.prompt.slice(0, 180)}...` : null,
       selectedSpan?.completion ? `Span Completion Preview: ${selectedSpan.completion.slice(0, 180)}...` : null,
       selectedSpan?.evidence ? `Grounding Evidence: ${selectedSpan.evidence.explained}` : null
     ].filter(Boolean).join('\n');
 
-    navigator.clipboard.writeText(report);
+    if (!(await copyTextToClipboard(report))) return;
     setCopied(true);
     setTimeout(() => setCopied(false), 2200);
   };
@@ -423,13 +427,17 @@ export const ActiveContextPanel: React.FC<ActiveContextPanelProps> = ({
                           )}
                         </button>
                       </div>
+                      {/* Green only for 'ok'; 'unknown' is a dashed grey chip. */}
                       <span
+                        title={traceStatusTitle(selectedTrace.status)}
                         className={`text-[9px] uppercase px-1.5 py-0.5 rounded border ${
                           selectedTrace.status === 'error'
                             ? 'bg-rose-500/20 text-rose-300 border-rose-500/40'
                             : selectedTrace.status === 'warning'
                             ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
-                            : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                            : selectedTrace.status === 'ok'
+                            ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                            : 'bg-transparent text-neutral-400 border-dashed border-white/20'
                         }`}
                       >
                         {selectedTrace.status}
@@ -446,13 +454,13 @@ export const ActiveContextPanel: React.FC<ActiveContextPanelProps> = ({
                       <div className="text-[9px] font-sans text-neutral-400 uppercase tracking-widest liquid-card-label">
                         Latency
                       </div>
-                      <div className="text-neutral-200 font-medium">{selectedTrace.durationMs}ms</div>
+                      <div className="text-neutral-200 font-medium">{formatLatencyMs(selectedTrace.durationMs)}</div>
                     </div>
                     <div className="p-1.5 rounded bg-white/[0.04] border border-white/[0.06]">
                       <div className="text-[9px] font-sans text-neutral-400 uppercase tracking-widest liquid-card-label">
                         Tokens
                       </div>
-                      <div className="text-neutral-200 font-medium">{selectedTrace.totalTokens}</div>
+                      <div className="text-neutral-200 font-medium">{selectedTrace.totalTokens?.toLocaleString() ?? DASH}</div>
                     </div>
                     <div className="p-1.5 rounded bg-white/[0.04] border border-white/[0.06]">
                       <div className="text-[9px] font-sans text-neutral-400 uppercase tracking-widest liquid-card-label">
@@ -497,7 +505,7 @@ export const ActiveContextPanel: React.FC<ActiveContextPanelProps> = ({
                       <span>Offset: {selectedSpan.startOffsetMs}ms</span>
                       <span>·</span>
                       {/* An unrecorded span latency prints as a dash, not "0ms". */}
-                      <span className="text-neutral-200 font-bold">Span: {formatLatencyMs(selectedSpan.latencyMs)}</span>
+                      <span className="text-neutral-200 font-bold">Span: {formatLatencyMs(selectedSpan.durationMs)}</span>
                     </div>
                   </div>
 
