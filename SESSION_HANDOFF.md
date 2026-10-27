@@ -3952,6 +3952,24 @@ No key, token, password or hash is in this subsection. The second leader chat wr
 
 For a cloud session taking over when the local limits run out: read 29.16 and 29.17 first, then this. No key, token, password or hash here.
 
+**WHAT REMAINS (checklist, 2026-10-27 ~13:10 UTC; tick by editing this list):**
+Code and docs (session `final-completion` is on it now; a cloud session takes over from its pushed branch `docs/final-viva*` only if it stops):
+- [ ] End-to-end test of the live site, results in `docs/E2E_TEST_2026-10-27.md`.
+- [ ] README.md current and honest; other top-level docs corrected; `AGENTPULSE_DESIGN_SYSTEM.md` archived or updated.
+- [ ] Comment-only pass on the key files (main.py, middleware.py, ingest.py, grounding.py, simulate_guard.py, worker, chat_server.py, chat_providers.py, App.tsx, stateModel.ts, traceStatus.ts, ChatConsole.tsx).
+- [ ] 29.18 brought into main + section 29.19; the PR merged after the owner's yes; deploy checked.
+Leader only (needs the VM or a public action, after the owner's yes):
+- [ ] `gh repo edit` description + topics; release `v1.0-viva` (`gh release create`, notes in `docs/RELEASE_NOTES_v1.0-viva.md`).
+- [ ] VM `.env`: `AGENTPULSE_SIMULATE_IP_PER_HOUR=20`, `AGENTPULSE_SIMULATE_IP_PER_DAY=60`, backend recreate (~1-2 Nov, before the viva).
+- [ ] 1 Nov: freeze (no more merges), final check of `/v1/health/ready`, `/chat/health`, one chat turn, one Lab run.
+The owner's own tasks (he said he will do them later; remind him):
+- [ ] UptimeRobot: 3 monitors (https://agentpulse.centralindia.cloudapp.azure.com/v1/health/ready, /v1/health/evaluator, /chat/health).
+- [ ] GitHub > Settings > Advanced Security: Secret Protection Enable + Push protection ON (keep Dependabot security updates off during the freeze).
+- [ ] Revoke the OLD NVIDIA key at build.nvidia.com (the new one is in the VM .env).
+- [ ] Restrict the Firebase web key (Google Cloud > Credentials, the site's domain only).
+- [ ] Choose an off-VM place for the nightly backup (`~/backups/nightly` on the VM); the leader explains the download.
+- [ ] Read `DEMO_GUIDE.md` and rehearse the demo once.
+
 **Update 2026-10-27 ~13:00 UTC (weekly usage 96%):** running now: session `final-completion` (local_c1a36345, Sonnet, branch from main 329d4ab): (1) end-to-end test of the live site, results in `docs/E2E_TEST_2026-10-27.md`; (2) README and the other top-level docs made current and honest, `AGENTPULSE_DESIGN_SYSTEM.md` archived or updated; (3) a limited comment-only pass on the key files; (4) this section 29.18 brought into main plus a dated 29.19; (5) PREPARED, not run: `gh repo edit` description/topics, release `v1.0-viva` notes in `docs/RELEASE_NOTES_v1.0-viva.md`, the VM step for the Lab limits (20/hour, 60/day). It opens ONE PR into main and does not merge. If it stops on the usage limit, its pushed commits are on its branch (`docs/final-viva*`); a cloud session can finish steps 1-4 from there (no VM needed).
 
 **Update 2026-10-27 ~12:40 UTC:** #111's deploy finished green and was checked: `/v1/health/ready` 200, `/chat/health` 200, the new "not scored yet" status text is in the live bundle. Nothing is open: no PR, no running session. The leader's hourly usage watch was stopped to save the last weekly usage (96%); this section is current as of now. Next (owner and leader): the end-to-end test on the live site on 30-31 Oct, the comment-only pass, the freeze on 1 Nov (final handoff, release tag, README counts: backend 628, dashboard 404; Lab per-IP limits 20/60).
