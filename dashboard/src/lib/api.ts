@@ -190,6 +190,8 @@ export class ApiError extends Error {
   constructor(
     message: string,
     public readonly status: number,
+    /** Seconds until a refused request is worth repeating (a 429 from the public Telemetry Lab). */
+    public readonly retryAfter?: number,
   ) {
     super(message);
     this.name = 'ApiError';
@@ -244,6 +246,21 @@ export function createApiClient(connection: AgentPulseConnection) {
           return (await response.json()) as T;
         } catch {
           // ignore parse failure and throw
+        }
+      }
+      // A 429 from POST /v1/simulate (the public Telemetry Lab limits) carries a plain sentence in
+      // its body, {"detail": "...", "code": "...", "retry_after": n}. Show that sentence instead of
+      // the bare "429 Too Many Requests", which tells a visitor nothing about when to retry.
+      if (response.status === 429) {
+        try {
+          const body = (await response.json()) as { detail?: unknown; retry_after?: unknown };
+          if (typeof body.detail === 'string' && body.detail.trim()) {
+            const wait = typeof body.retry_after === 'number' ? body.retry_after : undefined;
+            throw new ApiError(body.detail, 429, wait);
+          }
+        } catch (err) {
+          if (err instanceof ApiError) throw err;
+          // the body was not the expected JSON: fall through to the generic message
         }
       }
       throw new ApiError(`API request failed: ${response.status} ${response.statusText}`, response.status);
