@@ -96,7 +96,7 @@ interface TracesViewProps {
   selectedSpan?: Span;
   onSelectTrace: (trace: Trace) => void;
   onSelectSpan: (span: Span) => void;
-  onCurateToDataset: (span: Span, trace: Trace) => void;
+  onCurateToDataset: (span: Span, trace: Trace) => void | Promise<boolean>;
   filterAgentId?: string;
   onOpenShortcutsModal?: () => void;
 }
@@ -422,9 +422,10 @@ export const TracesView: React.FC<TracesViewProps> = ({
     }
   };
 
-  const handleCurate = () => {
+  const handleCurate = async () => {
     if (currentSpan && currentTrace) {
-      onCurateToDataset(currentSpan, currentTrace);
+      // The handler returns false when it refused or failed; only a real curation shows success.
+      if ((await onCurateToDataset(currentSpan, currentTrace)) === false) return;
       setCuratedSuccess(true);
       setTimeout(() => setCuratedSuccess(false), 2500);
     }

@@ -310,7 +310,8 @@ export function createApiClient(connection: AgentPulseConnection) {
           // Null until the baseline and current windows both fill.
           latest_window_centroid_distance?: number | null;
           latest_tool_drift?: number | null;
-          baseline_size?: number;
+          // Null when the agent has no drift record yet.
+          baseline_size?: number | null;
         }[];
       }>('/v1/drift'),
     getAlerts: (limit = 50) => fetchApi<{ alerts: AlertItem[] }>(`/v1/alerts?limit=${limit}`),

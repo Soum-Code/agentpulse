@@ -35,6 +35,9 @@ const span = (over: Partial<SpanDetail> = {}): SpanDetail =>
     ...over,
   }) as unknown as SpanDetail;
 
+// A clean span the evaluator has scored; span() alone has no evaluation row, which is unknown (M1).
+const scored = () => span({ evaluation: { overall_risk_score: 0.1 } as any });
+
 const alert = (over: Partial<AlertItem> = {}): AlertItem =>
   ({
     id: 1,
@@ -68,6 +71,15 @@ describe('deriveTraceStatus', () => {
 
   it('is ok only when the alerts are loaded and empty', () => {
     expect(deriveTraceStatus({ apiStatus: 'completed', spans: [ok], alerts: [] })).toBe('ok');
+  });
+
+  it('is unknown, not ok, while a span is not scored yet (M1)', () => {
+    expect(deriveTraceStatus({ spans: [ok, { status: 'ok', evaluated: false }], alerts: [] })).toBe('unknown');
+    expect(deriveTraceStatus({ spans: [{ status: 'ok', evaluated: true }], alerts: [] })).toBe('ok');
+    // A known problem still wins over the unscored span.
+    expect(deriveTraceStatus({ spans: [{ status: 'error', evaluated: false }], alerts: [] })).toBe('error');
+    expect(deriveTraceStatus({ spans: [{ status: 'ok', evaluated: false }], alerts: [{ severity: 'MEDIUM' }] })).toBe('warning');
+    expect(traceStatusTitle('unknown')).toContain('not scored');
   });
 
   it('takes the worst of the API status, the spans and the alerts', () => {
@@ -111,7 +123,7 @@ describe('escalateFromAlertFeed', () => {
   it('never makes a worse status better, and never touches a loaded trace', () => {
     const feed = [alert({ trace_id: 't1', severity: 'MEDIUM' })];
     expect(escalateFromAlertFeed(entry('t1', { status: 'error' }), feed).status).toBe('error');
-    const loaded = toTrace(row('t1'), toSpans([span()], 't1'), []);
+    const loaded = toTrace(row('t1'), toSpans([scored()], 't1'), []);
     expect(escalateFromAlertFeed(loaded, feed)).toBe(loaded);
     expect(loaded.status).toBe('ok');
   });
@@ -121,7 +133,7 @@ describe('one trace with a HIGH alert reads the same everywhere', () => {
   // The case the Telemetry Lab's hallucination scenario produces: every span succeeded and the
   // evaluator raised HIGH alerts. This used to be 'ok' in the list, the filters and the exports.
   const flagged = toTrace(row('t-flagged'), toSpans([span()], 't-flagged'), [alert({ trace_id: 't-flagged', severity: 'HIGH' })]);
-  const clean = toTrace(row('t-clean'), toSpans([span()], 't-clean'), []);
+  const clean = toTrace(row('t-clean'), toSpans([scored()], 't-clean'), []);
   const notLoaded = toTrace(row('t-entry'));
   const traces = [flagged, clean, notLoaded];
 

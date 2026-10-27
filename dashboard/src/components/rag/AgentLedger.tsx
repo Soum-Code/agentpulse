@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Layers, RefreshCw } from 'lucide-react';
 import { api, AlertItem, SpanDetail } from '../../lib/api';
 import { API_START_HINT, Feed, datum, feedFromError } from '../../lib/stateModel';
-import { allEvaluated, alertsReading, spanToLedgerRow } from '../../lib/ragLedger';
+import { TURN_AGENTS, allEvaluated, alertsReading, spanToLedgerRow } from '../../lib/ragLedger';
 import { verdictBadgeClasses, verdictLabel, verdictTooltip } from '../../lib/riskTone';
 import { DatumDisplay } from './DatumDisplay';
 import type { getRagTheme } from './ragTheme';
@@ -12,6 +12,9 @@ type RagTheme = ReturnType<typeof getRagTheme>;
 interface AgentLedgerProps {
   /** The chat turn's trace. Without one there is nothing to read. */
   traceId?: string;
+  /** The agents the chat reported it ran for this turn. Undefined while the turn has not answered:
+   *  then all three are waited for, so "None raised." never appears before the answerer's span. */
+  expectedAgents?: readonly string[];
   theme: RagTheme;
 }
 
@@ -38,7 +41,11 @@ const SLOW_POLLS = 20;
  * stops the polling (a network blip used to freeze the ledger on 'Unreachable'); (2) "None raised." is
  * printed only when every span has been scored. Before that the honest answer is "unknown".
  */
-export const AgentLedger: React.FC<AgentLedgerProps> = ({ traceId, theme }) => {
+export const AgentLedger: React.FC<AgentLedgerProps> = ({ traceId, expectedAgents, theme }) => {
+  const expected = expectedAgents ?? TURN_AGENTS;
+  // Read by the poll through a ref, so the chat's answer arriving does not restart the polling.
+  const expectedRef = useRef(expected);
+  expectedRef.current = expected;
   const [spans, setSpans] = useState<SpanDetail[]>([]);
   const [alerts, setAlerts] = useState<AlertItem[]>([]);
   const [feed, setFeed] = useState<Feed>({ status: 'pending' });
@@ -63,7 +70,7 @@ export const AgentLedger: React.FC<AgentLedgerProps> = ({ traceId, theme }) => {
         setSpans(detail.spans);
         setAlerts(detail.alerts);
         setFeed({ status: 'ready' });
-        if (allEvaluated(detail.spans)) {
+        if (allEvaluated(detail.spans, expectedRef.current)) {
           setSettled(true);
           return;
         }
@@ -85,8 +92,8 @@ export const AgentLedger: React.FC<AgentLedgerProps> = ({ traceId, theme }) => {
   }, [traceId, reload]);
 
   const rows = spans.map((s) => spanToLedgerRow(s, settled));
-  const everyScored = allEvaluated(spans);
-  const alertsNow = alertsReading(alerts.length, spans, settled);
+  const everyScored = allEvaluated(spans, expected);
+  const alertsNow = alertsReading(alerts.length, spans, settled, expected);
   const failing = feed.status === 'unreachable' || feed.status === 'error';
 
   return (

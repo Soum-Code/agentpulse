@@ -28,6 +28,7 @@ import {
 import { Agent, Trace, Span, Incident, ProductTab } from '../../types';
 import { copyTextToClipboard } from '../../utils/traceExport';
 import { traceStatusTitle } from '../../lib/traceStatus';
+import { agentStatusBadgeClasses } from '../../lib/agentStatusTone';
 
 interface ActiveContextPanelProps {
   currentTab: ProductTab;
@@ -41,7 +42,7 @@ interface ActiveContextPanelProps {
   onSelectAgent: (agent: Agent) => void;
   onSelectTrace: (trace: Trace) => void;
   onSelectSpan?: (span: Span) => void;
-  onCurateToDataset?: (span: Span, trace: Trace) => void;
+  onCurateToDataset?: (span: Span, trace: Trace) => void | Promise<boolean>;
   isOpen: boolean;
   onToggleOpen: () => void;
   isPinned: boolean;
@@ -80,7 +81,9 @@ export const ActiveContextPanel: React.FC<ActiveContextPanelProps> = ({
   const effectiveAgentName = selectedAgent?.name || selectedTrace?.agentName;
   const effectiveAgentFramework = selectedAgent?.framework;
   const effectiveAgentModel = selectedAgent?.model;
-  const effectiveAgentStatus = selectedAgent?.status || (selectedTrace?.status === 'error' ? 'error' : 'running');
+  // Only a selected agent has a measured status. A trace's agent used to get an invented
+  // 'running' (or 'error'), so no badge is shown without one (review S2).
+  const effectiveAgentStatus = selectedAgent?.status;
 
   const hasAnyContext = !!(selectedAgent || selectedTrace || selectedSpan || selectedIncident);
 
@@ -109,9 +112,10 @@ export const ActiveContextPanel: React.FC<ActiveContextPanelProps> = ({
     setTimeout(() => setCopied(false), 2200);
   };
 
-  const handleTriggerCurate = () => {
+  const handleTriggerCurate = async () => {
     if (selectedSpan && selectedTrace && onCurateToDataset) {
-      onCurateToDataset(selectedSpan, selectedTrace);
+      // The handler returns false when it refused or failed; only a real curation shows success.
+      if ((await onCurateToDataset(selectedSpan, selectedTrace)) === false) return;
       setCuratedSuccess(true);
       setTimeout(() => setCuratedSuccess(false), 2400);
     }
@@ -270,15 +274,14 @@ export const ActiveContextPanel: React.FC<ActiveContextPanelProps> = ({
                   <div className="space-y-1">
                     <div className="text-sm font-sans font-medium text-white tracking-tight liquid-card-title flex items-center justify-between">
                       <span className="truncate">{effectiveAgentName}</span>
-                      <span
-                        className={`text-[9px] font-mono uppercase px-1.5 py-0.5 rounded border ${
-                          effectiveAgentStatus === 'warning'
-                            ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
-                            : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
-                        }`}
-                      >
-                        {effectiveAgentStatus}
-                      </span>
+                      {/* Colour by the shared agent-status tone: critical rose, warning amber, else neutral. */}
+                      {effectiveAgentStatus && (
+                        <span
+                          className={`text-[9px] font-mono uppercase px-1.5 py-0.5 rounded border ${agentStatusBadgeClasses(effectiveAgentStatus)}`}
+                        >
+                          {effectiveAgentStatus}
+                        </span>
+                      )}
                     </div>
                     <div className="text-[11px] font-sans text-neutral-400 flex items-center space-x-2 liquid-card-label">
                       {effectiveAgentFramework && (

@@ -31,3 +31,14 @@ export function keepLoadedDetail(listed: Trace[], previous: Trace[]): Trace[] {
   const loaded = new Map(previous.filter((t) => t.alerts !== undefined).map((t) => [t.id, t]));
   return listed.map((t) => loaded.get(t.id) ?? t);
 }
+
+/**
+ * The selected trace as the latest poll has it. App keeps the selection as a copy taken when it
+ * was clicked, so a trace scored or alerted after that kept its old status and scores in the
+ * inspector. A poll's loaded copy of the same trace replaces it; a list entry (no detail) never
+ * replaces a loaded selection.
+ */
+export function freshSelectedTrace(traces: Trace[], selected: Trace | undefined): Trace | undefined {
+  if (!selected) return selected;
+  return traces.find((t) => t.id === selected.id && t.alerts !== undefined) ?? selected;
+}

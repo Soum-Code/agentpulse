@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, BookOpen, FileText, CheckCircle2 } from 'lucide-react';
+import { X, BookOpen, FileText } from 'lucide-react';
 import type { ColorPalette, ChalkSurfacePreset } from '../../types';
 import { getRagTheme } from './ragTheme';
 
@@ -66,10 +66,9 @@ export const CorpusModal: React.FC<CorpusModalProps> = ({
                   <div className={`font-medium ${theme.textColor} text-xs truncate`}>{doc}</div>
                   <span className={`text-[11px] ${theme.subtextColor} shrink-0 font-mono`}>DOC-{String(idx + 1).padStart(2, '0')}</span>
                 </div>
-                <div className={`text-[11px] ${theme.subtextColor} mt-1 flex items-center gap-1`}>
-                  <CheckCircle2 className="w-3 h-3 rag-ok-text" />
-                  <span>Indexed in vector store • Full-text available</span>
-                </div>
+                {/* Only what GET /chat/corpus says: a title the retriever can return. The old "Indexed in
+                    vector store • Full-text available" had no source (the service exposes no full text). */}
+                <div className={`text-[11px] ${theme.subtextColor} mt-1`}>Listed by the chat service as retrievable</div>
               </div>
             </div>
           ))}
