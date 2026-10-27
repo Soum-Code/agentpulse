@@ -146,6 +146,33 @@ describe('error handling', () => {
     ).resolves.toEqual(body);
   });
 
+  it('turns a 429 with a detail sentence into an ApiError carrying that sentence and the wait', async () => {
+    // The public Telemetry Lab answers 429 {"detail", "code", "retry_after"}; the page shows the sentence.
+    mockFetch({
+      ok: false,
+      status: 429,
+      statusText: 'Too Many Requests',
+      body: { detail: 'You have run 6 scenarios in the last hour. Try again in 55 min.', code: 'ip_hour_limit', retry_after: 3300 },
+    });
+
+    await expect(
+      createApiClient({ baseUrl: '', apiKey: '' }).getMetrics(),
+    ).rejects.toMatchObject({
+      name: 'ApiError',
+      status: 429,
+      message: 'You have run 6 scenarios in the last hour. Try again in 55 min.',
+      retryAfter: 3300,
+    });
+  });
+
+  it('keeps the generic message for a 429 whose body is not the expected JSON', async () => {
+    mockFetch({ ok: false, status: 429, statusText: 'Too Many Requests', body: { unexpected: true } });
+
+    await expect(
+      createApiClient({ baseUrl: '', apiKey: '' }).getMetrics(),
+    ).rejects.toMatchObject({ status: 429, message: 'API request failed: 429 Too Many Requests' });
+  });
+
   it('throws with the status code on other failures', async () => {
     mockFetch({ ok: false, status: 401, statusText: 'Unauthorized' });
 
