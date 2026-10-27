@@ -15,7 +15,8 @@
 # updates. The worker (`python -m app.worker`) reads the queue and does the scoring.
 # POST /v1/simulate is also the one write the public site lets through without the write
 # password, so it first passes the limits in services/simulate_guard.py (runs per IP, runs per
-# day, queue depth). POST /v1/ingest is not limited by that file and works as before.
+# day, queue depth). POST /v1/ingest is not limited by that file. Both reach ingest_spans, which
+# first checks the size limits (spans per request, field lengths) of config.py.
 
 from __future__ import annotations
 
@@ -34,6 +35,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 # .order_by().
 from sqlmodel import col, select
 
+from app.config import settings
 from app.database import get_session
 from app.models import (
     AgentRecord,
@@ -157,8 +159,68 @@ class IngestResponse(BaseModel):
     errors: list[str] = Field(default_factory=list)
 
 
+# The span fields counted as long text, and as short labels, by check_ingest_limits. Every other
+# field is a number, a time or `metadata`, which has its own check.
+_TEXT_FIELDS = ("input_summary", "output_summary", "error_message", "tool_args", "tool_result_summary")
+_LABEL_FIELDS = (
+    "trace_id", "span_id", "parent_span_id", "agent_id", "agent_role", "pipeline_id",
+    "event_type", "span_kind", "status", "input_hash", "output_hash", "model", "tool_name",
+)
+
+
+# In short: refuses a batch that is bigger than the limits in config.py, with 413 and one plain
+# sentence, before anything is written. It checks, in this order: how many spans there are; then
+# for each span the long text fields, the short label fields and the size of `metadata`. A span
+# is named by its position in the request (counting from 0), never by its content, so a huge
+# value is not copied into the reply. A limit of 0 is off. The body size is checked earlier, in
+# BodySizeLimitMiddleware. The numbers and where they come from: config.py.
+def check_ingest_limits(payload: "IngestPayload") -> None:
+    def refuse(sentence: str) -> None:
+        raise HTTPException(status_code=413, detail=sentence)
+
+    max_spans = settings.ingest_max_spans
+    if max_spans > 0 and len(payload.spans) > max_spans:
+        refuse(
+            f"Too many spans in one request: {len(payload.spans)} (the limit is {max_spans}). "
+            f"Send them in batches of at most {max_spans}."
+        )
+
+    max_text = settings.ingest_max_text_chars
+    max_label = settings.ingest_max_label_chars
+    max_meta = settings.ingest_max_metadata_chars
+    if max_label > 0:
+        for name in ("service_name", "sdk_version"):
+            if len(getattr(payload, name)) > max_label:
+                refuse(f"{name} is longer than {max_label} characters.")
+    for index, span in enumerate(payload.spans):
+        if max_text > 0:
+            for name in _TEXT_FIELDS:
+                value = getattr(span, name)
+                if value is not None and len(value) > max_text:
+                    refuse(
+                        f"Span {index} (counting from 0): {name} is {len(value)} characters "
+                        f"long; the limit is {max_text}."
+                    )
+        if max_label > 0:
+            for name in _LABEL_FIELDS:
+                value = getattr(span, name)
+                if value is not None and len(value) > max_label:
+                    refuse(
+                        f"Span {index} (counting from 0): {name} is {len(value)} characters "
+                        f"long; the limit is {max_label}."
+                    )
+        if max_meta > 0 and span.metadata:
+            meta_chars = len(json.dumps(span.metadata, default=str))
+            if meta_chars > max_meta:
+                refuse(
+                    f"Span {index} (counting from 0): metadata is {meta_chars} characters "
+                    f"as JSON; the limit is {max_meta}."
+                )
+
+
 # POST /v1/ingest -> the SDK sends a batch of spans here.
 # status_code=202 means "Accepted": received, will be processed later (by the worker).
+# A batch over the size limits is refused with 413 first (check_ingest_limits above).
 # response_model makes FastAPI check that the reply matches IngestResponse.
 @router.post("/ingest", response_model=IngestResponse, status_code=202)
 async def ingest_spans(
@@ -176,6 +238,9 @@ async def ingest_spans(
     Re-submitting a span is a no-op rather than an error: the span is not
     re-inserted and the job is deduplicated by `job_key`.
     """
+    # Step 0: size limits. Over a limit -> 413, and nothing below has run, so nothing is stored.
+    check_ingest_limits(payload)
+
     # Step 1: counters for the reply. accepted = spans saved (or already known), failed = spans
     # that raised an error, duplicates = spans whose span_id was already stored, errors = short
     # error texts, enqueue_targets = the spans that should get an evaluation job.

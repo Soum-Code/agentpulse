@@ -41,9 +41,14 @@ from fastapi.staticfiles import StaticFiles
 # select(...) builds a SQL SELECT query.
 from sqlmodel import select
 
-from app.config import settings
+from app.config import settings, startup_security_problem
 from app.database import get_session, init_db, close_db
-from app.middleware import APIKeyMiddleware, RateLimitMiddleware, RequestMetricsMiddleware
+from app.middleware import (
+    APIKeyMiddleware,
+    BodySizeLimitMiddleware,
+    RateLimitMiddleware,
+    RequestMetricsMiddleware,
+)
 from app.models import Baseline
 # Each router below is a group of URL routes defined in the routers package.
 from app.routers import (
@@ -79,6 +84,16 @@ async def lifespan(app: FastAPI):
     """Application lifespan: startup and shutdown hooks."""
     # Startup
     logger.info("AgentPulse backend starting...")
+
+    # Step 0: refuse to run in a state that is open to everybody. In short: with dev mode
+    # off, the placeholder API key is a public secret, so the backend stops here with an
+    # error that says what to set (it only logged a warning before). Dev mode itself starts
+    # as before (local runs, the tests, the Hugging Face demo) and /v1/health says so. This
+    # is the first thing that happens, before the database is touched.
+    problem = startup_security_problem(settings)
+    if problem is not None:
+        logger.critical(problem)
+        raise RuntimeError(problem)
 
     # Step 1: create any database tables that do not exist yet.
     # Init database
@@ -169,14 +184,6 @@ async def lifespan(app: FastAPI):
         # "window_baseline_pool" rows; this API code does not.)
         logger.error("Failed to restore drift baselines: %s", exc)
 
-    # Step 5: warn, but do not stop, if the server is set up for non-local use
-    # while it still has the placeholder key.
-    if not settings.local_dev_mode and settings.api_key == "change-me-to-a-secure-key":
-        logger.warning(
-            "AGENTPULSE_LOCAL_DEV_MODE is false but AGENTPULSE_API_KEY is still the "
-            "default placeholder — set a real secret before exposing this beyond localhost."
-        )
-
     # Step 6: hang the objects on app.state, which route code reaches as
     # request.app.state. Only ws_manager is ever read from there (routers/ingest.py
     # uses it to tell connected dashboards about new spans).
@@ -218,7 +225,7 @@ def create_app() -> FastAPI:
     # Middleware
     # In short: the middleware added LAST runs FIRST. Starlette's add_middleware puts
     # each new one at the front of its list, so a request passes through them in this
-    # order: CORS -> RateLimit -> RequestMetrics -> APIKey -> the route.
+    # order: CORS -> RateLimit -> RequestMetrics -> APIKey -> BodySizeLimit -> the route.
     # (So the remark below that RequestMetrics is "outermost" is wrong: CORS and
     # RateLimit wrap it. Metrics count the 401 answers from APIKey but not the 429
     # answers from RateLimit.)
@@ -230,19 +237,23 @@ def create_app() -> FastAPI:
     # every cross-origin caller regardless of whether it has a valid key.
     # (Preflight = the OPTIONS request a browser sends first to ask if a
     # cross-origin call is allowed.)
-    # 1st added = innermost: checks the X-API-Key header.
+    # 1st added = innermost, right next to the route: refuses a POST /v1/ingest body above the
+    # size limit with 413 (see middleware.py). It only sees requests that already passed the
+    # key check below, so nobody without a key makes the server read their body.
+    app.add_middleware(BodySizeLimitMiddleware)
+    # 2nd added: checks the X-API-Key header.
     app.add_middleware(APIKeyMiddleware)
     # Added last so it wraps outermost and therefore times the whole stack,
     # including auth rejections and rate-limited requests.
-    # 2nd added: counts requests and times them.
+    # 3rd added: counts requests and times them.
     app.add_middleware(RequestMetricsMiddleware)
-    # 3rd added: limits requests to /v1/ingest per client (numbers come from settings).
+    # 4th added: limits requests to /v1/ingest per client (numbers come from settings).
     app.add_middleware(
         RateLimitMiddleware,
         max_requests=settings.rate_limit_max_requests,
         window_seconds=settings.rate_limit_window_seconds,
     )
-    # 4th added = outermost: CORS headers. An empty origins list would fall back to
+    # 5th added = outermost: CORS headers. An empty origins list would fall back to
     # ["*"] (any website address), but config.py normally supplies a non-empty list.
     app.add_middleware(
         CORSMiddleware,

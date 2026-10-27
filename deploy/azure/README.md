@@ -136,9 +136,20 @@ What changes for people and programs:
   dataset) make the browser ask for the username and password on the first write, in a login
   box titled "AgentPulse writes". The browser then sends them with later requests until it is
   closed. If the box is cancelled, they only log a warning to the browser console and look like
-  they did nothing. Every view that only reads works without a password. The Telemetry Lab's
-  "Run scenario" is the exception and asks for nothing (see "Telemetry Lab" below), as does the
-  live chat.
+  they did nothing. Every view that only reads works without a password, except the API-key
+  routes (next bullet). The Telemetry Lab's "Run scenario" is the exception and asks for
+  nothing (see "Telemetry Lab" below), as does the live chat.
+- **The API-key routes ask for the password on reads too.** Any path with a segment that starts
+  with `keys` (`/v1/keys`, `/v1/keys/7`, in any letter case and however the slashes or dots are
+  spelled) needs the same username and password, for `GET` and `HEAD` as well. Why: `GET
+  /v1/keys?owner_id=<id>` lists that owner's keys (id, label, key prefix, dates), and because
+  nginx adds the master key, the backend answered any visitor who guessed or learned an
+  `owner_id`. A signed-in console user now meets the same login box when the dashboard calls
+  `GET /v1/keys`; the only place it does is deleting a project that was created before the
+  project stored its key id (`deleteTelemetryProject` in `dashboard/src/lib/firebase.ts`), and
+  creating or revoking a key (`POST`/`DELETE`) already needed the password. If the box is
+  cancelled the delete is refused and the project is kept. The check is one `@keys` matcher and a
+  second `basic_auth` line in the Caddyfile, with the same user and hash as the writes.
 - **Nothing on the VM is affected.** The worker and `seed_demo.py` (run with `docker compose
   exec`) talk to the backend over the Docker network, and `deploy.sh` checks health inside the
   containers and with `GET`s through Caddy.
@@ -193,6 +204,20 @@ To turn writes on:
 To change the password, repeat steps 2 to 4. A write that must stay public is one more line in
 the `@write` block of the Caddyfile; there are two now: the live chat's `/chat*` (next section)
 and the Telemetry Lab's `POST /v1/simulate` (the section after it).
+
+**Putting the closed key routes live.** The `@keys` matcher is part of the Caddyfile, and the
+deploy-azure workflow never recreates Caddy, so it takes effect only when Caddy is validated and
+recreated (step 4 above; the checkout must already hold the new Caddyfile). Then, from outside:
+
+```bash
+H=https://<hostname>
+curl -s -o /dev/null -w '%{http_code}\n' "$H/v1/keys?owner_id=someone"                 # 401
+curl -s -o /dev/null -w '%{http_code}\n' --path-as-is "$H/V1/keys?owner_id=someone"    # 401
+curl -s -o /dev/null -w '%{http_code}\n' "$H/v1/traces"                                # 200
+```
+
+To undo it, delete the `@keys` block and the `basic_auth @keys` block from the Caddyfile and
+recreate Caddy.
 
 ## The live chat
 
@@ -279,7 +304,8 @@ answers nothing.
 
    It can write spans and read, like any issued key, but `/v1/keys` refuses it. To revoke it,
    list the owner's keys (`GET /v1/keys?owner_id=live-chat`) and `DELETE /v1/keys/<id>?owner_id=live-chat`
-   with the server's key, then issue a new one the same way (remove the old line first).
+   with the server's key, from inside the backend container as above (through the public URL both
+   ask for the write password), then issue a new one the same way (remove the old line first).
 3. Build. About 10 to 20 minutes on the VM's 2 vCPUs, most of it installing torch; the image
    is about 2.1 GB, so check that `df -h /` shows at least 10 GB free first.
 
@@ -546,9 +572,9 @@ counted as that proxy.
 
 `deploy/azure/check_caddy_paths.sh` needs only Docker. It runs the Caddyfile in this checkout in
 the real `caddy:2-alpine` image, in front of a stub that only reports what reached it, with a
-password made up for the run; it runs `caddy validate`, then sends 35 requests (32 for the paths
-above and their lookalikes, 3 with made-up `X-Forwarded-For` headers) and prints which got 401 and
-which passed. It ends with `ALL AS EXPECTED` and exit status 0 only if every one came out as the
+password made up for the run; it runs `caddy validate`, then sends 69 requests (66 for the paths
+above, the API-key routes and their lookalikes, 3 with made-up `X-Forwarded-For` headers) and
+prints which got 401 and which passed. It ends with `ALL AS EXPECTED` and exit status 0 only if every one came out as the
 script lists it. No secret is involved and nothing on the VM is touched. Run it after any change
 to the `@write` block.
 
@@ -593,6 +619,64 @@ Every command runs in `~/agentpulse` with
 public any more, and "Run scenario" asks for the password again, as before this section). Faster
 and without touching Caddy: `AGENTPULSE_SIMULATE_DAILY_CAP=0` in `.env` and the backend recreate
 above, which answers every run with 429 until it is set back.
+
+## Size limits and start-up checks
+
+**Size limits.** `POST /v1/ingest` and the live WebSocket (`/v1/ws/live`, which needs no key) refuse
+what is bigger than a limit. A refused ingest request is answered `413` with `{"detail": "<one
+plain sentence>"}` (for example `Too many spans in one request: 1200 (the limit is 1000). Send them
+in batches of at most 1000.`) and nothing is stored; the sentence names a span by its position,
+never by its content. A refused WebSocket connection gets HTTP 403 before the handshake, and a
+message that is too big closes the connection with code 1009.
+
+Each limit is an environment variable of the backend, set in `.env` on the VM and applied by
+recreating the backend (the command in "Telemetry Lab", "Limits", above). An unset or empty value is
+the default, a value that is not a whole number is logged and the default is used, and `0` switches
+that one limit off.
+
+| setting | default | what it limits |
+|---|---|---|
+| `AGENTPULSE_INGEST_MAX_BODY_BYTES` | 10485760 (10 MiB) | the body of one `POST /v1/ingest`, checked from `Content-Length` and, without it, while the body streams in |
+| `AGENTPULSE_INGEST_MAX_SPANS` | 1000 | spans in one request |
+| `AGENTPULSE_INGEST_MAX_TEXT_CHARS` | 10000 | `input_summary`, `output_summary`, `error_message`, `tool_args`, `tool_result_summary` of a span |
+| `AGENTPULSE_INGEST_MAX_LABEL_CHARS` | 256 | the short fields: ids, `agent_id`, `agent_role`, `pipeline_id`, `model`, `tool_name`, `status`..., and `service_name` |
+| `AGENTPULSE_INGEST_MAX_METADATA_CHARS` | 16384 | a span's `metadata`, counted as JSON text |
+| `AGENTPULSE_WS_MAX_MESSAGE_BYTES` | 1024 | one message a WebSocket client sends (the only one the API reads is `ping`, 4 bytes) |
+| `AGENTPULSE_WS_MAX_CONNECTIONS` | 200 | open WebSocket connections, all visitors together |
+| `AGENTPULSE_WS_MAX_CONNECTIONS_PER_IP` | 20 | open WebSocket connections of one visitor (an IPv6 visitor counts by its `/64`; the visitor comes from `X-Forwarded-For` as for the Telemetry Lab, `AGENTPULSE_SIMULATE_TRUSTED_PROXIES`) |
+
+Where the numbers come from (measured on 27 October 2026, the comments in `backend/app/config.py`
+say the same): the SDK cuts a text field at 2,000 characters plus a 14-character marker and an
+error text at 500 (`sdk/src/agentpulse/config.py`, `utils.py`, `integrations/`), its ids are at
+most 64 characters, and one span with every text field at that ceiling is 7,518 bytes of JSON
+(a typical span, as the Lab and the benchmarks send it, is about 740). The SDK sends everything it
+has buffered in one request every 100 ms and keeps at most 10,000 spans. The largest batch any
+script in this repository sends is 32 spans (the Lab's drift run). 1,000 spans of the worst case
+are 7.1 MiB, which is why the body limit is 10 MiB. The span limit is there because the backend
+writes one request's spans one after another while it holds the write lock. A batch the SDK sends
+over a limit is answered 413 and the SDK, which does not retry a 4xx, writes it to its fallback
+file. `tests/test_input_limits.py` fails if the defaults no longer fit what the SDK can send.
+
+Two things in front of the backend are stricter or looser than these numbers, and neither was
+changed. The dashboard's nginx has no `client_max_body_size`, so nginx's own default of 1 MiB
+applies to everything that comes in through the public URL (tried against the real template: a body
+of 1,048,576 bytes passes, 1,048,577 gets nginx's HTML `413`), so the 10 MiB limit only matters for
+senders that reach the backend directly (the chat container over the Docker network, a local run).
+And the backend image starts uvicorn with `--ws-max-size 65536`, because uvicorn's default of 16 MiB
+per WebSocket frame would be held in memory before the application could look at it.
+
+**Start-up checks.** With `AGENTPULSE_LOCAL_DEV_MODE` off (the compose files set it, and so does
+`deploy.sh` for its candidate container) the backend now refuses to start while `AGENTPULSE_API_KEY`
+is still the public placeholder from `.env.example`: it logs the reason and exits, and with
+`restart: unless-stopped` Docker keeps trying until `.env` is fixed. Before, it only logged a
+warning. The VM is not affected (its `.env` holds a real key), and a deploy would stop at the
+candidate container's health check, before anything is swapped, if that were ever not so. With dev
+mode on (the default for a plain local run, the tests and the Hugging Face demo) nothing is
+refused, and `GET /v1/health` carries `"dev_mode": true` and `"dev_mode_reason": "<sentence>"`
+(`false` and `null` on the VM). The backend service's compose healthcheck now asks
+`/v1/health/ready`, which is 503 when the database does not answer, instead of `/v1/health`, which
+is 200 whenever the process is up. `deploy.sh` does not read the container's health status (it
+execs into the container and reads the body of `/v1/health`), so it behaves as before.
 
 ## Seeding demo data
 
