@@ -19,6 +19,7 @@ import type { ChatTurn, ChatHealth } from '../../lib/ragTypes';
 import type { ColorPalette, ChalkSurfacePreset } from '../../types';
 import { chatErrorTitle, isRefusal, isRetryable } from '../../lib/ragApi';
 import { getRagTheme } from './ragTheme';
+import { SimpleMarkdown } from './SimpleMarkdown';
 import {
   STAGES,
   failoverCount,
@@ -305,9 +306,10 @@ export const ChatConsole: React.FC<ChatConsoleProps> = ({
                       )}
 
                       {/* Reply text (if the answerer produced one) */}
+                      {/* The answer's simple markdown (bold, italics, lists, code) as React elements, never HTML. */}
                       {resp?.reply ? (
-                        <div className={`text-[14px] ${theme.assistantBubbleText} leading-relaxed whitespace-pre-wrap break-words mb-4`}>
-                          {resp.reply}
+                        <div className={`text-[14px] ${theme.assistantBubbleText} leading-relaxed break-words mb-4`}>
+                          <SimpleMarkdown text={resp.reply} />
                         </div>
                       ) : !isPartialOrError ? (
                         <div className={`${theme.subtextColor} italic text-[12px] mb-3`}>No reply produced.</div>

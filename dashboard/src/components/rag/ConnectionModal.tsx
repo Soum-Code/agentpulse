@@ -13,7 +13,8 @@ interface ConnectionModalProps {
   apiKey: string;
   onSaveApiKey: (key: string) => void;
   ragStatus: { ok: boolean; status: string };
-  evaluatorStatus: { ready: boolean; workers_alive: number };
+  /** Null when the evaluator health has not answered (not checked yet, or unreachable). */
+  evaluatorStatus: { ready: boolean; workers_alive: number } | null;
   palette?: ColorPalette;
   isCalmMode?: boolean;
   chalkSurface?: ChalkSurfacePreset;
@@ -95,7 +96,10 @@ export const ConnectionModal: React.FC<ConnectionModalProps> = ({
           <div className="flex items-center justify-between text-[11px]">
             <span className={theme.subtextColor}>AgentPulse Evaluator Worker:</span>
             <span className="flex items-center gap-1.5 font-medium">
-              {evaluatorStatus.workers_alive > 0 ? (
+              {/* Unknown is said as unknown, never as "no workers" (review S4). */}
+              {!evaluatorStatus ? (
+                <span className={theme.subtextColor}>UNKNOWN (no answer from /v1/health/evaluator)</span>
+              ) : evaluatorStatus.workers_alive > 0 ? (
                 <>
                   <CheckCircle2 className="w-3.5 h-3.5 rag-ok-text" />
                   <span className="rag-ok-text">

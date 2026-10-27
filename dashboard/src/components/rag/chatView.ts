@@ -62,6 +62,34 @@ export function noticeTone(code: string | undefined): NoticeTone {
   return 'err';
 }
 
+export interface EvaluatorBadge {
+  tone: 'ok' | 'err' | 'unknown';
+  label: string;
+  title: string;
+}
+
+// In short: what the monitor's evaluator badge says. Only an answer from /v1/health/evaluator can
+// say "offline" (0 workers, including its 503 body). Not asked yet, or the API not reachable, is
+// unknown: the worker may be fine, so it is never drawn as offline (review S4).
+export function evaluatorBadge(
+  readiness: { workers_alive: number } | null,
+  unreachable: boolean,
+): EvaluatorBadge {
+  if (!readiness) {
+    return unreachable
+      ? {
+          tone: 'unknown',
+          label: 'Evaluator unknown',
+          title: 'Could not reach the AgentPulse API on /v1/health/evaluator, so the worker state is unknown.',
+        }
+      : { tone: 'unknown', label: 'Evaluator: checking…', title: 'The evaluator health has not answered yet.' };
+  }
+  if (readiness.workers_alive > 0) {
+    return { tone: 'ok', label: `Worker alive (${readiness.workers_alive})`, title: `${readiness.workers_alive} worker(s) registered and ready` };
+  }
+  return { tone: 'err', label: 'Evaluator offline', title: 'No evaluator worker alive. Grounding evaluations will not run.' };
+}
+
 export type StageState = 'waiting' | 'running' | 'done';
 
 // In short: where one step of a running turn is, from the stream events only. 'search' is done once

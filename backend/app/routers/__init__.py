@@ -394,9 +394,10 @@ async def get_drift_overview():
                 ),
                 # tool_drift: how evenly the agent spreads its calls over different tools
                 # (0 = always the same tool, 1 = all its tools equally). baseline_size: how
-                # many of the agent's spans had been analyzed before this record.
+                # many of the agent's spans had been analyzed before this record; None when
+                # there is no record yet (unknown, not 0 spans).
                 "latest_tool_drift": drift.tool_drift if drift else None,
-                "baseline_size": drift.baseline_size if drift else 0,
+                "baseline_size": drift.baseline_size if drift else None,
             })
 
         return {"agents": overview}

@@ -19,7 +19,8 @@ export function isHighSeverity(severity: string | null | undefined): boolean {
 export interface TraceStatusInput {
   /** The trace row's own status from the API: "running" or "completed". */
   apiStatus?: string | null;
-  spans: { status: SpanStatus }[];
+  /** `evaluated: false` marks a span the evaluator has not scored yet (no evaluation row). */
+  spans: { status: SpanStatus; evaluated?: boolean }[];
   /** The alerts GET /v1/traces/{id} lists. Undefined means the detail was not loaded, which is
    *  not the same as "no alerts". */
   alerts?: { severity: string }[];
@@ -31,8 +32,10 @@ export interface TraceStatusInput {
  *           the same severities are shown as critical.
  * warning - still running, a span scored as risky, or any other alert (the MEDIUM ones: drift,
  *           stability drop).
- * ok      - the detail was loaded and nothing above applies.
- * unknown - nothing wrong is known but the alerts were not loaded, so "ok" would be a guess.
+ * ok      - the detail was loaded, every span was scored, and nothing above applies.
+ * unknown - nothing wrong is known but the alerts were not loaded, or a span is still waiting
+ *           for the evaluator (its alerts are only written once it is scored), so "ok" would
+ *           be a guess.
  *
  * An alert counts whether or not it was acknowledged or resolved: the status says what the
  * detectors found, and closing the alert does not undo the finding.
@@ -47,7 +50,10 @@ export function deriveTraceStatus({ apiStatus, spans, alerts }: TraceStatusInput
   if (spans.some((s) => s.status === 'warning')) return 'warning';
   if (alerts && alerts.length > 0) return 'warning';
 
-  return alerts === undefined ? 'unknown' : 'ok';
+  if (alerts === undefined) return 'unknown';
+  // A span with no evaluation row yet has not been measured; the trace is not "ok" until it is.
+  if (spans.some((s) => s.evaluated === false)) return 'unknown';
+  return 'ok';
 }
 
 /** Sort rank, worst first. Unknown is ranked after ok: it is never promoted above a known status. */
@@ -61,9 +67,9 @@ export function traceStatusTitle(status: TraceStatus): string {
     case 'warning':
       return 'Still running, a span scored as risky, or the trace has an alert below HIGH';
     case 'ok':
-      return 'Trace detail loaded: no failed span and no alert';
+      return 'Trace detail loaded and scored: no failed span and no alert';
     default:
-      return 'Unknown: the spans and alerts of this trace are not loaded yet';
+      return 'Unknown: the spans and alerts of this trace are not loaded yet, or a span is not scored yet';
   }
 }
 

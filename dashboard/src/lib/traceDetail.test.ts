@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 vi.mock('./api', () => ({ api: { getTrace: vi.fn() } }));
 
 import { api } from './api';
-import { keepLoadedDetail, loadFullTrace, loadFullTraces } from './traceDetail';
+import { freshSelectedTrace, keepLoadedDetail, loadFullTrace, loadFullTraces } from './traceDetail';
 import type { Trace } from '../types';
 
 const entry = (id: string): Trace => ({
@@ -86,5 +86,22 @@ describe('keepLoadedDetail', () => {
   it('follows the new list: dropped traces go, order is the list\'s', () => {
     const shown = keepLoadedDetail([entry('z'), entry('a')], [loaded('a'), loaded('gone')]);
     expect(shown.map((t) => t.id)).toEqual(['z', 'a']);
+  });
+});
+
+describe('freshSelectedTrace (S1)', () => {
+  const loaded = (id: string, status: Trace['status']): Trace => ({ ...entry(id), status, alerts: [], spans: [] });
+
+  it('swaps a stale selection for the polled, loaded copy of the same trace', () => {
+    const selected = loaded('a', 'unknown');
+    const polled = loaded('a', 'error');
+    expect(freshSelectedTrace([entry('x'), polled], selected)).toBe(polled);
+  });
+
+  it('keeps the selection when the poll only has a list entry for it, or nothing', () => {
+    const selected = loaded('a', 'ok');
+    expect(freshSelectedTrace([entry('a')], selected)).toBe(selected);
+    expect(freshSelectedTrace([], selected)).toBe(selected);
+    expect(freshSelectedTrace([loaded('a', 'ok')], undefined)).toBeUndefined();
   });
 });
