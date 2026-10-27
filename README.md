@@ -197,7 +197,7 @@ cp .env.example .env
 docker compose up --build -d
 ```
 
-Set `AGENTPULSE_API_KEY` in `.env` to a real value before exposing this beyond localhost — the default is a placeholder.
+Set `AGENTPULSE_API_KEY` in `.env` to a real value (for example `openssl rand -hex 24`) before the first `docker compose up`: the compose files run the backend with `AGENTPULSE_LOCAL_DEV_MODE=false`, and in that mode it refuses to start while the key is still the placeholder from `.env.example`. A plain local run without Docker (`AGENTPULSE_LOCAL_DEV_MODE` unset, which means on) is not affected.
 
 ## License
 

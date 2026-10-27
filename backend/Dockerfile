@@ -47,4 +47,9 @@ ENV AGENTPULSE_PORT=8000
 
 EXPOSE 8000
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# --ws-max-size: the largest WebSocket frame uvicorn will read into memory, in bytes. Its
+# default is 16 MiB, which anybody who can open /v1/ws/live could make the server hold; the
+# only message the API understands from a client is "ping". 65536 is 64 times the app's own
+# limit (AGENTPULSE_WS_MAX_MESSAGE_BYTES, 1024, config.py), which is the one that decides.
+# A frame over this is refused by uvicorn itself (close code 1009) before the app sees it.
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--ws-max-size", "65536"]

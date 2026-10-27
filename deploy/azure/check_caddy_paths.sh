@@ -125,8 +125,51 @@ check 401 PATCH  /v1/alerts/1 -d '{}'
 check 401 POST   /v1/datasets/x/cases -d '{}'
 check 401 POST   /v1/experiments -d '{}'
 check 401 POST   / -d '{}'
+# The API-key routes are closed to readers as well (the @keys matcher in the Caddyfile). nginx adds
+# the server's own API key to every /v1/ request, so without this a public GET /v1/keys?owner_id=<id>
+# listed that owner's keys. GET and HEAD, and every spelling of the path that Caddy's own `path`
+# matcher would have folded back to /v1/keys (case, doubled slashes, dot segments), need the password.
+check 401 GET    /v1/keys
+check 401 GET    '/v1/keys?owner_id=someone'
+check 401 HEAD   '/v1/keys?owner_id=someone' -I
+check 401 GET    /v1/keys/
+check 401 GET    /v1/keys/1
+check 401 GET    '/v1/keys/1?owner_id=someone'
+check 401 GET    /V1/keys
+check 401 GET    /v1/Keys
+check 401 GET    /v1/KEYS/1
+check 401 GET    //v1/keys
+check 401 GET    /v1//keys
+check 401 GET    /v1/keys//
+check 401 GET    /v1/./keys
+check 401 GET    '/v1/x/../keys'
+check 401 GET    '/v1/%2e/keys'
+check 401 GET    '/v1/x/%2e%2e/keys'
+check 401 GET    '/v1/%6beys'
+check 401 GET    '/v1/ke%79s'
+check 401 GET    '/v1%2fkeys'
+check 401 GET    '/v1/keys%2f'
+check 401 GET    '/v1/keys/../traces'
+check 401 OPTIONS /v1/keys
+# With the password the same read reaches the upstream, with a wrong one it does not.
+check 200 GET    '/v1/keys?owner_id=someone' -u "$USER_NAME:$PW"
+check 200 GET    /V1/KEYS -u "$USER_NAME:$PW"
+check 401 GET    '/v1/keys?owner_id=someone' -u "$USER_NAME:wrong"
+# The rule is "a segment that IS keys", so ordinary reads whose path merely contains or starts with
+# the letters (an agent called "turkeys" or "keystone", a trace id ending in "keys", a script file
+# called keys-abc.js) stay public. The backend answers 404 to /v1/keys;x and /v1/keys.json, which
+# is why they are not asked for the password (tests/test_caddyfile_keys.py proves that part).
+check 200 GET    /v1/agents/turkeys/health
+check 200 GET    /v1/agents/keystone/health
+check 200 GET    /v1/traces/abckeys
+check 200 GET    /assets/keys-abc123.js
+check 200 GET    /v1/agents/monkey_agent/health
 # Reads stay public; the chat's own exemption is unchanged.
 check 200 GET    /v1/alerts
+check 200 GET    /v1/traces
+check 200 GET    /v1/agents
+check 200 GET    /v1/health/ready
+check 200 GET    /v1/metrics
 check 200 GET    /v1/simulate/abc
 check 200 HEAD   /v1/simulate/abc -I
 check 200 POST   /chat/stream -d '{}'

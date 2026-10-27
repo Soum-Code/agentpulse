@@ -326,7 +326,11 @@ class TestHealthEndpoints:
         from app.config import settings
 
         original = settings.local_dev_mode
+        original_key = settings.api_key
         settings.local_dev_mode = False
+        # A non-dev start refuses the public placeholder key (main.py lifespan), so this test,
+        # which starts the app with dev mode off, gives it a key of its own.
+        settings.api_key = "health-test-key"
         try:
             with self.client() as client:
                 assert client.get("/v1/health/live").status_code == 200
@@ -337,6 +341,7 @@ class TestHealthEndpoints:
                 assert client.get("/v1/health/evaluator").status_code == 401
         finally:
             settings.local_dev_mode = original
+            settings.api_key = original_key
 
     def test_readiness_withholds_diagnosis_from_unauthenticated_callers(self):
         """The verdict is public; the reason behind it is not.
@@ -348,7 +353,10 @@ class TestHealthEndpoints:
         from app.config import settings
 
         original = settings.local_dev_mode
+        original_key = settings.api_key
         settings.local_dev_mode = False
+        # Same as above: a non-dev start needs a key that is not the placeholder.
+        settings.api_key = "health-test-key"
         try:
             with self.client() as client:
                 anon = client.get("/v1/health/ready").json()
@@ -358,6 +366,7 @@ class TestHealthEndpoints:
                 ).json()
         finally:
             settings.local_dev_mode = original
+            settings.api_key = original_key
 
         assert "ready" in anon
         assert "checks" not in anon
