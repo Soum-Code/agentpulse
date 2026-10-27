@@ -612,13 +612,12 @@ export default function App() {
             )}
 
             {productTab === 'performance' && (
-              <PerformanceView />
+              <PerformanceView onNavigateTab={setProductTab} paused={!isLive} />
             )}
 
             {productTab === 'settings' && (
               <SettingsView
-                isCalmMode={isCalmMode}
-                onToggleCalmMode={theme.onToggleCalmMode}
+                {...theme}
                 currentUser={currentUser}
                 activeProject={activeProject}
                 onOpenProjectSelector={() => setIsProjectSelectorOpen(true)}
