@@ -1,11 +1,12 @@
 """API key authentication and rate limiting middleware."""
 
 # WHAT THIS FILE IS FOR
-# Three middleware classes. Middleware = code that every HTTP request passes through
+# Four middleware classes. Middleware = code that every HTTP request passes through
 # before it reaches the route that handles it, and every response passes through again
 # on the way back.
 #   APIKeyMiddleware         checks the X-API-Key header; answers 401 if it is missing
 #                            or wrong.
+#   BodySizeLimitMiddleware  refuses a POST /v1/ingest body above the size limit with 413.
 #   RateLimitMiddleware      limits how many requests one client may send to
 #                            /v1/ingest; answers 429 when the limit is passed.
 #   RequestMetricsMiddleware counts requests, server errors (5xx) and latency for the
@@ -24,7 +25,7 @@ import logging
 import time
 from collections import defaultdict
 
-from fastapi import Request
+from fastapi import HTTPException, Request
 # BaseHTTPMiddleware: write a `dispatch(request, call_next)` method. Calling
 # `await call_next(request)` runs the rest of the chain and returns the response.
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -153,6 +154,60 @@ async def _is_valid_issued_key(presented: str) -> bool:
     except Exception as exc:  # noqa: BLE001 - authentication must not 500
         logger.error("API key lookup failed: %s", exc)
         return False
+
+
+# In short: stops an oversized body of POST /v1/ingest before it is read into memory. Two
+# checks. (1) The Content-Length header: a request that says it is too big is answered 413 at
+# once and its body is never read. (2) A body that carries no such header (chunked), or lies
+# about it: the bytes are counted as the route reads them, and the 413 is raised as soon as
+# the total passes the limit. The limit is settings.ingest_max_body_bytes (0 = off).
+# Written as a plain ASGI middleware (not BaseHTTPMiddleware) because only that can see the
+# body as it arrives. FastAPI re-raises an HTTPException that comes out of the body read, which
+# is why the count raises one: any other error there becomes a vague "400 error parsing the
+# body". It sits innermost (added first in main.py), so a request without a valid key is
+# answered 401 before anyone reads its body, and the 413 still passes the CORS and metrics layers.
+class BodySizeLimitMiddleware:
+    # The paths it guards: POST /v1/ingest (and anything below it).
+    PATH_PREFIX = "/v1/ingest"
+
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        limit = settings.ingest_max_body_bytes
+        if scope["type"] != "http" or limit <= 0 or not scope["path"].startswith(self.PATH_PREFIX):
+            await self.app(scope, receive, send)
+            return
+
+        # The sentence the caller reads. size is the announced length, or None when the bytes
+        # were counted while streaming and the real total is not known.
+        def sentence(size: int | None) -> str:
+            is_text = f"Request body is {size} bytes, over" if size is not None else "Request body is over"
+            return (
+                f"{is_text} the limit of {limit} bytes for POST /v1/ingest. "
+                "Send fewer spans per request."
+            )
+
+        # Check 1: the size the client announced.
+        declared = dict(scope["headers"]).get(b"content-length")
+        if declared is not None and declared.isdigit() and int(declared) > limit:
+            response = JSONResponse(status_code=413, content={"detail": sentence(int(declared))})
+            await response(scope, receive, send)
+            return
+
+        # Check 2: count what really arrives.
+        received = 0
+
+        async def counting_receive():
+            nonlocal received
+            message = await receive()
+            if message["type"] == "http.request":
+                received += len(message.get("body", b""))
+                if received > limit:
+                    raise HTTPException(status_code=413, detail=sentence(None))
+            return message
+
+        await self.app(scope, counting_receive, send)
 
 
 # Note: the docstring says "token-bucket", but the code is a sliding window counter.
