@@ -399,8 +399,8 @@ const RagChatbotView: React.FC<RagChatbotAppProps> = ({
 
           <div className="flex items-center gap-2 min-w-0">
             <span className="w-2 h-2 rounded-full rag-accent-dot shrink-0" aria-hidden="true" />
-            <h1 className={`text-[14px] font-semibold tracking-tight ${theme.textColor} truncate`}>
-              AgentPulse <span className={`font-medium ${theme.subtextColor}`}>RAG live monitor</span>
+            <h1 className={`text-[14px] font-semibold ${theme.textColor} truncate`}>
+              AgentPulse <span className={`hidden sm:inline font-medium ${theme.subtextColor}`}>RAG live monitor</span>
             </h1>
           </div>
 

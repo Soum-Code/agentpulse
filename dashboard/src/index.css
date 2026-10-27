@@ -2620,6 +2620,16 @@ body.palette-dark {
 }
 .rag-segment [aria-selected="false"] { color: var(--rag-text-2); }
 
+/* In short: the "Aetheris Iris" frame of the console tab, Dark palette only. Its glass let the bright
+   liquid canvas show through at about 92 %, so the grey subtitle and the small pill dropped to
+   1.5-4.3:1 over the blue (measured). Apple's rule for Regular glass over bright content is a dimming
+   layer; this adds one under the same gradient. Chalk and Butter keep their own light frame. */
+:is([data-palette="dark"], .palette-dark) [data-rag-frame].aetheris-iris-glass {
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.07) 0%, rgba(200, 160, 255, 0.03) 50%, rgba(120, 80, 240, 0.05) 100%),
+    rgba(8, 9, 16, 0.82) !important;
+}
+
 /* In short: the frame around the chat in the console tab, with the palette's border. */
 .rag-frame-inner { border-color: rgba(255, 255, 255, 0.10); }
 :is([data-palette="chalk"], .palette-chalk) .rag-frame-inner { border-color: var(--chalk-border, #cbd5e1); }
