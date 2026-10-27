@@ -3,6 +3,9 @@ import { Bot, AlertTriangle, TrendingDown, Activity, ArrowRight, Clock, ShieldCh
 import { Agent, Trace, Incident, DriftProfile, Span } from '../../types';
 import { triggerCardEntranceAnimation } from '../../utils/liquidHoverAnime';
 import { summarizeDrift, breakDownIncidents } from '../../lib/overviewStats';
+import { formatLatencyMs, formatSuccessRate, isLowSuccess } from '../../lib/agentFormat';
+import { traceStatusTitle } from '../../lib/traceStatus';
+import { copyTextToClipboard } from '../../utils/traceExport';
 
 interface OverviewViewProps {
   agents: Agent[];
@@ -29,9 +32,11 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
 }) => {
   const [copiedTraceId, setCopiedTraceId] = useState<string | null>(null);
 
-  const handleCopyTraceId = (e: React.MouseEvent, traceId: string) => {
+  const handleCopyTraceId = async (e: React.MouseEvent, traceId: string) => {
     e.stopPropagation();
-    navigator.clipboard.writeText(traceId);
+    // copyTextToClipboard falls back to a hidden textarea where navigator.clipboard is missing
+    // (plain http) or refuses, and says whether it worked: "Copied" shows only when it did.
+    if (!(await copyTextToClipboard(traceId))) return;
     setCopiedTraceId(traceId);
     setTimeout(() => {
       setCopiedTraceId(prev => (prev === traceId ? null : prev));
@@ -39,7 +44,7 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
   };
 
   // Aggregate KPIs
-  const totalTraces = agents.reduce((acc, a) => acc + a.totalTraces24h, 0);
+  const totalSpans = agents.reduce((acc, a) => acc + a.totalSpans, 0);
   // latencyAvgMs is optional -- adapters.ts leaves it undefined when the backend
   // reported none. Summing it directly made one such agent turn the whole
   // average into NaN, which is what the card was displaying. strictNullChecks is
@@ -150,7 +155,7 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
             </div>
           </div>
           <div className="text-3xl sm:text-4xl font-mono tabular-nums font-medium text-white tracking-tight leading-none drop-shadow-xs liquid-card-metric">
-            {totalTraces.toLocaleString()}
+            {totalSpans.toLocaleString()}
           </div>
           {/* This chip used to read "+14.2% vs nominal baseline". There is no baseline
               for trace volume anywhere in the system, so the 14.2 was typed in. It now
@@ -410,12 +415,13 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
 
                   <div className="flex items-center justify-between sm:justify-end space-x-5 shrink-0 text-right font-mono text-xs pt-2.5 sm:pt-0 border-t sm:border-t-0 border-white/[0.08]">
                     <div>
-                      <div className="text-sm font-mono tabular-nums text-neutral-100 font-medium tracking-tight liquid-card-metric">{agent.latencyAvgMs != null ? `${Math.round(agent.latencyAvgMs)}ms` : '—'}</div>
+                      <div className="text-sm font-mono tabular-nums text-neutral-100 font-medium tracking-tight liquid-card-metric">{formatLatencyMs(agent.latencyAvgMs)}</div>
                       <div className="text-[10px] font-sans text-neutral-400 uppercase tracking-widest font-normal mt-0.5 liquid-card-label">avg latency</div>
                     </div>
                     <div>
-                      <div className={`text-sm font-mono tabular-nums font-medium tracking-tight liquid-card-metric ${agent.successRate < 90 ? 'text-rose-400/90' : 'text-emerald-400/90'}`}>
-                        {agent.successRate != null ? `${Number(agent.successRate.toFixed(1))}%` : '—'}
+                      {/* The same formatters as the Agents view: a missing or NaN rate is a dash. */}
+                      <div className={`text-sm font-mono tabular-nums font-medium tracking-tight liquid-card-metric ${isLowSuccess(agent.successRate) ? 'text-rose-400/90' : 'text-emerald-400/90'}`}>
+                        {formatSuccessRate(agent.successRate)}
                       </div>
                       <div className="text-[10px] font-sans text-neutral-400 uppercase tracking-widest font-normal mt-0.5 liquid-card-label">success rate</div>
                     </div>
@@ -630,6 +636,11 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
               <span className="w-2.5 h-2.5 rounded-full bg-rose-400 inline-block shadow-[0_0_8px_rgba(244,63,94,0.9)]" />
               <span className="font-medium text-neutral-200">Error</span>
             </span>
+            {/* A trace whose spans and alerts are not loaded yet is neither OK nor failing. */}
+            <span className="flex items-center space-x-1.5">
+              <span className="w-2.5 h-2.5 rounded-full border border-dashed border-neutral-400 inline-block" />
+              <span className="font-medium text-neutral-200">Unknown</span>
+            </span>
           </div>
         </div>
 
@@ -711,7 +722,7 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
                           ? 'bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border-amber-500/35 hover:border-amber-500/50'
                           : 'bg-white/[0.05] hover:bg-amber-500/20 text-neutral-300 hover:text-amber-300 border-white/[0.08] hover:border-amber-500/40'
                       }`}
-                      title={`Span: ${primarySpan?.name || 'root'} (${primarySpan?.durationMs || trace.durationMs}ms - Click to inspect Span)`}
+                      title={`Span: ${primarySpan?.name || 'root'} (${formatLatencyMs(primarySpan ? primarySpan.durationMs : trace.durationMs)} - Click to inspect Span)`}
                     >
                       <Zap className="w-2.5 h-2.5 text-amber-400 shrink-0" />
                       <span className="truncate">{primarySpan?.name || 'root'}</span>
@@ -745,13 +756,17 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
                         )}
                       </button>
                     </div>
+                    {/* Green only for 'ok'. 'unknown' (detail not loaded) is a hollow grey ring. */}
                     <span
+                      title={`${trace.status}: ${traceStatusTitle(trace.status)}`}
                       className={`w-2.5 h-2.5 rounded-full shrink-0 ml-1.5 ${
                         trace.status === 'error'
                           ? 'bg-rose-400 shadow-[0_0_8px_rgba(244,63,94,0.9)] animate-pulse'
                           : trace.status === 'warning'
                           ? 'bg-amber-400 shadow-[0_0_8px_rgba(245,158,11,0.9)]'
-                          : 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.9)]'
+                          : trace.status === 'ok'
+                          ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.9)]'
+                          : 'border border-dashed border-neutral-400'
                       }`}
                     />
                   </div>
@@ -762,7 +777,8 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
                 </div>
 
                 <div className="flex items-center justify-between text-[11px] font-mono tabular-nums text-neutral-400 pt-2.5 border-t border-white/[0.08] liquid-card-metric">
-                  <span className="font-medium text-neutral-200">{trace.durationMs}ms</span>
+                  {/* durationMs is undefined when the API gave no end time and no span latency. */}
+                  <span className="font-medium text-neutral-200">{formatLatencyMs(trace.durationMs)}</span>
                   {/* totalTokens is absent when no span recorded counts, and the
                       backend has no cost model at all. Both were rendered
                       unconditionally and threw on the first real trace. */}

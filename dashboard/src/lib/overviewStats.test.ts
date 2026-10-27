@@ -8,7 +8,7 @@ const agent = (id: string, driftStatus?: Agent['driftStatus'], driftScore?: numb
   status: 'idle',
   latencyAvgMs: 10,
   successRate: 100,
-  totalTraces24h: 1,
+  totalSpans: 1,
   description: '',
   driftScore,
   driftStatus,

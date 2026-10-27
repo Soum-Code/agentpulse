@@ -3,9 +3,11 @@
  *
  * A field the backend did not provide is exported as null (JSON) or an empty cell (CSV). A
  * count that could not be measured is null, not 0: an export that says 0 tokens for a span
- * that never reported tokens is indistinguishable from a measured zero.
+ * that never reported tokens is indistinguishable from a measured zero. The same goes for a
+ * duration that was not recorded and for a status that is still unknown (the trace's spans and
+ * alerts were not loaded): null, never 0 and never "ok".
  */
-import type { Span, Trace, TraceAlert } from '../types';
+import type { Span, Trace, TraceAlert, TraceStatus } from '../types';
 import type { GroundingVerdict } from '../lib/api';
 
 export const TRACE_EXPORT_SCHEMA = 'agentpulse.trace.v1';
@@ -31,12 +33,17 @@ export interface TraceExportPayload {
   generator: string;
   trace: {
     id: string;
+    /** The first span's agent. */
     agentId: string;
+    /** Every agent that has a span in the trace; null while the spans are not loaded. */
+    agentIds: string[] | null;
     agentName: string;
     sessionId: string | null;
     rootSpanId: string;
-    status: 'ok' | 'warning' | 'error';
-    durationMs: number;
+    /** The worst of the span statuses and the alerts (lib/traceStatus.ts); null while unknown. */
+    status: Exclude<TraceStatus, 'unknown'> | null;
+    /** null when the trace has no end time and no span recorded a latency. */
+    durationMs: number | null;
     totalTokens: number | null;
     cost: number | null;
     timestamp: string;
@@ -59,6 +66,7 @@ export interface TraceExportPayload {
         totalTokens: number | null;
       };
       spansByType: Record<string, number>;
+      /** The span with the longest recorded latency; null when no span recorded one. */
       slowestSpan: {
         id: string;
         name: string;
@@ -68,9 +76,12 @@ export interface TraceExportPayload {
       /** Spans that errored, warned, or had an evaluator that did not pass. */
       discrepantSpansCount: number;
     };
-    spans: Span[];
+    spans: ExportedSpan[];
   };
 }
+
+/** A span as exported: durationMs is null, not missing and not 0, when no latency was recorded. */
+export type ExportedSpan = Omit<Span, 'durationMs'> & { durationMs: number | null };
 
 const isFlaggedSpan = (span: Span): boolean =>
   span.status === 'error' || span.status === 'warning' || !!span.evaluatorResults?.some((r) => !r.passed);
@@ -104,14 +115,20 @@ const collectEvaluatorResults = (spans: Span[]): ExportedEvaluatorResult[] =>
     }))
   );
 
+/** 'unknown' is not a status a reader can act on, so it is exported as no value at all. */
+const exportedStatus = (trace: Trace): Exclude<TraceStatus, 'unknown'> | null =>
+  trace.status === 'unknown' ? null : trace.status;
+
 /**
  * Formats a single trace into a structured, schema-compliant JSON payload for offline analysis.
  */
 export function formatTraceForExport(trace: Trace): TraceExportPayload {
   const spans = trace.spans ?? [];
 
+  // Only spans that recorded a latency can be the slowest; an unrecorded one is not a 0 ms span.
   const slowest = spans.reduce<Span | null>(
-    (best, span) => (best === null || span.durationMs > best.durationMs ? span : best),
+    (best, span) =>
+      span.durationMs != null && (best === null || span.durationMs > best.durationMs) ? span : best,
     null
   );
 
@@ -127,11 +144,12 @@ export function formatTraceForExport(trace: Trace): TraceExportPayload {
     trace: {
       id: trace.id,
       agentId: trace.agentId,
+      agentIds: trace.agentIds ?? null,
       agentName: trace.agentName,
       sessionId: trace.sessionId ?? null,
       rootSpanId: trace.rootSpanId,
-      status: trace.status,
-      durationMs: trace.durationMs,
+      status: exportedStatus(trace),
+      durationMs: trace.durationMs ?? null,
       totalTokens: trace.totalTokens ?? null,
       cost: trace.cost ?? null,
       timestamp: trace.timestamp,
@@ -157,7 +175,7 @@ export function formatTraceForExport(trace: Trace): TraceExportPayload {
           : null,
         discrepantSpansCount: spans.filter(isFlaggedSpan).length,
       },
-      spans,
+      spans: spans.map((span) => ({ ...span, durationMs: span.durationMs ?? null })),
     },
   };
 }
@@ -226,11 +244,12 @@ export function formatTracesAsCsv(traces: Trace[]): string {
     const spans = t.spans ?? [];
     return [
       t.id,
-      t.agentId,
+      // All the agents of a multi-agent trace, so that agent name 'multi-agent (3)' can be read.
+      t.agentIds ? t.agentIds.join('; ') : t.agentId,
       t.agentName,
       t.sessionId,
       t.timestamp,
-      t.status,
+      exportedStatus(t),
       t.durationMs,
       t.totalTokens,
       sumReportedTokens(spans, 'prompt'),
@@ -246,7 +265,10 @@ export function formatTracesAsCsv(traces: Trace[]): string {
       t.errorSummary,
       t.tags?.join('; '),
       evaluatorsSummary(collectEvaluatorResults(spans)),
-      spans.map((s) => `${s.name} [${s.type}, ${s.durationMs}ms, ${s.status}]`).join(' -> '),
+      // A span with no recorded latency says so, instead of "undefinedms" or a made-up 0ms.
+      spans
+        .map((s) => `${s.name} [${s.type}, ${s.durationMs != null ? `${s.durationMs}ms` : 'latency not recorded'}, ${s.status}]`)
+        .join(' -> '),
     ]
       .map(csvCell)
       .join(',');

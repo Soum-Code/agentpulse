@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { prefersReducedMotion } from '../../utils/liquidHoverAnime';
-import { agentSubtitle } from '../../lib/agentFormat';
+import { agentSubtitle, formatLatencyMs } from '../../lib/agentFormat';
 import {
   Search,
   Bot,
@@ -177,7 +177,8 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
         typeLabel: 'Trace',
         title: `Trace ${trace.id}: ${trace.inputPreview.slice(0, 48)}...`,
         // totalTokens is undefined when no span reported tokens; it printed "undefined tokens".
-        subtitle: `${trace.agentName} · ${trace.durationMs}ms${trace.totalTokens != null ? ` · ${trace.totalTokens} tokens` : ''}`,
+        // durationMs is undefined when the trace has no recorded duration: then it is left out.
+        subtitle: `${trace.agentName}${trace.durationMs != null ? ` · ${formatLatencyMs(trace.durationMs)}` : ''}${trace.totalTokens != null ? ` · ${trace.totalTokens} tokens` : ''}`,
         badge: trace.status.toUpperCase(),
         statusSemantic: trace.status === 'error' ? 'rose' : trace.status === 'warning' ? 'amber' : 'neutral',
         icon: Activity,

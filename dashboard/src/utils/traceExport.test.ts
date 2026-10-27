@@ -508,3 +508,78 @@ describe('clipboard', () => {
     expect(await copyTextToClipboard('tr-test-123')).toBe(false);
   });
 });
+
+describe('exports of a trace with no recorded duration or status', () => {
+  // A trace as adapters.ts builds it from a list entry whose spans carry no latency and whose
+  // alerts were never loaded: duration and status are unknown, not 0 and not ok.
+  const unrecorded: Trace = {
+    id: 'tr-unrecorded',
+    agentId: 'planner',
+    agentName: 'multi-agent (2)',
+    agentIds: ['planner', 'retriever'],
+    rootSpanId: 'a',
+    status: 'unknown',
+    timestamp: '2026-10-27T10:00:00',
+    inputPreview: 'q',
+    outputPreview: 'a',
+    spans: [
+      { id: 'a', traceId: 'tr-unrecorded', name: 'plan', type: 'agent', status: 'ok', startOffsetMs: 0 },
+      { id: 'b', traceId: 'tr-unrecorded', name: 'fetch', type: 'tool', status: 'ok', startOffsetMs: 5 },
+    ],
+  };
+
+  it('writes null for the duration and the status in the JSON, never 0 and never "ok"', () => {
+    const { trace } = formatTraceForExport(unrecorded);
+    expect(trace.durationMs).toBeNull();
+    expect(trace.status).toBeNull();
+    expect(trace.analysis.slowestSpan).toBeNull();
+    // The span keeps its key, with null, instead of dropping it or writing 0.
+    expect(trace.spans.map((s) => s.durationMs)).toEqual([null, null]);
+    expect(formatTraceLogBody(unrecorded)).toContain('"durationMs": null');
+    expect(formatTraceLogBody(unrecorded)).not.toContain('"durationMs": 0');
+  });
+
+  it('picks the slowest span among the spans that recorded a latency', () => {
+    const partial: Trace = {
+      ...unrecorded,
+      spans: [
+        { ...unrecorded.spans[0], durationMs: 40 },
+        unrecorded.spans[1],
+        { ...unrecorded.spans[0], id: 'c', durationMs: 90 },
+      ],
+    };
+    expect(formatTraceForExport(partial).trace.analysis.slowestSpan?.id).toBe('c');
+    // A real 0 ms span is a measurement, and it can be the slowest only if nothing is longer.
+    const zero: Trace = { ...unrecorded, spans: [{ ...unrecorded.spans[0], durationMs: 0 }, unrecorded.spans[1]] };
+    expect(formatTraceForExport(zero).trace.analysis.slowestSpan).toMatchObject({ id: 'a', durationMs: 0 });
+  });
+
+  it('leaves the duration and status cells empty in the CSV, and says so in the span list', () => {
+    const [headerLine, rowLine] = formatTracesAsCsv([unrecorded]).split('\n');
+    const header = headerLine.slice(1, -1).split('","');
+    const row = rowLine.slice(1, -1).split('","');
+    const cell = (name: string) => row[header.indexOf(name)];
+    expect(cell('Duration (ms)')).toBe('');
+    expect(cell('Status')).toBe('');
+    expect(cell('Spans Hierarchy')).toBe('plan [agent, latency not recorded, ok] -> fetch [tool, latency not recorded, ok]');
+    expect(rowLine).not.toContain('undefined');
+    expect(rowLine).not.toContain('NaN');
+  });
+
+  it('lists every agent of a multi-agent trace, in the JSON and in the CSV Agent ID cell', () => {
+    expect(formatTraceForExport(unrecorded).trace.agentIds).toEqual(['planner', 'retriever']);
+    expect(formatTraceForExport(sparseTrace).trace.agentIds).toBeNull();
+    const [headerLine, rowLine] = formatTracesAsCsv([unrecorded]).split('\n');
+    const header = headerLine.slice(1, -1).split('","');
+    const row = rowLine.slice(1, -1).split('","');
+    expect(row[header.indexOf('Agent ID')]).toBe('planner; retriever');
+    expect(row[header.indexOf('Agent Name')]).toBe('multi-agent (2)');
+  });
+
+  it('keeps a measured status and duration as they are', () => {
+    const { trace } = formatTraceForExport(mockTrace);
+    expect(trace.status).toBe('error');
+    expect(trace.durationMs).toBe(1450);
+    expect(trace.spans.map((s) => s.durationMs)).toEqual([850, 1200]);
+  });
+});
