@@ -103,7 +103,7 @@ export const ProductHeader: React.FC<ProductHeaderProps> = ({
   const hasContextHierarchy = !!(effectiveAgentName || selectedTrace || selectedSpan || selectedIncident);
 
   return (
-    <header className="sticky top-0 z-30 ios-ultra-thin ios-ultra-thin-header px-4 sm:px-6 py-2.5 flex items-center justify-between text-xs font-mono relative">
+    <header className="sticky top-0 z-30 ios-ultra-thin ios-ultra-thin-header px-4 sm:px-6 py-2.5 flex flex-wrap items-center justify-between gap-y-1 text-xs font-mono relative">
       {/* Top Specular Beam */}
       <div className="absolute inset-x-0 top-0 h-[1px] liquid-specular-beam pointer-events-none" />
 
@@ -242,8 +242,10 @@ export const ProductHeader: React.FC<ProductHeaderProps> = ({
         )}
       </div>
 
-      {/* Right Controls */}
-      <div className="flex items-center space-x-2.5 shrink-0 z-10">
+      {/* Right Controls. In short: they wrap onto a second row on a narrow window. Without the
+          wrap (it used to be shrink-0), the project button, Sign In and Public Site were pushed
+          out of sight below about 1780 px. */}
+      <div className="flex flex-wrap items-center justify-end gap-x-2.5 gap-y-1.5 min-w-0 z-10">
         {/* Quick Jump to Flagship Live RAG Chat (Aetheris Iris) */}
         <button
           onClick={() => onSelectTab('rag-monitor')}
