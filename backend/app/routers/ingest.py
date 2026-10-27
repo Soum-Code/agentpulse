@@ -13,6 +13,9 @@
 # main.py adds `router`. It uses job_queue.enqueue_job, runtime_metrics.COUNTERS, the Trace /
 # Span / AgentRecord tables, and the WebSocket manager (routers/websocket.py) to push live
 # updates. The worker (`python -m app.worker`) reads the queue and does the scoring.
+# POST /v1/simulate is also the one write the public site lets through without the write
+# password, so it first passes the limits in services/simulate_guard.py (runs per IP, runs per
+# day, queue depth). POST /v1/ingest is not limited by that file and works as before.
 
 from __future__ import annotations
 
@@ -46,6 +49,9 @@ from app.services.grounding import nli_breakdown
 from app.services.job_queue import enqueue_job
 # COUNTERS = in-memory counters (spans accepted, failed, duplicate...) that /v1/platform shows.
 from app.services.runtime_metrics import COUNTERS
+# check_simulate_request = the limits of the public Telemetry Lab (runs per IP, runs per day,
+# queue depth). It answers with the 429 reply to send, or None when the run may go ahead.
+from app.services.simulate_guard import check_simulate_request
 
 # In short: this file only saves spans and queues work. Scoring happens in the worker.
 # Evaluation no longer runs in this process. Ingest persists spans, enqueues a
@@ -344,7 +350,10 @@ Scenario = Literal["clean", "hallucination", "tool_mismatch", "drift", "disagree
 # topic text that is put into the first span (only the three five-agent scenarios use it).
 class SimulateRequest(BaseModel):
     scenario: Scenario = "clean"
-    query: str = "Advances in multimodal foundation models"
+    # In short: at most 500 characters (422 above that). This route is public, and the text is
+    # stored in two spans and scored by the worker; without a limit, one request could carry a
+    # megabyte of it, and the daily cap would not bound the disk it fills.
+    query: str = Field(default="Advances in multimodal foundation models", max_length=500)
 
 
 # The reply of POST /v1/simulate: the ingest counts plus the trace to read the results from
@@ -574,7 +583,14 @@ def _pipeline_spans(
 # queued and pushed to WebSocket clients exactly like real ones. The worker must still score
 # them. One request is enough even for the 32-span drift scenario: the rate limit only
 # watches /v1/ingest, and this call does not go through HTTP again.
-@router.post("/simulate", response_model=SimulateResponse)
+# This is the one write the public site lets through without the write password (see
+# deploy/azure/Caddyfile), so it is limited here: see services/simulate_guard.py. The 429 reply
+# has a Retry-After header and a JSON body {"detail": <sentence>, "code": ..., "retry_after": n}.
+@router.post(
+    "/simulate",
+    response_model=SimulateResponse,
+    responses={429: {"description": "Too many runs from this IP or for the site today, or the evaluator is busy."}},
+)
 async def simulate_pipeline(
     req: SimulateRequest,
     background_tasks: BackgroundTasks,
@@ -582,6 +598,12 @@ async def simulate_pipeline(
 ):
     """Run a failure scenario through the real ingest, queue and worker."""
     import uuid
+    # Step 0: the limits. A refused run builds nothing, writes nothing and is not counted.
+    # (Returning the reply object skips response_model, which is what a 429 needs.)
+    refused = await check_simulate_request(request)
+    if refused is not None:
+        return refused
+
     # Step 1: make new random ids. trace_id is 32 hex characters. span_base is the first 8
     # characters of a second random id; span ids are span_base plus "01", "02", ...
     trace_id = uuid.uuid4().hex

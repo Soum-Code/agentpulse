@@ -23,3 +23,7 @@
 *.json  text
 *.yml   text
 *.yaml  text
+
+# A shell script with Windows line endings stops at its first line ("\r: command not found"),
+# and a Windows checkout writes them. This one is run by hand from a checkout on any system.
+deploy/azure/check_caddy_paths.sh  text eol=lf

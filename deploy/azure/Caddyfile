@@ -13,15 +13,25 @@
 # `caddy hash-password`, never the password itself) reach Caddy from .env through
 # the compose file.
 #
-# One write is public on purpose: /chat*, the live chat (the `chat` compose service,
-# demo/chat_server.py). It reaches that service and nothing else, and the service
-# limits it itself: turns per IP per minute and per day, a daily cap for the site,
-# a maximum question length and a kill switch (deploy/azure/README.md, "The live
-# chat"). If the chat container is not running, /chat* answers 502 and the rest of
-# the site is unaffected: Caddy looks the name up per request, not at start.
+# Two writes are public on purpose.
 #
-# Unset, they fall back to the placeholders below (the compose file does the same
-# for an empty value). The placeholder hash matches no password, so every write
+# 1. /chat*, the live chat (the `chat` compose service, demo/chat_server.py). It reaches
+#    that service and nothing else, and the service limits it itself: turns per IP per
+#    minute and per day, a daily cap for the site, a maximum question length and a kill
+#    switch (deploy/azure/README.md, "The live chat"). If the chat container is not
+#    running, /chat* answers 502 and the rest of the site is unaffected: Caddy looks the
+#    name up per request, not at start.
+#
+# 2. POST /v1/simulate, the Telemetry Lab's "Run scenario". Exactly that method and that
+#    path, nothing else. Unlike the chat it goes through the dashboard's nginx, which adds
+#    the server's AGENTPULSE_API_KEY, so the backend limits it itself: runs per IP per hour
+#    and per day, a daily cap for the site and a refusal when the evaluation queue is deep
+#    (backend/app/services/simulate_guard.py; deploy/azure/README.md, "Telemetry Lab").
+#    It writes only demo traces under one fixed service name. To close it again, delete
+#    its line in the @write block below and recreate Caddy.
+#
+# Unset, AGENTPULSE_WRITE_USER and AGENTPULSE_WRITE_HASH fall back to the placeholders
+# below (the compose file does the same for an empty value). The placeholder hash matches no password, so every write
 # is refused with 401, reads keep working and Caddy still starts: a missing value
 # must not take the whole site down. It has to stay valid base64, though; Caddy
 # refuses to start on anything else.
@@ -35,6 +45,14 @@
 		# matches. The chat's line uses the same matcher as its handle block below,
 		# so whatever skips the password goes to the chat service and only there.
 		not path /chat*
+		# The Telemetry Lab's line. It is an `expression`, not `path /v1/simulate`, on purpose:
+		# `path` ignores letter case, merges double slashes and resolves "." and ".." before it
+		# compares, and it does not look at the method. Tried against this file with
+		# check_caddy_paths.sh, that let PUT, PATCH and DELETE on the path, /v1//simulate,
+		# /V1/simulate and /v1/x/../simulate skip the password. {http.request.uri.path} is the
+		# path as it arrived (percent-escapes decoded, nothing merged or resolved), so the two
+		# == match POST and exactly /v1/simulate and nothing else.
+		not expression `{http.request.method} == 'POST' && {http.request.uri.path} == '/v1/simulate'`
 	}
 	basic_auth @write bcrypt "AgentPulse writes" {
 		{$AGENTPULSE_WRITE_USER:writes-disabled} {$AGENTPULSE_WRITE_HASH:ZGlzYWJsZWQ=}
