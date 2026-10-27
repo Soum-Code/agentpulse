@@ -54,13 +54,15 @@ export const ConnectionModal: React.FC<ConnectionModalProps> = ({
     }, 600);
   };
 
+  // In short: styled with the chat's .rag-* classes (16 px card, measured status colours, the
+  // accent focus ring on the fields, one tinted Save button), so it follows the palette.
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-150 font-mono text-xs">
-      <div className={`relative w-full max-w-lg ${theme.cardBg} border ${theme.cardBorder} rounded-xl shadow-2xl p-6 ${theme.textColor}`}>
+      <div className={`relative w-full max-w-lg ${theme.cardBg} border ${theme.cardBorder} rounded-2xl shadow-2xl p-6 ${theme.textColor}`}>
         <div className={`flex items-center justify-between pb-4 border-b ${theme.divider}`}>
           <div className="flex items-center gap-2">
             <Server className={`w-4 h-4 ${theme.accentText}`} />
-            <span className={`text-sm font-semibold tracking-wide ${theme.textColor} uppercase`}>
+            <span className={`text-sm font-semibold tracking-tight ${theme.textColor}`}>
               Pipeline Service Endpoints
             </span>
           </div>
@@ -79,13 +81,13 @@ export const ConnectionModal: React.FC<ConnectionModalProps> = ({
             <span className="flex items-center gap-1.5 font-medium">
               {ragStatus.ok ? (
                 <>
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                  <span className="text-emerald-400">ONLINE</span>
+                  <CheckCircle2 className="w-3.5 h-3.5 rag-ok-text" />
+                  <span className="rag-ok-text">ONLINE</span>
                 </>
               ) : (
                 <>
-                  <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
-                  <span className="text-amber-400">{ragStatus.status.toUpperCase()}</span>
+                  <AlertTriangle className="w-3.5 h-3.5 rag-warn-text" />
+                  <span className="rag-warn-text">{ragStatus.status.toUpperCase()}</span>
                 </>
               )}
             </span>
@@ -95,15 +97,15 @@ export const ConnectionModal: React.FC<ConnectionModalProps> = ({
             <span className="flex items-center gap-1.5 font-medium">
               {evaluatorStatus.workers_alive > 0 ? (
                 <>
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                  <span className="text-emerald-400">
+                  <CheckCircle2 className="w-3.5 h-3.5 rag-ok-text" />
+                  <span className="rag-ok-text">
                     ALIVE ({evaluatorStatus.workers_alive} {evaluatorStatus.workers_alive === 1 ? 'worker' : 'workers'})
                   </span>
                 </>
               ) : (
                 <>
-                  <AlertTriangle className="w-3.5 h-3.5 text-rose-400" />
-                  <span className="text-rose-400">NO WORKERS ALIVE</span>
+                  <AlertTriangle className="w-3.5 h-3.5 rag-err-text" />
+                  <span className="rag-err-text">NO WORKERS ALIVE</span>
                 </>
               )}
             </span>
@@ -120,9 +122,9 @@ export const ConnectionModal: React.FC<ConnectionModalProps> = ({
               value={localRagUrl}
               onChange={(e) => setLocalRagUrl(e.target.value)}
               placeholder="empty: this site's /chat; locally http://localhost:8100"
-              className={`w-full px-3 py-2 ${theme.inputBg} border ${theme.inputBorder} rounded-lg ${theme.textColor} placeholder-neutral-500 focus:outline-none focus:border-cyan-500 text-xs`}
+              className={`w-full px-3 py-2 ${theme.inputBg} border ${theme.inputBorder} rounded-lg ${theme.textColor} rag-placeholder rag-composer focus:outline-none text-xs`}
             />
-            <span className={`text-[10px] ${theme.subtextColor} mt-1 block`}>
+            <span className={`text-[11px] ${theme.subtextColor} mt-1 block`}>
               Handles <code className={theme.textColor}>POST /chat/stream</code>, <code className={theme.textColor}>GET /chat/health</code> and <code className={theme.textColor}>GET /chat/corpus</code>.
             </span>
           </div>
@@ -136,9 +138,9 @@ export const ConnectionModal: React.FC<ConnectionModalProps> = ({
               value={localAgentPulseUrl}
               onChange={(e) => setLocalAgentPulseUrl(e.target.value)}
               placeholder="http://localhost:8000"
-              className={`w-full px-3 py-2 ${theme.inputBg} border ${theme.inputBorder} rounded-lg ${theme.textColor} placeholder-neutral-500 focus:outline-none focus:border-cyan-500 text-xs`}
+              className={`w-full px-3 py-2 ${theme.inputBg} border ${theme.inputBorder} rounded-lg ${theme.textColor} rag-placeholder rag-composer focus:outline-none text-xs`}
             />
-            <span className={`text-[10px] ${theme.subtextColor} mt-1 block`}>
+            <span className={`text-[11px] ${theme.subtextColor} mt-1 block`}>
               AgentPulse ingestion and evaluation API (:8000 or current origin).
             </span>
           </div>
@@ -153,17 +155,17 @@ export const ConnectionModal: React.FC<ConnectionModalProps> = ({
                 value={localApiKey}
                 onChange={(e) => setLocalApiKey(e.target.value)}
                 placeholder="ap_live_..."
-                className={`w-full pl-8 pr-3 py-2 ${theme.inputBg} border ${theme.inputBorder} rounded-lg ${theme.textColor} placeholder-neutral-500 focus:outline-none focus:border-cyan-500 text-xs`}
+                className={`w-full pl-8 pr-3 py-2 ${theme.inputBg} border ${theme.inputBorder} rounded-lg ${theme.textColor} rag-placeholder rag-composer focus:outline-none text-xs`}
               />
               <Key className={`w-3.5 h-3.5 ${theme.subtextColor} absolute left-2.5 top-2.5`} />
             </div>
-            <span className={`text-[10px] ${theme.subtextColor} mt-1 block`}>
+            <span className={`text-[11px] ${theme.subtextColor} mt-1 block`}>
               Optional for local testing if unauthenticated.
             </span>
           </div>
 
           <div className={`pt-4 border-t ${theme.divider} flex items-center justify-between`}>
-            <span className={`text-[10px] ${theme.subtextColor}`}>
+            <span className={`text-[11px] ${theme.subtextColor}`}>
               Settings persist in browser session.
             </span>
             <div className="flex gap-2">
@@ -176,7 +178,7 @@ export const ConnectionModal: React.FC<ConnectionModalProps> = ({
               </button>
               <button
                 type="submit"
-                className="px-4 py-1.5 rounded bg-cyan-500 text-black font-semibold text-xs hover:bg-cyan-400 transition-colors flex items-center gap-1"
+                className="px-4 py-1.5 rag-primary font-semibold text-xs flex items-center gap-1"
               >
                 {saved ? <CheckCircle2 className="w-3.5 h-3.5" /> : null}
                 {saved ? 'Saved' : 'Save Endpoints'}
