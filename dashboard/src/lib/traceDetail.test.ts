@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 vi.mock('./api', () => ({ api: { getTrace: vi.fn() } }));
 
 import { api } from './api';
-import { loadFullTrace, loadFullTraces } from './traceDetail';
+import { keepLoadedDetail, loadFullTrace, loadFullTraces } from './traceDetail';
 import type { Trace } from '../types';
 
 const entry = (id: string): Trace => ({
@@ -66,5 +66,25 @@ describe('loadFullTrace', () => {
     const out = await loadFullTraces([entry('a'), { ...entry('b'), alerts: [] }, entry('c')]);
     expect(out.map((t) => t.spans.length)).toEqual([1, 0, 1]);
     expect(vi.mocked(api.getTrace).mock.calls.map((c) => c[0])).toEqual(['a', 'c']);
+  });
+});
+
+describe('keepLoadedDetail', () => {
+  const loaded = (id: string): Trace => ({ ...entry(id), status: 'error', alerts: [], spans: [] });
+
+  it('puts back the detail of a trace that was loaded by an earlier poll', () => {
+    const previous = [loaded('a'), entry('b')];
+    const listed = [entry('a'), entry('b'), entry('c')];
+    const shown = keepLoadedDetail(listed, previous);
+    // 'a' keeps its loaded status instead of dropping back to a list entry for a moment.
+    expect(shown[0]).toBe(previous[0]);
+    // 'b' was only a list entry before, and 'c' is new: both stay as listed.
+    expect(shown[1]).toBe(listed[1]);
+    expect(shown[2]).toBe(listed[2]);
+  });
+
+  it('follows the new list: dropped traces go, order is the list\'s', () => {
+    const shown = keepLoadedDetail([entry('z'), entry('a')], [loaded('a'), loaded('gone')]);
+    expect(shown.map((t) => t.id)).toEqual(['z', 'a']);
   });
 });

@@ -18,3 +18,16 @@ export async function loadFullTrace(trace: Trace): Promise<Trace> {
 export function loadFullTraces(traces: Trace[]): Promise<Trace[]> {
   return Promise.all(traces.map(loadFullTrace));
 }
+
+/**
+ * Puts back the detail already loaded for a trace while a poll refreshes the list.
+ *
+ * Every poll rebuilds the list from GET /v1/traces, whose entries have no spans and no alerts, and
+ * then re-fetches the newest few. Without this, those few would drop to 'unknown' (and lose their
+ * duration and tokens) for the moment between the two, on every poll. A trace that was never
+ * loaded stays a list entry. Newer detail replaces this as soon as it arrives.
+ */
+export function keepLoadedDetail(listed: Trace[], previous: Trace[]): Trace[] {
+  const loaded = new Map(previous.filter((t) => t.alerts !== undefined).map((t) => [t.id, t]));
+  return listed.map((t) => loaded.get(t.id) ?? t);
+}

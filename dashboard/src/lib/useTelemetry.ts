@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { api } from './api';
-import { loadFullTrace } from './traceDetail';
+import { keepLoadedDetail, loadFullTrace } from './traceDetail';
+import { escalateFromAlertFeed } from './traceStatus';
 import {
   DriftEntry,
   toAgents,
@@ -58,6 +59,10 @@ export function useTelemetry(paused = false): TelemetryState {
   const [connected, setConnected] = useState(false);
   const [tick, setTick] = useState(0);
 
+  // The traces on screen, readable from inside load() without making it depend on them.
+  const tracesRef = useRef<Trace[]>([]);
+  tracesRef.current = traces;
+
   const mounted = useRef(true);
   useEffect(() => {
     mounted.current = true;
@@ -86,9 +91,14 @@ export function useTelemetry(paused = false): TelemetryState {
         setDriftProfiles(toDriftProfiles(driftEntries));
         setIncidents(toIncidents(alertsRes.alerts ?? []));
 
-        // Show the list immediately, then fill in spans for the newest traces.
-        const listed = (tracesRes.traces ?? []).map((t) => toTrace(t));
-        setTraces(listed);
+        // Show the list immediately, then fill in spans for the newest traces. A list entry has no
+        // alerts, so its status is unknown, except where the alert feed above already names it.
+        // `shown` keeps the detail loaded by an earlier poll for a trace until the new detail
+        // arrives, so statuses do not flip to unknown and back every ten seconds.
+        const alertFeed = alertsRes.alerts ?? [];
+        const listed = (tracesRes.traces ?? []).map((t) => escalateFromAlertFeed(toTrace(t), alertFeed));
+        const shown = keepLoadedDetail(listed, tracesRef.current);
+        setTraces(shown);
         setConnected(true);
         setError(null);
         setFailure(null);
@@ -100,12 +110,12 @@ export function useTelemetry(paused = false): TelemetryState {
             try {
               return await loadFullTrace(shallow);
             } catch {
-              return listed[i];
+              return shown[i];
             }
           }),
         );
         if (cancelled || !mounted.current) return;
-        setTraces([...hydrated, ...listed.slice(HYDRATE_LIMIT)]);
+        setTraces([...hydrated, ...shown.slice(HYDRATE_LIMIT)]);
       } catch (err) {
         if (cancelled || !mounted.current) return;
         setConnected(false);

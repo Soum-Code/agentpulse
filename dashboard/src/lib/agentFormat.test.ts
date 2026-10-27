@@ -22,7 +22,7 @@ const agent = (over: Partial<Agent> = {}): Agent => ({
   name: 'a',
   status: 'idle',
   successRate: 100,
-  totalTraces24h: 1,
+  totalSpans: 1,
   lastActive: '2026-10-25T08:00:00',
   ...over,
 });

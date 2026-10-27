@@ -7,10 +7,13 @@
  * token count was never recorded is not a fast trace or a zero-token trace, so it never matches a
  * duration bracket and sorts after every measured one.
  */
-import type { Trace } from '../types';
+import type { Trace, TraceStatus } from '../types';
 import { parseDateTimeToMs } from '../utils/dateUtils';
+import { TRACE_STATUS_RANK } from './traceStatus';
 
-export type TraceStatusFilter = 'all' | 'ok' | 'warning' | 'error';
+// 'unknown' is a status of its own (a trace whose spans and alerts are not loaded yet), so it can
+// be filtered for and counted, and it is never folded into 'ok'.
+export type TraceStatusFilter = 'all' | TraceStatus;
 export type TraceDurationPreset = 'all' | 'fast' | 'moderate' | 'slow' | 'long' | 'custom';
 export type TraceSortOption =
   | 'timestamp-desc'
@@ -62,11 +65,18 @@ export interface TraceFilterState {
 }
 
 /**
- * Whether the trace has a recorded duration. adapters.ts gives 0 to a trace with neither end_time
- * nor loaded spans, and a real trace is never 0 ms, so 0 means "unknown".
+ * Whether the trace has a recorded duration. adapters.ts leaves durationMs undefined for a trace
+ * with neither end_time nor a span latency. 0 and NaN also count as unknown (a real trace is
+ * never 0 ms), which keeps the rule true for a trace built by hand or by an older caller.
  */
 export function hasDuration(t: Trace): boolean {
-  return Number.isFinite(t.durationMs) && t.durationMs > 0;
+  return t.durationMs != null && Number.isFinite(t.durationMs) && t.durationMs > 0;
+}
+
+/** Whether the agent has a span in the trace. A multi-agent trace belongs to each of its agents,
+ *  not only to the first span's; before the spans load, agentId (the service name) is all there is. */
+function hasAgent(t: Trace, agentId: string): boolean {
+  return t.agentIds ? t.agentIds.includes(agentId) : t.agentId === agentId;
 }
 
 /** True when the trace falls in the chosen duration bracket. Unknown durations match only 'all'. */
@@ -107,6 +117,7 @@ function matchesSearch(t: Trace, search: string): boolean {
     t.id.toLowerCase().includes(q) ||
     t.agentName.toLowerCase().includes(q) ||
     t.agentId.toLowerCase().includes(q) ||
+    (t.agentIds ?? []).some((id) => id.toLowerCase().includes(q)) ||
     t.status.toLowerCase().includes(q) ||
     t.inputPreview.toLowerCase().includes(q) ||
     (t.tags ?? []).some((tag) => tag.toLowerCase().includes(q))
@@ -124,22 +135,23 @@ const newestFirst = (a: Trace, b: Trace): number => {
 export function filterAndSortTraces(traces: Trace[], f: TraceFilterState): Trace[] {
   const list = traces.filter(
     (t) =>
-      (!f.agentId || t.agentId === f.agentId) &&
+      (!f.agentId || hasAgent(t, f.agentId)) &&
       (f.status === 'all' || t.status === f.status) &&
       matchesDuration(t, f.durationPreset, f.customMinDuration, f.customMaxDuration) &&
       matchesSearch(t, f.search),
   );
 
-  // Rank for status-priority: errors first, then warnings, then ok.
-  const rank: Record<string, number> = { error: 0, warning: 1, ok: 2 };
+  // Status priority puts errors first, then warnings, then ok, then unknown (TRACE_STATUS_RANK).
+  const rank: Record<string, number> = TRACE_STATUS_RANK;
   return list.sort((a, b) => {
     switch (f.sort) {
       case 'duration-desc':
       case 'duration-asc': {
-        // A trace with no recorded duration goes last in either direction.
+        // A trace with no recorded duration goes last in either direction, and two of them
+        // are ordered by time (comparing two undefined durations would give NaN).
         if (hasDuration(a) !== hasDuration(b)) return hasDuration(a) ? -1 : 1;
-        if (a.durationMs !== b.durationMs) {
-          return f.sort === 'duration-desc' ? b.durationMs - a.durationMs : a.durationMs - b.durationMs;
+        if (hasDuration(a) && a.durationMs !== b.durationMs) {
+          return f.sort === 'duration-desc' ? b.durationMs! - a.durationMs! : a.durationMs! - b.durationMs!;
         }
         return newestFirst(a, b);
       }
@@ -164,13 +176,13 @@ export function filterAndSortTraces(traces: Trace[], f: TraceFilterState): Trace
 }
 
 export interface TraceCounts {
-  status: { all: number; ok: number; warning: number; error: number };
+  status: { all: number; ok: number; warning: number; error: number; unknown: number };
   duration: { all: number; fast: number; moderate: number; slow: number; long: number; unknown: number };
 }
 
 /** How many traces each status and duration bracket holds, within one agent's scope if given. */
 export function countTraces(traces: Trace[], agentId?: string): TraceCounts {
-  const scope = traces.filter((t) => !agentId || t.agentId === agentId);
+  const scope = traces.filter((t) => !agentId || hasAgent(t, agentId));
   const inBracket = (p: TraceDurationPreset) => scope.filter((t) => matchesDuration(t, p)).length;
   return {
     status: {
@@ -178,6 +190,7 @@ export function countTraces(traces: Trace[], agentId?: string): TraceCounts {
       ok: scope.filter((t) => t.status === 'ok').length,
       warning: scope.filter((t) => t.status === 'warning').length,
       error: scope.filter((t) => t.status === 'error').length,
+      unknown: scope.filter((t) => t.status === 'unknown').length,
     },
     duration: {
       all: scope.length,

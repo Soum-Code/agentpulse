@@ -98,7 +98,10 @@ export interface Agent {
   costPerHour?: number;
   /** Percentage, 0-100, rounded to one decimal (1 - error_rate). */
   successRate: number;
-  totalTraces24h: number;
+  /** total_spans from GET /v1/agents: every span the agent has sent since it was first seen.
+   *  (This used to be called totalTraces24h, which was wrong twice: it is spans, not traces,
+   *  and it is a lifetime count, not the last 24 hours.) */
+  totalSpans: number;
   /** agent_role from the API; undefined when the SDK did not send one. */
   description?: string;
   framework?: string;
@@ -118,6 +121,9 @@ export interface Agent {
 
 export type SpanType = 'agent' | 'tool' | 'model' | 'evaluator' | 'retrieval';
 export type SpanStatus = 'ok' | 'warning' | 'error';
+/** A trace's status adds 'unknown' to a span's: it is what a trace is until its detail (spans
+ *  and alerts) has been loaded, because nothing can then say it is fine. See lib/traceStatus.ts. */
+export type TraceStatus = SpanStatus | 'unknown';
 
 export interface EvaluatorResult {
   id: string;
@@ -142,10 +148,10 @@ export interface Span {
   type: SpanType;
   status: SpanStatus;
   startOffsetMs: number;
-  /** For layout (bar widths, sums): latency_ms, or 0 when the SDK sent none. Print latencyMs. */
-  durationMs: number;
-  /** The span's recorded latency_ms; undefined when it was not recorded. What the views print. */
-  latencyMs?: number;
+  /** The span's latency_ms. Undefined when the SDK sent none: not recorded is not 0 ms. The
+   *  waterfall reads it as `?? 0` only to lay a bar out; everything printed or exported keeps
+   *  the undefined (a dash, an empty cell, null). */
+  durationMs?: number;
   agentLane?: string;
   model?: string;
   prompt?: string;
@@ -153,9 +159,11 @@ export interface Span {
   toolName?: string;
   toolArgs?: Record<string, any>;
   toolOutput?: Record<string, any> | string;
+  // Present when the span reported at least one count. Each side is undefined when only the
+  // other was reported; total is the sum of the sides that were.
   tokens?: {
-    prompt: number;
-    completion: number;
+    prompt?: number;
+    completion?: number;
     total: number;
   };
   cost?: number;
@@ -183,12 +191,20 @@ export interface TraceAlert {
 
 export interface Trace {
   id: string;
+  /** The first span's agent (the service name for a trace whose spans are not loaded); what
+   *  the Agents view and the other views match a trace to an agent by. */
   agentId: string;
+  /** Display name: the agent, or 'multi-agent (n)' when the spans come from n agents. */
   agentName: string;
+  /** Every distinct agent that has a span in the trace; undefined while the spans are not loaded. */
+  agentIds?: string[];
   sessionId?: string;
   rootSpanId: string;
-  status: 'ok' | 'warning' | 'error';
-  durationMs: number;
+  /** The worst of the span statuses and the alerts, or 'unknown' until both are loaded. */
+  status: TraceStatus;
+  /** Wall time of the trace in ms. Undefined when the API gave no end time and no span a
+   *  latency: not recorded is not 0 ms. */
+  durationMs?: number;
   // Undefined when no span reported tokens. adapters.ts leaves it unset, so it is optional here.
   totalTokens?: number;
   cost?: number;
