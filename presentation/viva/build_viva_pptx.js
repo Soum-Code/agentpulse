@@ -48,7 +48,7 @@ const BODY_Y = 2.3, BODY_B = 6.7;
 // ---------- notes from the HTML deck ----------
 // In short: pull every <aside class="notes"> in order and decode the few entities used.
 const html = fs.readFileSync(path.join(HERE, 'AgentPulse_Viva.html'), 'utf8');
-const NOTES = [...html.matchAll(/<aside class="notes">([\s\S]*?)<\/aside>/g)].map((m) =>
+const NOTES = [...html.replace(/<!--[\s\S]*?-->/g, '').matchAll(/<aside class="notes">([\s\S]*?)<\/aside>/g)].map((m) =>
   m[1].replace(/&gt;/g, '>').replace(/&lt;/g, '<').replace(/&amp;/g, '&').trim());
 
 // ---------- layouts ----------
