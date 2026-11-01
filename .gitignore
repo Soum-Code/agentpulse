@@ -81,3 +81,6 @@ linkedin_profile.md
 
 # The live chat's kill switch on the VM (deploy/azure/docker-compose.azure.yml mounts it).
 chat-control/
+
+# The automatic demo's video, screenshots and exported trace JSON (demo/auto_demo/README.md).
+demo/auto_demo/output/
