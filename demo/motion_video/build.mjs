@@ -278,16 +278,22 @@ function shotScene(id, shot, srcName, opt) {
 
   const L = [];
   // In short: a cut inside a section lands slightly large and settles, so it reads as meant.
-  if (shot.settle) L.push(`tl.fromTo("#${id}-cam", { scale: 1.035, x: ${-W * 0.0175}, y: ${-H * 0.0175} }, { scale: 1, x: 0, y: 0, duration: 0.5, ease: "power3.out" }, 0);`);
-  else L.push(`tl.set("#${id}-cam", { scale: 1, x: 0, y: 0 }, 0);`);
+  // In short: camera moves never overlap; each starts when the one before it has finished.
+  let camFree = 0;
+  const camTo = (f, at, d, ease = "power2.inOut") => {
+    const start = Math.max(at, camFree);
+    const len = Math.min(d, dur - 0.02 - start);
+    if (len < 0.1) return;
+    L.push(`tl.to("#${id}-cam", { scale: ${f.s}, x: ${f.x}, y: ${f.y}, duration: ${r3(len)}, ease: "${ease}" }, ${r3(start)});`);
+    camFree = start + len;
+  };
+  if (shot.settle) {
+    L.push(`tl.fromTo("#${id}-cam", { scale: 1.035, x: ${r3(-W * 0.0175)}, y: ${r3(-H * 0.0175)} }, { scale: 1, x: 0, y: 0, duration: 0.5, ease: "power3.out" }, 0);`);
+    camFree = 0.5;
+  } else L.push(`tl.set("#${id}-cam", { scale: 1, x: 0, y: 0 }, 0);`);
   for (const h of holds) {
-    h.stops.forEach((st, i) => {
-      const d = i === 0 ? 0.9 : 0.75;
-      L.push(`tl.to("#${id}-cam", { scale: ${st.f.s}, x: ${st.f.x}, y: ${st.f.y}, duration: ${d}, ease: "power2.inOut" }, ${r3(st.t)});`);
-    });
-    const outAt = Math.min(h.end, dur - 0.05);
-    const outD = Math.min(0.8, Math.max(0.05, dur - outAt - 0.02));
-    L.push(`tl.to("#${id}-cam", { scale: 1, x: 0, y: 0, duration: ${r3(outD)}, ease: "power2.inOut" }, ${r3(outAt)});`);
+    h.stops.forEach((st, i) => camTo(st.f, st.t, i === 0 ? 0.9 : 0.75));
+    camTo({ s: 1, x: 0, y: 0 }, Math.min(h.end, dur - 0.85), 0.8);
   }
   // Cursor ring: it appears near the previous target (or the centre), glides to the element,
   // and a ripple spreads on the click.
@@ -413,9 +419,15 @@ export function splitIdle(a, b, events, idle) {
   let cur = a;
   let busyUntil = a + (idle.leadIn ?? 2);
   for (const [k0, k1] of [...keep, [b, b]]) {
-    if (k0 - busyUntil > min) {
+    const gap = k0 - busyUntil;
+    if (gap > min && gap / rate >= (idle.minShown ?? 1.5)) {
+      // Long enough to watch sped up: keep it, faster, labelled.
       if (busyUntil > cur) clips.push({ in: cur, out: busyUntil, rate: 1 });
       clips.push({ in: busyUntil, out: k0, rate, idle: true });
+      cur = k0;
+    } else if (gap > min && idle.cutShort) {
+      // Too short to show sped up without a flicker: cut it out; a dip marks the cut.
+      if (busyUntil > cur) clips.push({ in: cur, out: busyUntil, rate: 1 });
       cur = k0;
     }
     busyUntil = Math.max(busyUntil, k1);
@@ -474,7 +486,10 @@ function main() {
       const base = { ...c, in: Math.max(0, a0), out: Math.min(srcDur - 0.05, b0) };
       const idle = c.idle ?? sec.idle ?? cut.idle;
       if (!idle || c.rate) return [base];
-      return splitIdle(base.in, base.out, events, idle).map((p) => ({ ...base, ...p }));
+      // Pieces that touch (a speed change, not a cut) join without a dip or a settle.
+      return splitIdle(base.in, base.out, events, idle).map((p, i, all) => ({
+        ...base, ...p, cont: i > 0 && Math.abs(all[i - 1].out - p.in) < 0.01,
+      }));
     }),
   }));
   const overlap = 0.55; // a card covers the last/first 0.55 s of the footage around it
@@ -505,8 +520,8 @@ function main() {
         out: c.out,
         rate: c.rate ?? 1,
         zoom: c.zoom,
-        settle: ci > 0,
-        dipOut: ci < sec.clips.length - 1,
+        settle: ci > 0 && !c.cont,
+        dipOut: ci < sec.clips.length - 1 && !sec.clips[ci + 1].cont,
       };
       shot.events = events.filter((e) => e.t >= shot.in && e.t < shot.out && !(c.skip || []).includes(e.label));
       const id = `s${String(++shotN).padStart(2, "0")}`;

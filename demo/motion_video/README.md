@@ -2,8 +2,8 @@
 
 This folder turns the automatic demo recording (`demo/auto_demo`, a 1920x1080 browser video plus its `events.json`) into two polished MP4s, rendered with [HyperFrames](https://github.com/heygen-com/hyperframes) (Apache-2.0):
 
-- `output/highlight.mp4`: a short cut, with idle waits played at 8x.
-- `output/full.mp4`: the whole walkthrough, with idle waits played at 3x.
+- `output/highlight.mp4`: a cut of about 4 minutes. It keeps the main moments and drops the rest; a short dark dip marks each cut.
+- `output/full.mp4`: the whole walkthrough at real speed, about 10 minutes, with a card before each part.
 
 Both are 1920x1080 at 30 fps. Each one has:
 
@@ -11,7 +11,7 @@ Both are 1920x1080 at 30 fps. Each one has:
 - A newspaper-style card before each part of the dashboard, in the viva deck's look: off-white paper, black serif headlines, one deep red.
 - The camera zooming onto every element the demo clicks, types into or points at. The positions come from `events.json`, not from guesses.
 - A cursor ring that moves to each click, with a ripple on the click.
-- Speed-ups marked on screen: "Waiting, shown at 8× speed".
+- Speed-ups, when a cut asks for them, marked on screen ("Waiting, shown at 3× speed"). The 1 Nov recording has captions almost end to end, so neither cut uses one.
 
 There is no music and no voice. The recording's own captions narrate it.
 
@@ -72,6 +72,8 @@ That command writes two contact sheets to `output/verify/`:
 - `highlight_timeline.jpg`: one frame every 4 seconds.
 
 ## How a cut is written
+
+The two cuts in `cuts/` are tuned to the auto-demo run of 1 Nov 2026, 19:47 (22 steps, 9 min 27 s). For a new recording, check the clip edges against its `events.json`, or use the step anchors below.
 
 A cut file (`cuts/highlight.json`, `cuts/full.json`) lists sections. Each section has a card (`title`, `kicker`, `deck`; a word in `*stars*` is the red accent) and its clips. A clip edge is either a time in seconds or an anchor on the recording's own events, so a cut still fits after the demo is recorded again:
 
