@@ -188,11 +188,63 @@ aside.notes { display: none; }
 .notes-overlay.show { display: block; }
 
 /* ===========================================
-   MOTION: a newspaper does not bounce. One short fade per slide, none under reduced motion.
+   MOTION: smooth and quiet, like a page being laid out. Each slide builds in reading order:
+   the rules draw from left to right, then kicker, headline, exhibit (rows, bars, boxes one
+   after another), the side column, and the source line last. Nothing bounces; everything
+   uses opacity and transform only. All of it is off under prefers-reduced-motion.
    =========================================== */
-.slide.visible .frame, .slide.visible .front { animation: settle 0.45s ease-out both; }
-@keyframes settle { from { opacity: 0; } to { opacity: 1; } }
-@media (prefers-reduced-motion: reduce) { .slide.visible .frame, .slide.visible .front { animation: none; } }
+:root { --ease-smooth: cubic-bezier(0.22, 0.61, 0.36, 1); }
+@keyframes rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+@keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes draw { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes grow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+
+/* Running head: the double rule draws in, the labels fade */
+.slide.visible .runhead span { animation: fade 0.5s var(--ease-smooth) both; }
+.runhead::after { transform-origin: left center; }
+.slide.visible .runhead::after { animation: draw 0.8s var(--ease-smooth) both; }
+
+/* Reading order: kicker, headline, exhibit, side column, source */
+.slide.visible .kicker { animation: rise 0.6s var(--ease-smooth) 0.10s both; }
+.slide.visible .headline { animation: rise 0.7s var(--ease-smooth) 0.18s both; }
+.slide.visible .body > :first-child { animation: rise 0.7s var(--ease-smooth) 0.34s both; }
+.slide.visible .body > :nth-child(2) { animation: rise 0.7s var(--ease-smooth) 0.62s both; }
+.slide.visible .source { animation: fade 0.6s var(--ease-smooth) 0.9s both; }
+
+/* Exhibits build piece by piece */
+.slide.visible .ntable tr { animation: rise 0.5s var(--ease-smooth) both; }
+.slide.visible .ntable tr:nth-child(1) { animation-delay: 0.40s; }
+.slide.visible .ntable tr:nth-child(2) { animation-delay: 0.50s; }
+.slide.visible .ntable tr:nth-child(3) { animation-delay: 0.60s; }
+.slide.visible .ntable tr:nth-child(4) { animation-delay: 0.70s; }
+.slide.visible .ntable tr:nth-child(5) { animation-delay: 0.80s; }
+.slide.visible .ntable tr:nth-child(6) { animation-delay: 0.90s; }
+.bars .bar { transform-origin: left center; }
+.slide.visible .bars .bar { animation: grow 1.0s var(--ease-smooth) 0.5s both; }
+.slide.visible .bars .row:nth-child(2) .bar { animation-delay: 0.62s; }
+.slide.visible .bars .row:nth-child(3) .bar { animation-delay: 0.74s; }
+.slide.visible .bars .val { animation: fade 0.5s var(--ease-smooth) 1.25s both; }
+.slide.visible .flow .box, .slide.visible .chain > *, .slide.visible .briefs .item,
+.slide.visible .steps li, .slide.visible .concl li { animation: rise 0.55s var(--ease-smooth) both; }
+.slide.visible .flow .box:nth-child(1), .slide.visible .chain > :nth-child(1), .slide.visible .briefs .item:nth-child(1), .slide.visible .steps li:nth-child(1), .slide.visible .concl li:nth-child(1) { animation-delay: 0.40s; }
+.slide.visible .flow .box:nth-child(2), .slide.visible .chain > :nth-child(2), .slide.visible .briefs .item:nth-child(2), .slide.visible .steps li:nth-child(2), .slide.visible .concl li:nth-child(2) { animation-delay: 0.52s; }
+.slide.visible .flow .box:nth-child(3), .slide.visible .chain > :nth-child(3), .slide.visible .briefs .item:nth-child(3), .slide.visible .steps li:nth-child(3), .slide.visible .concl li:nth-child(3) { animation-delay: 0.64s; }
+.slide.visible .flow .box:nth-child(4), .slide.visible .chain > :nth-child(4), .slide.visible .steps li:nth-child(4) { animation-delay: 0.76s; }
+.slide.visible .flow .box:nth-child(5), .slide.visible .chain > :nth-child(5), .slide.visible .steps li:nth-child(5) { animation-delay: 0.88s; }
+.slide.visible .flow .box:nth-child(6) { animation-delay: 1.0s; }
+.slide.visible .pull { animation: rise 0.7s var(--ease-smooth) 0.75s both; }
+
+/* Front page: ears, masthead, motto, dateline rules, lead story, photo */
+.slide.visible .front .ears { animation: fade 0.6s var(--ease-smooth) both; }
+.slide.visible .front .mast { animation: rise 0.9s var(--ease-smooth) 0.1s both; }
+.slide.visible .front .motto { animation: fade 0.7s var(--ease-smooth) 0.45s both; }
+.slide.visible .front .dateline { animation: fade 0.8s var(--ease-smooth) 0.5s both; }
+.slide.visible .front .lead { animation: rise 0.8s var(--ease-smooth) 0.75s both; }
+.slide.visible .front .pic { animation: rise 0.8s var(--ease-smooth) 0.95s both; }
+
+@media (prefers-reduced-motion: reduce) {
+    .slide.visible *, .slide.visible *::after, .slide.visible .runhead::after { animation: none !important; }
+}
 
 /* ===========================================
    FRONT PAGE (title slide): ears, masthead, dateline, lead story and photo
