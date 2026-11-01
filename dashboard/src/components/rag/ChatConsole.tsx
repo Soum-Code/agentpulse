@@ -79,6 +79,9 @@ const StageIcon: React.FC<{ state: StageState }> = ({ state }) =>
     <Circle className="w-4 h-4 rag-text-3 shrink-0" aria-hidden="true" />
   );
 
+// In short: the chat panel of the RAG screen: the finished turns, the running turn's three steps and the box
+// to type a question. It keeps only the typing and the open / closed state; the turns come in as props, and
+// the page does the sending and the cancelling.
 export const ChatConsole: React.FC<ChatConsoleProps> = ({
   turns,
   onSendMessage,
@@ -105,6 +108,8 @@ export const ChatConsole: React.FC<ChatConsoleProps> = ({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   // Set when a question is sent from the keyboard, so the field gets the focus back afterwards.
   const refocusRef = useRef(false);
+  // In short: blockedReason is why the chat cannot run a turn right now (undefined when it can); runningTurn is
+  // the turn the stream is still filling in; limits are the chat service's own limits from /chat/health.
   const blockedReason = unavailableReason(chatStatus);
   const runningTurn = turns.find((t) => t.status === 'running');
   const limits = chatHealth?.limits;

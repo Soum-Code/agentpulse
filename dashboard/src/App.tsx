@@ -56,6 +56,9 @@ interface Toast {
   isWarning?: boolean;
 }
 
+// In short: the root of the dashboard. It decides which screen shows: 'public' (the landing page), 'rag' (the chat)
+// or 'product' (the console). It also keeps the selected agent / trace / span / incident, reads the backend
+// through useTelemetry, handles sign-in and projects, and listens for the keyboard shortcuts.
 export default function App() {
   // 'public' is the marketing page, 'product' is the console.
   // 'rag' is the fullscreen dedicated RAG monitor & drift verification split-screen.
@@ -257,6 +260,8 @@ export default function App() {
         return;
       }
 
+      // The second key of a chord. g then o, t, a, i, d, r, e, s or l opens a tab (overview, traces, agents, incidents,
+      // drift, replay, experiments, settings, telemetry lab); g then c shows or hides the side panel; g then z toggles Calm mode.
       if (chordKey === 'g') {
         const k = e.key.toLowerCase();
         chordKey = null;
@@ -367,6 +372,7 @@ export default function App() {
       showToast({ title: `Could not acknowledge: ${err instanceof Error ? err.message : title}`, isWarning: true }, 4500);
     }
   };
+  // In short: let the keyboard listener (set up once, above) call the newest version of this handler.
   acknowledgeRef.current = handleResolveIncident;
 
   // Views that read the agent/trace lists show the "no telemetry yet" notice on an empty instance.
@@ -390,6 +396,8 @@ export default function App() {
   const incidentBadge = datumFromFeed(feed, () => breakDownIncidents(incidents).active, 'no alerts feed');
   const driftBadge = datumFromFeed(feed, () => summarizeDrift(agents).drifting, 'no drift feed');
 
+  // In short: one root, three screens. 'rag' returns the full-screen chat and 'public' returns the landing page.
+  // 'product' carries on to the console layout below.
   if (mode === 'rag') {
     return (
       <RagChatbotApp
@@ -434,6 +442,8 @@ export default function App() {
     );
   }
 
+  // The console layout: a background canvas, the header, the main view next to the side panel, then the dock
+  // and the pop-up windows on top.
   return (
     <div
       data-density={textDensity}
@@ -501,6 +511,8 @@ export default function App() {
               </div>
             )}
 
+            {/* In short: the screen of the current tab. productTab picks which one of the blocks below is drawn. */}
+            {/* ViewErrorBoundary catches a crash in one view, and AnimeTabTransitionContainer animates the cards in. */}
             {!gate.blockWithPanel && (hasTelemetry || !needsTelemetry) && (
             <ViewErrorBoundary key={productTab} viewName={productTab.replace('-', ' ')}>
             <AnimeTabTransitionContainer activeTab={productTab}>
@@ -666,6 +678,7 @@ export default function App() {
             )}
           </main>
 
+          {/* In short: the side panel for the selected agent, trace, span or incident. The RAG monitor tab has none. */}
           {productTab !== 'rag-monitor' && (
             <ActiveContextPanel
               currentTab={productTab}
@@ -688,6 +701,8 @@ export default function App() {
           )}
         </div>
 
+      {/* In short: what sits on top of the page: the bottom dock, the command palette (Ctrl+K), the shortcuts sheet, */}
+      {/* the toast, and the sign-in and project windows. */}
       <FloatingDock
         currentTab={productTab}
         onSelectTab={setProductTab}

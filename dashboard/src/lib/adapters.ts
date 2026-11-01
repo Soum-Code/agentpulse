@@ -28,6 +28,7 @@ import type {
 import { verdictLabel, verdictTooltip } from './riskTone';
 import { deriveTraceStatus, isHighSeverity } from './traceStatus';
 
+// In short: one agent's row of GET /v1/drift.
 export interface DriftEntry {
   agent_id: string;
   current_asi: number | null;
@@ -42,6 +43,8 @@ export interface DriftEntry {
 // Drift views colour and explain a distance against the same number the alert uses.
 export const DRIFT_THRESHOLD = 0.3;
 
+// In short: the status badge of an agent. 'critical' for sustained drift or an error rate above 25%,
+// 'warning' for any errors or a stability index (ASI) below 80, otherwise 'idle'.
 function agentStatus(agent: ApiAgent, drift?: DriftEntry): AgentStatus {
   const window = drift?.latest_window_centroid_distance;
   if (window != null && window > DRIFT_THRESHOLD) return 'critical';
@@ -66,6 +69,7 @@ function driftSpansSeen(d?: DriftEntry): number | undefined {
   return d.baseline_size + 1;
 }
 
+// In short: join the agent list with the drift list (by agent_id) into the cards the views draw.
 export function toAgents(apiAgents: ApiAgent[], drift: DriftEntry[]): Agent[] {
   const byId = new Map(drift.map((d) => [d.agent_id, d]));
   return apiAgents.map((a) => {
@@ -97,6 +101,7 @@ export function toAgents(apiAgents: ApiAgent[], drift: DriftEntry[]): Agent[] {
   });
 }
 
+// In short: what kind of step a span is, by the first thing it has: a tool name, then scores, then a model.
 function spanType(span: SpanDetail): SpanType {
   if (span.tool_name) return 'tool';
   if (span.evaluation) return 'evaluator';
@@ -136,6 +141,7 @@ function evaluatorResults(span: SpanDetail): EvaluatorResult[] | undefined {
       id: `${span.span_id}-grounding`,
       name: 'Grounding',
       score: e.grounding_score,
+      // The grounding score is a risk, so higher is worse and 0.7 or less passes.
       threshold: 0.7,
       passed: e.grounding_score <= 0.7,
       maturity: 'BETA',
@@ -150,6 +156,7 @@ function evaluatorResults(span: SpanDetail): EvaluatorResult[] | undefined {
       id: `${span.span_id}-toolclaim`,
       name: 'Tool Claim',
       score: e.tool_claim_score,
+      // Passes only when the score is exactly 0.
       threshold: 0,
       passed: e.tool_claim_score === 0,
       maturity: 'EXPERIMENTAL',
@@ -159,7 +166,10 @@ function evaluatorResults(span: SpanDetail): EvaluatorResult[] | undefined {
   return out.length ? out : undefined;
 }
 
+// In short: turn the API's spans into the Span shape the views draw. Each start time becomes an offset from
+// the first span, which is what the waterfall needs.
 export function toSpans(spans: SpanDetail[], traceId: string): Span[] {
+  // t0 is the start of the earliest span; every span is placed relative to it.
   const starts = spans
     .map((s) => Date.parse(s.start_time))
     .filter((t) => Number.isFinite(t));
@@ -205,6 +215,7 @@ export function toSpans(spans: SpanDetail[], traceId: string): Span[] {
   });
 }
 
+// In short: rename one alert's fields to the names the Trace view uses (snake_case to camelCase, null to undefined).
 function toTraceAlert(a: AlertItem): TraceAlert {
   return {
     id: a.id,
@@ -277,6 +288,8 @@ export function toTrace(
   };
 }
 
+// In short: each alert becomes an Incident. Its severity gives 'critical', 'warning' or 'info', and its
+// acknowledged / resolved flags give 'investigating', 'resolved' or 'open'.
 export function toIncidents(alerts: AlertItem[]): Incident[] {
   return alerts.map((a) => {
     const sev = a.severity?.toLowerCase();
@@ -299,6 +312,8 @@ export function toIncidents(alerts: AlertItem[]): Incident[] {
   });
 }
 
+// In short: one profile per agent for the Drift view. A missing number stays undefined, and driftReason
+// says in words whether the window distance is over the threshold.
 export function toDriftProfiles(drift: DriftEntry[]): DriftProfile[] {
   return drift.map((d) => ({
     agentId: d.agent_id,
@@ -323,6 +338,8 @@ export function toDriftProfiles(drift: DriftEntry[]): DriftProfile[] {
   }));
 }
 
+// In short: the rows of GET /v1/datasets become dataset cards. The dataset name is the id, and the version
+// is the description.
 export function toDatasets(raw: unknown[]): Dataset[] {
   return (raw as Record<string, any>[]).map((d, i) => ({
     id: String(d.dataset_name ?? i),
