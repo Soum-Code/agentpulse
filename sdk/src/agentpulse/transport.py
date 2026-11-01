@@ -49,9 +49,11 @@ logger = logging.getLogger("agentpulse.transport")
 # thread instead. It is only used when the transport runs on a thread of its own, where
 # waiting for a lookup holds up nothing but the sender.
 class _InlineLoop:
+    # In short: look up a host name's addresses right here, on the calling thread.
     async def getaddrinfo(self, *args, **kwargs):
         return socket.getaddrinfo(*args, **kwargs)
 
+    # In short: the reverse lookup (address to name), also done on the calling thread.
     async def getnameinfo(self, *args, **kwargs):
         return socket.getnameinfo(*args, **kwargs)
 
