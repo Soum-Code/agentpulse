@@ -3,42 +3,37 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AgentPulse — M.Tech final review, 3 Nov 2026</title>
+<title>AgentPulse — M.Tech final review, 3 November 2026</title>
 <!--
-  AgentPulse viva deck (frontend-slides skill). One self-contained file; images in ./assets/.
-  Every number on a slide has its source in the slide's <aside class="notes"> and in SPEAKER_NOTES.md.
-  Keys: arrows / space / PageUp / PageDown move; N shows the speaker notes; Home / End jump.
-  Theme: change the :root variables below. Palette follows the live site's Dark + Obsidian look.
+  AgentPulse viva deck, broadsheet edition (frontend-slides skill, "Paper & Ink" preset adapted to a newspaper front page).
+  One self-contained file; photos in ./assets/.
+  Content rules from the academic-pptx skill: every headline is a takeaway sentence, one exhibit per results slide,
+  every borrowed number cited on the slide, a Conclusions slide that stays up for Q&A, References in the appendix.
+  Keys: arrows / Space / PageUp / PageDown move; N shows the speaker notes under the slide; Home / End jump.
+  Theme: change the :root variables. Speaker notes live in each slide's <aside class="notes"> (the .pptx build reads them too).
 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,500&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,800;0,900;1,700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=Libre+Franklin:wght@500;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
 <style>
 /* ===========================================
-   THEME (matches the live site: Dark palette, Obsidian tint)
+   THEME: newsprint paper, black ink, one deep-red accent
    =========================================== */
 :root {
-    --stage-bg: #020305;
-    --slide-bg: #06070a;
-    --surface: #0d1117;
-    --surface-2: #121823;
-    --line: rgba(255, 255, 255, 0.09);
-    --line-strong: rgba(255, 255, 255, 0.18);
-    --text: #f5f5f7;
-    --muted: #a3acbb;
-    --faint: #6f7a8c;
-    --mint: #3ddc97;
-    --mint-soft: rgba(61, 220, 151, 0.12);
-    --amber: #f5b841;
-    --amber-soft: rgba(245, 184, 65, 0.12);
-    --rose: #f25c7a;
-    --rose-soft: rgba(242, 92, 122, 0.12);
-    --blue: #4c8dff;
-    --blue-soft: rgba(76, 141, 255, 0.14);
-    --font-display: 'Plus Jakarta Sans', sans-serif;
-    --font-mono: 'JetBrains Mono', monospace;
-    --pad-x: 120px;
-    --ease: cubic-bezier(0.16, 1, 0.3, 1);
+    --stage-bg: #2b2925;
+    --slide-bg: #f4f0e6;
+    --paper: #f4f0e6;
+    --ink: #141414;
+    --ink-2: #3d3a35;
+    --grey: #6b665d;
+    --hair: #b9b2a3;
+    --rule: #141414;
+    --red: #a4161a;
+    --font-head: 'Playfair Display', 'Times New Roman', serif;
+    --font-body: 'Source Serif 4', Cambria, serif;
+    --font-label: 'Libre Franklin', Arial, sans-serif;
+    --font-mono: 'IBM Plex Mono', Consolas, monospace;
+    --pad-x: 110px;
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -66,251 +61,162 @@ img, video, canvas, svg { max-width: 100%; max-height: 100%; }
 }
 
 /* ===========================================
-   SLIDE ATMOSPHERE: dark base and a faint blue glow (the site's marble, toned down)
+   PAPER: flat newsprint, ink text
    =========================================== */
-body { font-family: var(--font-display); color: var(--text); }
-.slide {
-    background:
-        radial-gradient(1100px 700px at 88% -10%, rgba(40, 90, 200, 0.22), transparent 60%),
-        radial-gradient(900px 600px at -10% 110%, rgba(30, 70, 160, 0.16), transparent 60%),
-        var(--slide-bg);
-}
-.slide > * { position: relative; }
+body { font-family: var(--font-body); color: var(--ink); }
+.slide { background: var(--paper); color: var(--ink); }
 
 /* ===========================================
-   SHARED CHROME: kicker (section label), title, page tag, source line
+   PAGE FURNITURE: running head with a double rule, kicker, takeaway headline, source line
    =========================================== */
-.frame { position: absolute; inset: 0; padding: 92px var(--pad-x) 0; }
-.kicker {
-    font-family: var(--font-mono); font-size: 22px; letter-spacing: 0.14em; text-transform: uppercase;
-    color: var(--mint); display: flex; align-items: center; gap: 14px;
+.runhead {
+    position: absolute; left: var(--pad-x); right: var(--pad-x); top: 46px; height: 46px;
+    display: grid; grid-template-columns: 1fr auto 1fr; align-items: end;
+    font-family: var(--font-label); font-size: 19px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-2);
 }
-.kicker::before { content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--mint); }
-.title { font-size: 66px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.08; margin-top: 22px; max-width: 1560px; }
-.title em { font-style: italic; font-weight: 500; color: var(--mint); }
-.lede { font-size: 30px; line-height: 1.45; color: var(--muted); margin-top: 22px; max-width: 1400px; }
-.pagetag { position: absolute; top: 96px; right: var(--pad-x); font-family: var(--font-mono); font-size: 20px; color: var(--faint); letter-spacing: 0.1em; }
+.runhead .paper { font-family: var(--font-head); font-size: 30px; font-weight: 900; letter-spacing: 0; text-transform: none; color: var(--ink); }
+.runhead .mid { text-align: center; }
+.runhead .pg { text-align: right; }
+.runhead::after {
+    content: ""; position: absolute; left: 0; right: 0; bottom: -16px; height: 7px;
+    border-top: 3px solid var(--rule); border-bottom: 1px solid var(--rule);
+}
+.frame { position: absolute; left: var(--pad-x); right: var(--pad-x); top: 128px; bottom: 112px; display: flex; flex-direction: column; }
+.kicker { font-family: var(--font-label); font-weight: 700; font-size: 22px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--red); }
+.headline { font-family: var(--font-head); font-weight: 800; font-size: 62px; line-height: 1.07; letter-spacing: -0.01em; margin-top: 12px; max-width: 1640px; }
+.body { flex: 1; display: grid; grid-template-columns: 1.62fr 1fr; gap: 0; margin-top: 34px; min-height: 0; }
+.body.full { grid-template-columns: 1fr; }
+.exhibit { padding-right: 52px; display: flex; flex-direction: column; justify-content: center; min-height: 0; }
+.notecol { border-left: 1px solid var(--rule); padding-left: 48px; display: flex; flex-direction: column; justify-content: center; gap: 26px; }
+.notecol p { font-size: 34px; line-height: 1.32; color: var(--ink); }
+.notecol p b { font-weight: 600; }
+.notecol .small { font-size: 28px; color: var(--ink-2); }
 .source {
     position: absolute; left: var(--pad-x); right: var(--pad-x); bottom: 44px;
-    font-family: var(--font-mono); font-size: 17px; color: var(--faint); line-height: 1.5;
-    border-top: 1px solid var(--line); padding-top: 14px;
+    border-top: 1px solid var(--rule); padding-top: 12px;
+    font-family: var(--font-body); font-style: italic; font-size: 22px; color: var(--grey); line-height: 1.35;
 }
-.source b { color: var(--muted); font-weight: 500; }
+.source b { font-style: normal; font-family: var(--font-label); font-weight: 700; font-size: 17px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-2); margin-right: 8px; }
+.red { color: var(--red); }
 .mono { font-family: var(--font-mono); }
-.mint { color: var(--mint); } .amber { color: var(--amber); } .rose { color: var(--rose); } .blue { color: var(--blue); } .muted { color: var(--muted); }
 
-/* Cards */
-.card {
-    background: linear-gradient(180deg, rgba(255,255,255,0.035), rgba(255,255,255,0.015));
-    border: 1px solid var(--line); border-radius: 22px; padding: 34px 36px;
+/* Pull quote: the key finding between two rules */
+.pull {
+    border-top: 3px solid var(--rule); border-bottom: 1px solid var(--rule); padding: 22px 0 24px;
+    font-family: var(--font-head); font-style: italic; font-weight: 700; font-size: 40px; line-height: 1.18;
 }
-.card h3 { font-size: 32px; font-weight: 700; letter-spacing: -0.01em; }
-.card p, .card li { font-size: 25px; line-height: 1.45; color: var(--muted); }
-.card p + p { margin-top: 12px; }
-.label { font-family: var(--font-mono); font-size: 18px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--faint); }
-.chip {
-    display: inline-flex; align-items: center; gap: 10px; font-family: var(--font-mono); font-size: 20px;
-    padding: 8px 16px; border-radius: 999px; border: 1px solid var(--line-strong); color: var(--text);
-}
-.chip.mint { border-color: rgba(61,220,151,0.45); background: var(--mint-soft); color: var(--mint); }
-.chip.amber { border-color: rgba(245,184,65,0.45); background: var(--amber-soft); color: var(--amber); }
-.chip.rose { border-color: rgba(242,92,122,0.45); background: var(--rose-soft); color: var(--rose); }
-.chip.neutral { border-color: rgba(163,172,187,0.45); background: rgba(163,172,187,0.10); color: #d5dbe5; }
 
-/* Big stat */
-.stat .num { font-family: var(--font-mono); font-size: 64px; font-weight: 700; letter-spacing: -0.02em; line-height: 1; }
-.stat .cap { font-size: 22px; color: var(--muted); margin-top: 12px; line-height: 1.4; }
+/* Photo with caption and credit, like a news photo */
+.photo { border: 1px solid var(--ink); background: #fff; padding: 8px; }
+.photo img { display: block; width: 100%; object-fit: cover; object-position: top left; max-height: none; }
+.caption { font-family: var(--font-body); font-size: 24px; line-height: 1.35; color: var(--ink-2); margin-top: 12px; }
+.caption .credit { font-family: var(--font-label); font-size: 16px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--grey); margin-left: 6px; }
 
-/* Screenshot frame */
-.shot {
-    border-radius: 18px; overflow: hidden; border: 1px solid var(--line-strong);
-    box-shadow: 0 30px 80px rgba(0,0,0,0.55), 0 0 0 1px rgba(76,141,255,0.12);
-    background: #000;
-}
-.shot img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: top left; max-height: none; }
-.caption { font-family: var(--font-mono); font-size: 17px; color: var(--faint); margin-top: 14px; line-height: 1.45; }
+/* Newspaper table */
+.ntable { width: 100%; border-collapse: collapse; }
+.ntable th { font-family: var(--font-label); font-weight: 700; font-size: 19px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-2); text-align: left; padding: 0 0 12px; border-bottom: 3px solid var(--rule); }
+.ntable td { font-size: 34px; padding: 20px 0; border-bottom: 1px solid var(--hair); vertical-align: top; }
+.ntable td.num, .ntable th.num { text-align: right; font-variant-numeric: tabular-nums lining-nums; white-space: nowrap; padding-left: 24px; }
+.ntable td.num { font-weight: 600; }
+.ntable tr.hl td { color: var(--red); }
 
-/* Speaker notes: hidden; press N to show an overlay outside the slide design */
+/* Bar exhibit (drawn to scale) */
+.bars .row { display: grid; grid-template-columns: 330px 1fr; align-items: center; gap: 24px; margin: 22px 0; }
+.bars .nm { font-size: 29px; line-height: 1.2; }
+.bars .track { position: relative; height: 62px; border-left: 2px solid var(--ink); }
+.bars .bar { height: 100%; background: var(--ink); }
+.bars .bar.red { background: var(--red); }
+.bars .val { position: absolute; top: 50%; transform: translateY(-50%); font-weight: 600; font-size: 30px; padding-left: 14px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.bars .axis { font-family: var(--font-label); font-size: 18px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--grey); margin-top: 6px; }
+
+/* Diagram boxes (ink outlines, like a printed figure) */
+.flow { display: grid; grid-template-columns: repeat(6, 1fr); gap: 34px; align-items: stretch; }
+.flow .box { border: 2px solid var(--ink); background: #fbf8f1; padding: 22px 18px; position: relative; min-height: 250px; }
+.flow .box .lab { font-family: var(--font-label); font-weight: 700; font-size: 16px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--grey); }
+.flow .box h4 { font-family: var(--font-head); font-weight: 800; font-size: 33px; line-height: 1.08; margin-top: 10px; }
+.flow .box p { font-size: 25px; line-height: 1.3; margin-top: 12px; color: var(--ink-2); }
+.flow .box.key { background: var(--ink); color: var(--paper); }
+.flow .box.key .lab, .flow .box.key p { color: #d9d2c3; }
+.flow .box:not(:last-child)::after { content: "→"; position: absolute; right: -31px; top: 44%; font-size: 30px; font-family: var(--font-body); color: var(--ink); }
+
+/* Chain (problem slide) */
+.chain { display: flex; align-items: center; }
+.chain .node { width: 300px; border: 2px solid var(--ink); background: #fbf8f1; padding: 24px 24px; }
+.chain .node .lab { font-family: var(--font-label); font-weight: 700; font-size: 16px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--grey); }
+.chain .node h4 { font-family: var(--font-head); font-weight: 800; font-size: 38px; margin-top: 6px; }
+.chain .node .st { font-family: var(--font-mono); font-size: 22px; margin-top: 10px; }
+.chain .node.bad { border-color: var(--red); }
+.chain .node.bad .st { color: var(--red); }
+.chain .arr { width: 60px; text-align: center; font-size: 36px; }
+
+/* Verdict stamps */
+.stamp { display: inline-block; font-family: var(--font-label); font-weight: 700; font-size: 22px; letter-spacing: 0.12em; text-transform: uppercase; border: 2px solid currentColor; padding: 8px 16px; margin-right: 14px; }
+
+/* Briefs: three short news items between column rules */
+.briefs { display: grid; grid-template-columns: repeat(3, 1fr); }
+.briefs .item { padding: 0 40px; border-left: 1px solid var(--rule); }
+.briefs .item:first-child { padding-left: 0; border-left: none; }
+.briefs .item:last-child { padding-right: 0; }
+.briefs h3 { font-family: var(--font-head); font-weight: 800; font-size: 40px; line-height: 1.1; }
+.briefs .lab { font-family: var(--font-label); font-weight: 700; font-size: 18px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--red); margin-bottom: 10px; }
+.briefs p { font-size: 31px; line-height: 1.35; margin-top: 16px; color: var(--ink-2); }
+
+/* Numbered steps */
+.steps { list-style: none; counter-reset: s; }
+.steps li { counter-increment: s; font-size: 31px; line-height: 1.28; padding: 12px 0 12px 58px; position: relative; border-bottom: 1px solid var(--hair); }
+.steps li::before { content: counter(s); position: absolute; left: 0; top: 10px; font-family: var(--font-head); font-weight: 900; font-size: 38px; color: var(--red); }
+
+/* Conclusions list */
+.concl { list-style: none; counter-reset: c; }
+.concl li { counter-increment: c; font-size: 36px; line-height: 1.3; padding: 18px 0 18px 76px; position: relative; border-bottom: 1px solid var(--hair); }
+.concl li::before { content: counter(c); position: absolute; left: 0; top: 8px; font-family: var(--font-head); font-weight: 900; font-size: 54px; color: var(--red); }
+.concl li b { font-weight: 600; }
+
+.refs p { font-size: 26px; line-height: 1.5; }
+.app { color: var(--red); }
+
+/* Playfair defaults to old-style figures; numbers in this deck must read clearly */
+.headline, .pull, .front h1, .mast, .steps li::before, .concl li::before, .briefs h3, .flow h4 { font-variant-numeric: lining-nums; }
+
+/* Speaker notes: hidden in the slide; N shows them in a panel below the stage (presenter aid) */
 aside.notes { display: none; }
 .notes-overlay {
-    position: fixed; left: 0; right: 0; bottom: 0; max-height: 38vh; overflow: auto; z-index: 2000;
-    background: rgba(8, 10, 14, 0.96); border-top: 1px solid #2a3140; color: #e6e9ef;
-    font: 15px/1.5 'JetBrains Mono', monospace; padding: 16px 24px; display: none; white-space: pre-wrap;
+    position: fixed; left: 0; right: 0; bottom: 0; max-height: 42vh; overflow: auto; z-index: 2000;
+    background: rgba(20, 20, 20, 0.95); color: #f4f0e6; border-top: 2px solid #a4161a;
+    font: 16px/1.5 'Source Serif 4', Georgia, serif; padding: 16px 28px; display: none; white-space: pre-wrap;
 }
 .notes-overlay.show { display: block; }
 
 /* ===========================================
-   ANIMATION: one subtle staggered rise per slide; off under reduced motion
+   MOTION: a newspaper does not bounce. One short fade per slide, none under reduced motion.
    =========================================== */
-.reveal { opacity: 0; transform: translateY(18px); transition: opacity 0.55s var(--ease), transform 0.55s var(--ease); }
-.slide.visible .reveal { opacity: 1; transform: none; }
-.slide.visible .reveal.d1 { transition-delay: 0.06s; }
-.slide.visible .reveal.d2 { transition-delay: 0.14s; }
-.slide.visible .reveal.d3 { transition-delay: 0.22s; }
-.slide.visible .reveal.d4 { transition-delay: 0.30s; }
-.slide.visible .reveal.d5 { transition-delay: 0.38s; }
-@media (prefers-reduced-motion: reduce) {
-    .reveal { opacity: 1; transform: none; transition: none; }
-}
-@media print { .reveal { opacity: 1 !important; transform: none !important; } }
+.slide.visible .frame, .slide.visible .front { animation: settle 0.45s ease-out both; }
+@keyframes settle { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .slide.visible .frame, .slide.visible .front { animation: none; } }
 
 /* ===========================================
-   SLIDE-SPECIFIC LAYOUTS
+   FRONT PAGE (title slide): ears, masthead, dateline, lead story and photo
    =========================================== */
-/* 01 title */
-.s-title .left { position: absolute; left: var(--pad-x); top: 150px; width: 820px; }
-.s-title h1 { font-size: 150px; font-weight: 800; letter-spacing: -0.045em; line-height: 0.95; margin-top: 40px; }
-.s-title h1 span { color: var(--mint); }
-.s-title .sub { font-size: 34px; line-height: 1.42; color: var(--muted); margin-top: 36px; }
-.s-title .who { position: absolute; left: var(--pad-x); bottom: 92px; width: 820px; }
-.s-title .who .name { font-size: 36px; font-weight: 700; }
-.s-title .who .meta { font-family: var(--font-mono); font-size: 21px; color: var(--muted); margin-top: 14px; line-height: 1.6; }
-.s-title .shot { position: absolute; right: -40px; top: 170px; width: 940px; height: 434px; }
-.s-title .caption { position: absolute; right: 120px; top: 622px; width: 780px; text-align: right; }
-
-/* 02 problem */
-.chain { display: flex; align-items: center; gap: 0; margin-top: 56px; }
-.node {
-    width: 300px; padding: 26px 28px; border-radius: 18px; border: 1px solid var(--line-strong);
-    background: var(--surface); text-align: left;
+.front { position: absolute; inset: 0; padding: 40px var(--pad-x) 0; }
+.front .ears { display: grid; grid-template-columns: 1fr auto 1fr; font-family: var(--font-label); font-size: 20px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-2); padding-bottom: 10px; border-bottom: 1px solid var(--rule); }
+.front .ears .c { text-align: center; } .front .ears .r { text-align: right; }
+.front .mast { font-family: var(--font-head); font-weight: 900; font-size: 196px; line-height: 1; text-align: center; letter-spacing: -0.02em; margin-top: 16px; }
+.front .motto { text-align: center; font-style: italic; font-size: 30px; color: var(--ink-2); margin-top: 4px; }
+.front .dateline {
+    margin-top: 18px; border-top: 3px solid var(--rule); border-bottom: 1px solid var(--rule); padding: 10px 0;
+    display: flex; justify-content: space-between; font-family: var(--font-label); font-size: 20px; letter-spacing: 0.1em; text-transform: uppercase;
 }
-.node .label { font-size: 16px; }
-.node .nm { font-size: 30px; font-weight: 700; margin-top: 8px; }
-.node .st { font-family: var(--font-mono); font-size: 19px; margin-top: 12px; color: var(--mint); }
-.node.bad { border-color: rgba(242,92,122,0.6); background: linear-gradient(180deg, rgba(242,92,122,0.10), var(--surface)); }
-.node.bad .st { color: var(--rose); }
-.arrow { width: 90px; height: 2px; background: var(--line-strong); position: relative; }
-.arrow::after { content: ""; position: absolute; right: -2px; top: -6px; border-left: 12px solid var(--line-strong); border-top: 7px solid transparent; border-bottom: 7px solid transparent; }
-.arrow.bad { background: var(--rose); } .arrow.bad::after { border-left-color: var(--rose); }
-.http { font-family: var(--font-mono); font-size: 20px; color: var(--mint); margin-left: 30px; line-height: 1.5; }
-.grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px; }
-
-/* 03 architecture */
-.pipe { display: grid; grid-template-columns: repeat(6, 1fr); gap: 18px; margin-top: 50px; }
-.pipe .box { border: 1px solid var(--line-strong); border-radius: 18px; padding: 24px 22px; background: var(--surface); min-height: 300px; position: relative; }
-.pipe .box .label { font-size: 15px; }
-.pipe .box h4 { font-size: 27px; font-weight: 700; margin-top: 10px; line-height: 1.2; }
-.pipe .box p { font-size: 20px; color: var(--muted); margin-top: 12px; line-height: 1.42; }
-.pipe .box .code { font-family: var(--font-mono); font-size: 17px; color: var(--mint); margin-top: 12px; line-height: 1.5; }
-.pipe .box.hl { border-color: rgba(61,220,151,0.55); background: linear-gradient(180deg, rgba(61,220,151,0.09), var(--surface)); }
-.pipe .box:not(:last-child)::after {
-    content: "→"; position: absolute; right: -17px; top: 50%; transform: translateY(-50%);
-    font-size: 26px; color: var(--mint); background: var(--slide-bg); line-height: 1; padding: 2px 0; z-index: 2;
-}
-.traits { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-top: 34px; }
-.traits .card { padding: 26px 30px; }
-.traits .stat .num { font-size: 44px; }
-.traits .stat .cap { font-size: 20px; }
-
-/* 04 grounding */
-.formula {
-    font-family: var(--font-mono); font-size: 46px; font-weight: 500; letter-spacing: -0.01em;
-    padding: 30px 40px; border-radius: 20px; border: 1px solid rgba(61,220,151,0.4); background: var(--mint-soft);
-    display: inline-block; margin-top: 40px;
-}
-.formula .w { color: var(--amber); font-weight: 700; }
-.two { display: grid; grid-template-columns: 1.05fr 0.95fr; gap: 40px; margin-top: 34px; }
-.verdicts { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 16px; }
-.statrow { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
-.statrow .card { padding: 26px 26px; }
-.statrow .stat .num { font-size: 50px; }
-.statrow .stat .cap { font-size: 19px; }
-
-/* 05 drift */
-.drift-vis { position: relative; height: 600px; border-radius: 22px; border: 1px solid var(--line); background: var(--surface); overflow: hidden; }
-
-/* 06 results bars */
-.bars { margin-top: 26px; }
-.bar-row { display: grid; grid-template-columns: 330px 1fr; align-items: center; gap: 24px; margin-top: 22px; }
-.bar-row .nm { font-size: 24px; color: var(--muted); }
-.bar { height: 56px; border-radius: 10px; display: flex; align-items: center; padding: 0 18px; font-family: var(--font-mono); font-size: 24px; font-weight: 700; color: #06070a; }
-.tbl { width: 100%; border-collapse: collapse; margin-top: 10px; }
-.tbl td { font-size: 22px; padding: 13px 0; border-bottom: 1px solid var(--line); color: var(--muted); vertical-align: top; }
-.tbl td.v { font-family: var(--font-mono); color: var(--text); text-align: right; white-space: nowrap; padding-left: 18px; }
-
-/* 07 verified */
-.checks { list-style: none; }
-.checks li { font-size: 23px; line-height: 1.42; color: var(--muted); padding: 11px 0 11px 40px; position: relative; border-bottom: 1px solid var(--line); }
-.checks li::before { content: "✓"; position: absolute; left: 4px; top: 10px; color: var(--mint); font-weight: 700; }
-.checks li.note::before { content: "!"; color: var(--amber); left: 10px; }
-.checks b { color: var(--text); font-weight: 600; }
-
-/* 08 demo */
-.steps { list-style: none; counter-reset: s; }
-.steps li { counter-increment: s; font-size: 25px; line-height: 1.4; color: var(--muted); padding: 13px 0 13px 66px; position: relative; }
-.steps li::before {
-    content: counter(s); position: absolute; left: 0; top: 10px; width: 44px; height: 44px; border-radius: 12px;
-    background: var(--mint-soft); border: 1px solid rgba(61,220,151,0.45); color: var(--mint);
-    font-family: var(--font-mono); font-size: 22px; font-weight: 700; display: grid; place-items: center;
-}
-.steps li b { color: var(--text); font-weight: 600; }
-.url { font-family: var(--font-mono); font-size: 30px; color: var(--mint); margin-top: 18px; word-break: break-all; }
-
-/* 10 limits */
-.lim { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 44px; }
-.lim .card { padding: 28px 32px; }
-.lim .card h3 { font-size: 28px; display: flex; align-items: center; gap: 14px; }
-.lim .card p { font-size: 22px; margin-top: 10px; }
-.dot { width: 14px; height: 14px; border-radius: 50%; flex: none; }
-
-/* 12 conclusion */
-.s-end .big { font-size: 92px; font-weight: 800; letter-spacing: -0.035em; line-height: 1.02; margin-top: 30px; max-width: 1500px; }
-.s-end .big em { font-style: italic; font-weight: 500; color: var(--mint); }
-.take { display: grid; grid-template-columns: repeat(3, 1fr); gap: 26px; margin-top: 60px; }
-.take .card { padding: 30px 32px; }
-.take .n { font-family: var(--font-mono); font-size: 22px; color: var(--mint); }
-.take p { font-size: 25px; line-height: 1.42; color: var(--text); margin-top: 12px; }
-.take p span { color: var(--muted); }
-.endbar { position: absolute; left: var(--pad-x); right: var(--pad-x); bottom: 92px; display: flex; justify-content: space-between; align-items: flex-end; }
-.endbar .url { margin-top: 0; font-size: 32px; }
-
-
-/* Layout: kicker + title at the top, .body fills the rest and centres its content above the source line */
-.frame { display: flex; flex-direction: column; padding-bottom: 150px; }
-.body { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 0; min-height: 0; }
-.body > :first-child { margin-top: 0 !important; }
-.s-end .frame { padding-bottom: 260px; }
-/* Projection sizes (bigger than the first draft) */
-.card p, .card li { font-size: 27px; }
-.card h3 { font-size: 36px; }
-.stat .num { font-size: 76px; }
-.stat .cap { font-size: 24px; }
-.pipe .box { min-height: 360px; padding: 28px 24px; }
-.pipe .box h4 { font-size: 30px; }
-.pipe .box p { font-size: 22px; }
-.pipe .box .code { font-size: 19px; }
-.traits { margin-top: 44px; }
-.traits .stat .num { font-size: 52px; }
-.traits .stat .cap { font-size: 22px; }
-.statrow .stat .num { font-size: 58px; }
-.statrow .stat .cap { font-size: 21px; }
-.tbl td { font-size: 26px; padding: 17px 0; }
-.checks li { font-size: 26px; padding: 15px 0 15px 42px; }
-.steps li { font-size: 28px; padding: 16px 0 16px 68px; }
-.lim .card h3 { font-size: 31px; }
-.lim .card p { font-size: 25px; }
-.take p { font-size: 29px; }
-.node { width: 330px; padding: 30px 30px; }
-.node .nm { font-size: 34px; }
-.node .st { font-size: 21px; }
-.http { font-size: 23px; }
-.bar-row .nm { font-size: 26px; }
-.bar { height: 66px; font-size: 27px; }
-
-
-/* Per-slide fill tuning */
-.chain .node { width: 370px; }
-.body > .grid3 { margin-top: 80px !important; }
-.drift-vis text { font-size: 24px; }
-.bar-row { grid-template-columns: 400px 1fr; margin-top: 30px; }
-.label { font-size: 20px; }
-
-/* backup marker */
-.backup-tag { font-family: var(--font-mono); font-size: 19px; color: var(--amber); letter-spacing: 0.14em; }
+.front .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 0; margin-top: 34px; }
+.front .lead { padding-right: 48px; }
+.front .lead h1 { font-family: var(--font-head); font-weight: 800; font-size: 64px; line-height: 1.06; }
+.front .lead .deck { font-size: 32px; line-height: 1.34; color: var(--ink-2); margin-top: 22px; }
+.front .lead .by { font-family: var(--font-label); font-weight: 700; font-size: 22px; letter-spacing: 0.14em; text-transform: uppercase; margin-top: 26px; }
+.front .lead .by span { color: var(--red); }
+.front .pic { border-left: 1px solid var(--rule); padding-left: 48px; }
 
 /* Deck chrome outside the stage */
-.progress { position: fixed; left: 0; top: 0; width: 100%; height: 3px; background: var(--mint); z-index: 1001; transform-origin: 0 0; transform: scaleX(0); transition: transform 0.3s var(--ease); }
-.counter { position: fixed; right: 18px; bottom: 14px; font: 13px 'JetBrains Mono', monospace; color: #6f7a8c; z-index: 1001; }
+.progress { position: fixed; left: 0; top: 0; width: 100%; height: 3px; background: #a4161a; z-index: 1001; transform-origin: 0 0; transform: scaleX(0); transition: transform 0.3s ease-out; }
+.counter { position: fixed; right: 18px; bottom: 14px; font: 13px 'Libre Franklin', Arial, sans-serif; color: #b9b2a3; z-index: 1001; }
 </style>
 </head>
 <body>
@@ -322,476 +228,568 @@ aside.notes { display: none; }
 <main class="deck-stage" id="deckStage">
 
 <!-- =========================================================
-     01 TITLE
+     1 FRONT PAGE
      ========================================================= -->
-<section class="slide s-title active" data-time="0:20">
-    <div class="left">
-        <div class="kicker reveal d1">M.Tech (AIML) · Final review · 3 Nov 2026</div>
-        <h1 class="reveal d2">Agent<span>Pulse</span></h1>
-        <p class="sub reveal d3">Self-hosted observability for multi-agent LLM pipelines. Every span is scored for grounding risk and drift by two small local models&nbsp;— no LLM judge.</p>
-    </div>
-    <div class="shot reveal d4"><img src="assets/live_overview.jpg" alt="The live AgentPulse console, Overview view"></div>
-    <p class="caption reveal d4">The live console, Overview (screenshot 1 Nov 2026)</p>
-    <div class="who reveal d5">
-        <div class="name">Somnath Reddy</div>
-        <div class="meta">agentpulse.centralindia.cloudapp.azure.com<br>github.com/Soum-Code/agentpulse</div>
-    </div>
-    <aside class="notes">0:00-0:20. Name, programme, title. "AgentPulse watches multi-agent LLM pipelines and scores every step for grounding risk and drift, with two small models on a CPU, no LLM judge. It is live; I will show it in a few minutes."
-Screenshot: live Overview, Dark palette, taken 2026-11-01 with headless Chrome (presentation/viva/assets/live_overview.jpg). The counters in it (172 spans, 16 incidents) are the live database on that day, not a benchmark.</aside>
-</section>
-
-<!-- =========================================================
-     02 PROBLEM
-     ========================================================= -->
-<section class="slide" data-time="0:50">
-    <div class="frame">
-        <div class="kicker reveal d1">01 · The problem</div>
-        <h2 class="title reveal d2">Multi-agent pipelines fail <em>silently</em></h2>
-        <div class="body">
-            <div class="chain reveal d3">
-                <div class="node"><div class="label">agent 1</div><div class="nm">Retriever</div><div class="st">200 OK</div></div>
-                <div class="arrow"></div>
-                <div class="node bad"><div class="label">agent 2</div><div class="nm">Verifier</div><div class="st">claim not in evidence</div></div>
-                <div class="arrow bad"></div>
-                <div class="node bad"><div class="label">agent 3</div><div class="nm">Answerer</div><div class="st">builds on it</div></div>
-                <div class="http">every call: 200 OK<br>no exception<br>latency normal</div>
+<section class="slide active">
+    <div class="front">
+        <div class="ears"><span>Vol. 1 · No. 1</span><span class="c">M.Tech (AIML) Final Review</span><span class="r">Tuesday, 3 November 2026</span></div>
+        <div class="mast">AgentPulse</div>
+        <div class="motto">Observability for multi-agent LLM pipelines</div>
+        <div class="dateline"><span>Live edition: agentpulse.centralindia.cloudapp.azure.com</span><span>Code: github.com/Soum-Code/agentpulse</span></div>
+        <div class="cols">
+            <div class="lead">
+                <h1>Every agent step, checked for grounding and drift, without an LLM judge</h1>
+                <p class="deck">Two small local models score each span. Two signals held up on real data, two did not, and this paper says which.</p>
+                <p class="by">By <span>Somnath Reddy</span></p>
             </div>
-            <div class="grid3" style="margin-top: 56px;">
-                <div class="card reveal d4"><h3 class="rose">Grounding failure</h3><p>An agent states something its own evidence does not support, and the next agent builds on it.</p></div>
-                <div class="card reveal d4"><h3 class="amber">Behavioural drift</h3><p>An agent's answers move away from how it used to answer, after a model or prompt change. Nothing errors.</p></div>
-                <div class="card reveal d5"><h3 class="blue">Quality is an add-on</h3><p>Existing tools trace tokens, latency and cost well, but treat quality evaluation as optional and sampled.</p></div>
+            <div class="pic">
+                <div class="photo"><img src="assets/live_overview.jpg" alt="The live AgentPulse console, Overview view" style="height: 450px;"></div>
+                <p class="caption">The deployed console on 1 November 2026. <span class="credit">Photo: screenshot of the live site</span></p>
             </div>
         </div>
     </div>
-    <div class="source">Goal of this project: score <b>every</b> span, cheaply enough for a CPU, and show plainly what was not measured. Framing from README.md (intro paragraph).</div>
-    <aside class="notes">0:20-1:10. The failure that motivates the project: a pipeline returns a fluent answer, every service reports success, and the answer is not supported by what was retrieved. The diagram is a schematic, not a measurement.
-Third card: README.md intro: "Existing LLM observability tools trace tokens, latency, and cost well, but treat quality evaluation as an optional, sampled add-on."
-No numbers on this slide.</aside>
+    <aside class="notes">TIME: 0:00-0:20 (20 seconds)
+SAY:
+- Good morning. I am Somnath Reddy. My project is AgentPulse.
+- It watches AI agents that work together, and checks every step they take.
+- It checks two things: grounding (is the answer supported by its evidence?) and drift (is the agent changing its behaviour?).
+- It uses two small models on a normal CPU. No big LLM is used as a judge.
+- It is live on the internet. I will show it in a few minutes.
+IF ASKED "Is this deployed?": Yes, on one Azure VM; the address is on the slide and anyone can open it.
+SOURCES: screenshot of the live Overview, 2026-11-01 (assets/live_overview.jpg); its counters are the live database that day, not a benchmark.</aside>
 </section>
 
 <!-- =========================================================
-     03 ARCHITECTURE
+     2 PROBLEM
      ========================================================= -->
-<section class="slide" data-time="1:10">
+<section class="slide">
+    <div class="runhead"><span class="paper">AgentPulse</span><span class="mid">The problem</span><span class="pg">Page 2</span></div>
     <div class="frame">
-        <div class="kicker reveal d1">02 · What AgentPulse is</div>
-        <h2 class="title reveal d2">Score every span, <em>locally</em></h2>
+        <div class="kicker">The problem</div>
+        <h2 class="headline">In a multi-agent pipeline, a wrong answer looks exactly like a right one</h2>
         <div class="body">
-            <div class="pipe reveal d3">
-                <div class="box"><div class="label">your process</div><h4>SDK</h4><p>Decorator, OpenAI / Anthropic wrapper, LangGraph adapter.</p><div class="code">bounded buffer,<br>fail-open</div></div>
-                <div class="box"><div class="label">FastAPI</div><h4>Ingest API</h4><p>Accepts and queues. Runs no model.</p><div class="code">POST /v1/ingest</div></div>
-                <div class="box"><div class="label">storage</div><h4>SQLite (WAL)</h4><p>Spans plus a durable job queue the worker leases from.</p><div class="code">at-least-once</div></div>
-                <div class="box hl"><div class="label">worker · CPU</div><h4>Evaluator</h4><p>MiniLM-L6-v2 embeddings + DeBERTa-v3-small NLI.</p><div class="code">grounding · drift</div></div>
-                <div class="box"><div class="label">rules</div><h4>Alerts</h4><p>Thresholds per signal, one alert per agent and type in 15 min.</p><div class="code">cooldown 900 s</div></div>
-                <div class="box"><div class="label">React 19</div><h4>Console</h4><p>REST + WebSocket. Traces, incidents, drift, Lab.</p><div class="code">unmeasured = "—"</div></div>
-            </div>
-            <div class="traits">
-                <div class="card stat reveal d4"><div class="num mint">202.94 ms</div><div class="cap">median per case, AgentPulse evaluator, vs <b class="rose">3,170.39 ms</b> for an LLM judge (Qwen3-8B, CPU), 30 cases</div></div>
-                <div class="card stat reveal d4"><div class="num mint">0.005 ms</div><div class="cap">SDK decorator overhead per call (P50 over 2,000 calls)</div></div>
-                <div class="card stat reveal d5"><div class="num">0</div><div class="cap">LLM calls in the evaluator: two small models, run on the CPU of the same VM</div></div>
-            </div>
-        </div>
-    </div>
-    <div class="source"><b>Sources:</b> LLM_JUDGE_COMPARISON_REPORT.md (median latency table, 2026-08-26) · benchmarks/benchmark_results.json (2026-08-18) · HOW_IT_WORKS.md (buffer 10,000 spans, drop-oldest; cooldown 900 s) · README.md "Architecture in short"</div>
-    <aside class="notes">1:10-2:20. Walk left to right. The SDK never blocks the agent: a bounded buffer (10,000 spans by default, oldest dropped; HOW_IT_WORKS.md). The API only accepts and queues; the worker leases jobs from a table in the same SQLite file and runs the two models. Alert rules have a 900 s cooldown per (alert type, agent) (HOW_IT_WORKS.md, alerting).
-Numbers: 202.94 ms vs 3,170.39 ms = median latency over 30 cases, AgentPulse NLI pipeline vs Qwen3-8B-GGUF Q4_K_M via llama.cpp on CPU (LLM_JUDGE_COMPARISON_REPORT.md; README "Numbers and where they come from"; date 2026-08-26). One judge model, one machine: do not generalise to all LLM judges.
-0.005 ms: SDK decorator overhead, P50 over 2,000 calls, benchmarks/benchmark_results.json, 2026-08-18.
-Four signals exist in code (grounding, drift, tool-claim, disagreement); only the first two held up on real data (slide 10).</aside>
-</section>
-
-<!-- =========================================================
-     04 GROUNDING
-     ========================================================= -->
-<section class="slide" data-time="1:10">
-    <div class="frame">
-        <div class="kicker reveal d1">03 · Signal 1 · Grounding</div>
-        <h2 class="title reveal d2">Grounding risk: an NLI model, <em>not a judge</em></h2>
-        <div class="body">
-            <div class="formula reveal d3">risk = P(contradiction) + <span class="w">0.3</span> × P(neutral)</div>
-            <div class="two">
-                <div class="reveal d4">
-                    <p class="lede" style="margin-top:0; font-size:26px;">DeBERTa-v3-small compares an agent's output with the evidence it was given. 0 = safe, 1 = risky. <b style="color:var(--text)">High above 0.7, medium above 0.4.</b></p>
-                    <div class="verdicts">
-                        <span class="chip rose">contradicted</span><span class="chip neutral">unverifiable</span><span class="chip mint">supported</span>
-                    </div>
-                    <p class="lede" style="font-size:24px; margin-top:16px;">The verdict is whichever probability is highest. <b style="color:var(--text)">Unverifiable</b> = the evidence neither supports nor contradicts. A status, not a pass.</p>
-                    <p class="lede" style="font-size:24px; margin-top:16px;"><b class="amber">0.3 is a design choice, not a fit:</b> weights 0.0 to 0.3 cannot be told apart on this data.</p>
+            <div class="exhibit">
+                <div class="chain">
+                    <div class="node"><div class="lab">Agent 1</div><h4>Retriever</h4><div class="st">200 OK</div></div>
+                    <div class="arr">→</div>
+                    <div class="node bad"><div class="lab">Agent 2</div><h4>Verifier</h4><div class="st">claim not in its evidence</div></div>
+                    <div class="arr red">→</div>
+                    <div class="node bad"><div class="lab">Agent 3</div><h4>Answerer</h4><div class="st">builds on it</div></div>
                 </div>
-                <div class="statrow reveal d5" style="grid-template-columns: 1fr 1fr; align-content: start;">
-                    <div class="card stat"><div class="num mint">0.963</div><div class="cap">F1 on the 30-case test split (FPR 0.059: 1 of 17 supported cases)</div></div>
-                    <div class="card stat"><div class="num mint" style="font-size:40px;">0.927 / 0.952</div><div class="cap">F1 on 47 truly held-out cases (at 0.7 / at 0.4), FPR 0.074</div></div>
-                    <div class="card stat" style="grid-column: span 2;"><div class="num">68</div><div class="cap">hand-labelled cases behind these numbers (39 supported, 29 failures). 5 of the 30 test cases copy dev cases. Small sample, not production traffic.</div></div>
-                </div>
+                <p class="caption" style="margin-top: 26px;">Every call returns 200, nothing throws, latency is normal. Schematic, not data.</p>
+            </div>
+            <div class="notecol">
+                <p><b>Grounding failure:</b> an agent says what its evidence does not support.</p>
+                <p><b>Drift:</b> an agent slowly answers differently after a change.</p>
+                <p class="small">Most tools trace cost and latency; quality checks are optional and sampled.</p>
             </div>
         </div>
     </div>
-    <div class="source"><b>Source:</b> GROUNDING_RECALIBRATION_2026-10.md (tables T3c, T3d, section 3.6; analysis 2026-10-22) · HOW_IT_WORKS.md (verdict rule) · backend/app/services/grounding.py (NEUTRAL_RISK_WEIGHT = 0.3)</div>
-    <aside class="notes">2:20-3:30. The score is the NLI model's probabilities, not an LLM's opinion. Contradiction counts fully; neutral counts 0.3. Cut-offs 0.7 (high) and 0.4 (medium), strict ">".
-Say plainly: 0.3 is a design choice. On the corrected labels, weights 0.0 to 0.3 give identical results; the one case that separates them is val_17. At 0.5 the medium band flagged 7 of 17 supported test cases (FPR 0.412), which is why 0.5 was dropped (GROUNDING_RECALIBRATION_2026-10.md, finding 4; backup slide B1).
-Unverifiable: argmax of the three probabilities is neutral. It says nothing about truth; it is shown next to the score (HOW_IT_WORKS.md "The verdict, next to the score").
-Numbers: F1 0.963, FPR 0.059 (1/17), test split of 30, 5 copy dev = T3c; held-out 47: F1 0.927 at 0.7, 0.952 at 0.4, FPR 0.074 (2/27) = T3d; 68 cases = 39 supported + 29 failures. All from GROUNDING_RECALIBRATION_2026-10.md, analysis dated 2026-10-22, and the README table.</aside>
+    <div class="source"><b>Source</b>README.md, introduction (tools treat quality evaluation as an optional, sampled add-on).</div>
+    <aside class="notes">TIME: 0:20-1:10 (50 seconds)
+SAY:
+- Many AI systems now use several agents in a chain: one finds documents, one checks, one answers.
+- Problem 1, grounding failure: an agent says something that its own evidence does not support. The next agent trusts it.
+- Every call still says "200 OK". No error, normal speed. So normal monitoring sees nothing wrong.
+- Problem 2, drift: after a model or prompt change, an agent slowly starts answering differently.
+- Most tools measure cost and speed well. Quality checks are optional and done only on samples.
+IF ASKED "Why not just check the final answer?": The mistake starts in a middle agent; checking each step tells you which agent went wrong.
+SOURCES: README.md intro paragraph. The chain is a schematic.</aside>
 </section>
 
 <!-- =========================================================
-     05 DRIFT
+     3 ARCHITECTURE
      ========================================================= -->
-<section class="slide" data-time="0:40">
+<section class="slide">
+    <div class="runhead"><span class="paper">AgentPulse</span><span class="mid">How it works</span><span class="pg">Page 3</span></div>
     <div class="frame">
-        <div class="kicker reveal d1">04 · Signal 2 · Drift</div>
-        <h2 class="title reveal d2">Drift: how far an agent has moved <em>from itself</em></h2>
-        <div class="body">
-            <div class="two" style="grid-template-columns: 1fr 1fr; margin-top: 44px; align-items: center;">
-                <div class="drift-vis reveal d3">
-                    <svg viewBox="0 0 800 470" width="100%" height="100%" preserveAspectRatio="xMidYMid meet" aria-label="Schematic: baseline and current window of output embeddings">
-                        <g fill="#3ddc97" opacity="0.85">
-                            <circle cx="210" cy="220" r="7"/><circle cx="250" cy="190" r="7"/><circle cx="180" cy="260" r="7"/><circle cx="240" cy="270" r="7"/><circle cx="200" cy="180" r="7"/>
-                            <circle cx="270" cy="235" r="7"/><circle cx="160" cy="215" r="7"/><circle cx="225" cy="300" r="7"/><circle cx="285" cy="200" r="7"/><circle cx="190" cy="235" r="7"/>
-                        </g>
-                        <circle cx="222" cy="232" r="105" fill="none" stroke="#3ddc97" stroke-dasharray="6 8" opacity="0.6"/>
-                        <circle cx="222" cy="232" r="11" fill="#06070a" stroke="#3ddc97" stroke-width="4"/>
-                        <g fill="#f5b841" opacity="0.9">
-                            <circle cx="560" cy="200" r="7"/><circle cx="600" cy="240" r="7"/><circle cx="540" cy="250" r="7"/><circle cx="590" cy="180" r="7"/><circle cx="620" cy="215" r="7"/><circle cx="570" cy="275" r="7"/>
-                        </g>
-                        <circle cx="580" cy="228" r="82" fill="none" stroke="#f5b841" stroke-dasharray="6 8" opacity="0.6"/>
-                        <circle cx="580" cy="228" r="11" fill="#06070a" stroke="#f5b841" stroke-width="4"/>
-                        <line x1="236" y1="231" x2="562" y2="228" stroke="#f25c7a" stroke-width="3"/>
-                        <polygon points="566,228 552,221 552,235" fill="#f25c7a"/>
-                        <text x="400" y="120" fill="#f25c7a" font-family="JetBrains Mono" font-size="22" text-anchor="middle">cosine distance &gt; 0.30</text>
-                        <text x="222" y="380" fill="#3ddc97" font-family="JetBrains Mono" font-size="21" text-anchor="middle">baseline: first 20</text>
-                        <text x="580" y="350" fill="#f5b841" font-family="JetBrains Mono" font-size="21" text-anchor="middle">window: latest 12</text>
-                        <text x="400" y="440" fill="#6f7a8c" font-family="JetBrains Mono" font-size="17" text-anchor="middle">schematic, not data</text>
-                    </svg>
+        <div class="kicker">The system</div>
+        <h2 class="headline">AgentPulse scores every span on a CPU, off the agent's critical path</h2>
+        <div class="body full">
+            <div class="exhibit" style="padding-right: 0;">
+                <div class="flow">
+                    <div class="box"><div class="lab">In your agent</div><h4>SDK</h4><p>Decorator, client wrapper, LangGraph</p></div>
+                    <div class="box"><div class="lab">FastAPI</div><h4>Ingest API</h4><p>Queues spans; runs no model</p></div>
+                    <div class="box"><div class="lab">Storage</div><h4>SQLite + job queue</h4><p>WAL mode, durable</p></div>
+                    <div class="box key"><div class="lab">Worker, CPU</div><h4>Evaluator</h4><p>MiniLM + DeBERTa NLI</p></div>
+                    <div class="box"><div class="lab">Rules</div><h4>Alerts</h4><p>One per agent and type in 15 min</p></div>
+                    <div class="box"><div class="lab">React</div><h4>Console</h4><p>Traces, incidents, drift, Lab</p></div>
                 </div>
-                <div>
-                    <p class="lede reveal d3" style="margin-top:0; font-size:27px;">MiniLM embeds each output. Per agent, the mean of its <b style="color:var(--text)">first 20</b> outputs is the baseline; the mean of its <b style="color:var(--text)">latest 12</b> is the window. <span class="mono rose">DRIFT_DETECTED</span> fires above a cosine distance of <b style="color:var(--text)">0.30</b>.</p>
-                    <div class="statrow reveal d4" style="margin-top: 34px;">
-                        <div class="card stat"><div class="num mint">1.5%</div><div class="cap">false alarms</div></div>
-                        <div class="card stat"><div class="num mint">91.9%</div><div class="cap">detection</div></div>
-                        <div class="card stat"><div class="num amber">24.5%</div><div class="cap">of real sessions long enough to measure at all</div></div>
-                    </div>
-                    <p class="lede reveal d5" style="font-size:22px; margin-top:24px;">Offline, an external real-trace corpus, held-out split, measured once.</p>
-                </div>
+                <div class="pull" style="margin-top: 44px;">No LLM call anywhere in the evaluator. The SDK adds <span class="red">0.005 ms</span> per call and never blocks the agent.</div>
             </div>
         </div>
     </div>
-    <div class="source"><b>Source:</b> DRIFT_REAL_TEXT_DIAGNOSIS_REPORT.md sections 11.3 and 11.5 (2026-08-27) · README.md "What it does" · HOW_IT_WORKS.md (baseline 20, window 12, threshold 0.30)</div>
-    <aside class="notes">3:30-4:10. Drift compares an agent with its own past, not with a reference answer. Baseline = mean embedding of its first 20 outputs; window = mean of its latest 12; DRIFT_DETECTED when the cosine distance between the two means is above 0.30.
-Numbers: 1.5% false alarms, 91.9% detection, 24.5% of sessions long enough (32 outputs) to report a distance at all. DRIFT_REAL_TEXT_DIAGNOSIS_REPORT.md 11.3 and 11.5, 2026-08-27, offline, held-out split of an external real-trace corpus, measured once. The 24.5% is the honest catch: most real sessions are too short.
-The picture is a schematic (says so on the slide).</aside>
+    <div class="source"><b>Source</b>README.md, Architecture in short; HOW_IT_WORKS.md (bounded buffer, cooldown 900 s); benchmarks/benchmark_results.json, 2026-08-18 (0.005 ms, P50 over 2,000 calls).</div>
+    <aside class="notes">TIME: 1:10-2:15 (65 seconds)
+SAY:
+- Read the boxes from left to right. This is the path of one step ("span") of an agent.
+- The SDK sits inside your agent. It sends each step to AgentPulse and never waits for an answer, so the agent is never slowed down.
+- The API only puts the step in a queue. A separate worker picks it up and runs two small models: MiniLM (turns text into numbers, called embeddings) and DeBERTa (an NLI model: it says if one text supports or contradicts another).
+- If a score crosses a threshold, an alert is raised. The same alert for the same agent comes at most once in 15 minutes.
+- The console shows everything live. If something was not measured, it shows a dash, never a fake zero.
+IF ASKED "What is a span?": One step of an agent: one LLM call or one tool call, with its input, output and timing.
+SOURCES: README.md "Architecture in short"; HOW_IT_WORKS.md (buffer of 10,000 spans, oldest dropped; cooldown 900 s per alert type and agent); benchmarks/benchmark_results.json, 2026-08-18 (SDK decorator 0.005 ms, P50 over 2,000 calls).</aside>
 </section>
 
 <!-- =========================================================
-     06 RESULTS: COST
+     4 GROUNDING METHOD
      ========================================================= -->
-<section class="slide" data-time="0:50">
+<section class="slide">
+    <div class="runhead"><span class="paper">AgentPulse</span><span class="mid">Signal 1: grounding</span><span class="pg">Page 4</span></div>
     <div class="frame">
-        <div class="kicker reveal d1">05 · Results · cost</div>
-        <h2 class="title reveal d2">Cheap enough to run on <em>every</em> span</h2>
+        <div class="kicker">Method · grounding</div>
+        <h2 class="headline">Grounding risk is an NLI probability, and its 0.3 weight is a design choice</h2>
         <div class="body">
-            <div class="two" style="grid-template-columns: 1.1fr 0.9fr; margin-top: 40px;">
-                <div class="reveal d3">
-                    <div class="label">Median evaluation time per case, 30 cases, CPU</div>
-                    <div class="bars">
-                        <div class="bar-row"><div class="nm">AgentPulse (MiniLM + DeBERTa)</div><div style="display:flex; align-items:center; gap:18px;"><div class="bar" style="width: 6.4%; padding: 0; background: var(--mint);"></div><span class="mono mint" style="font-size:27px; font-weight:700;">202.94 ms</span></div></div>
-                        <div class="bar-row"><div class="nm">LLM judge (Qwen3-8B, llama.cpp)</div><div><div class="bar" style="width: 100%; background: var(--rose);">3,170.39 ms</div></div></div>
-                    </div>
-                    <p class="lede" style="font-size:22px; margin-top: 30px;">One judge model on one machine: not a claim about every LLM judge.</p>
-                    <div class="card stat" style="margin-top: 40px; padding: 28px 32px;"><div class="num mint" style="font-size:56px;">180 ms</div><div class="cap">live median evaluation time over 172 spans on the deployed worker (ONNX), as the Settings view showed it on 27 Oct 2026</div></div>
+            <div class="exhibit">
+                <div style="font-family: var(--font-mono); font-size: 36px; white-space: nowrap; border-top: 3px solid var(--rule); border-bottom: 1px solid var(--rule); padding: 30px 0;">risk = P(contradiction) + <span class="red">0.3</span> × P(neutral)</div>
+                <div style="display: grid; grid-template-columns: 4fr 3fr 3fr; margin-top: 34px; font-family: var(--font-label); font-size: 22px; letter-spacing: 0.08em; text-transform: uppercase;">
+                    <div style="border-top: 10px solid #9c978c; padding-top: 10px;">Low · 0 to 0.4</div>
+                    <div style="border-top: 10px solid var(--ink-2); padding-top: 10px;">Medium · above 0.4</div>
+                    <div style="border-top: 10px solid var(--red); padding-top: 10px; color: var(--red);">High · above 0.7</div>
                 </div>
-                <div class="reveal d4">
-                    <div class="label">Single runs, one Windows 11 machine, CPU, PyTorch</div>
-                    <table class="tbl">
-                        <tr><td>SDK decorator overhead (P50, 2,000 calls)</td><td class="v">0.005 ms</td></tr>
-                        <tr><td>MiniLM embedding (P50, 100 runs)</td><td class="v">15.1 ms</td></tr>
-                        <tr><td>DeBERTa NLI (P50, 50 runs)</td><td class="v">88.5 ms</td></tr>
-                        <tr><td>Two grounding models, per case (30 cases)</td><td class="v">151.19 ms</td></tr>
-                        <tr><td>Full pipeline, per case (30 cases)</td><td class="v">165.18 ms</td></tr>
-                    </table>
-                </div>
+                <div style="margin-top: 40px;"><span class="stamp red">Contradicted</span><span class="stamp" style="color: var(--grey);">Unverifiable</span><span class="stamp">Supported</span></div>
+                <p class="caption">Verdict = whichever of the three probabilities is highest.</p>
+            </div>
+            <div class="notecol">
+                <p>DeBERTa compares each output with the evidence the agent was given.</p>
+                <p><b>Unverifiable</b>: neither supported nor contradicted. A status, not a pass.</p>
+                <p class="small">Weights 0 to 0.3 give identical results on our data.</p>
             </div>
         </div>
     </div>
-    <div class="source"><b>Sources:</b> LLM_JUDGE_COMPARISON_REPORT.md (2026-08-26) · benchmarks/benchmark_results.json (2026-08-18) · experiments/results/ablation_results.json (2026-09-18) · docs/E2E_TEST_2026-10-27.md item 23 (180 ms). Each is one run on one machine, not a constant.</div>
-    <aside class="notes">4:10-5:00. The point: evaluating every span is affordable without an LLM judge.
-Bar: 202.94 ms vs 3,170.39 ms median per case over 30 cases (LLM_JUDGE_COMPARISON_REPORT.md; the report computes 15.6x). Bar widths are to scale (202.94/3170.39 = 6.4%); the short bar's label sits beside it.
-Table: 0.005 ms, 15.1 ms, 88.5 ms from benchmarks/benchmark_results.json (2026-08-18, Windows 11, 16 logical cores, CPU, PyTorch, not ONNX). 151.19 ms and 165.18 ms per case from experiments/results/ablation_results.json (30-case ablation, 2026-09-18). An older run of that script measured 215.9 ms; do not quote it (README).
-The live worker uses the ONNX backend; these are PyTorch numbers. If asked about live latency: Settings on the live site showed a live median of 180 ms over 172 spans on 2026-10-27 (docs/E2E_TEST_2026-10-27.md, item 23).</aside>
+    <div class="source"><b>Source</b>GROUNDING_RECALIBRATION_2026-10.md, section 3.6 (analysis 2026-10-22); HOW_IT_WORKS.md, the verdict rule; backend/app/services/grounding.py (NEUTRAL_RISK_WEIGHT = 0.3).</div>
+    <aside class="notes">TIME: 2:15-3:10 (55 seconds)
+SAY:
+- Grounding means: is the answer supported by the evidence the agent had?
+- An NLI model (natural language inference) reads two texts and gives three probabilities: the evidence supports the answer, contradicts it, or is neutral (says neither).
+- Our risk score is contradiction plus 0.3 times neutral. 0 is safe, 1 is risky. Above 0.4 is medium, above 0.7 is high.
+- Next to the score we show a verdict. "Unverifiable" means the evidence neither supports nor contradicts. It is not a pass; it means "could not check".
+- The 0.3 is my design choice, not a fitted number. On our data, any weight from 0 to 0.3 gives the same result.
+IF ASKED "Why 0.3 and not 0.5?": At 0.5, 7 of 17 correct test answers were wrongly flagged medium; at 0.3 only 1 of 17 (appendix A1).
+SOURCES: GROUNDING_RECALIBRATION_2026-10.md (banner, finding 4, section 3.6; analysis 2026-10-22); HOW_IT_WORKS.md "The verdict, next to the score"; grounding.py NEUTRAL_RISK_WEIGHT = 0.3 (PR #89). Model: cross-encoder/nli-deberta-v3-small.</aside>
 </section>
 
 <!-- =========================================================
-     07 RESULTS: VERIFIED
+     5 GROUNDING RESULT
      ========================================================= -->
-<section class="slide" data-time="0:40">
+<section class="slide">
+    <div class="runhead"><span class="paper">AgentPulse</span><span class="mid">Signal 1: grounding</span><span class="pg">Page 5</span></div>
     <div class="frame">
-        <div class="kicker reveal d1">06 · Results · verification</div>
-        <h2 class="title reveal d2">Tested, and checked <em>live</em></h2>
+        <div class="kicker">Result · grounding</div>
+        <h2 class="headline">On 68 hand-labelled cases, grounding catches contradictions with few false alarms</h2>
         <div class="body">
-            <div class="two" style="grid-template-columns: 0.62fr 1.38fr; margin-top: 40px;">
-                <div class="reveal d3" style="display:grid; gap: 22px; align-content: start;">
-                    <div class="card stat"><div class="num mint">628</div><div class="cap">backend tests passed (pytest, 4 min 12 s)</div></div>
-                    <div class="card stat"><div class="num mint">404</div><div class="cap">dashboard tests passed (35 files), tsc clean</div></div>
-                    <p class="caption" style="margin-top:0;">Re-run 27 Oct 2026, author's machine</p>
-                </div>
-                <div class="reveal d4">
-                    <div class="label">End-to-end test of the live site, 27 Oct 2026, from outside</div>
-                    <ul class="checks" style="margin-top: 8px;">
-                        <li><b>Health</b>: /v1/health, /v1/health/ready, /chat/health all 200</li>
-                        <li><b>Closed routes</b>: /v1/keys and 3 path variants, ingest without key, PUT /v1/simulate: all 401</li>
-                        <li><b>Chat</b>: one turn 6.35 s, all three agents answered by Groq; the worker scored all three spans</li>
-                        <li><b>Telemetry Lab</b>: hallucination scenario raised HIGH alerts for verifier (0.971) and analyst (0.999)</li>
-                        <li><b>Console</b>: every view in Dark and Chalk scripted for NaN / undefined / null: 0 found</li>
-                        <li class="note"><b>Two real bugs found and fixed</b> (SVG arrowhead, header at 1366 px); one noted (stale worker count)</li>
-                    </ul>
-                </div>
+            <div class="exhibit">
+                <table class="ntable">
+                    <tr><th>Evaluation set</th><th class="num">Cases</th><th class="num">F1</th><th class="num">False alarms</th></tr>
+                    <tr class="hl"><td>Test split</td><td class="num">30</td><td class="num">0.963</td><td class="num">0.059</td></tr>
+                    <tr><td>Held-out pool, cut-off 0.7</td><td class="num">47</td><td class="num">0.927</td><td class="num">0.074</td></tr>
+                    <tr><td>Held-out pool, cut-off 0.4</td><td class="num">47</td><td class="num">0.952</td><td class="num">0.074</td></tr>
+                </table>
+                <p class="caption">False alarms = share of supported cases flagged (1 of 17 on the test split; 2 of 27 held out).</p>
+            </div>
+            <div class="notecol">
+                <div class="pull">A small sample, <span class="red">not production traffic</span>.</div>
+                <p class="small">68 cases: 39 supported, 29 failures. 5 of the 30 test cases copy development cases.</p>
             </div>
         </div>
     </div>
-    <div class="source"><b>Sources:</b> README.md "Testing and benchmarks" (628 / 404, re-run 2026-10-27) · docs/E2E_TEST_2026-10-27.md items 1-25 and findings F1-F3 · SESSION_HANDOFF.md 29.19</div>
-    <aside class="notes">5:00-5:40. 628 backend tests (pytest tests/, 4 min 12 s) and 404 dashboard tests (35 files, tsc --noEmit clean), re-run on 2026-10-27 on the author's machine (README "Testing and benchmarks"; SESSION_HANDOFF 29.19.4). These replace the older 422 / 136.
-E2E on the live site, 2026-10-27 ~12:55-13:10 UTC (docs/E2E_TEST_2026-10-27.md): items 1-4 health; item 7 four key paths 401; items 8-9 ingest and PUT simulate 401; item 10 chat turn 6.35 s by curl (stream total 6,148 ms; retriever 3,340, verifier 559, answerer 682 ms; all Groq gpt-oss-20b), spans scored 0.306 unverifiable / 0.135 / 0.027 supported; item 11 Lab hallucination: HIGH_HALLUCINATION_RISK and GROUNDING_FAILURE for verifier 0.971 and analyst 0.999; items 14-24 console views. F1 SVG arrowhead and F2 header at 1366 px fixed in PR #112; F3 "1 of 22 alive" open.
-Another single turn the same day took 1.6 s (SESSION_HANDOFF 29.17.3). Neither is "the" latency.
-Honest gap: the deploy is not gated on the test suite (see limits).</aside>
+    <div class="source"><b>Source</b>GROUNDING_RECALIBRATION_2026-10.md, tables T3c and T3d (analysis 2026-10-22); README.md, Numbers and where they come from.</div>
+    <aside class="notes">TIME: 3:10-3:55 (45 seconds)
+SAY:
+- How good is the grounding check? I measured it on 68 cases that were labelled by hand: 39 correct answers and 29 failures.
+- On the 30-case test split, F1 is 0.963. F1 is one number for "finds the failures and does not cry wolf"; 1.0 is perfect.
+- False alarms: 1 of 17 correct answers was flagged, so 0.059.
+- On 47 cases never used for design, F1 is 0.927 or 0.952, depending on the cut-off.
+- Honest point: this is a small sample, and 5 test cases are copies of development cases. It is not a production benchmark.
+IF ASKED "Is 68 cases enough?": No, not for a general claim; the 95% interval on the test F1 is 0.897 to 1.000, and more labelled data is my first next step.
+SOURCES: GROUNDING_RECALIBRATION_2026-10.md T3c (test split: F1 0.963, FPR 0.059 = 1/17; 5 of 30 copy dev), T3d (held-out 47: F1 0.927 at 0.7, 0.952 at 0.4, FPR 0.074 = 2/27), T3b (interval [0.897, 1.000]); README.md table.</aside>
 </section>
 
 <!-- =========================================================
-     08 LIVE DEMO
+     6 DRIFT
      ========================================================= -->
-<section class="slide" data-time="2:30">
+<section class="slide">
+    <div class="runhead"><span class="paper">AgentPulse</span><span class="mid">Signal 2: drift</span><span class="pg">Page 6</span></div>
     <div class="frame">
-        <div class="kicker reveal d1">07 · Live demo</div>
-        <h2 class="title reveal d2">See it on the <em>live</em> site</h2>
+        <div class="kicker">Result · drift</div>
+        <h2 class="headline">Drift detection is accurate, but only a quarter of real sessions are long enough to measure</h2>
         <div class="body">
-            <div class="url reveal d2">https://agentpulse.centralindia.cloudapp.azure.com</div>
-            <div class="two" style="grid-template-columns: 0.86fr 1.14fr; margin-top: 30px;">
-                <ol class="steps reveal d3">
-                    <li><b>Launch App → RAG Live.</b> Ask "how does SQLite WAL improve concurrency?"</li>
-                    <li><b>Three stages</b>: retriever, verifier, answerer, each with time, provider, model.</li>
-                    <li><b>Agent ledger</b>: grounding risk and verdict per span; what "Unverifiable" means.</li>
-                    <li><b>Out of corpus</b>: "who won the 2022 football world cup?" Read the ledger.</li>
-                    <li><b>Traces</b> → newest trace → <span class="mono">X</span> exports the JSON.</li>
+            <div class="exhibit">
+                <div class="bars">
+                    <div class="row"><div class="nm">Detection</div><div class="track"><div class="bar" style="width: 91.9%;"></div><span class="val" style="left: auto; right: calc(8.1% + 14px); color: var(--paper);">91.9%</span></div></div>
+                    <div class="row"><div class="nm">False alarms</div><div class="track"><div class="bar" style="width: 1.5%;"></div><span class="val" style="left: 1.5%;">1.5%</span></div></div>
+                    <div class="row"><div class="nm">Sessions long enough to measure</div><div class="track"><div class="bar red" style="width: 24.5%;"></div><span class="val red" style="left: 24.5%;">24.5%</span></div></div>
+                    <div class="row"><div></div><div class="axis">0 to 100 percent, to scale</div></div>
+                </div>
+            </div>
+            <div class="notecol">
+                <p><b>Baseline:</b> an agent's first 20 outputs. <b>Window:</b> its latest 12.</p>
+                <p>Alert when the two drift apart by a cosine distance above <b>0.30</b>.</p>
+                <p class="small">Offline, real-trace corpus, held-out split, measured once.</p>
+            </div>
+        </div>
+    </div>
+    <div class="source"><b>Source</b>DRIFT_REAL_TEXT_DIAGNOSIS_REPORT.md, sections 11.3 and 11.5 (2026-08-27); HOW_IT_WORKS.md (baseline 20, window 12, threshold 0.30).</div>
+    <aside class="notes">TIME: 3:55-4:35 (40 seconds)
+SAY:
+- Drift compares an agent with its own past, not with a correct answer.
+- MiniLM turns each answer into a vector (a list of numbers). We average the agent's first 20 answers (baseline) and its latest 12 answers (window).
+- If the two averages are far apart (cosine distance above 0.30), we raise "drift detected".
+- On real traces it caught 91.9% of drift, with 1.5% false alarms.
+- But only 24.5% of real sessions had enough answers (32) to measure at all. That is the honest weak point.
+IF ASKED "What happens to short sessions?": They get no drift value; the console shows a dash, not zero.
+SOURCES: DRIFT_REAL_TEXT_DIAGNOSIS_REPORT.md 11.3 and 11.5 (2026-08-27, offline, held-out split of an external real-trace corpus, measured once); HOW_IT_WORKS.md; README "What it does" (32 outputs).</aside>
+</section>
+
+<!-- =========================================================
+     7 COST
+     ========================================================= -->
+<section class="slide">
+    <div class="runhead"><span class="paper">AgentPulse</span><span class="mid">Results: cost</span><span class="pg">Page 7</span></div>
+    <div class="frame">
+        <div class="kicker">Result · cost</div>
+        <h2 class="headline">The evaluator is 15.6 times faster than an LLM judge, at a small accuracy cost</h2>
+        <div class="body">
+            <div class="exhibit">
+                <div class="bars">
+                    <div class="row"><div class="nm">AgentPulse (MiniLM + DeBERTa)</div><div class="track"><div class="bar" style="width: 6.4%;"></div><span class="val" style="left: 6.4%;">202.94 ms</span></div></div>
+                    <div class="row"><div class="nm">LLM judge (Qwen3-8B, CPU)</div><div class="track"><div class="bar red" style="width: 100%;"></div><span class="val" style="left: auto; right: 14px; color: var(--paper);">3,170.39 ms</span></div></div>
+                    <div class="row"><div></div><div class="axis">Median time per case, 30 cases, to scale</div></div>
+                </div>
+            </div>
+            <div class="notecol">
+                <p>Same 30 cases: judge F1 <b>1.000</b>, AgentPulse <b>0.963</b>.</p>
+                <p class="small">One judge model on one machine; not a claim about every judge.</p>
+            </div>
+        </div>
+    </div>
+    <div class="source"><b>Source</b>LLM_JUDGE_COMPARISON_REPORT.md, median latency table and correction banner (2026-08-26; F1 at the shipped weight derived from stored probabilities).</div>
+    <aside class="notes">TIME: 4:35-5:20 (45 seconds)
+SAY:
+- Can we afford to check every step? Yes. Our two models took 202.94 milliseconds per case.
+- A local 8-billion-parameter LLM judge took 3,170.39 milliseconds. That is 15.6 times slower.
+- To be fair: on the same 30 cases the judge was more accurate, F1 1.000 against our 0.963.
+- So the trade is a little accuracy for a big saving in time and cost. That saving is what lets us score every span.
+- This is one judge model on one machine, so I do not claim it for every LLM judge.
+IF ASKED "Why not use the judge then?": It is 15.6 times slower and needs a large model or a paid API call per span; checking every span is the point of this project.
+SOURCES: LLM_JUDGE_COMPARISON_REPORT.md (median 202.94 vs 3,170.39 ms, 15.6x; judge Qwen3-8B-GGUF Q4_K_M via llama.cpp, CPU; 2026-08-26). F1 1.000 vs 0.963 at weight 0.3: the report's correction banner, derived from stored probabilities, not re-run. Other single-run latencies (not on the slide): MiniLM 15.1 ms and DeBERTa 88.5 ms P50 (benchmarks/benchmark_results.json, 2026-08-18); 151.19 / 165.18 ms per case (experiments/results/ablation_results.json, 2026-09-18); live median 180 ms over 172 spans (docs/E2E_TEST_2026-10-27.md item 23).</aside>
+</section>
+
+<!-- =========================================================
+     8 VERIFICATION
+     ========================================================= -->
+<section class="slide">
+    <div class="runhead"><span class="paper">AgentPulse</span><span class="mid">Results: verification</span><span class="pg">Page 8</span></div>
+    <div class="frame">
+        <div class="kicker">Result · verification</div>
+        <h2 class="headline">The live site passed an end-to-end test from outside on 27 October</h2>
+        <div class="body">
+            <div class="exhibit">
+                <table class="ntable">
+                    <tr><th>Check on the live site</th><th class="num">Result</th></tr>
+                    <tr><td>Health endpoints</td><td class="num">200</td></tr>
+                    <tr><td>Key routes, writes without a key</td><td class="num">401</td></tr>
+                    <tr><td>Chat turn, three agents on Groq</td><td class="num">6.35 s, all scored</td></tr>
+                    <tr><td>Lab hallucination run</td><td class="num">HIGH alerts</td></tr>
+                    <tr><td>Every console view, two palettes</td><td class="num">0 NaN</td></tr>
+                </table>
+            </div>
+            <div class="notecol">
+                <p><b>628</b> backend and <b>404</b> dashboard tests pass.</p>
+                <p class="small">The test also found two real bugs; both were fixed.</p>
+            </div>
+        </div>
+    </div>
+    <div class="source"><b>Source</b>docs/E2E_TEST_2026-10-27.md, items 1-25 and findings F1-F3; README.md, Testing and benchmarks (re-run 2026-10-27).</div>
+    <aside class="notes">TIME: 5:20-5:55 (35 seconds)
+SAY:
+- Tests: 628 backend tests and 404 dashboard tests pass. I re-ran them on 27 October.
+- The same day I tested the live site from outside, like a visitor would.
+- Health checks answer 200. Secret routes and writes without a key are refused (401).
+- A chat question took 6.35 seconds, and all three agents' steps were scored.
+- The Lab's hallucination scenario raised HIGH alerts. No broken values on any screen. Two bugs were found and fixed.
+IF ASKED "Is 6.35 s the normal speed?": It is one turn; another turn that day took 1.6 s and today's took 3.2 s, so I do not quote one number as typical.
+SOURCES: docs/E2E_TEST_2026-10-27.md: items 1-4 health 200; item 7 /v1/keys and 3 variants 401; items 8-9 ingest and PUT /v1/simulate 401; item 10 chat 6.35 s (stream 6,148 ms; Groq gpt-oss-20b), spans 0.306 unverifiable, 0.135 and 0.027 supported; item 11 HIGH_HALLUCINATION_RISK and GROUNDING_FAILURE, verifier 0.971, analyst 0.999; items 14-24 views in Dark and Chalk, 0 NaN/undefined; F1 SVG arrowhead and F2 header at 1366 px fixed (PR #112), F3 open. README "Testing and benchmarks": 628 passed (4 min 12 s), 404 passed (35 files), tsc clean, 2026-10-27. 1.6 s: SESSION_HANDOFF.md 29.17.3.</aside>
+</section>
+
+<!-- =========================================================
+     9 LIVE DEMO
+     ========================================================= -->
+<section class="slide">
+    <div class="runhead"><span class="paper">AgentPulse</span><span class="mid">Live demo</span><span class="pg">Page 9</span></div>
+    <div class="frame">
+        <div class="kicker">Live demo · agentpulse.centralindia.cloudapp.azure.com</div>
+        <h2 class="headline">One question, three agents, and every step scored as it happens</h2>
+        <div class="body" style="grid-template-columns: 1.5fr 1fr;">
+            <div class="exhibit">
+                <div class="photo"><img src="assets/live_rag.jpg" alt="RAG Live view after a real turn" style="height: 505px;"></div>
+                <p class="caption">A real turn on 1 November: 3.2 s, all agents on Groq; answerer risk 0.191. One turn, not a rate. <span class="credit">Photo: live site</span></p>
+            </div>
+            <div class="notecol" style="gap: 0;">
+                <ol class="steps">
+                    <li>Ask how SQLite WAL improves concurrency</li>
+                    <li>Read the three stages</li>
+                    <li>Open the agent ledger</li>
+                    <li>Ask an out-of-corpus question</li>
+                    <li>Export the trace (key X)</li>
                 </ol>
-                <div class="reveal d4">
-                    <div class="shot" style="height: 500px;"><img src="assets/live_rag.jpg" alt="RAG Live view after a real turn"></div>
-                    <p class="caption">A real turn, 1 Nov 2026: 3.2 s, all three agents on Groq; answerer grounding 0.191 (low risk). One turn, not a rate.</p>
-                </div>
             </div>
         </div>
     </div>
-    <aside class="notes">5:40-8:10. Follow DEMO_GUIDE.md, steps 1, 2, 3, 4, 5 (the Telemetry Lab step 6 only if time is left). Say only what the screen shows.
-1. Launch App, RAG Live. Ask the WAL question. The answer comes from the retrieved document "SQLite Write-Ahead Logging (WAL) Architecture".
-2. Point at the three stages: time in ms, provider and model, failovers.
-3. Agent ledger: rows stay "pending" until the worker has scored them; alerts line says "Unknown so far" until every span is scored. Unverifiable = the evidence neither supports nor contradicts; common here because the retriever's premise is short.
-4. Out-of-corpus question: read the verdicts from the screen; do not predict them.
-5. Traces, newest trace, press X: "Everything on these screens is in this file. Nothing in it is computed in the browser."
-Screenshot (fallback if the network fails): live RAG view, 2026-11-01, one turn of 3.2 s with stages 410 / 510 / 378 ms, all groq openai/gpt-oss-20b, answerer grounding 0.191 low_risk (presentation/viva/assets/live_rag.jpg). Earlier single turns: 1.6 s and 6.1 s on 2026-10-27 (README).
-If something fails: DEMO_GUIDE.md "If something goes wrong" table (limit reached = 5 a minute per IP; providers at their limit; evaluator offline). Never call a failure a success.
-Before the talk: curl /chat/health and /v1/health/ready (both 200); one warm-up question.</aside>
+    <div class="source"><b>Source</b>DEMO_GUIDE.md, steps 1-5; screenshot of the live RAG Live view, 1 November 2026.</div>
+    <aside class="notes">TIME: 5:55-8:15 (2 minutes 20 seconds). Switch to the browser.
+SAY (follow DEMO_GUIDE.md; say only what the screen shows):
+- Open the site, Launch App, RAG Live. Ask: "how does SQLite WAL improve concurrency?"
+- Point at the three stages: retriever, verifier, answerer. Each shows its time, the provider and the model.
+- Open the agent ledger: one row per agent with its grounding risk and verdict. Rows say "pending" until the worker has scored them. Explain "Unverifiable" in one line: the evidence neither supports nor contradicts.
+- Ask: "who won the 2022 football world cup?" The corpus has nothing on football. Read the verdicts from the screen; do not predict them.
+- Go to Traces, open the newest trace, press X: "Everything on the screen is in this JSON file. Nothing is computed in the browser."
+IF ASKED "What if a provider fails?": The chat tries the next provider in the chain (Groq, NVIDIA, OpenRouter, Pollinations) and the screen says which one answered, or that all were at their limit.
+IF THE DEMO FAILS: "Limit reached" = the abuse limit (5 questions a minute per visitor) is working; "Providers at their limit" = press Retry once, then show an earlier turn; no network = use this slide's photo and appendix A3. Never call a failure a success.
+SOURCES: DEMO_GUIDE.md; screenshot 2026-11-01 (assets/live_rag.jpg): 3.2 s total, retriever 410 ms, verifier 510 ms, answerer 378 ms, all groq openai/gpt-oss-20b, answerer grounding 0.191 low_risk. Provider chain: README "What works live".</aside>
 </section>
 
 <!-- =========================================================
-     09 ENGINEERING
+     10 ENGINEERING
      ========================================================= -->
-<section class="slide" data-time="0:40">
+<section class="slide">
+    <div class="runhead"><span class="paper">AgentPulse</span><span class="mid">Engineering</span><span class="pg">Page 10</span></div>
     <div class="frame">
-        <div class="kicker reveal d1">08 · Engineering</div>
-        <h2 class="title reveal d2">Deployed, automated, <em>locked down</em></h2>
-        <div class="body">
-            <div class="grid3" style="margin-top: 48px;">
-                <div class="card reveal d3">
-                    <div class="label blue">Deployment</div>
-                    <h3 style="margin-top:10px;">One Azure VM</h3>
-                    <p>Standard_B2als_v2 (2 vCPU, 4 GB), Central India. Docker Compose: Caddy (TLS), nginx + dashboard, FastAPI backend, evaluator worker, chat service.</p>
-                    <p>Nightly database backup.</p>
-                </div>
-                <div class="card reveal d4">
-                    <div class="label mint">CI / CD</div>
-                    <h3 style="margin-top:10px;">GitHub Actions</h3>
-                    <p>Pull requests run the full pytest suite and the dashboard's tsc + vitest.</p>
-                    <p>A push to main deploys: rebuild changed images, test the new backend on a copy of the live database, swap, roll back if unhealthy.</p>
-                </div>
-                <div class="card reveal d5">
-                    <div class="label rose">Security</div>
-                    <h3 style="margin-top:10px;">Closed by default</h3>
-                    <p>Every write needs the Caddy write password, except the chat and <span class="mono">POST /v1/simulate</span>. Key routes: 401 on every case variant. Refuses to start with the placeholder key.</p>
-                    <p>Rate limits per IP: chat 5/min, 40/day; Lab 6/hour, 30/day; 300/day per site.</p>
-                </div>
+        <div class="kicker">Engineering</div>
+        <h2 class="headline">One small Azure VM, deployed automatically and closed to writes</h2>
+        <div class="body full">
+            <div class="briefs" style="align-self: center;">
+                <div class="item"><div class="lab">Deployment</div><h3>One VM, five containers</h3><p>Azure B2als_v2: 2 vCPU, 4 GB. Docker Compose with TLS.</p></div>
+                <div class="item"><div class="lab">CI / CD</div><h3>Tested, then shipped</h3><p>Every pull request runs the tests. A push to main deploys and rolls back if unhealthy.</p></div>
+                <div class="item"><div class="lab">Security</div><h3>Read-open, write-closed</h3><p>Writes need a password. Key routes return 401. Every public route is rate-limited.</p></div>
             </div>
         </div>
     </div>
-    <div class="source"><b>Sources:</b> deploy/azure/README.md (VM size) · .github/workflows/tests.yml, dashboard.yml, deploy-azure.yml · deploy/azure/Caddyfile · README.md "What works live" · SESSION_HANDOFF.md 29.17.2 and the #109 entry in 29.18</div>
-    <aside class="notes">8:10-8:50. Deployment: Standard_B2als_v2, 2 vCPU / 4 GB (deploy/azure/README.md); five containers: caddy, dashboard (nginx), backend, worker, chat. Nightly backup at 02:17 UTC, on the same disk (a limit).
-CI: tests.yml runs pytest tests/ on pull requests touching backend/demo/tests/sdk; dashboard.yml runs tsc and vitest on dashboard changes; deploy-azure.yml on push to main runs deploy/azure/deploy.sh over SSH: rebuild only changed images, test the new backend against a copy of the live DB, swap, put the previous images back if unhealthy.
-Security: Caddy basic_auth (bcrypt) on every write; the only exemption is exactly POST /v1/simulate (a "not expression" on method and raw path: Caddy's path matcher ignores case and merges slashes, so the plain matcher let nine variants through; SESSION_HANDOFF 29.17.2). /v1/keys, /V1/keys, //v1/keys, /v1/keys/1 all 401 (E2E item 7). Backend refuses to start with the placeholder key when local dev mode is off (README "Docker deployment"; PR #109). Limits: chat 5 a minute, 40 a day per IP, 300 a day for the site, 500 characters (README); Lab 6 per IP per hour, 30 per IP per day, 300 a day for the site (README; simulate_guard.py). Size limits on ingest and the WebSocket (PR #109).</aside>
+    <div class="source"><b>Source</b>deploy/azure/README.md (VM size); .github/workflows/tests.yml, dashboard.yml, deploy-azure.yml; deploy/azure/Caddyfile; README.md, What works live; SESSION_HANDOFF.md 29.17.2.</div>
+    <aside class="notes">TIME: 8:15-8:55 (40 seconds)
+SAY:
+- It runs on one small Azure VM: 2 CPUs, 4 GB memory, in Central India. Five containers: the web server with HTTPS, the dashboard, the API, the evaluator worker and the chat.
+- Every pull request runs the test suite automatically (GitHub Actions).
+- When code reaches main, it deploys by itself: it tests the new version on a copy of the live database, switches over, and goes back to the old version if the new one is unhealthy.
+- Anyone can read the site. Writing needs a password, except the chat and one Lab route. Secret key routes return 401.
+- Every public route has a per-visitor limit, so nobody can flood it.
+IF ASKED "What are the limits?": Chat 5 questions a minute and 40 a day per visitor, 300 a day for the whole site; Lab 6 runs an hour and 30 a day per visitor.
+SOURCES: deploy/azure/README.md (Standard_B2als_v2, 2 vCPU / 4 GB); five containers: caddy, dashboard (nginx), backend, worker, chat (README "Architecture in short"); tests.yml and dashboard.yml run on pull requests; deploy-azure.yml (rebuild changed images, test against a copy of the live DB, swap, roll back); Caddyfile basic_auth on writes, exemption only for the exact POST /v1/simulate (SESSION_HANDOFF 29.17.2); E2E item 7 (four key paths 401); limits from README "What works live".</aside>
 </section>
 
 <!-- =========================================================
-     10 HONEST LIMITS
+     11 LIMITS
      ========================================================= -->
-<section class="slide" data-time="0:35">
+<section class="slide">
+    <div class="runhead"><span class="paper">AgentPulse</span><span class="mid">Corrections and limits</span><span class="pg">Page 11</span></div>
     <div class="frame">
-        <div class="kicker reveal d1" style="color: var(--amber);">09 · Honest limits</div>
-        <h2 class="title reveal d2">What did not hold up, <em>said first</em></h2>
+        <div class="kicker">Honest limits</div>
+        <h2 class="headline">Two of the four signals failed on real traces, and the evidence base is small</h2>
         <div class="body">
-            <div class="lim">
-                <div class="card reveal d3"><h3><span class="dot" style="background:var(--rose)"></span>Inter-agent disagreement</h3><p>Found <b style="color:var(--text)">0 of 10</b> labelled contradictions on real traces (AUC 0.457 without the planner). Alert withdrawn; score only stored.</p></div>
-                <div class="card reveal d3"><h3><span class="dot" style="background:var(--rose)"></span>Tool-claim check</h3><p><b style="color:var(--text)">F1 0.000</b> on real traces: no claim found in 8,353 prose spans. It only reads counts written in digits.</p></div>
-                <div class="card reveal d4"><h3><span class="dot" style="background:var(--amber)"></span>Small labelled set</h3><p>Grounding quality rests on <b style="color:var(--text)">68</b> hand-labelled cases; only one is a neutral failure, so the data cannot say what the 0.3 weight buys.</p></div>
-                <div class="card reveal d4"><h3><span class="dot" style="background:var(--amber)"></span>Drift coverage</h3><p>Only <b style="color:var(--text)">24.5%</b> of real sessions were long enough to report a drift distance at all.</p></div>
-                <div class="card reveal d5" style="grid-column: span 2;"><h3><span class="dot" style="background:var(--blue)"></span>One small deployment</h3><p>One VM, one SQLite file, one evaluator worker; backup on the same disk; deploy not gated on the test suite; the chat runs on free LLM tiers and can be slow or refused.</p></div>
+            <div class="exhibit">
+                <table class="ntable">
+                    <tr><th>Limit</th><th class="num">Evidence</th></tr>
+                    <tr class="hl"><td>Inter-agent disagreement</td><td class="num">0 of 10 found</td></tr>
+                    <tr class="hl"><td>Tool-claim check</td><td class="num">F1 0.000</td></tr>
+                    <tr><td>Labelled grounding cases</td><td class="num">68</td></tr>
+                    <tr><td>Sessions long enough for drift</td><td class="num">24.5%</td></tr>
+                    <tr><td>Deployment</td><td class="num">1 VM, 1 SQLite file</td></tr>
+                </table>
+            </div>
+            <div class="notecol">
+                <div class="pull">Grounding and drift are the two signals that <span class="red">held up</span>.</div>
+                <p class="small">The two failed alerts are withdrawn, not hidden.</p>
             </div>
         </div>
     </div>
-    <div class="source"><b>Sources:</b> README.md "Known limits" · COMPETITIVE_POSITIONING.md 5.2 · SESSION_HANDOFF.md 24.9.5 · TOOL_CLAIM_EXTERNAL_TEST_REPORT.md section 10 · GROUNDING_RECALIBRATION_2026-10.md · DEMO_GUIDE.md "The honest limits"</div>
-    <aside class="notes">8:50-9:25. Say these before being asked.
-Disagreement: 0 of 10 independently labelled contradictions on real multi-agent traces; with the planner excluded AUC 0.457 (chance). Alert withdrawn (COMPETITIVE_POSITIONING.md 5.2; SESSION_HANDOFF.md 14.1, 24.9.5).
-Tool-claim: F1 0.000 on a real-data benchmark, no claim extracted from 8,353 prose spans; 0.842 on 19 hand-written cases that used the phrasing its regex expects (TOOL_CLAIM_EXTERNAL_TEST_REPORT.md section 10).
-Grounding: 68 hand-labelled cases (39 supported, 29 failures), only one neutral failure (val_17), so the 0.3 weight cannot be measured (GROUNDING_RECALIBRATION_2026-10.md; DEMO_GUIDE.md).
-Drift: 24.5% coverage (DRIFT_REAL_TEXT_DIAGNOSIS_REPORT.md 11.5).
-Deployment: README "Known limits"; deploy not gated on tests (SESSION_HANDOFF 29.16.6 follow-up list).
-These are why the live monitor header says "Grounding & Drift only".</aside>
+    <div class="source"><b>Source</b>README.md, Known limits; COMPETITIVE_POSITIONING.md 5.2; TOOL_CLAIM_EXTERNAL_TEST_REPORT.md section 10; GROUNDING_RECALIBRATION_2026-10.md; DRIFT_REAL_TEXT_DIAGNOSIS_REPORT.md 11.5.</div>
+    <aside class="notes">TIME: 8:55-9:35 (40 seconds)
+SAY:
+- I want to say the weak points before you ask.
+- Disagreement between agents: on real traces it found 0 of 10 real contradictions. So I withdrew that alert.
+- The tool-claim check scored F1 0.000 on real traces, because real agents do not write counts as digits.
+- Grounding rests on only 68 labelled cases. Drift can be measured on only a quarter of sessions.
+- And it is one VM with one SQLite file: fine for a prototype, not for production.
+IF ASKED "Why keep the failed signals in the code?": They are measured negative results; the scores are stored for study, but no alert is raised on them (appendix A2).
+SOURCES: README "Known limits"; COMPETITIVE_POSITIONING.md 5.2 and SESSION_HANDOFF.md 24.9.5 (0 of 10; AUC 0.457 without the planner); TOOL_CLAIM_EXTERNAL_TEST_REPORT.md section 10 (F1 0.000; no claim in 8,353 prose spans; 0.842 on 19 hand-written cases); GROUNDING_RECALIBRATION_2026-10.md (68 = 39 + 29; one neutral failure, val_17); DRIFT_REAL_TEXT_DIAGNOSIS_REPORT.md 11.5 (24.5%); README (one VM, one SQLite file, one worker, backup on the same disk); deploy not gated on tests: SESSION_HANDOFF 29.16.6.</aside>
 </section>
 
 <!-- =========================================================
-     11 FUTURE WORK
+     12 CONCLUSIONS (stays up during Q&A)
      ========================================================= -->
-<section class="slide" data-time="0:15">
+<section class="slide">
+    <div class="runhead"><span class="paper">AgentPulse</span><span class="mid">Conclusions</span><span class="pg">Page 12</span></div>
     <div class="frame">
-        <div class="kicker reveal d1">10 · Future work</div>
-        <h2 class="title reveal d2">Next, in order of what the limits <em>ask for</em></h2>
-        <div class="body">
-            <div class="grid3" style="grid-template-columns: repeat(2, 1fr); margin-top: 48px;">
-                <div class="card reveal d3"><div class="label mint">Grounding</div><h3 style="margin-top:10px;">More labelled data</h3><p>A larger labelled set drawn from real traces, with neutral failures, then re-run the ablation at the 0.3 weight.</p></div>
-                <div class="card reveal d3"><div class="label rose">The two failed signals</div><h3 style="margin-top:10px;">Redesign or remove</h3><p>Claim extraction from prose instead of digits for tool-claim; a different formulation for disagreement, tested on real traces first.</p></div>
-                <div class="card reveal d4"><div class="label blue">Scale and safety</div><h3 style="margin-top:10px;">Beyond one VM</h3><p>A server database instead of one SQLite file, several workers, an off-VM backup, deploys gated on the test suite.</p></div>
-                <div class="card reveal d4"><div class="label amber">Reach</div><h3 style="margin-top:10px;">More frameworks</h3><p>LangChain and CrewAI adapters (today: decorator, OpenAI / Anthropic wrapper, LangGraph).</p></div>
+        <div class="kicker">Conclusions</div>
+        <h2 class="headline">Conclusions</h2>
+        <div class="body" style="grid-template-columns: 1.7fr 1fr;">
+            <div class="exhibit">
+                <ol class="concl">
+                    <li>Every span can be scored on a CPU without an LLM judge: <b>202.94 ms</b> per case.</li>
+                    <li>Grounding (F1 <b>0.963</b>) and drift held up; two other signals failed and are withdrawn.</li>
+                    <li>It is live, tested (<b>628 + 404</b>) and open to examiners.</li>
+                </ol>
+            </div>
+            <div class="notecol">
+                <p class="small"><b>Next:</b> more labelled data, a server database, test-gated deploys.</p>
+                <p style="font-family: var(--font-label); font-weight: 700; font-size: 22px; letter-spacing: 0.1em; text-transform: uppercase;">Somnath Reddy</p>
+                <p class="small" style="font-family: var(--font-mono); font-size: 23px; line-height: 1.5;">agentpulse.centralindia.<br>cloudapp.azure.com<br>github.com/Soum-Code/agentpulse</p>
             </div>
         </div>
     </div>
-    <aside class="notes">9:25-9:40. Each item follows from a limit on the previous slide; none is done.
-Re-running experiments/ablation.py at weight 0.3 is listed as not done in SESSION_HANDOFF.md 29.16.4. LangChain and CrewAI adapters are "still not implemented" (README "What it does"). Off-VM backup and deploy gating are open items (SESSION_HANDOFF 29.16.6, 29.18).
-No numbers on this slide.</aside>
+    <div class="source"><b>Source</b>LLM_JUDGE_COMPARISON_REPORT.md; GROUNDING_RECALIBRATION_2026-10.md T3c; README.md, Testing and benchmarks (2026-10-27).</div>
+    <aside class="notes">TIME: 9:35-10:00 (25 seconds). Then leave this slide on screen for questions.
+SAY:
+- One: every step can be checked on a normal CPU, without an LLM judge, in about 200 milliseconds.
+- Two: grounding and drift held up when measured. Two other signals failed, and I withdrew them.
+- Three: it is live, tested, and you can open it yourselves now.
+- Next steps: more labelled data from real traces, a proper database server, and deploys that wait for the tests.
+- Thank you. I am happy to take questions.
+IF ASKED "What is your main contribution?": Per-span grounding and drift scoring with small local models, measured honestly, inside a working deployed system.
+SOURCES: 202.94 ms (LLM_JUDGE_COMPARISON_REPORT.md); F1 0.963 (GROUNDING_RECALIBRATION_2026-10.md T3c); 628 + 404 tests (README, 2026-10-27). Next steps: SESSION_HANDOFF.md 29.16.4, 29.16.6.</aside>
 </section>
 
 <!-- =========================================================
-     12 CONCLUSION (stays up during Q&A)
+     A1 APPENDIX: the label-order bug and the weight
      ========================================================= -->
-<section class="slide s-end" data-time="0:20">
+<section class="slide">
+    <div class="runhead"><span class="paper">AgentPulse</span><span class="mid app">Appendix A1</span><span class="pg">For questions</span></div>
     <div class="frame">
+        <div class="kicker">Appendix · the 0.3 weight</div>
+        <h2 class="headline">After a label-order bug was fixed, 0.5 flagged 7 of 17 correct answers; 0.3 flags 1</h2>
         <div class="body">
-            <div class="kicker reveal d1">Conclusion</div>
-            <div class="big reveal d2">Two signals that held up,<br><em>measured, live, and honest</em> about the rest.</div>
-            <div class="take">
-                <div class="card reveal d3"><div class="n">01</div><p>Every span scored by two local models on a CPU. <span>No LLM judge: 202.94 ms vs 3,170.39 ms median per case.</span></p></div>
-                <div class="card reveal d4"><div class="n">02</div><p>Grounding and drift held up. <span>F1 0.963 on the test split; two other signals failed on real traces and are labelled so.</span></p></div>
-                <div class="card reveal d5"><div class="n">03</div><p>Live on Azure and tested. <span>628 + 404 tests; chat, Telemetry Lab and console open to examiners.</span></p></div>
+            <div class="exhibit">
+                <table class="ntable">
+                    <tr><th>Neutral weight</th><th class="num">F1</th><th class="num">False alarms</th></tr>
+                    <tr class="hl"><td>0.0 to 0.3</td><td class="num">0.963</td><td class="num">0.059</td></tr>
+                    <tr><td>0.4</td><td class="num">0.897</td><td class="num">0.176</td></tr>
+                    <tr><td>0.5</td><td class="num">0.788</td><td class="num">0.412</td></tr>
+                </table>
+                <p class="caption">Test split, cut-off 0.4, corrected labels. At the 0.7 cut-off every weight up to 0.6 gives the same result.</p>
+            </div>
+            <div class="notecol">
+                <p>Before 21 October the code read two DeBERTa labels in swapped order. PR #69 fixed it; every figure was re-measured.</p>
             </div>
         </div>
     </div>
-    <div class="endbar reveal d5">
-        <div>
-            <div class="label">Live site</div>
-            <div class="url">agentpulse.centralindia.cloudapp.azure.com</div>
-            <div class="mono muted" style="font-size: 22px; margin-top: 10px;">github.com/Soum-Code/agentpulse</div>
-        </div>
-        <div style="font-size: 44px; font-weight: 700;">Thank you · <span class="mint">Questions?</span></div>
-    </div>
-    <aside class="notes">9:40-10:00. Read the three cards in one breath, then leave this slide up for Q&A.
-Numbers repeat earlier slides: 202.94 / 3,170.39 ms (LLM_JUDGE_COMPARISON_REPORT.md); F1 0.963 (GROUNDING_RECALIBRATION_2026-10.md T3c); 628 + 404 tests (README, 2026-10-27).
-For questions about the two failed signals or the 0.3 weight, go to the backup slides (End key, then back).</aside>
+    <div class="source"><b>Source</b>GROUNDING_RECALIBRATION_2026-10.md, banner and findings 4-7 (T3c, T5b, T7); PR #69; PR #89.</div>
+    <aside class="notes">APPENDIX, only for questions.
+SAY:
+- Until 21 October the code read DeBERTa's "entailment" and "neutral" outputs in the wrong order. It was found, fixed (PR #69), and every grounding number was re-measured.
+- With correct labels, a weight of 0.5 flagged 7 of 17 correct answers as medium risk. 0.3 flags only 1.
+- Weights from 0 to 0.3 give identical results, so 0.3 is a choice inside that range, not a fitted value.
+- High-risk alerts (above 0.7) do not change for any weight up to 0.6.
+- The live database was re-scored: 90 low, 7 medium, 19 high (it was 12, 81, 23 at 0.5).
+IF ASKED "How do I know other numbers are not also wrong?": The recalibration report lists every result the bug touched; anything built only on the contradiction probability was unaffected.
+SOURCES: GROUNDING_RECALIBRATION_2026-10.md finding 4 (w 0.0-0.3: 0.963 / 0.059; 0.4: 0.897 / 0.176; 0.5: 0.788 / 0.412, 7 of 17), finding 7 and banner (live rows 90/7/19 and 1 without label at 0.3; 12/81/23 at 0.5), finding 5 (contradiction-only results unaffected); PR #69 (label order from the model config), PR #89 (weight 0.3).</aside>
 </section>
 
 <!-- =========================================================
-     B1 BACKUP: the weight and the label bug
+     A2 APPENDIX: two withdrawn signals
      ========================================================= -->
-<section class="slide" data-time="backup">
+<section class="slide">
+    <div class="runhead"><span class="paper">AgentPulse</span><span class="mid app">Appendix A2</span><span class="pg">For questions</span></div>
     <div class="frame">
-        <div class="backup-tag reveal d1">BACKUP B1 · Q&amp;A</div>
-        <h2 class="title reveal d2" style="font-size: 58px;">The label-order bug, and why the weight is 0.3</h2>
+        <div class="kicker">Appendix · negative results</div>
+        <h2 class="headline">Both withdrawn signals looked good on hand-written cases and failed on real traces</h2>
         <div class="body">
-            <div class="two" style="grid-template-columns: 1fr 1fr; margin-top: 40px;">
-                <div class="reveal d3">
-                    <p class="lede" style="margin-top:0; font-size:25px;">Before 21 Oct the code read DeBERTa's <b style="color:var(--text)">entailment and neutral probabilities swapped</b>. PR #69 reads the label order from the model config; every grounding figure was re-measured.</p>
-                    <p class="lede" style="font-size:25px;">At the 0.7 cut-off, weights up to 0.6 give identical results: <b style="color:var(--text)">high alerts do not depend on the weight</b>. Only the medium line does.</p>
-                    <p class="lede" style="font-size:25px;">Live rows re-scored at 0.3: <span class="mono" style="color:var(--text)">90 low / 7 medium / 19 high</span> (at 0.5: 12 / 81 / 23).</p>
-                </div>
-                <div class="reveal d4">
-                    <div class="label">Test split, cut-off 0.4, corrected labels</div>
-                    <table class="tbl" style="margin-top: 14px;">
-                        <tr><td>weight</td><td class="v">F1</td><td class="v">false-positive rate</td></tr>
-                        <tr><td class="mono" style="color:var(--mint)">0.0 – 0.3</td><td class="v mint">0.963</td><td class="v mint">0.059</td></tr>
-                        <tr><td class="mono">0.4</td><td class="v">0.897</td><td class="v">0.176</td></tr>
-                        <tr><td class="mono" style="color:var(--rose)">0.5</td><td class="v rose">0.788</td><td class="v rose">0.412</td></tr>
-                    </table>
-                    <p class="caption">At 0.5, 7 of 17 supported test cases were flagged medium.</p>
-                </div>
+            <div class="exhibit">
+                <table class="ntable">
+                    <tr><th>Signal</th><th class="num">Hand-written</th><th class="num">Real traces</th></tr>
+                    <tr><td>Tool-claim check, F1</td><td class="num">0.842</td><td class="num red">0.000</td></tr>
+                    <tr><td>Inter-agent disagreement</td><td class="num">—</td><td class="num red">0 of 10 found</td></tr>
+                </table>
+                <p class="caption">Tool-claim: 19 hand-written cases; no claim found in 8,353 real prose spans. Disagreement: AUC 0.457 without the planner, which is chance.</p>
+            </div>
+            <div class="notecol">
+                <p>Real agents write counts in words, not digits; the tool-claim check only reads digits.</p>
             </div>
         </div>
     </div>
-    <div class="source"><b>Source:</b> GROUNDING_RECALIBRATION_2026-10.md (banner, findings 4-7, T3c, T5b, T7) · SESSION_HANDOFF.md 29.11.3 · PR #69, PR #89</div>
-    <aside class="notes">Backup. GROUNDING_RECALIBRATION_2026-10.md finding 4: test split, cut-off 0.4, corrected labels: w 0.0-0.3 F1 0.963, FPR 0.059; w 0.4 0.897 / 0.176; w 0.5 0.788 / 0.412 (7 of 17). At 0.7 every weight up to 0.6 identical. Finding 7 and the banner: live rows at 0.3 = 90 low / 7 medium / 19 high / 1 without label; at 0.5 they were 12 / 81 / 23. PR #69 = label order from config (contradiction 0, entailment 1, neutral 2). PR #89 set NEUTRAL_RISK_WEIGHT = 0.3 (model_version v1.2).</aside>
+    <div class="source"><b>Source</b>TOOL_CLAIM_EXTERNAL_TEST_REPORT.md section 10; COMPETITIVE_POSITIONING.md 5.1, 5.2; SESSION_HANDOFF.md 14.1, 24.9.5.</div>
+    <aside class="notes">APPENDIX, only for questions.
+SAY:
+- Tool-claim check: it compares a count that the agent writes ("I found 12 papers") with the count the tool really returned. On 19 hand-written cases F1 was 0.842. On real traces it found no claim at all in 8,353 steps, because real agents write in words, not digits. F1 0.000.
+- Disagreement: it compares agents' outputs in one trace with NLI. On real multi-agent traces it found 0 of 10 labelled contradictions; without the planner agent its AUC was 0.457, which is chance (0.5 = a coin toss).
+- So I withdrew both alerts. The scores are still stored for study.
+IF ASKED "Why did disagreement fail?": Point to the diagnosis in DISAGREEMENT_FORMULATION_DIAGNOSIS_REPORT.md rather than guessing; the measured fact is 0 of 10 and AUC 0.457.
+SOURCES: TOOL_CLAIM_EXTERNAL_TEST_REPORT.md section 10 (0.842 on 19 hand-written cases; 0.000 real; 8,353 prose spans; only fires on counts written in digits: README "What it does"); COMPETITIVE_POSITIONING.md 5.1, 5.2; SESSION_HANDOFF.md 14.1, 24.9.5 (0 of 10; AUC 0.457 without the planner).</aside>
 </section>
 
 <!-- =========================================================
-     B2 BACKUP: the two negative results
+     A3 APPENDIX: Telemetry Lab and incidents
      ========================================================= -->
-<section class="slide" data-time="backup">
+<section class="slide">
+    <div class="runhead"><span class="paper">AgentPulse</span><span class="mid app">Appendix A3</span><span class="pg">For questions</span></div>
     <div class="frame">
-        <div class="backup-tag reveal d1">BACKUP B2 · Q&amp;A</div>
-        <h2 class="title reveal d2" style="font-size: 58px;">Two signals measured, and withdrawn</h2>
-        <div class="body">
-            <div class="two" style="grid-template-columns: 1fr 1fr; margin-top: 44px; align-items: center;">
-                <div class="card reveal d3">
-                    <div class="label rose">Tool-claim validation</div>
-                    <div class="stat" style="margin-top: 18px;"><div class="num"><span class="muted">0.842</span> → <span class="rose">0.000</span></div><div class="cap">F1 on 19 hand-written cases → F1 on a real-data benchmark</div></div>
-                    <p style="margin-top: 22px;">Compares a count the output states with the tool's recorded result count. On real agent traces it extracted no claim from 8,353 prose spans: agents do not write counts in digits.</p>
-                </div>
-                <div class="card reveal d4">
-                    <div class="label rose">Inter-agent disagreement</div>
-                    <div class="stat" style="margin-top: 18px;"><div class="num rose">0 / 10</div><div class="cap">labelled contradictions found on real multi-agent traces</div></div>
-                    <p style="margin-top: 22px;">NLI between agents' outputs in one trace. With the planner excluded, AUC 0.457: chance. The alert was withdrawn; the score is still stored, not alerted on.</p>
-                </div>
+        <div class="kicker">Appendix · Telemetry Lab</div>
+        <h2 class="headline">A fault injected in the Lab becomes a scored trace and a HIGH incident</h2>
+        <div class="body" style="grid-template-columns: 1fr 1fr;">
+            <div class="exhibit">
+                <div class="photo"><img src="assets/live_lab.jpg" alt="Telemetry Lab view" style="height: 450px;"></div>
+                <p class="caption">Five scenarios; the agent text is fixed, the evaluator is real. <span class="credit">Photo: live site</span></p>
+            </div>
+            <div class="exhibit" style="padding-right: 0; padding-left: 26px; border-left: 1px solid var(--rule);">
+                <div class="photo"><img src="assets/live_incidents.jpg" alt="Incidents view with Lab alerts" style="height: 450px;"></div>
+                <p class="caption">Lab runs of 27 October: GROUNDING_FAILURE for analyst, risk 0.999. <span class="credit">Photo: live site</span></p>
             </div>
         </div>
     </div>
-    <div class="source"><b>Sources:</b> TOOL_CLAIM_EXTERNAL_TEST_REPORT.md section 10 · COMPETITIVE_POSITIONING.md 5.1, 5.2 · SESSION_HANDOFF.md 14.1, 24.9.5 · README.md "What it does"</div>
-    <aside class="notes">Backup. Tool-claim: 0.842 on 19 hand-written cases, 0.000 on a real-data benchmark, 8,353 prose spans with no claim extracted (TOOL_CLAIM_EXTERNAL_TEST_REPORT.md section 10; COMPETITIVE_POSITIONING.md 5.1). Disagreement: 0 of 10, AUC 0.457 without the planner (COMPETITIVE_POSITIONING.md 5.2; SESSION_HANDOFF.md 14.1, 24.9.5). Why keep them in the code: they are measured negative results, reported rather than hidden; the Telemetry Lab still has the scenarios so the mechanism can be shown on synthetic text.</aside>
+    <div class="source"><b>Source</b>HOW_IT_WORKS.md, Telemetry Lab; docs/E2E_TEST_2026-10-27.md, items 11, 12 and 22.</div>
+    <aside class="notes">APPENDIX, only for questions or if the live demo fails.
+SAY:
+- The Telemetry Lab lets anyone inject one of five faults: clean, hallucination, tool-claim mismatch, drift, disagreement.
+- The agent text is fixed in the code; everything after it (scoring, alerts) is the real system.
+- On 27 October the hallucination run raised HIGH alerts: verifier 0.971, analyst 0.999.
+- If you run it twice within 15 minutes you see the scores but no new alert, because of the 15-minute cooldown.
+IF ASKED "Is the Lab data real?": The text is a fixture; the scores and alerts come from the real evaluator.
+SOURCES: HOW_IT_WORKS.md (fixture text in backend/app/routers/ingest.py); docs/E2E_TEST_2026-10-27.md item 11 (verifier 0.971, analyst 0.999), item 12 (no alert on a repeat within 15 min, cooldown 900 s), item 22; screenshots 2026-11-01.</aside>
 </section>
 
 <!-- =========================================================
-     B3 BACKUP: Telemetry Lab and incidents
+     A4 REFERENCES
      ========================================================= -->
-<section class="slide" data-time="backup">
+<section class="slide">
+    <div class="runhead"><span class="paper">AgentPulse</span><span class="mid app">References</span><span class="pg">For questions</span></div>
     <div class="frame">
-        <div class="backup-tag reveal d1">BACKUP B3 · Q&amp;A</div>
-        <h2 class="title reveal d2" style="font-size: 58px;">Telemetry Lab: a fault in, an incident out</h2>
-        <div class="body">
-            <div class="two" style="grid-template-columns: 1fr 1fr; margin-top: 36px; gap: 36px;">
-                <div class="reveal d3">
-                    <div class="shot" style="height: 420px;"><img src="assets/live_lab.jpg" alt="Telemetry Lab view"></div>
-                    <p class="caption">Five scenarios: clean, hallucination, tool-claim mismatch, drift, disagreement. Agent text is a fixture; the evaluator is real.</p>
-                </div>
-                <div class="reveal d4">
-                    <div class="shot" style="height: 420px;"><img src="assets/live_incidents.jpg" alt="Incidents view with Lab alerts"></div>
-                    <p class="caption">Incidents from Lab runs on 27 Oct: GROUNDING_FAILURE and HIGH_HALLUCINATION_RISK for analyst, risk 0.999.</p>
-                </div>
+        <div class="kicker">References</div>
+        <h2 class="headline">Every figure in this deck comes from these documents in the repository</h2>
+        <div class="body" style="grid-template-columns: 1fr 1fr;">
+            <div class="exhibit refs" style="justify-content: flex-start;">
+                <p>README.md (state of 2026-10-27)</p>
+                <p>docs/E2E_TEST_2026-10-27.md</p>
+                <p>GROUNDING_RECALIBRATION_2026-10.md</p>
+                <p>DRIFT_REAL_TEXT_DIAGNOSIS_REPORT.md</p>
+                <p>LLM_JUDGE_COMPARISON_REPORT.md</p>
+                <p>TOOL_CLAIM_EXTERNAL_TEST_REPORT.md</p>
+                <p>COMPETITIVE_POSITIONING.md</p>
+            </div>
+            <div class="exhibit refs" style="justify-content: flex-start; padding-left: 26px; border-left: 1px solid var(--rule);">
+                <p>HOW_IT_WORKS.md; DEMO_GUIDE.md</p>
+                <p>benchmarks/benchmark_results.json</p>
+                <p>experiments/results/ablation_results.json</p>
+                <p>deploy/azure/README.md; .github/workflows/</p>
+                <p>SESSION_HANDOFF.md, sections 14, 24, 29</p>
+                <p>Models: sentence-transformers/all-MiniLM-L6-v2; cross-encoder/nli-deberta-v3-small</p>
             </div>
         </div>
     </div>
-    <div class="source"><b>Sources:</b> HOW_IT_WORKS.md (Telemetry Lab; fixture text in routers/ingest.py) · docs/E2E_TEST_2026-10-27.md items 11, 12, 22 · README.md (Lab limits 6/h, 30/day per IP)</div>
-    <aside class="notes">Backup. The Lab injects one of five scenarios into a five-agent pipeline; the text is a fixture (string literals in backend/app/routers/ingest.py), everything downstream is real (HOW_IT_WORKS.md). E2E item 11: hallucination raised HIGH_HALLUCINATION_RISK and GROUNDING_FAILURE for verifier 0.971 and analyst 0.999. Item 12: a repeat within 15 minutes scores the spans but raises no new alert (cooldown 900 s). Screenshots: live site, 2026-11-01; the incidents shown are from the 2026-10-27 test runs. Open to visitors: 6 runs per IP per hour, 30 per day, 300 per day for the site.</aside>
+    <div class="source"><b>Source</b>Repository github.com/Soum-Code/agentpulse; model names from HOW_IT_WORKS.md.</div>
+    <aside class="notes">APPENDIX. Show only if asked where a number comes from.
+SAY:
+- Every number in this deck comes from a document in the repository; each slide names its source at the bottom.
+- The two models are public Hugging Face models: all-MiniLM-L6-v2 for embeddings and nli-deberta-v3-small for NLI.
+IF ASKED "Is there a paper?": Show the paper-communication proof you brought separately; this deck does not claim a publication.
+SOURCES: HOW_IT_WORKS.md (model table).</aside>
 </section>
 
 </main>
 </div>
 
-<!-- Inline editing hot zone (frontend-slides default): press E or hover the top-left corner -->
-<div class="edit-hotzone" style="position:fixed;top:0;left:0;width:80px;height:80px;z-index:10000;"></div>
-<button class="edit-toggle" id="editToggle" title="Edit mode (E)" style="position:fixed;top:16px;left:16px;z-index:10001;opacity:0;pointer-events:none;transition:opacity .3s;background:#121823;color:#f5f5f7;border:1px solid #2a3140;border-radius:8px;padding:6px 10px;font:13px 'JetBrains Mono',monospace;">edit</button>
-
 <script>
 /* ===========================================
    SLIDE PRESENTATION CONTROLLER
-   Fixed 1920x1080 stage scaled to the window; keys, wheel, touch; N toggles notes.
+   Fixed 1920x1080 stage scaled to the window; keys, wheel, touch; N toggles the notes panel.
    =========================================== */
 class SlidePresentation {
     constructor() {
@@ -817,7 +815,6 @@ class SlidePresentation {
     }
     setupKeys() {
         document.addEventListener('keydown', (e) => {
-            if (e.target.isContentEditable) return;
             if (['ArrowRight', 'ArrowDown', 'PageDown', ' '].includes(e.key)) { e.preventDefault(); this.show(this.current + 1); }
             else if (['ArrowLeft', 'ArrowUp', 'PageUp'].includes(e.key)) { e.preventDefault(); this.show(this.current - 1); }
             else if (e.key === 'Home') this.show(0);
@@ -847,45 +844,13 @@ class SlidePresentation {
             s.classList.toggle('visible', k === this.current);
         });
         const n = this.slides[this.current].querySelector('aside.notes');
-        this.notes.textContent = `Slide ${this.current + 1} · ${this.slides[this.current].dataset.time || ''}\n` + (n ? n.textContent.trim() : '');
+        this.notes.textContent = `Slide ${this.current + 1} of ${this.slides.length}\n` + (n ? n.textContent.trim() : '');
         document.getElementById('progress').style.transform = `scaleX(${(this.current + 1) / this.slides.length})`;
         document.getElementById('counter').textContent = `${this.current + 1} / ${this.slides.length}`;
         history.replaceState(null, '', '#' + (this.current + 1));
     }
 }
 const deck = new SlidePresentation();
-
-/* ===========================================
-   INLINE EDITING (frontend-slides default): E toggles, hot zone reveals the button, Ctrl+S saves a copy
-   =========================================== */
-const editor = {
-    isActive: false,
-    toggleEditMode() {
-        this.isActive = !this.isActive;
-        document.querySelectorAll('.slide h1, .slide h2, .slide h3, .slide p, .slide li, .slide .num, .slide .cap').forEach(el => { el.contentEditable = this.isActive; });
-        document.getElementById('editToggle').classList.toggle('active', this.isActive);
-        document.getElementById('editToggle').style.opacity = this.isActive ? 1 : 0;
-        document.getElementById('editToggle').style.pointerEvents = this.isActive ? 'auto' : 'none';
-    }
-};
-(() => {
-    const hot = document.querySelector('.edit-hotzone'), btn = document.getElementById('editToggle');
-    let t = null;
-    const showBtn = () => { clearTimeout(t); btn.style.opacity = 1; btn.style.pointerEvents = 'auto'; };
-    const hideBtn = () => { t = setTimeout(() => { if (!editor.isActive) { btn.style.opacity = 0; btn.style.pointerEvents = 'none'; } }, 400); };
-    hot.addEventListener('mouseenter', showBtn); hot.addEventListener('mouseleave', hideBtn);
-    btn.addEventListener('mouseenter', showBtn); btn.addEventListener('mouseleave', hideBtn);
-    btn.addEventListener('click', () => editor.toggleEditMode());
-    hot.addEventListener('click', () => editor.toggleEditMode());
-    document.addEventListener('keydown', (e) => {
-        if ((e.key === 'e' || e.key === 'E') && !e.target.isContentEditable) editor.toggleEditMode();
-        if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-            e.preventDefault();
-            const blob = new Blob(['<!DOCTYPE html>\n' + document.documentElement.outerHTML], { type: 'text/html' });
-            const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'AgentPulse_Viva.html'; a.click();
-        }
-    });
-})();
 </script>
 </body>
 </html>
