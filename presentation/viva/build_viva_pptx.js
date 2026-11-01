@@ -1,12 +1,13 @@
 /*
- * Builds presentation/viva/AgentPulse_Viva.pptx: the PowerPoint twin of AgentPulse_Viva.html.
- * Same slides, same order, same numbers. The speaker notes are read from the HTML deck's
+ * Builds presentation/viva/AgentPulse_Viva.pptx: the PowerPoint twin of AgentPulse_Viva.html (broadsheet edition).
+ * Same 16 slides, same order, same numbers. The speaker notes are read from the HTML deck's
  * <aside class="notes"> blocks, so the two decks cannot drift apart on notes or sources.
  *
  * Run (pptxgenjs must be resolvable; APPLY_THEME points at the pptx skill's apply_theme.js):
  *   NODE_PATH=<dir with node_modules> APPLY_THEME=<path>/apply_theme.js node presentation/viva/build_viva_pptx.js
  *
- * In short: a theme (colours + fonts), two layouts (title, content), then one block per slide.
+ * In short: a theme (newsprint, ink, one red), two layouts (front page, content page), then one block per slide.
+ * Fonts ship with Office: Times New Roman (headlines), Cambria (text), Arial (labels), Consolas (formula).
  */
 const fs = require('fs');
 const path = require('path');
@@ -16,19 +17,18 @@ const HERE = __dirname;
 const OUT = path.join(HERE, 'AgentPulse_Viva.pptx');
 const A = (f) => path.join(HERE, 'assets', f);
 
-// In short: the palette of the live site's Dark + Obsidian look (same as the HTML :root).
-// dk1/lt1 are swapped on purpose: this is a dark deck, so "text 1" is the light ink.
+// In short: the newspaper palette of the HTML :root (paper, ink, one deep red).
 const THEME = {
-  name: 'AgentPulse Viva',
-  headFontFace: 'Calibri',
-  bodyFontFace: 'Calibri',
+  name: 'AgentPulse Broadsheet',
+  headFontFace: 'Times New Roman',
+  bodyFontFace: 'Cambria',
   colors: {
-    dk1: 'F5F5F7', lt1: '06070A', dk2: 'A3ACBB', lt2: '0D1117',
-    accent1: '3DDC97', accent2: 'F5B841', accent3: 'F25C7A', accent4: '4C8DFF',
-    accent5: '6F7A8C', accent6: '161D29', hlink: '3DDC97', folHlink: '4C8DFF',
+    dk1: '141414', lt1: 'F4F0E6', dk2: '3D3A35', lt2: 'FBF8F1',
+    accent1: 'A4161A', accent2: '6B665D', accent3: 'B9B2A3', accent4: '9C978C',
+    accent5: '141414', accent6: 'FFFFFF', hlink: 'A4161A', folHlink: '6B665D',
   },
 };
-const MONO = 'Consolas';
+const HEAD = 'Times New Roman', LABEL = 'Arial', MONO = 'Consolas';
 
 const pres = new pptxgen();
 pres.layout = 'LAYOUT_WIDE'; // 13.333 x 7.5 in
@@ -37,10 +37,13 @@ pres.title = 'AgentPulse — M.Tech final review';
 pres.subject = 'Grounding and drift monitoring for multi-agent LLM pipelines';
 pres.theme = { headFontFace: THEME.headFontFace, bodyFontFace: THEME.bodyFontFace };
 const C = pres.SchemeColor;
-const INK = C.text1, MUTED = C.text2, BG = C.background1, SURF = C.background2;
-const MINT = C.accent1, AMBER = C.accent2, ROSE = C.accent3, BLUE = C.accent4, FAINT = C.accent5, SURF2 = C.accent6;
+const INK = C.text1, INK2 = C.text2, PAPER = C.background1, BOX = C.background2;
+const RED = C.accent1, GREY = C.accent2, HAIR = C.accent3, MIDGREY = C.accent4, WHITE = C.accent6;
+const HAIR_HEX = 'B9B2A3', INK_HEX = '141414';
 
-const M = 0.83, W = 13.333, CW = W - 2 * M;
+const M = 0.76, W = 13.333, CW = W - 2 * M;
+const EX_W = 7.15, RULE_X = M + EX_W + 0.3, NOTE_X = RULE_X + 0.33, NOTE_W = W - M - NOTE_X;
+const BODY_Y = 2.3, BODY_B = 6.7;
 
 // ---------- notes from the HTML deck ----------
 // In short: pull every <aside class="notes"> in order and decode the few entities used.
@@ -49,19 +52,18 @@ const NOTES = [...html.matchAll(/<aside class="notes">([\s\S]*?)<\/aside>/g)].ma
   m[1].replace(/&gt;/g, '>').replace(/&lt;/g, '<').replace(/&amp;/g, '&').trim());
 
 // ---------- layouts ----------
+pres.defineSlideMaster({ title: 'FRONT', background: { color: 'F4F0E6' }, objects: [] });
 pres.defineSlideMaster({
-  title: 'TITLE',
-  background: { path: A('pptx_background.png') },
-  objects: [],
-});
-pres.defineSlideMaster({
-  title: 'CONTENT',
-  background: { path: A('pptx_background.png') },
+  title: 'PAGE',
+  background: { color: 'F4F0E6' },
   objects: [
-    { placeholder: { options: { name: 'kicker', type: 'body', x: M, y: 0.52, w: 9.5, h: 0.34, fontFace: MONO, fontSize: 13, color: MINT, charSpacing: 3, margin: 0, valign: 'middle' }, text: '' } },
-    { placeholder: { options: { name: 'title', type: 'title', x: M, y: 0.9, w: CW, h: 0.8, fontSize: 36, bold: true, color: INK, margin: 0, valign: 'middle' }, text: '' } },
+    { text: { text: 'AgentPulse', options: { x: M, y: 0.3, w: 3, h: 0.38, fontFace: HEAD, fontSize: 16, bold: true, color: INK, margin: 0, valign: 'bottom' } } },
+    { line: { x: M, y: 0.76, w: CW, h: 0, line: { color: INK_HEX, width: 2.25 } } },
+    { line: { x: M, y: 0.81, w: CW, h: 0, line: { color: INK_HEX, width: 0.75 } } },
+    { line: { x: M, y: 6.9, w: CW, h: 0, line: { color: INK_HEX, width: 0.75 } } },
+    { placeholder: { options: { name: 'kicker', type: 'body', x: M, y: 0.93, w: 11, h: 0.27, fontFace: LABEL, fontSize: 11, bold: true, color: RED, charSpacing: 2, margin: 0, valign: 'middle' }, text: '' } },
+    { placeholder: { options: { name: 'title', type: 'title', x: M, y: 1.22, w: CW - 0.6, h: 0.98, fontFace: HEAD, fontSize: 30, bold: true, color: INK, margin: 0, valign: 'top', align: 'left', lineSpacingMultiple: 0.95 }, text: '' } },
   ],
-  slideNumber: { x: 12.35, y: 7.08, w: 0.6, h: 0.25, fontFace: MONO, fontSize: 9, color: FAINT, align: 'right' },
 });
 
 // ---------- helpers ----------
@@ -72,370 +74,347 @@ function slide(master, section) {
   n += 1;
   return s;
 }
-function head(s, kicker, titleRuns, kickerColor) {
-  s.addText(kicker.toUpperCase(), { placeholder: 'kicker', color: kickerColor || MINT });
-  s.addText(titleRuns, { placeholder: 'title' });
-}
-// Title with an italic accent phrase, like the HTML <em>.
-function tRuns(before, accent, after) {
-  const r = [{ text: before }];
-  if (accent) r.push({ text: accent, options: { italic: true, color: MINT, bold: false } });
-  if (after) r.push({ text: after });
-  return r;
-}
 function text(s, t, x, y, w, h, o = {}) {
-  s.addText(t, { x, y, w, h, isTextBox: true, margin: 0, fontSize: 15, color: MUTED, valign: 'top', ...o });
+  s.addText(t, { x, y, w, h, isTextBox: true, margin: 0, fontSize: 20, color: INK, valign: 'top', ...o });
 }
-function card(s, x, y, w, h, o = {}) {
-  s.addShape(pres.shapes.ROUNDED_RECTANGLE, {
-    x, y, w, h, rectRadius: 0.12, fill: { color: o.fill || SURF, transparency: o.transparency ?? 0 },
-    line: { color: o.line || FAINT, width: 0.75, transparency: o.lineT ?? 55 }, objectName: o.name || 'card',
-  });
-}
-function label(s, t, x, y, w, color) {
-  text(s, t.toUpperCase(), x, y, w, 0.25, { fontFace: MONO, fontSize: 10, color: color || FAINT, charSpacing: 2 });
-}
-function stat(s, num, cap, x, y, w, h, color, numSize) {
-  card(s, x, y, w, h);
-  text(s, num, x + 0.22, y + 0.18, w - 0.44, 0.62, { fontFace: MONO, fontSize: numSize || 30, bold: true, color: color || INK, valign: 'middle' });
-  text(s, cap, x + 0.22, y + 0.84, w - 0.44, h - 0.95, { fontSize: 13 });
+// Running head (section in the middle, page at the right), kicker and takeaway headline.
+function page(s, mid, pg, kicker, headline, midRed) {
+  text(s, mid.toUpperCase(), 4.0, 0.42, 5.33, 0.26, { fontFace: LABEL, fontSize: 9.5, color: midRed ? RED : INK2, charSpacing: 2, align: 'center', valign: 'bottom' });
+  text(s, pg.toUpperCase(), W - M - 3, 0.42, 3, 0.26, { fontFace: LABEL, fontSize: 9.5, color: INK2, charSpacing: 2, align: 'right', valign: 'bottom' });
+  s.addText(kicker.toUpperCase(), { placeholder: 'kicker' });
+  s.addText(headline, { placeholder: 'title' });
 }
 function source(s, t) {
-  s.addShape(pres.shapes.LINE, { x: M, y: 6.72, w: CW, h: 0, line: { color: FAINT, width: 0.5, transparency: 60 } });
-  text(s, t, M, 6.8, CW - 0.6, 0.45, { fontFace: MONO, fontSize: 9, color: FAINT });
+  s.addText([{ text: 'SOURCE  ', options: { fontFace: LABEL, fontSize: 8.5, bold: true, italic: false, color: INK2, charSpacing: 2 } }, { text: t }],
+    { x: M, y: 6.97, w: CW, h: 0.42, isTextBox: true, margin: 0, fontFace: 'Cambria', fontSize: 10.5, italic: true, color: GREY, valign: 'top' });
 }
-function arrow(s, x1, y1, x2, color) {
-  s.addShape(pres.shapes.LINE, { x: x1, y: y1, w: x2 - x1, h: 0, line: { color: color || FAINT, width: 1.5, endArrowType: 'triangle' } });
+function vrule(s, x, y1, y2) {
+  s.addShape(pres.shapes.LINE, { x, y: y1, w: 0, h: y2 - y1, line: { color: INK_HEX, width: 0.75 } });
 }
-function shot(s, file, x, y, w, h) {
-  s.addShape(pres.shapes.ROUNDED_RECTANGLE, { x: x - 0.03, y: y - 0.03, w: w + 0.06, h: h + 0.06, rectRadius: 0.1, fill: { color: SURF2 }, line: { color: BLUE, width: 0.75, transparency: 50 } });
-  s.addImage({ path: A(file), x, y, w, h, sizing: { type: 'cover', w, h }, altText: file });
+// The right-hand column: a column rule and up to three short paragraphs.
+function notecol(s, paras, y0 = BODY_Y + 0.35) {
+  vrule(s, RULE_X, BODY_Y + 0.1, BODY_B - 0.1);
+  let y = y0;
+  paras.forEach((p) => {
+    const small = p.small;
+    const runs = p.runs || [{ text: p.text }];
+    const h = p.h || 1.0;
+    s.addText(runs.map((r) => ({ text: r.text, options: r.b ? { bold: true } : r.red ? { color: RED } : {} })),
+      { x: NOTE_X, y, w: NOTE_W, h, isTextBox: true, margin: 0, fontFace: 'Cambria', fontSize: small ? 17 : 20, color: small ? INK2 : INK, valign: 'top' });
+    y += h + 0.18;
+  });
+}
+function pull(s, runs, x, y, w, h) {
+  s.addShape(pres.shapes.LINE, { x, y, w, h: 0, line: { color: INK_HEX, width: 2.25 } });
+  s.addText(runs.map((r) => ({ text: r.text, options: r.red ? { color: RED } : {} })),
+    { x, y: y + 0.12, w, h: h - 0.24, isTextBox: true, margin: 0, fontFace: HEAD, fontSize: 22, bold: true, italic: true, color: INK, valign: 'middle' });
+  s.addShape(pres.shapes.LINE, { x, y: y + h, w, h: 0, line: { color: INK_HEX, width: 0.75 } });
+}
+function caption(s, t, credit, x, y, w, h = 0.5) {
+  const runs = [{ text: t }];
+  if (credit) runs.push({ text: '  ' + credit.toUpperCase(), options: { fontFace: LABEL, fontSize: 8, color: GREY, charSpacing: 1 } });
+  s.addText(runs, { x, y, w, h, isTextBox: true, margin: 0, fontFace: 'Cambria', fontSize: 12, color: INK2, valign: 'top' });
+}
+function photo(s, file, x, y, w, h) {
+  s.addShape(pres.shapes.RECTANGLE, { x, y, w, h, fill: { color: WHITE }, line: { color: INK_HEX, width: 0.75 } });
+  s.addImage({ path: A(file), x: x + 0.06, y: y + 0.06, w: w - 0.12, h: h - 0.12, sizing: { type: 'cover', w: w - 0.12, h: h - 0.12 }, altText: file });
+}
+// Newspaper table: header row in small caps over a heavy rule, hairlines between rows.
+function ntable(s, header, rows, x, y, w, colW, o = {}) {
+  const head = header.map((t, k) => ({ text: t.toUpperCase(), options: { fontFace: LABEL, fontSize: 10, bold: true, color: INK2, charSpacing: 1, align: k ? 'right' : 'left', border: [{ type: 'none' }, { type: 'none' }, { pt: 2.25, color: INK_HEX }, { type: 'none' }] } }));
+  const body = rows.map((r) => r.cells.map((t, k) => ({ text: t, options: { color: r.red ? RED : INK, bold: k > 0, align: k ? 'right' : 'left', border: [{ type: 'none' }, { type: 'none' }, { pt: 0.75, color: HAIR_HEX }, { type: 'none' }] } })));
+  s.addTable([head, ...body], { x, y, w, colW, fontFace: 'Cambria', fontSize: o.fontSize || 18, rowH: o.rowH || 0.55, valign: 'middle', margin: [0, 0.06, 0, 0], fill: { color: 'F4F0E6' } });
 }
 
 // =================== TALK ===================
 pres.addSection({ title: 'Talk' });
 
-// 01 Title
+// 1 Front page
 {
-  const s = slide('TITLE', 'Talk');
-  text(s, 'M.TECH (AIML) · FINAL REVIEW · 3 NOV 2026', M, 0.95, 6, 0.3, { fontFace: MONO, fontSize: 13, color: MINT, charSpacing: 3 });
-  s.addText([{ text: 'Agent', options: { color: INK } }, { text: 'Pulse', options: { color: MINT } }],
-    { x: M, y: 1.4, w: 6.2, h: 1.3, isTextBox: true, margin: 0, fontSize: 72, bold: true, fontFace: 'Calibri' });
-  text(s, 'Self-hosted observability for multi-agent LLM pipelines. Every span is scored for grounding risk and drift by two small local models — no LLM judge.',
-    M, 2.85, 5.6, 1.6, { fontSize: 20 });
-  shot(s, 'live_overview.jpg', 6.75, 1.3, 5.75, 2.655);
-  text(s, 'The live console, Overview (screenshot 1 Nov 2026)', 6.75, 4.05, 5.75, 0.3, { fontFace: MONO, fontSize: 10, color: FAINT, align: 'right' });
-  text(s, 'Somnath Reddy', M, 5.55, 6, 0.45, { fontSize: 22, bold: true, color: INK });
-  text(s, 'agentpulse.centralindia.cloudapp.azure.com\ngithub.com/Soum-Code/agentpulse', M, 6.05, 7, 0.6, { fontFace: MONO, fontSize: 12, color: MUTED });
+  const s = slide('FRONT', 'Talk');
+  text(s, 'VOL. 1 · NO. 1', M, 0.26, 4, 0.25, { fontFace: LABEL, fontSize: 10, color: INK2, charSpacing: 2 });
+  text(s, 'M.TECH (AIML) FINAL REVIEW', 4.0, 0.26, 5.33, 0.25, { fontFace: LABEL, fontSize: 10, color: INK2, charSpacing: 2, align: 'center' });
+  text(s, 'TUESDAY, 3 NOVEMBER 2026', W - M - 4, 0.26, 4, 0.25, { fontFace: LABEL, fontSize: 10, color: INK2, charSpacing: 2, align: 'right' });
+  s.addShape(pres.shapes.LINE, { x: M, y: 0.56, w: CW, h: 0, line: { color: INK_HEX, width: 0.75 } });
+  text(s, 'AgentPulse', M, 0.5, CW, 1.2, { fontFace: HEAD, fontSize: 96, bold: true, align: 'center', valign: 'middle' });
+  text(s, 'Observability for multi-agent LLM pipelines', M, 1.97, CW, 0.3, { fontFace: 'Cambria', fontSize: 15, italic: true, color: INK2, align: 'center' });
+  s.addShape(pres.shapes.LINE, { x: M, y: 2.32, w: CW, h: 0, line: { color: INK_HEX, width: 2.25 } });
+  text(s, 'LIVE EDITION: AGENTPULSE.CENTRALINDIA.CLOUDAPP.AZURE.COM', M, 2.39, 7, 0.25, { fontFace: LABEL, fontSize: 9.5, charSpacing: 1, valign: 'middle' });
+  text(s, 'CODE: GITHUB.COM/SOUM-CODE/AGENTPULSE', W - M - 5, 2.39, 5, 0.25, { fontFace: LABEL, fontSize: 9.5, charSpacing: 1, align: 'right', valign: 'middle' });
+  s.addShape(pres.shapes.LINE, { x: M, y: 2.7, w: CW, h: 0, line: { color: INK_HEX, width: 0.75 } });
+  text(s, 'Every agent step, checked for grounding and drift, without an LLM judge', M, 2.95, 5.6, 1.85, { fontFace: HEAD, fontSize: 32, bold: true });
+  text(s, 'Two small local models score each span. Two signals held up on real data, two did not, and this paper says which.', M, 4.9, 5.6, 1.1, { fontFace: 'Cambria', fontSize: 16, color: INK2 });
+  s.addText([{ text: 'BY ' }, { text: 'SOMNATH REDDY', options: { color: RED } }], { x: M, y: 6.1, w: 5.6, h: 0.3, isTextBox: true, margin: 0, fontFace: LABEL, fontSize: 11, bold: true, charSpacing: 2, color: INK });
+  vrule(s, 6.75, 2.95, 6.9);
+  photo(s, 'live_overview.jpg', 7.08, 2.95, W - M - 7.08, 3.15);
+  caption(s, 'The deployed console on 1 November 2026.', 'Photo: screenshot of the live site', 7.08, 6.2, W - M - 7.08, 0.5);
 }
 
-// 02 Problem
+// 2 Problem
 {
-  const s = slide('CONTENT', 'Talk');
-  head(s, '01 · The problem', tRuns('Multi-agent pipelines fail ', 'silently'));
-  const nodes = [['AGENT 1', 'Retriever', '200 OK', false], ['AGENT 2', 'Verifier', 'claim not in evidence', true], ['AGENT 3', 'Answerer', 'builds on it', true]];
+  const s = slide('PAGE', 'Talk');
+  page(s, 'The problem', 'Page 2', 'The problem', 'In a multi-agent pipeline, a wrong answer looks exactly like a right one');
+  const nodes = [['AGENT 1', 'Retriever', '200 OK', false], ['AGENT 2', 'Verifier', 'claim not in its evidence', true], ['AGENT 3', 'Answerer', 'builds on it', true]];
   nodes.forEach(([l, nm, st, bad], i) => {
-    const x = M + i * 3.0;
-    card(s, x, 2.05, 2.45, 1.3, { line: bad ? ROSE : FAINT, lineT: bad ? 20 : 55 });
-    label(s, l, x + 0.2, 2.18, 2.0);
-    text(s, nm, x + 0.2, 2.45, 2.1, 0.4, { fontSize: 20, bold: true, color: INK });
-    text(s, st, x + 0.2, 2.9, 2.1, 0.3, { fontFace: MONO, fontSize: 11, color: bad ? ROSE : MINT });
-    if (i < 2) arrow(s, x + 2.48, 2.7, x + 2.97, i === 1 ? ROSE : FAINT);
+    const x = M + i * 2.45, y = 3.55;
+    s.addShape(pres.shapes.RECTANGLE, { x, y, w: 2.05, h: 1.2, fill: { color: BOX }, line: { color: bad ? 'A4161A' : INK_HEX, width: 1.5 } });
+    text(s, l, x + 0.15, y + 0.12, 1.8, 0.2, { fontFace: LABEL, fontSize: 8, bold: true, color: GREY, charSpacing: 1 });
+    text(s, nm, x + 0.15, y + 0.33, 1.8, 0.4, { fontFace: HEAD, fontSize: 20, bold: true });
+    text(s, st, x + 0.15, y + 0.75, 1.8, 0.4, { fontFace: MONO, fontSize: 10.5, color: bad ? RED : INK });
+    if (i < 2) text(s, '→', x + 2.05, y + 0.35, 0.4, 0.45, { fontSize: 20, align: 'center', color: i === 1 ? RED : INK });
   });
-  text(s, 'every call: 200 OK\nno exception\nlatency normal', 9.95, 2.2, 2.6, 1.0, { fontFace: MONO, fontSize: 13, color: MINT });
-  const cards = [['Grounding failure', ROSE, 'An agent states something its own evidence does not support, and the next agent builds on it.'],
-    ['Behavioural drift', AMBER, "An agent's answers move away from how it used to answer, after a model or prompt change. Nothing errors."],
-    ['Quality is an add-on', BLUE, 'Existing tools trace tokens, latency and cost well, but treat quality evaluation as optional and sampled.']];
-  const cw = (CW - 0.6) / 3;
-  cards.forEach(([h, col, p], i) => {
-    const x = M + i * (cw + 0.3);
-    card(s, x, 3.85, cw, 2.45);
-    text(s, h, x + 0.25, 4.05, cw - 0.5, 0.45, { fontSize: 20, bold: true, color: col });
-    text(s, p, x + 0.25, 4.6, cw - 0.5, 1.6, { fontSize: 15 });
-  });
-  source(s, 'Goal of this project: score every span, cheaply enough for a CPU, and show plainly what was not measured. Framing from README.md (intro paragraph).');
+  caption(s, 'Every call returns 200, nothing throws, latency is normal. Schematic, not data.', null, M, 4.95, EX_W, 0.4);
+  notecol(s, [
+    { runs: [{ text: 'Grounding failure:', b: 1 }, { text: ' an agent says what its evidence does not support.' }], h: 1.0 },
+    { runs: [{ text: 'Drift:', b: 1 }, { text: ' an agent slowly answers differently after a change.' }], h: 1.0 },
+    { text: 'Most tools trace cost and latency; quality checks are optional and sampled.', small: 1, h: 0.9 },
+  ], 2.75);
+  source(s, 'README.md, introduction (tools treat quality evaluation as an optional, sampled add-on).');
 }
 
-// 03 Architecture
+// 3 Architecture
 {
-  const s = slide('CONTENT', 'Talk');
-  head(s, '02 · What AgentPulse is', tRuns('Score every span, ', 'locally'));
-  const boxes = [['YOUR PROCESS', 'SDK', 'Decorator, OpenAI / Anthropic wrapper, LangGraph adapter.', 'bounded buffer,\nfail-open'],
-    ['FASTAPI', 'Ingest API', 'Accepts and queues. Runs no model.', 'POST /v1/ingest'],
-    ['STORAGE', 'SQLite (WAL)', 'Spans plus a durable job queue the worker leases from.', 'at-least-once'],
-    ['WORKER · CPU', 'Evaluator', 'MiniLM-L6-v2 embeddings + DeBERTa-v3-small NLI.', 'grounding · drift'],
-    ['RULES', 'Alerts', 'Thresholds per signal; one alert per agent and type in 15 min.', 'cooldown 900 s'],
-    ['REACT 19', 'Console', 'REST + WebSocket. Traces, incidents, drift, Lab.', 'unmeasured = "—"']];
-  const g = 0.24, bw = (CW - 5 * g) / 6;
-  boxes.forEach(([l, h, p, c], i) => {
-    const x = M + i * (bw + g);
-    const hl = i === 3;
-    card(s, x, 1.95, bw, 2.6, { line: hl ? MINT : FAINT, lineT: hl ? 30 : 55 });
-    label(s, l, x + 0.14, 2.08, bw - 0.2);
-    text(s, h, x + 0.14, 2.35, bw - 0.26, 0.4, { fontSize: 16, bold: true, color: INK });
-    text(s, p, x + 0.14, 2.8, bw - 0.24, 1.1, { fontSize: 12 });
-    text(s, c, x + 0.14, 3.95, bw - 0.24, 0.5, { fontFace: MONO, fontSize: 10, color: MINT });
-    if (i < 5) text(s, '→', x + bw - 0.02, 3.05, g + 0.04, 0.35, { fontSize: 16, color: MINT, align: 'center', bold: true });
+  const s = slide('PAGE', 'Talk');
+  page(s, 'How it works', 'Page 3', 'The system', "AgentPulse scores every span on a CPU, off the agent's critical path");
+  const boxes = [['IN YOUR AGENT', 'SDK', 'Decorator, client wrapper, LangGraph'], ['FASTAPI', 'Ingest API', 'Queues spans; runs no model'],
+    ['STORAGE', 'SQLite + job queue', 'WAL mode, durable'], ['WORKER, CPU', 'Evaluator', 'MiniLM + DeBERTa NLI'],
+    ['RULES', 'Alerts', 'One per agent and type in 15 min'], ['REACT', 'Console', 'Traces, incidents, drift, Lab']];
+  const g = 0.28, bw = (CW - 5 * g) / 6, y = 2.65, h = 2.0;
+  boxes.forEach(([l, hd, p], i) => {
+    const x = M + i * (bw + g), key = i === 3;
+    s.addShape(pres.shapes.RECTANGLE, { x, y, w: bw, h, fill: { color: key ? INK : BOX }, line: { color: INK_HEX, width: 1.5 } });
+    text(s, l, x + 0.12, y + 0.14, bw - 0.2, 0.2, { fontFace: LABEL, fontSize: 8, bold: true, color: key ? HAIR : GREY, charSpacing: 1 });
+    text(s, hd, x + 0.12, y + 0.4, bw - 0.2, 0.62, { fontFace: HEAD, fontSize: 17, bold: true, color: key ? PAPER : INK });
+    text(s, p, x + 0.12, y + 1.05, bw - 0.2, 0.9, { fontFace: 'Cambria', fontSize: 13, color: key ? HAIR : INK2 });
+    if (i < 5) text(s, '→', x + bw, y + 0.8, g, 0.35, { fontSize: 16, align: 'center' });
   });
-  const tw = (CW - 0.5) / 3;
-  stat(s, '202.94 ms', 'median per case, AgentPulse evaluator, vs 3,170.39 ms for an LLM judge (Qwen3-8B, CPU), 30 cases', M, 4.8, tw, 1.65, MINT, 26);
-  stat(s, '0.005 ms', 'SDK decorator overhead per call (P50 over 2,000 calls)', M + tw + 0.25, 4.8, tw, 1.65, MINT, 26);
-  stat(s, '0', 'LLM calls in the evaluator: two small models, run on the CPU of the same VM', M + 2 * (tw + 0.25), 4.8, tw, 1.65, INK, 26);
-  source(s, 'Sources: LLM_JUDGE_COMPARISON_REPORT.md (median latency table, 2026-08-26) · benchmarks/benchmark_results.json (2026-08-18) · HOW_IT_WORKS.md (buffer 10,000 spans, drop-oldest; cooldown 900 s) · README.md "Architecture in short"');
+  pull(s, [{ text: 'No LLM call anywhere in the evaluator. The SDK adds ' }, { text: '0.005 ms', red: 1 }, { text: ' per call and never blocks the agent.' }], M, 5.1, CW, 0.95);
+  source(s, 'README.md, Architecture in short; HOW_IT_WORKS.md (bounded buffer, cooldown 900 s); benchmarks/benchmark_results.json, 2026-08-18 (0.005 ms, P50 over 2,000 calls).');
 }
 
-// 04 Grounding
+// 4 Grounding method
 {
-  const s = slide('CONTENT', 'Talk');
-  head(s, '03 · Signal 1 · Grounding', tRuns('Grounding risk: an NLI model, ', 'not a judge'));
-  card(s, M, 1.9, CW, 0.85, { fill: MINT, transparency: 88, line: MINT, lineT: 50 });
-  s.addText([{ text: 'risk = P(contradiction) + ' }, { text: '0.3', options: { color: AMBER, bold: true } }, { text: ' × P(neutral)' }],
-    { x: M + 0.3, y: 1.9, w: CW - 0.6, h: 0.85, isTextBox: true, margin: 0, fontFace: MONO, fontSize: 26, color: INK, valign: 'middle' });
-  s.addText([{ text: "DeBERTa-v3-small compares an agent's output with the evidence it was given. 0 = safe, 1 = risky. " }, { text: 'High above 0.7, medium above 0.4.', options: { bold: true, color: INK } }],
-    { x: M, y: 3.0, w: 5.8, h: 0.85, isTextBox: true, margin: 0, fontSize: 16, color: MUTED, valign: 'top' });
-  [['contradicted', ROSE], ['unverifiable', MUTED], ['supported', MINT]].forEach(([t, col], i) => {
-    const x = M + i * 1.75;
-    s.addShape(pres.shapes.ROUNDED_RECTANGLE, { x, y: 3.95, w: 1.6, h: 0.38, rectRadius: 0.19, fill: { color: col, transparency: 85 }, line: { color: col, width: 0.75, transparency: 40 } });
-    text(s, t, x, 3.95, 1.6, 0.38, { fontFace: MONO, fontSize: 12, color: col, align: 'center', valign: 'middle' });
+  const s = slide('PAGE', 'Talk');
+  page(s, 'Signal 1: grounding', 'Page 4', 'Method · grounding', 'Grounding risk is an NLI probability, and its 0.3 weight is a design choice');
+  const y0 = 2.75;
+  s.addShape(pres.shapes.LINE, { x: M, y: y0, w: EX_W, h: 0, line: { color: INK_HEX, width: 2.25 } });
+  s.addText([{ text: 'risk = P(contradiction) + ' }, { text: '0.3', options: { color: RED } }, { text: ' × P(neutral)' }],
+    { x: M, y: y0 + 0.08, w: EX_W, h: 0.75, isTextBox: true, margin: 0, fontFace: MONO, fontSize: 21, color: INK, valign: 'middle' });
+  s.addShape(pres.shapes.LINE, { x: M, y: y0 + 0.91, w: EX_W, h: 0, line: { color: INK_HEX, width: 0.75 } });
+  const bands = [['LOW · 0 TO 0.4', 0.4, '9C978C', INK], ['MEDIUM · ABOVE 0.4', 0.3, '3D3A35', INK], ['HIGH · ABOVE 0.7', 0.3, 'A4161A', RED]];
+  let bx = M;
+  bands.forEach(([t, frac, col, tc]) => {
+    const bw = EX_W * frac;
+    s.addShape(pres.shapes.RECTANGLE, { x: bx, y: y0 + 1.2, w: bw, h: 0.07, fill: { color: col }, line: { color: col, width: 0 } });
+    text(s, t, bx, y0 + 1.33, bw, 0.25, { fontFace: LABEL, fontSize: 10.5, color: tc, charSpacing: 1 });
+    bx += bw;
   });
-  s.addText([{ text: 'The verdict is whichever probability is highest. ' }, { text: 'Unverifiable', options: { bold: true, color: INK } }, { text: ' = the evidence neither supports nor contradicts. A status, not a pass.' }],
-    { x: M, y: 4.5, w: 5.8, h: 0.8, isTextBox: true, margin: 0, fontSize: 15, color: MUTED, valign: 'top' });
-  s.addText([{ text: '0.3 is a design choice, not a fit: ', options: { bold: true, color: AMBER } }, { text: 'weights 0.0 to 0.3 cannot be told apart on this data.' }],
-    { x: M, y: 5.4, w: 5.8, h: 0.7, isTextBox: true, margin: 0, fontSize: 15, color: MUTED, valign: 'top' });
-  stat(s, '0.963', 'F1 on the 30-case test split (FPR 0.059: 1 of 17 supported cases)', 7.0, 3.0, 2.6, 1.6, MINT, 30);
-  stat(s, '0.927 / 0.952', 'F1 on 47 truly held-out cases (at 0.7 / at 0.4), FPR 0.074', 9.9, 3.0, 2.6, 1.6, MINT, 22);
-  stat(s, '68', 'hand-labelled cases behind these numbers (39 supported, 29 failures). 5 of the 30 test cases copy dev cases. Small sample, not production traffic.', 7.0, 4.8, 5.5, 1.6, INK, 30);
-  source(s, 'Source: GROUNDING_RECALIBRATION_2026-10.md (tables T3c, T3d, section 3.6; analysis 2026-10-22) · HOW_IT_WORKS.md (verdict rule) · backend/app/services/grounding.py (NEUTRAL_RISK_WEIGHT = 0.3)');
-}
-
-// 05 Drift
-{
-  const s = slide('CONTENT', 'Talk');
-  head(s, '04 · Signal 2 · Drift', tRuns('Drift: how far an agent has moved ', 'from itself'));
-  const px = M, py = 1.95, pw = 5.6, ph = 4.4;
-  card(s, px, py, pw, ph);
-  // In short: a schematic of two clouds of output embeddings and the distance between their means.
-  const dots = (cx, cy, pts, col) => pts.forEach(([dx, dy]) => s.addShape(pres.shapes.OVAL, { x: cx + dx - 0.05, y: cy + dy - 0.05, w: 0.1, h: 0.1, fill: { color: col }, line: { color: col, width: 0 } }));
-  const bx = px + 1.5, by = py + 2.05, wx = px + 4.15, wy = py + 2.05;
-  s.addShape(pres.shapes.OVAL, { x: bx - 0.8, y: by - 0.8, w: 1.6, h: 1.6, fill: { color: MINT, transparency: 94 }, line: { color: MINT, width: 0.75, dashType: 'dash', transparency: 40 } });
-  s.addShape(pres.shapes.OVAL, { x: wx - 0.62, y: wy - 0.62, w: 1.24, h: 1.24, fill: { color: AMBER, transparency: 94 }, line: { color: AMBER, width: 0.75, dashType: 'dash', transparency: 40 } });
-  dots(bx, by, [[-0.15, -0.1], [0.2, -0.32], [-0.38, 0.22], [0.15, 0.3], [-0.2, -0.45], [0.42, 0.02], [-0.5, -0.12], [0.02, 0.55], [0.5, -0.28], [-0.25, 0.05]], MINT);
-  dots(wx, wy, [[-0.15, -0.22], [0.15, 0.1], [-0.3, 0.17], [0.08, -0.4], [0.33, -0.1], [-0.05, 0.38]], AMBER);
-  arrow(s, bx + 0.12, by, wx - 0.12, ROSE);
-  text(s, 'cosine distance > 0.30', px + 1.3, py + 0.5, 3.0, 0.35, { fontFace: MONO, fontSize: 13, color: ROSE, align: 'center' });
-  text(s, 'baseline: first 20', bx - 1.0, by + 0.95, 2.0, 0.3, { fontFace: MONO, fontSize: 12, color: MINT, align: 'center' });
-  text(s, 'window: latest 12', wx - 1.0, wy + 0.8, 2.0, 0.3, { fontFace: MONO, fontSize: 12, color: AMBER, align: 'center' });
-  text(s, 'schematic, not data', px, py + ph - 0.5, pw, 0.3, { fontFace: MONO, fontSize: 10, color: FAINT, align: 'center' });
-  s.addText([{ text: 'MiniLM embeds each output. Per agent, the mean of its ' }, { text: 'first 20', options: { bold: true, color: INK } }, { text: ' outputs is the baseline; the mean of its ' }, { text: 'latest 12', options: { bold: true, color: INK } },
-    { text: ' is the window. ' }, { text: 'DRIFT_DETECTED', options: { fontFace: MONO, color: ROSE } }, { text: ' fires above a cosine distance of ' }, { text: '0.30', options: { bold: true, color: INK } }, { text: '.' }],
-    { x: 6.85, y: 2.0, w: 5.65, h: 1.3, isTextBox: true, margin: 0, fontSize: 17, color: MUTED, valign: 'top' });
-  const sw = (5.65 - 0.4) / 3;
-  stat(s, '1.5%', 'false alarms', 6.85, 3.55, sw, 1.55, MINT, 28);
-  stat(s, '91.9%', 'detection', 6.85 + sw + 0.2, 3.55, sw, 1.55, MINT, 28);
-  stat(s, '24.5%', 'of real sessions long enough to measure at all', 6.85 + 2 * (sw + 0.2), 3.55, sw, 1.55, AMBER, 28);
-  text(s, 'Offline, an external real-trace corpus, held-out split, measured once.', 6.85, 5.35, 5.65, 0.5, { fontSize: 14 });
-  source(s, 'Source: DRIFT_REAL_TEXT_DIAGNOSIS_REPORT.md sections 11.3 and 11.5 (2026-08-27) · README.md "What it does" · HOW_IT_WORKS.md (baseline 20, window 12, threshold 0.30)');
-}
-
-// 06 Results: cost
-{
-  const s = slide('CONTENT', 'Talk');
-  head(s, '05 · Results · cost', tRuns('Cheap enough to run on ', 'every', ' span'));
-  label(s, 'Median evaluation time per case, 30 cases, CPU', M, 1.95, 6);
-  // In short: a native bar chart, to scale, two bars.
-  s.addChart(pres.charts.BAR, [{ name: 'Median ms per case', labels: ['AgentPulse (MiniLM + DeBERTa)', 'LLM judge (Qwen3-8B, llama.cpp)'], values: [202.94, 3170.39] }], {
-    x: M - 0.1, y: 2.2, w: 6.0, h: 2.0, barDir: 'bar', chartColors: ['3DDC97', 'F25C7A'], showValue: true, dataLabelPosition: 'outEnd',
-    dataLabelFormatCode: '#,##0.00" ms"', dataLabelColor: 'F5F5F7', dataLabelFontSize: 12, dataLabelFontFace: '+mn-lt',
-    catAxisLabelColor: 'A3ACBB', catAxisLabelFontSize: 12, catAxisLabelFontFace: '+mn-lt', catAxisOrientation: 'maxMin',
-    valAxisHidden: true, valGridLine: { style: 'none' }, catGridLine: { style: 'none' }, valAxisMaxVal: 4200,
-    showLegend: false, barGapWidthPct: 45, catAxisLineShow: false,
+  [['CONTRADICTED', 'A4161A', RED], ['UNVERIFIABLE', '6B665D', GREY], ['SUPPORTED', INK_HEX, INK]].forEach(([t, lc, tc], i) => {
+    const x = M + i * 2.05;
+    s.addShape(pres.shapes.RECTANGLE, { x, y: y0 + 1.85, w: 1.85, h: 0.4, fill: { color: PAPER }, line: { color: lc, width: 1.5 } });
+    text(s, t, x, y0 + 1.85, 1.85, 0.4, { fontFace: LABEL, fontSize: 10.5, bold: true, color: tc, charSpacing: 1, align: 'center', valign: 'middle' });
   });
-  text(s, 'One judge model on one machine: not a claim about every LLM judge.', M, 4.25, 6, 0.35, { fontSize: 13 });
-  stat(s, '180 ms', 'live median evaluation time over 172 spans on the deployed worker (ONNX), as the Settings view showed it on 27 Oct 2026', M, 4.8, 5.9, 1.6, MINT, 28);
-  label(s, 'Single runs, one Windows 11 machine, CPU, PyTorch', 7.1, 1.95, 5.4);
-  const rows = [['SDK decorator overhead (P50, 2,000 calls)', '0.005 ms'], ['MiniLM embedding (P50, 100 runs)', '15.1 ms'], ['DeBERTa NLI (P50, 50 runs)', '88.5 ms'],
-    ['Two grounding models, per case (30 cases)', '151.19 ms'], ['Full pipeline, per case (30 cases)', '165.18 ms']];
-  s.addTable(rows.map(([a, b]) => [{ text: a, options: { color: MUTED } }, { text: b, options: { fontFace: MONO, color: INK, align: 'right' } }]), {
-    x: 7.1, y: 2.3, w: 5.4, colW: [4.0, 1.4], fontSize: 14, rowH: 0.52, valign: 'middle', margin: [0, 0.05, 0, 0],
-    border: [{ type: 'none' }, { type: 'none' }, { pt: 0.5, color: '2A3140' }, { type: 'none' }], fill: { color: BG, transparency: 100 },
+  caption(s, 'Verdict = whichever of the three probabilities is highest.', null, M, y0 + 2.4, EX_W, 0.35);
+  notecol(s, [
+    { text: 'DeBERTa compares each output with the evidence the agent was given.', h: 1.0 },
+    { runs: [{ text: 'Unverifiable', b: 1 }, { text: ': neither supported nor contradicted. A status, not a pass.' }], h: 1.0 },
+    { text: 'Weights 0 to 0.3 give identical results on our data.', small: 1, h: 0.7 },
+  ], 2.85);
+  source(s, 'GROUNDING_RECALIBRATION_2026-10.md, section 3.6 (analysis 2026-10-22); HOW_IT_WORKS.md, the verdict rule; backend/app/services/grounding.py (NEUTRAL_RISK_WEIGHT = 0.3).');
+}
+
+// 5 Grounding result
+{
+  const s = slide('PAGE', 'Talk');
+  page(s, 'Signal 1: grounding', 'Page 5', 'Result · grounding', 'On 68 hand-labelled cases, grounding catches contradictions with few false alarms');
+  ntable(s, ['Evaluation set', 'Cases', 'F1', 'False alarms'], [
+    { cells: ['Test split', '30', '0.963', '0.059'], red: 1 },
+    { cells: ['Held-out pool, cut-off 0.7', '47', '0.927', '0.074'] },
+    { cells: ['Held-out pool, cut-off 0.4', '47', '0.952', '0.074'] }], M, 3.05, EX_W, [3.55, 1.0, 1.1, 1.5]);
+  caption(s, 'False alarms = share of supported cases flagged (1 of 17 on the test split; 2 of 27 held out).', null, M, 5.35, EX_W, 0.5);
+  vrule(s, RULE_X, BODY_Y + 0.1, BODY_B - 0.1);
+  pull(s, [{ text: 'A small sample, ' }, { text: 'not production traffic', red: 1 }, { text: '.' }], NOTE_X, 3.0, NOTE_W, 1.15);
+  text(s, '68 cases: 39 supported, 29 failures. 5 of the 30 test cases copy development cases.', NOTE_X, 4.4, NOTE_W, 1.1, { fontFace: 'Cambria', fontSize: 17, color: INK2 });
+  source(s, 'GROUNDING_RECALIBRATION_2026-10.md, tables T3c and T3d (analysis 2026-10-22); README.md, Numbers and where they come from.');
+}
+
+// 6 Drift
+{
+  const s = slide('PAGE', 'Talk');
+  page(s, 'Signal 2: drift', 'Page 6', 'Result · drift', 'Drift detection is accurate, but only a quarter of real sessions are long enough to measure');
+  // In short: a native bar chart drawn to scale, 0-100 percent; the coverage bar is red.
+  s.addChart(pres.charts.BAR, [{ name: 'Percent', labels: ['Detection', 'False alarms', 'Sessions long enough to measure'], values: [91.9, 1.5, 24.5] }], {
+    x: M - 0.1, y: 2.75, w: EX_W + 0.1, h: 3.0, barDir: 'bar', chartColors: ['141414', '141414', 'A4161A'], showValue: true, dataLabelPosition: 'outEnd',
+    dataLabelFormatCode: '0.0"%"', dataLabelColor: '141414', dataLabelFontSize: 16, dataLabelFontFace: '+mn-lt', dataLabelFontBold: true,
+    catAxisLabelColor: '141414', catAxisLabelFontSize: 16, catAxisLabelFontFace: '+mn-lt', catAxisOrientation: 'maxMin', catAxisLineShow: true,
+    catAxisLineColor: '141414', valAxisHidden: true, valAxisMinVal: 0, valAxisMaxVal: 110, valGridLine: { style: 'none' }, catGridLine: { style: 'none' },
+    showLegend: false, barGapWidthPct: 55,
   });
-  source(s, 'Sources: LLM_JUDGE_COMPARISON_REPORT.md (2026-08-26) · benchmarks/benchmark_results.json (2026-08-18) · experiments/results/ablation_results.json (2026-09-18) · docs/E2E_TEST_2026-10-27.md item 23 (180 ms). Each is one run on one machine, not a constant.');
+  caption(s, '0 to 100 percent, to scale.', null, M, 5.8, EX_W, 0.3);
+  notecol(s, [
+    { runs: [{ text: 'Baseline:', b: 1 }, { text: " an agent's first 20 outputs. " }, { text: 'Window:', b: 1 }, { text: ' its latest 12.' }], h: 1.0 },
+    { runs: [{ text: 'Alert when the two drift apart by a cosine distance above ' }, { text: '0.30', b: 1 }, { text: '.' }], h: 1.0 },
+    { text: 'Offline, real-trace corpus, held-out split, measured once.', small: 1, h: 0.7 },
+  ], 2.85);
+  source(s, 'DRIFT_REAL_TEXT_DIAGNOSIS_REPORT.md, sections 11.3 and 11.5 (2026-08-27); HOW_IT_WORKS.md (baseline 20, window 12, threshold 0.30).');
 }
 
-// 07 Results: verified
+// 7 Cost
 {
-  const s = slide('CONTENT', 'Talk');
-  head(s, '06 · Results · verification', tRuns('Tested, and checked ', 'live'));
-  stat(s, '628', 'backend tests passed (pytest, 4 min 12 s)', M, 1.95, 3.2, 1.75, MINT, 36);
-  stat(s, '404', 'dashboard tests passed (35 files), tsc clean', M, 3.9, 3.2, 1.75, MINT, 36);
-  text(s, "Re-run 27 Oct 2026, author's machine", M, 5.8, 3.2, 0.3, { fontFace: MONO, fontSize: 10, color: FAINT });
-  label(s, 'End-to-end test of the live site, 27 Oct 2026, from outside', 4.45, 1.95, 8);
-  const items = [['✓', MINT, 'Health', ': /v1/health, /v1/health/ready, /chat/health all 200'],
-    ['✓', MINT, 'Closed routes', ': /v1/keys and 3 path variants, ingest without key, PUT /v1/simulate: all 401'],
-    ['✓', MINT, 'Chat', ': one turn 6.35 s, all three agents answered by Groq; the worker scored all three spans'],
-    ['✓', MINT, 'Telemetry Lab', ': hallucination scenario raised HIGH alerts for verifier (0.971) and analyst (0.999)'],
-    ['✓', MINT, 'Console', ': every view in Dark and Chalk scripted for NaN / undefined / null: 0 found'],
-    ['!', AMBER, 'Two real bugs found and fixed', ' (SVG arrowhead, header at 1366 px); one noted (stale worker count)']];
-  items.forEach(([mk, col, b, rest], i) => {
-    const y = 2.3 + i * 0.68;
-    text(s, mk, 4.45, y, 0.3, 0.6, { fontSize: 16, bold: true, color: col });
-    s.addText([{ text: b, options: { bold: true, color: INK } }, { text: rest }], { x: 4.8, y, w: 7.7, h: 0.6, isTextBox: true, margin: 0, fontSize: 15, color: MUTED, valign: 'top' });
-    s.addShape(pres.shapes.LINE, { x: 4.45, y: y + 0.63, w: 8.05, h: 0, line: { color: FAINT, width: 0.5, transparency: 70 } });
+  const s = slide('PAGE', 'Talk');
+  page(s, 'Results: cost', 'Page 7', 'Result · cost', 'The evaluator is 15.6 times faster than an LLM judge, at a small accuracy cost');
+  // In short: two bars drawn to scale with shapes (a chart's data labels wrap unpredictably in some viewers).
+  const tx = M + 2.7, tw = EX_W - 2.7, vmax = 3170.39;
+  [['AgentPulse (MiniLM + DeBERTa)', 202.94, '202.94', INK, false], ['LLM judge (Qwen3-8B, CPU)', 3170.39, '3,170.39', RED, true]].forEach(([nm, v, lab, col, inside], i) => {
+    const y = 3.15 + i * 1.0, bw = tw * v / vmax;
+    text(s, nm, M, y, 2.55, 0.6, { fontFace: 'Cambria', fontSize: 17, valign: 'middle' });
+    s.addShape(pres.shapes.RECTANGLE, { x: tx, y, w: bw, h: 0.6, fill: { color: col }, line: { color: col, width: 0 } });
+    if (inside) text(s, lab, tx + bw - 1.6, y, 1.5, 0.6, { fontFace: 'Cambria', fontSize: 17, bold: true, color: PAPER, align: 'right', valign: 'middle' });
+    else text(s, lab, tx + bw + 0.1, y, 1.5, 0.6, { fontFace: 'Cambria', fontSize: 17, bold: true, valign: 'middle' });
   });
-  source(s, 'Sources: README.md "Testing and benchmarks" (628 / 404, re-run 2026-10-27) · docs/E2E_TEST_2026-10-27.md items 1-25 and findings F1-F3 · SESSION_HANDOFF.md 29.19');
+  s.addShape(pres.shapes.LINE, { x: tx, y: 3.0, w: 0, h: 1.9, line: { color: INK_HEX, width: 1.5 } });
+  caption(s, 'Median milliseconds per case, 30 cases, to scale.', null, tx, 5.1, tw, 0.3);
+  notecol(s, [
+    { runs: [{ text: 'Same 30 cases: judge F1 ' }, { text: '1.000', b: 1 }, { text: ', AgentPulse ' }, { text: '0.963', b: 1 }, { text: '.' }], h: 1.0 },
+    { text: 'One judge model on one machine; not a claim about every judge.', small: 1, h: 0.9 },
+  ], 3.15);
+  source(s, 'LLM_JUDGE_COMPARISON_REPORT.md, median latency table and correction banner (2026-08-26; F1 at the shipped weight derived from stored probabilities).');
 }
 
-// 08 Live demo
+// 8 Verification
 {
-  const s = slide('CONTENT', 'Talk');
-  head(s, '07 · Live demo', tRuns('See it on the ', 'live', ' site'));
-  text(s, 'https://agentpulse.centralindia.cloudapp.azure.com', M, 1.8, CW, 0.4, { fontFace: MONO, fontSize: 18, color: MINT });
-  const steps = [['Launch App → RAG Live.', ' Ask "how does SQLite WAL improve concurrency?"'], ['Three stages', ': retriever, verifier, answerer, each with time, provider, model.'],
-    ['Agent ledger', ': grounding risk and verdict per span; what "Unverifiable" means.'], ['Out of corpus', ': "who won the 2022 football world cup?" Read the ledger.'],
-    ['Traces', ' → newest trace → X exports the JSON.']];
-  steps.forEach(([b, r], i) => {
-    const y = 2.45 + i * 0.8;
-    s.addShape(pres.shapes.ROUNDED_RECTANGLE, { x: M, y: y + 0.03, w: 0.38, h: 0.38, rectRadius: 0.08, fill: { color: MINT, transparency: 85 }, line: { color: MINT, width: 0.75, transparency: 40 } });
-    text(s, String(i + 1), M, y + 0.03, 0.38, 0.38, { fontFace: MONO, fontSize: 13, bold: true, color: MINT, align: 'center', valign: 'middle' });
-    s.addText([{ text: b, options: { bold: true, color: INK } }, { text: r }], { x: M + 0.55, y, w: 4.4, h: 0.75, isTextBox: true, margin: 0, fontSize: 15, color: MUTED, valign: 'top' });
+  const s = slide('PAGE', 'Talk');
+  page(s, 'Results: verification', 'Page 8', 'Result · verification', 'The live site passed an end-to-end test from outside on 27 October');
+  ntable(s, ['Check on the live site', 'Result'], [
+    { cells: ['Health endpoints', '200'] }, { cells: ['Key routes, writes without a key', '401'] },
+    { cells: ['Chat turn, three agents on Groq', '6.35 s, all scored'] }, { cells: ['Lab hallucination run', 'HIGH alerts'] },
+    { cells: ['Every console view, two palettes', '0 NaN'] }], M, 2.65, EX_W, [4.55, 2.6]);
+  notecol(s, [
+    { runs: [{ text: '628', b: 1 }, { text: ' backend and ' }, { text: '404', b: 1 }, { text: ' dashboard tests pass.' }], h: 1.0 },
+    { text: 'The test also found two real bugs; both were fixed.', small: 1, h: 0.8 },
+  ], 3.3);
+  source(s, 'docs/E2E_TEST_2026-10-27.md, items 1-25 and findings F1-F3; README.md, Testing and benchmarks (re-run 2026-10-27).');
+}
+
+// 9 Live demo
+{
+  const s = slide('PAGE', 'Talk');
+  page(s, 'Live demo', 'Page 9', 'Live demo · agentpulse.centralindia.cloudapp.azure.com', 'One question, three agents, and every step scored as it happens');
+  const pw = 7.15, ph = pw / 1.82 + 0.12;
+  photo(s, 'live_rag.jpg', M, 2.35, pw, Math.min(ph, 3.75));
+  caption(s, 'A real turn on 1 November: 3.2 s, all agents on Groq; answerer risk 0.191. One turn, not a rate.', 'Photo: live site', M, 2.35 + Math.min(ph, 3.75) + 0.1, pw, 0.5);
+  vrule(s, RULE_X, BODY_Y + 0.1, BODY_B - 0.1);
+  const steps = ['Ask how SQLite WAL improves concurrency', 'Read the three stages', 'Open the agent ledger', 'Ask an out-of-corpus question', 'Export the trace (key X)'];
+  steps.forEach((t, i) => {
+    const y = 2.6 + i * 0.78;
+    text(s, String(i + 1), NOTE_X, y, 0.4, 0.6, { fontFace: HEAD, fontSize: 24, bold: true, color: RED });
+    text(s, t, NOTE_X + 0.45, y + 0.04, NOTE_W - 0.45, 0.65, { fontFace: 'Cambria', fontSize: 18 });
+    s.addShape(pres.shapes.LINE, { x: NOTE_X, y: y + 0.72, w: NOTE_W, h: 0, line: { color: HAIR_HEX, width: 0.75 } });
   });
-  shot(s, 'live_rag.jpg', 6.25, 2.45, 6.25, 3.434);
-  text(s, 'A real turn, 1 Nov 2026: 3.2 s, all three agents on Groq; answerer grounding 0.191 (low risk). One turn, not a rate.', 6.25, 5.98, 6.25, 0.5, { fontFace: MONO, fontSize: 10, color: FAINT });
+  source(s, 'DEMO_GUIDE.md, steps 1-5; screenshot of the live RAG Live view, 1 November 2026.');
 }
 
-// 09 Engineering
+// 10 Engineering
 {
-  const s = slide('CONTENT', 'Talk');
-  head(s, '08 · Engineering', tRuns('Deployed, automated, ', 'locked down'));
-  const cw = (CW - 0.6) / 3;
-  const cols = [['DEPLOYMENT', BLUE, 'One Azure VM', ['Standard_B2als_v2 (2 vCPU, 4 GB), Central India.', 'Docker Compose: Caddy (TLS), nginx + dashboard, FastAPI backend, evaluator worker, chat service.', 'Nightly database backup.']],
-    ['CI / CD', MINT, 'GitHub Actions', ["Pull requests run the full pytest suite and the dashboard's tsc + vitest.", 'A push to main deploys: rebuild changed images, test the new backend on a copy of the live database, swap, roll back if unhealthy.']],
-    ['SECURITY', ROSE, 'Closed by default', ['Every write needs the Caddy write password, except the chat and POST /v1/simulate. Key routes: 401 on every case variant. Refuses to start with the placeholder key.', 'Rate limits per IP: chat 5/min, 40/day; Lab 6/hour, 30/day; 300/day per site.']]];
-  cols.forEach(([l, col, h, ps], i) => {
-    const x = M + i * (cw + 0.3);
-    card(s, x, 1.95, cw, 4.5);
-    label(s, l, x + 0.25, 2.15, cw - 0.5, col);
-    text(s, h, x + 0.25, 2.45, cw - 0.5, 0.45, { fontSize: 20, bold: true, color: INK });
-    s.addText(ps.map((p, k) => ({ text: p, options: { breakLine: k < ps.length - 1, paraSpaceAfter: 8 } })),
-      { x: x + 0.25, y: 3.0, w: cw - 0.5, h: 3.3, isTextBox: true, margin: 0, fontSize: 14, color: MUTED, valign: 'top' });
+  const s = slide('PAGE', 'Talk');
+  page(s, 'Engineering', 'Page 10', 'Engineering', 'One small Azure VM, deployed automatically and closed to writes');
+  const items = [['DEPLOYMENT', 'One VM, five containers', 'Azure B2als_v2: 2 vCPU, 4 GB. Docker Compose with TLS.'],
+    ['CI / CD', 'Tested, then shipped', 'Every pull request runs the tests. A push to main deploys and rolls back if unhealthy.'],
+    ['SECURITY', 'Read-open, write-closed', 'Writes need a password. Key routes return 401. Every public route is rate-limited.']];
+  const cw = CW / 3;
+  items.forEach(([l, h, p], i) => {
+    const x = M + i * cw, pad = i === 0 ? 0 : 0.3;
+    if (i > 0) vrule(s, x, 3.0, 5.9);
+    text(s, l, x + pad, 3.05, cw - 0.6, 0.25, { fontFace: LABEL, fontSize: 9.5, bold: true, color: RED, charSpacing: 2 });
+    text(s, h, x + pad, 3.35, cw - 0.6, 0.5, { fontFace: HEAD, fontSize: 22, bold: true });
+    text(s, p, x + pad, 3.95, cw - 0.6, 1.9, { fontFace: 'Cambria', fontSize: 18, color: INK2 });
   });
-  source(s, 'Sources: deploy/azure/README.md (VM size) · .github/workflows/tests.yml, dashboard.yml, deploy-azure.yml · deploy/azure/Caddyfile · README.md "What works live" · SESSION_HANDOFF.md 29.17.2 and the #109 entry in 29.18');
+  source(s, 'deploy/azure/README.md (VM size); .github/workflows/tests.yml, dashboard.yml, deploy-azure.yml; deploy/azure/Caddyfile; README.md, What works live; SESSION_HANDOFF.md 29.17.2.');
 }
 
-// 10 Honest limits
+// 11 Limits
 {
-  const s = slide('CONTENT', 'Talk');
-  head(s, '09 · Honest limits', tRuns('What did not hold up, ', 'said first'), AMBER);
-  const hw = (CW - 0.3) / 2;
-  const L = [['Inter-agent disagreement', ROSE, [['Found '], ['0 of 10', 1], [' labelled contradictions on real traces (AUC 0.457 without the planner). Alert withdrawn; score only stored.']]],
-    ['Tool-claim check', ROSE, [['F1 0.000', 1], [' on real traces: no claim found in 8,353 prose spans. It only reads counts written in digits.']]],
-    ['Small labelled set', AMBER, [['Grounding quality rests on '], ['68', 1], [' hand-labelled cases; only one is a neutral failure, so the data cannot say what the 0.3 weight buys.']]],
-    ['Drift coverage', AMBER, [['Only '], ['24.5%', 1], [' of real sessions were long enough to report a drift distance at all.']]]];
-  L.forEach(([h, col, runs], i) => {
-    const x = M + (i % 2) * (hw + 0.3), y = 1.95 + Math.floor(i / 2) * 1.55;
-    card(s, x, y, hw, 1.38);
-    s.addShape(pres.shapes.OVAL, { x: x + 0.25, y: y + 0.27, w: 0.14, h: 0.14, fill: { color: col }, line: { color: col, width: 0 } });
-    text(s, h, x + 0.5, y + 0.15, hw - 0.7, 0.38, { fontSize: 18, bold: true, color: INK });
-    s.addText(runs.map(([t, b]) => ({ text: t, options: b ? { bold: true, color: INK } : {} })), { x: x + 0.25, y: y + 0.6, w: hw - 0.5, h: 0.7, isTextBox: true, margin: 0, fontSize: 14, color: MUTED, valign: 'top' });
+  const s = slide('PAGE', 'Talk');
+  page(s, 'Corrections and limits', 'Page 11', 'Honest limits', 'Two of the four signals failed on real traces, and the evidence base is small');
+  ntable(s, ['Limit', 'Evidence'], [
+    { cells: ['Inter-agent disagreement', '0 of 10 found'], red: 1 }, { cells: ['Tool-claim check', 'F1 0.000'], red: 1 },
+    { cells: ['Labelled grounding cases', '68'] }, { cells: ['Sessions long enough for drift', '24.5%'] },
+    { cells: ['Deployment', '1 VM, 1 SQLite file'] }], M, 2.65, EX_W, [4.55, 2.6]);
+  vrule(s, RULE_X, BODY_Y + 0.1, BODY_B - 0.1);
+  pull(s, [{ text: 'Grounding and drift are the two signals that ' }, { text: 'held up', red: 1 }, { text: '.' }], NOTE_X, 3.2, NOTE_W, 1.2);
+  text(s, 'The two failed alerts are withdrawn, not hidden.', NOTE_X, 4.65, NOTE_W, 0.8, { fontFace: 'Cambria', fontSize: 17, color: INK2 });
+  source(s, 'README.md, Known limits; COMPETITIVE_POSITIONING.md 5.2; TOOL_CLAIM_EXTERNAL_TEST_REPORT.md section 10; GROUNDING_RECALIBRATION_2026-10.md; DRIFT_REAL_TEXT_DIAGNOSIS_REPORT.md 11.5.');
+}
+
+// 12 Conclusions
+{
+  const s = slide('PAGE', 'Talk');
+  page(s, 'Conclusions', 'Page 12', 'Conclusions', 'Conclusions');
+  const items = [[{ text: 'Every span can be scored on a CPU without an LLM judge: ' }, { text: '202.94 ms', b: 1 }, { text: ' per case.' }],
+    [{ text: 'Grounding (F1 ' }, { text: '0.963', b: 1 }, { text: ') and drift held up; two other signals failed and are withdrawn.' }],
+    [{ text: 'It is live, tested (' }, { text: '628 + 404', b: 1 }, { text: ') and open to examiners.' }]];
+  items.forEach((runs, i) => {
+    const y = 2.75 + i * 1.12;
+    text(s, String(i + 1), M, y, 0.5, 0.75, { fontFace: HEAD, fontSize: 32, bold: true, color: RED });
+    s.addText(runs.map((r) => ({ text: r.text, options: r.b ? { bold: true } : {} })), { x: M + 0.6, y: y + 0.06, w: EX_W - 0.6, h: 0.9, isTextBox: true, margin: 0, fontFace: 'Cambria', fontSize: 20, color: INK, valign: 'top' });
+    s.addShape(pres.shapes.LINE, { x: M, y: y + 1.0, w: EX_W, h: 0, line: { color: HAIR_HEX, width: 0.75 } });
   });
-  card(s, M, 5.05, CW, 1.3);
-  s.addShape(pres.shapes.OVAL, { x: M + 0.25, y: 5.32, w: 0.14, h: 0.14, fill: { color: BLUE }, line: { color: BLUE, width: 0 } });
-  text(s, 'One small deployment', M + 0.5, 5.2, 6, 0.38, { fontSize: 18, bold: true, color: INK });
-  text(s, 'One VM, one SQLite file, one evaluator worker; backup on the same disk; deploy not gated on the test suite; the chat runs on free LLM tiers and can be slow or refused.', M + 0.25, 5.65, CW - 0.5, 0.65, { fontSize: 14 });
-  source(s, 'Sources: README.md "Known limits" · COMPETITIVE_POSITIONING.md 5.2 · SESSION_HANDOFF.md 24.9.5 · TOOL_CLAIM_EXTERNAL_TEST_REPORT.md section 10 · GROUNDING_RECALIBRATION_2026-10.md · DEMO_GUIDE.md "The honest limits"');
+  vrule(s, RULE_X, BODY_Y + 0.1, BODY_B - 0.1);
+  s.addText([{ text: 'Next: ', options: { bold: true } }, { text: 'more labelled data, a server database, test-gated deploys.' }], { x: NOTE_X, y: 3.0, w: NOTE_W, h: 0.9, isTextBox: true, margin: 0, fontFace: 'Cambria', fontSize: 17, color: INK2, valign: 'top' });
+  text(s, 'SOMNATH REDDY', NOTE_X, 4.1, NOTE_W, 0.3, { fontFace: LABEL, fontSize: 11, bold: true, charSpacing: 2 });
+  text(s, 'agentpulse.centralindia.\ncloudapp.azure.com\ngithub.com/Soum-Code/agentpulse', NOTE_X, 4.5, NOTE_W, 1.0, { fontFace: MONO, fontSize: 12, color: INK2 });
+  source(s, 'LLM_JUDGE_COMPARISON_REPORT.md; GROUNDING_RECALIBRATION_2026-10.md T3c; README.md, Testing and benchmarks (2026-10-27).');
 }
 
-// 11 Future work
+// =================== APPENDIX ===================
+pres.addSection({ title: 'Appendix (Q&A)' });
+
+// A1
 {
-  const s = slide('CONTENT', 'Talk');
-  head(s, '10 · Future work', tRuns('Next, in order of what the limits ', 'ask for'));
-  const hw = (CW - 0.3) / 2;
-  const F = [['GROUNDING', MINT, 'More labelled data', 'A larger labelled set drawn from real traces, with neutral failures, then re-run the ablation at the 0.3 weight.'],
-    ['THE TWO FAILED SIGNALS', ROSE, 'Redesign or remove', 'Claim extraction from prose instead of digits for tool-claim; a different formulation for disagreement, tested on real traces first.'],
-    ['SCALE AND SAFETY', BLUE, 'Beyond one VM', 'A server database instead of one SQLite file, several workers, an off-VM backup, deploys gated on the test suite.'],
-    ['REACH', AMBER, 'More frameworks', 'LangChain and CrewAI adapters (today: decorator, OpenAI / Anthropic wrapper, LangGraph).']];
-  F.forEach(([l, col, h, p], i) => {
-    const x = M + (i % 2) * (hw + 0.3), y = 2.0 + Math.floor(i / 2) * 2.2;
-    card(s, x, y, hw, 1.95);
-    label(s, l, x + 0.25, y + 0.2, hw - 0.5, col);
-    text(s, h, x + 0.25, y + 0.5, hw - 0.5, 0.42, { fontSize: 20, bold: true, color: INK });
-    text(s, p, x + 0.25, y + 1.0, hw - 0.5, 0.85, { fontSize: 15 });
-  });
+  const s = slide('PAGE', 'Appendix (Q&A)');
+  page(s, 'Appendix A1', 'For questions', 'Appendix · the 0.3 weight', 'After a label-order bug was fixed, 0.5 flagged 7 of 17 correct answers; 0.3 flags 1', true);
+  ntable(s, ['Neutral weight', 'F1', 'False alarms'], [
+    { cells: ['0.0 to 0.3', '0.963', '0.059'], red: 1 }, { cells: ['0.4', '0.897', '0.176'] }, { cells: ['0.5', '0.788', '0.412'] }], M, 3.0, EX_W, [3.55, 1.6, 2.0]);
+  caption(s, 'Test split, cut-off 0.4, corrected labels. At the 0.7 cut-off every weight up to 0.6 gives the same result.', null, M, 5.3, EX_W, 0.6);
+  notecol(s, [{ text: 'Before 21 October the code read two DeBERTa labels in swapped order. PR #69 fixed it; every figure was re-measured.', h: 2.0 }], 3.1);
+  source(s, 'GROUNDING_RECALIBRATION_2026-10.md, banner and findings 4-7 (T3c, T5b, T7); PR #69; PR #89.');
 }
 
-// 12 Conclusion
+// A2
 {
-  const s = slide('TITLE', 'Talk');
-  text(s, 'CONCLUSION', M, 0.85, 6, 0.3, { fontFace: MONO, fontSize: 13, color: MINT, charSpacing: 3 });
-  s.addText([{ text: 'Two signals that held up,', options: { breakLine: true } }, { text: 'measured, live, and honest', options: { italic: true, bold: false, color: MINT } }, { text: ' about the rest.' }],
-    { x: M, y: 1.25, w: CW, h: 2.1, isTextBox: true, margin: 0, fontSize: 46, bold: true, color: INK, valign: 'top' });
-  const tw = (CW - 0.6) / 3;
-  const T = [['01', 'Every span scored by two local models on a CPU. ', 'No LLM judge: 202.94 ms vs 3,170.39 ms median per case.'],
-    ['02', 'Grounding and drift held up. ', 'F1 0.963 on the test split; two other signals failed on real traces and are labelled so.'],
-    ['03', 'Live on Azure and tested. ', '628 + 404 tests; chat, Telemetry Lab and console open to examiners.']];
-  T.forEach(([k, a, b], i) => {
-    const x = M + i * (tw + 0.3);
-    card(s, x, 3.6, tw, 1.95);
-    text(s, k, x + 0.25, 3.75, 1, 0.3, { fontFace: MONO, fontSize: 13, color: MINT });
-    s.addText([{ text: a, options: { color: INK } }, { text: b }], { x: x + 0.25, y: 4.1, w: tw - 0.5, h: 1.35, isTextBox: true, margin: 0, fontSize: 16, color: MUTED, valign: 'top' });
-  });
-  label(s, 'Live site', M, 5.95, 4);
-  text(s, 'agentpulse.centralindia.cloudapp.azure.com', M, 6.2, 7.5, 0.4, { fontFace: MONO, fontSize: 18, color: MINT });
-  text(s, 'github.com/Soum-Code/agentpulse', M, 6.65, 7, 0.3, { fontFace: MONO, fontSize: 12, color: MUTED });
-  s.addText([{ text: 'Thank you · ', options: { color: INK } }, { text: 'Questions?', options: { color: MINT } }], { x: 8.0, y: 6.2, w: 4.5, h: 0.6, isTextBox: true, margin: 0, fontSize: 26, bold: true, align: 'right', valign: 'middle' });
+  const s = slide('PAGE', 'Appendix (Q&A)');
+  page(s, 'Appendix A2', 'For questions', 'Appendix · negative results', 'Both withdrawn signals looked good on hand-written cases and failed on real traces', true);
+  ntable(s, ['Signal', 'Hand-written', 'Real traces'], [
+    { cells: ['Tool-claim check, F1', '0.842', '0.000'] }, { cells: ['Inter-agent disagreement', '—', '0 of 10 found'] }], M, 3.0, EX_W, [3.35, 1.7, 2.1]);
+  caption(s, 'Tool-claim: 19 hand-written cases; no claim found in 8,353 real prose spans. Disagreement: AUC 0.457 without the planner, which is chance.', null, M, 4.85, EX_W, 0.8);
+  notecol(s, [{ text: 'Real agents write counts in words, not digits; the tool-claim check only reads digits.', h: 1.6 }], 3.1);
+  source(s, 'TOOL_CLAIM_EXTERNAL_TEST_REPORT.md section 10; COMPETITIVE_POSITIONING.md 5.1, 5.2; SESSION_HANDOFF.md 14.1, 24.9.5.');
 }
 
-// =================== BACKUP ===================
-pres.addSection({ title: 'Backup (Q&A)' });
-
-// B1
+// A3
 {
-  const s = slide('CONTENT', 'Backup (Q&A)');
-  head(s, 'Backup B1 · Q&A', 'The label-order bug, and why the weight is 0.3', AMBER);
-  s.addText([
-    { text: 'Before 21 Oct the code read DeBERTa\'s ' }, { text: 'entailment and neutral probabilities swapped', options: { bold: true, color: INK } }, { text: '. PR #69 reads the label order from the model config; every grounding figure was re-measured.', options: { breakLine: true } },
-    { text: 'At the 0.7 cut-off, weights up to 0.6 give identical results: ' }, { text: 'high alerts do not depend on the weight', options: { bold: true, color: INK } }, { text: '. Only the medium line does.', options: { breakLine: true } },
-    { text: 'Live rows re-scored at 0.3: ' }, { text: '90 low / 7 medium / 19 high', options: { fontFace: MONO, color: INK } }, { text: ' (at 0.5: 12 / 81 / 23).' }],
-  { x: M, y: 2.0, w: 5.7, h: 4.3, isTextBox: true, margin: 0, fontSize: 16, color: MUTED, valign: 'top', paraSpaceAfter: 14 });
-  label(s, 'Test split, cut-off 0.4, corrected labels', 7.0, 2.0, 5.5);
-  const R = [['weight', 'F1', 'false-positive rate', MUTED], ['0.0 – 0.3', '0.963', '0.059', MINT], ['0.4', '0.897', '0.176', INK], ['0.5', '0.788', '0.412', ROSE]];
-  s.addTable(R.map(([a, b, c, col], i) => [a, b, c].map((t, k) => ({ text: t, options: { color: i === 0 ? FAINT : col, fontFace: i === 0 ? undefined : MONO, align: k ? 'right' : 'left' } }))), {
-    x: 7.0, y: 2.35, w: 5.5, colW: [1.7, 1.5, 2.3], fontSize: 16, rowH: 0.55, valign: 'middle', margin: [0, 0.05, 0, 0],
-    border: [{ type: 'none' }, { type: 'none' }, { pt: 0.5, color: '2A3140' }, { type: 'none' }], fill: { color: BG, transparency: 100 },
-  });
-  text(s, 'At 0.5, 7 of 17 supported test cases were flagged medium.', 7.0, 4.7, 5.5, 0.35, { fontFace: MONO, fontSize: 11, color: FAINT });
-  source(s, 'Source: GROUNDING_RECALIBRATION_2026-10.md (banner, findings 4-7, T3c, T5b, T7) · SESSION_HANDOFF.md 29.11.3 · PR #69, PR #89');
+  const s = slide('PAGE', 'Appendix (Q&A)');
+  page(s, 'Appendix A3', 'For questions', 'Appendix · Telemetry Lab', 'A fault injected in the Lab becomes a scored trace and a HIGH incident', true);
+  const hw = (CW - 0.6) / 2, ph = 3.4;
+  photo(s, 'live_lab.jpg', M, 2.45, hw, ph);
+  caption(s, 'Five scenarios; the agent text is fixed, the evaluator is real.', 'Photo: live site', M, 2.45 + ph + 0.1, hw, 0.5);
+  vrule(s, M + hw + 0.3, 2.45, 6.6);
+  photo(s, 'live_incidents.jpg', M + hw + 0.6, 2.45, hw, ph);
+  caption(s, 'Lab runs of 27 October: GROUNDING_FAILURE for analyst, risk 0.999.', 'Photo: live site', M + hw + 0.6, 2.45 + ph + 0.1, hw, 0.5);
+  source(s, 'HOW_IT_WORKS.md, Telemetry Lab; docs/E2E_TEST_2026-10-27.md, items 11, 12 and 22.');
 }
 
-// B2
+// A4 References
 {
-  const s = slide('CONTENT', 'Backup (Q&A)');
-  head(s, 'Backup B2 · Q&A', 'Two signals measured, and withdrawn', AMBER);
-  const hw = (CW - 0.3) / 2;
-  card(s, M, 2.0, hw, 4.2);
-  label(s, 'Tool-claim validation', M + 0.3, 2.2, hw - 0.6, ROSE);
-  s.addText([{ text: '0.842', options: { color: MUTED } }, { text: ' → ', options: { color: INK } }, { text: '0.000', options: { color: ROSE } }], { x: M + 0.3, y: 2.55, w: hw - 0.6, h: 0.8, isTextBox: true, margin: 0, fontFace: MONO, fontSize: 40, bold: true, valign: 'middle' });
-  text(s, 'F1 on 19 hand-written cases → F1 on a real-data benchmark', M + 0.3, 3.4, hw - 0.6, 0.35, { fontSize: 14 });
-  text(s, "Compares a count the output states with the tool's recorded result count. On real agent traces it extracted no claim from 8,353 prose spans: agents do not write counts in digits.", M + 0.3, 3.95, hw - 0.6, 1.9, { fontSize: 16 });
-  const x2 = M + hw + 0.3;
-  card(s, x2, 2.0, hw, 4.2);
-  label(s, 'Inter-agent disagreement', x2 + 0.3, 2.2, hw - 0.6, ROSE);
-  text(s, '0 / 10', x2 + 0.3, 2.55, hw - 0.6, 0.8, { fontFace: MONO, fontSize: 40, bold: true, color: ROSE, valign: 'middle' });
-  text(s, 'labelled contradictions found on real multi-agent traces', x2 + 0.3, 3.4, hw - 0.6, 0.35, { fontSize: 14 });
-  text(s, "NLI between agents' outputs in one trace. With the planner excluded, AUC 0.457: chance. The alert was withdrawn; the score is still stored, not alerted on.", x2 + 0.3, 3.95, hw - 0.6, 1.9, { fontSize: 16 });
-  source(s, 'Sources: TOOL_CLAIM_EXTERNAL_TEST_REPORT.md section 10 · COMPETITIVE_POSITIONING.md 5.1, 5.2 · SESSION_HANDOFF.md 14.1, 24.9.5 · README.md "What it does"');
-}
-
-// B3
-{
-  const s = slide('CONTENT', 'Backup (Q&A)');
-  head(s, 'Backup B3 · Q&A', 'Telemetry Lab: a fault in, an incident out', AMBER);
-  const hw = (CW - 0.4) / 2, ih = 3.5;
-  shot(s, 'live_lab.jpg', M, 2.0, hw, ih);
-  text(s, 'Five scenarios: clean, hallucination, tool-claim mismatch, drift, disagreement. Agent text is a fixture; the evaluator is real.', M, 5.62, hw, 0.6, { fontFace: MONO, fontSize: 10, color: FAINT });
-  shot(s, 'live_incidents.jpg', M + hw + 0.4, 2.0, hw, ih);
-  text(s, 'Incidents from Lab runs on 27 Oct: GROUNDING_FAILURE and HIGH_HALLUCINATION_RISK for analyst, risk 0.999.', M + hw + 0.4, 5.62, hw, 0.6, { fontFace: MONO, fontSize: 10, color: FAINT });
-  source(s, 'Sources: HOW_IT_WORKS.md (Telemetry Lab; fixture text in routers/ingest.py) · docs/E2E_TEST_2026-10-27.md items 11, 12, 22 · README.md (Lab limits 6/h, 30/day per IP)');
+  const s = slide('PAGE', 'Appendix (Q&A)');
+  page(s, 'References', 'For questions', 'References', 'Every figure in this deck comes from these documents in the repository', true);
+  const left = ['README.md (state of 2026-10-27)', 'docs/E2E_TEST_2026-10-27.md', 'GROUNDING_RECALIBRATION_2026-10.md', 'DRIFT_REAL_TEXT_DIAGNOSIS_REPORT.md', 'LLM_JUDGE_COMPARISON_REPORT.md', 'TOOL_CLAIM_EXTERNAL_TEST_REPORT.md', 'COMPETITIVE_POSITIONING.md'];
+  const right = ['HOW_IT_WORKS.md; DEMO_GUIDE.md', 'benchmarks/benchmark_results.json', 'experiments/results/ablation_results.json', 'deploy/azure/README.md; .github/workflows/', 'SESSION_HANDOFF.md, sections 14, 24, 29', 'Models: sentence-transformers/all-MiniLM-L6-v2; cross-encoder/nli-deberta-v3-small'];
+  const hw = (CW - 0.6) / 2;
+  text(s, left.join('\n'), M, 2.45, hw, 4.1, { fontFace: 'Cambria', fontSize: 15, lineSpacingMultiple: 1.25 });
+  vrule(s, M + hw + 0.3, 2.45, 6.6);
+  text(s, right.join('\n'), M + hw + 0.6, 2.45, hw, 4.1, { fontFace: 'Cambria', fontSize: 15, lineSpacingMultiple: 1.25 });
+  source(s, 'Repository github.com/Soum-Code/agentpulse; model names from HOW_IT_WORKS.md.');
 }
 
 (async () => {
