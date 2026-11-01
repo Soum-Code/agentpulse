@@ -7,9 +7,11 @@
     "maxScale": 1.75
   },
   "idle": {
-    "min": 3,
+    "min": 2.5,
     "rate": 8,
-    "leadIn": 1.5
+    "leadIn": 1.5,
+    "minShown": 1.5,
+    "cutShort": true
   },
   "intro": {
     "dur": 5,
@@ -18,7 +20,7 @@
     "earRight": "Recorded 1 November 2026",
     "motto": "Observability for multi-agent LLM pipelines",
     "head": "Every agent step, *checked* for grounding and drift",
-    "deck": "The live site, recorded in a browser. Waiting is sped up and marked on screen.",
+    "deck": "Highlights from the live site, recorded in a browser. Some stretches are cut.",
     "footLeft": "Live: agentpulse.centralindia.cloudapp.azure.com",
     "footRight": "Code: github.com/Soum-Code/agentpulse"
   },
@@ -27,80 +29,83 @@
       "title": "The landing page",
       "clips": [
         {
-          "in": "step 1 -1.5",
-          "out": "step 3 -0.4"
-        }
-      ]
-    },
-    {
-      "title": "The console: *Overview*",
-      "kicker": "The console",
-      "ear": "Overview",
-      "deck": "The counters are read from the live API.",
-      "clips": [
+          "in": 3.5,
+          "out": 16.9
+        },
         {
-          "in": "step 3 -0.4",
-          "out": "step 4 -0.4"
+          "in": 52.4,
+          "out": 68.2
         }
       ]
     },
     {
       "title": "Three agents answer, and each step is *scored*",
-      "kicker": "RAG Live",
-      "ear": "RAG Live",
-      "deck": "First a question the corpus covers, then one it does not.",
       "clips": [
         {
-          "in": "step 4 -0.4",
-          "out": "step 7 -0.4"
+          "in": 91.2,
+          "out": 127.5
+        },
+        {
+          "in": 179.0,
+          "out": 212.0
         }
-      ]
+      ],
+      "kicker": "RAG Live",
+      "ear": "RAG Live",
+      "deck": "A question the corpus covers, then one it does not.",
+      "cardDur": 2.9
+    },
+    {
+      "title": "The Telemetry Lab: faults injected *on purpose*",
+      "clips": [
+        {
+          "in": 255.5,
+          "out": 281.5
+        }
+      ],
+      "kicker": "Telemetry Lab",
+      "ear": "Telemetry Lab",
+      "deck": "Here, the hallucination scenario.",
+      "cardDur": 2.9
     },
     {
       "title": "Every answer leaves a *trace*",
+      "clips": [
+        {
+          "in": 384.0,
+          "out": 414.5
+        }
+      ],
       "kicker": "Traces",
       "ear": "Traces",
-      "deck": "The span inspector, the verdict with its risk, and a JSON download.",
-      "clips": [
-        {
-          "in": "step 7 -0.4",
-          "out": "step 10 -0.4"
-        }
-      ]
+      "deck": "Filter to errors, inspect a span, read its verdict, export the JSON.",
+      "cardDur": 2.9
     },
     {
-      "title": "The Telemetry Lab: *hallucination* and drift runs",
-      "kicker": "Telemetry Lab",
-      "ear": "Telemetry Lab",
-      "deck": "A hallucination run, then a drift run, scored by the evaluator worker.",
+      "title": "*Incidents*, then an agent's drift",
       "clips": [
         {
-          "in": "step 10 -0.4",
-          "out": "step 12 -0.4"
+          "in": 433.2,
+          "out": 480.5
         }
-      ]
-    },
-    {
-      "title": "*Drift*: one agent against its threshold",
-      "kicker": "Drift",
-      "ear": "Drift",
-      "clips": [
-        {
-          "in": "step 12 -0.4",
-          "out": "step 13 -0.4"
-        }
-      ]
-    },
-    {
-      "title": "*Incidents*: the alerts, newest first",
-      "kicker": "Incidents",
+      ],
+      "kicker": "Incidents and drift",
       "ear": "Incidents",
+      "deck": "Every alert, newest first; then one agent against its threshold.",
+      "cardDur": 2.9
+    },
+    {
+      "title": "Back on the *Overview*",
       "clips": [
         {
-          "in": "step 13 -0.4",
+          "in": 548.0,
           "out": "end"
         }
-      ]
+      ],
+      "kicker": "Overview",
+      "ear": "Overview",
+      "deck": "With this run counted.",
+      "cardDur": 2.9
     }
   ],
   "outro": {
@@ -111,5 +116,6 @@
     "deck": "No sign-in needed to look around.",
     "footLeft": "Code: github.com/Soum-Code/agentpulse",
     "footRight": "M.Tech (AIML) final review"
-  }
+  },
+  "recordingNote": "Clip edges are tuned to the auto-demo run of 2026-11-01 19:47 (22 steps, 9 min 27 s)."
 }
