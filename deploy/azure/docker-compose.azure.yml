@@ -11,6 +11,12 @@ services:
     # container, so publishing 8000 to the internet only widens the exposure.
     ports: !override []
     restart: unless-stopped
+    # In short: the image has only app/, so the Experiments and Datasets views were empty.
+    # backend/app/routers/experiments.py reads /experiments/results/*.json and /datasets/*.json
+    # (four folders above the file). Mount the repo's own files there, read-only.
+    volumes:
+      - ./experiments/results:/experiments/results:ro
+      - ./datasets:/datasets:ro
 
   worker:
     restart: unless-stopped
