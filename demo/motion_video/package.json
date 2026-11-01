@@ -1,0 +1,9 @@
+{
+  "name": "agentpulse-motion-video",
+  "private": true,
+  "type": "module",
+  "description": "Motion-video cut of the AgentPulse auto-demo recording, rendered with HyperFrames.",
+  "devDependencies": {
+    "hyperframes": "0.8.226"
+  }
+}
