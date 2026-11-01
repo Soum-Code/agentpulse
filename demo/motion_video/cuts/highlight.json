@@ -36,7 +36,8 @@
           "in": 52.4,
           "out": 68.2
         }
-      ]
+      ],
+      "cardDur": 3.6
     },
     {
       "title": "Three agents answer, and each step is *scored*",
@@ -51,9 +52,8 @@
         }
       ],
       "kicker": "RAG Live",
-      "ear": "RAG Live",
       "deck": "A question the corpus covers, then one it does not.",
-      "cardDur": 2.9
+      "cardDur": 3.6
     },
     {
       "title": "The Telemetry Lab: faults injected *on purpose*",
@@ -64,9 +64,8 @@
         }
       ],
       "kicker": "Telemetry Lab",
-      "ear": "Telemetry Lab",
       "deck": "Here, the hallucination scenario.",
-      "cardDur": 2.9
+      "cardDur": 3.6
     },
     {
       "title": "Every answer leaves a *trace*",
@@ -77,9 +76,8 @@
         }
       ],
       "kicker": "Traces",
-      "ear": "Traces",
       "deck": "Filter to errors, inspect a span, read its verdict, export the JSON.",
-      "cardDur": 2.9
+      "cardDur": 3.6
     },
     {
       "title": "*Incidents*, then an agent's drift",
@@ -90,9 +88,8 @@
         }
       ],
       "kicker": "Incidents and drift",
-      "ear": "Incidents",
       "deck": "Every alert, newest first; then one agent against its threshold.",
-      "cardDur": 2.9
+      "cardDur": 3.6
     },
     {
       "title": "Back on the *Overview*",
@@ -103,9 +100,8 @@
         }
       ],
       "kicker": "Overview",
-      "ear": "Overview",
       "deck": "With this run counted.",
-      "cardDur": 2.9
+      "cardDur": 3.6
     }
   ],
   "outro": {

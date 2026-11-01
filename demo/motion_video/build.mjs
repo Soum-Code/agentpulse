@@ -119,12 +119,16 @@ const esc = (s) =>
 
 // In short: headline words become spans so they can blur in one by one; *word* is the red accent.
 function words(text, idp) {
+  let on = false; // inside *...*, which may span several words
   return String(text)
     .split(/\s+/)
     .filter(Boolean)
     .map((w, i) => {
-      const accent = /^\*.*\*[.,:;!?]?$/.test(w);
-      const clean = accent ? w.replace(/\*/g, "") : w;
+      const opens = w.startsWith("*");
+      const closes = /\*[.,:;!?]?$/.test(w);
+      const accent = on || opens;
+      on = (on || opens) && !closes;
+      const clean = w.replace(/\*/g, "");
       return `<span class="w${accent ? " acc" : ""}" id="${idp}-w${i}">${esc(clean)}</span>`;
     })
     .join(" ");
@@ -223,7 +227,7 @@ function sectionScene(id, c, dur, index, total) {
       <div class="rule" style="top: 98px"></div>
       <div class="kicker" style="top: 360px">${esc(c.kicker || "")}</div>
       <div class="head" style="top: 412px; font-size: 96px; text-wrap: balance">${words(c.title, id)}</div>
-      ${c.deck ? `<div class="deck" style="top: 650px">${esc(c.deck)}</div>` : ""}
+      ${c.deck ? `<div class="deck" style="top: 680px">${esc(c.deck)}</div>` : ""}
     </div>`;
   const exit = `tl.to("#${id}-sheet", { clipPath: "inset(0% 0% 100% 0%)", duration: 0.5, ease: "power3.in" }, ${r3(dur - 0.55)});`;
   return sceneFile(id, CARD_CSS, body, cardTimeline(id, n, exit));

@@ -31,7 +31,8 @@
           "in": 0.5,
           "out": 48.2
         }
-      ]
+      ],
+      "cardDur": 3.6
     },
     {
       "title": "The console: *Overview*",
@@ -42,8 +43,8 @@
         }
       ],
       "kicker": "The console",
-      "ear": "Overview",
-      "deck": "The counters are read from the live API."
+      "deck": "The counters are read from the live API.",
+      "cardDur": 3.6
     },
     {
       "title": "Three agents answer, and each step is *scored*",
@@ -54,8 +55,8 @@
         }
       ],
       "kicker": "RAG Live",
-      "ear": "RAG Live",
-      "deck": "Two questions the corpus covers, then one it does not."
+      "deck": "Two questions the corpus covers, then one it does not.",
+      "cardDur": 3.6
     },
     {
       "title": "The Telemetry Lab: faults injected *on purpose*",
@@ -66,8 +67,8 @@
         }
       ],
       "kicker": "Telemetry Lab",
-      "ear": "Telemetry Lab",
-      "deck": "Five scenarios: clean, hallucination, tool-claim mismatch, drift, disagreement."
+      "deck": "Five scenarios: clean, hallucination, tool-claim mismatch, drift, disagreement.",
+      "cardDur": 3.6
     },
     {
       "title": "*Agents*: every agent that has sent a span",
@@ -78,7 +79,7 @@
         }
       ],
       "kicker": "Agents",
-      "ear": "Agents"
+      "cardDur": 3.6
     },
     {
       "title": "Every answer leaves a *trace*",
@@ -89,8 +90,8 @@
         }
       ],
       "kicker": "Traces",
-      "ear": "Traces",
-      "deck": "Filter to errors, inspect a span, read its verdict, export the JSON."
+      "deck": "Filter to errors, inspect a span, read its verdict, export the JSON.",
+      "cardDur": 3.6
     },
     {
       "title": "*APM*: what the server measures about itself",
@@ -101,7 +102,7 @@
         }
       ],
       "kicker": "APM",
-      "ear": "APM"
+      "cardDur": 3.6
     },
     {
       "title": "*Incidents*: every alert, newest first",
@@ -112,8 +113,8 @@
         }
       ],
       "kicker": "Incidents",
-      "ear": "Incidents",
-      "deck": "With the rule, agent, trace and flagged span behind each one."
+      "deck": "With the rule, agent, trace and flagged span behind each one.",
+      "cardDur": 3.6
     },
     {
       "title": "*Drift*: the latest outputs against the first",
@@ -124,8 +125,8 @@
         }
       ],
       "kicker": "Drift",
-      "ear": "Drift",
-      "deck": "An agent's latest 12 outputs against its first 20."
+      "deck": "An agent's latest 12 outputs against its first 20.",
+      "cardDur": 3.6
     },
     {
       "title": "Replay, experiments, datasets and *settings*",
@@ -136,7 +137,7 @@
         }
       ],
       "kicker": "More views",
-      "ear": "More views"
+      "cardDur": 3.6
     },
     {
       "title": "Back on the *Overview*",
@@ -147,8 +148,8 @@
         }
       ],
       "kicker": "Overview",
-      "ear": "Overview",
-      "deck": "With this run counted."
+      "deck": "With this run counted.",
+      "cardDur": 3.6
     }
   ],
   "outro": {
