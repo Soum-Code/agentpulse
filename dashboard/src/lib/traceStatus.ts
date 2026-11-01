@@ -16,6 +16,7 @@ export function isHighSeverity(severity: string | null | undefined): boolean {
   return s === 'high' || s === 'critical';
 }
 
+// In short: what deriveTraceStatus needs to decide the status of one trace.
 export interface TraceStatusInput {
   /** The trace row's own status from the API: "running" or "completed". */
   apiStatus?: string | null;
@@ -41,15 +42,19 @@ export interface TraceStatusInput {
  * detectors found, and closing the alert does not undo the finding.
  */
 export function deriveTraceStatus({ apiStatus, spans, alerts }: TraceStatusInput): TraceStatus {
+  // In short: look at the trace from worst to best. First everything that makes it an 'error',
+  // then everything that makes it a 'warning', and only then decide between 'unknown' and 'ok'.
   const api = apiStatus?.toUpperCase();
   if (api === 'ERROR') return 'error';
   if (spans.some((s) => s.status === 'error')) return 'error';
   if (alerts?.some((a) => isHighSeverity(a.severity))) return 'error';
 
+  // Warning: the trace is still running, a span scored as risky, or it has any other (lower) alert.
   if (api === 'RUNNING') return 'warning';
   if (spans.some((s) => s.status === 'warning')) return 'warning';
   if (alerts && alerts.length > 0) return 'warning';
 
+  // Nothing is known to be wrong. 'ok' needs the alerts loaded and every span scored; otherwise 'unknown'.
   if (alerts === undefined) return 'unknown';
   // A span with no evaluation row yet has not been measured; the trace is not "ok" until it is.
   if (spans.some((s) => s.evaluated === false)) return 'unknown';

@@ -13,6 +13,8 @@
 
 export type DatumStatus = 'pending' | 'measured' | 'unmeasured' | 'unreachable' | 'error';
 
+// In short: one value together with its state. Only the fields that belong to the state are filled in
+// (value, or reason, or service + instruction, or error).
 export interface Datum<T = any> {
   status: DatumStatus;
   value?: T;
@@ -22,6 +24,8 @@ export interface Datum<T = any> {
   error?: string;
 }
 
+// In short: one small builder per state, so a view writes datum.pending() or datum.measured(5)
+// instead of building the object by hand.
 export const datum = {
   measured: <T>(value: T): Datum<T> => ({
     status: 'measured',

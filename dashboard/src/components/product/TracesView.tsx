@@ -90,6 +90,8 @@ const VerdictBadge: React.FC<{ verdict?: GroundingVerdict | null }> = ({ verdict
   );
 };
 
+// In short: what the page gives this view: the traces, which trace and span are selected (and the functions
+// that change them), a function that saves a span as a benchmark case, and an optional agent to filter by.
 interface TracesViewProps {
   traces: Trace[];
   selectedTrace?: Trace;
@@ -130,6 +132,9 @@ const CopyChip: React.FC<{ label: string; title: string; copied: boolean; onCopy
   </button>
 );
 
+// In short: the Traces screen. A filtered, paged list of traces and, for the chosen trace, its spans as a tree,
+// timeline, flame graph or evidence view, with an inspector for the chosen span (scores, copy, export, curate)
+// and keyboard shortcuts. Nearly all of the file is this one component.
 export const TracesView: React.FC<TracesViewProps> = ({
   traces,
   selectedTrace,
@@ -192,6 +197,7 @@ export const TracesView: React.FC<TracesViewProps> = ({
   // The old two-way sort is kept as a derived value because the toolbar's toggle button and
   // the keyboard code still think in "newest first / oldest first".
   const sortOrder: ChronologicalSortOrder = sortOption === 'timestamp-asc' ? 'chronological' : 'reverse-chronological';
+  // In short: it has the shape of a React state setter (a value or a function) and turns the result into sortOption.
   const setSortOrder = (next: ChronologicalSortOrder | ((prev: ChronologicalSortOrder) => ChronologicalSortOrder)) => {
     const resolved = typeof next === 'function' ? next(sortOrder) : next;
     setSortOption(resolved === 'chronological' ? 'timestamp-asc' : 'timestamp-desc');
@@ -262,6 +268,8 @@ export const TracesView: React.FC<TracesViewProps> = ({
   const activeFiltersCount =
     (statusFilter !== 'all' ? 1 : 0) + (durationPreset !== 'all' ? 1 : 0) + (sortOption !== 'timestamp-desc' ? 1 : 0);
 
+  // In short: put the filters and the sort back to their defaults (all statuses, all durations, no custom range,
+  // newest first).
   const handleResetFilters = () => {
     setStatusFilter('all');
     setDurationPreset('all');
@@ -270,6 +278,7 @@ export const TracesView: React.FC<TracesViewProps> = ({
     setSortOption('timestamp-desc');
   };
 
+  // In short: the trace list after the agent filter, status, duration, search text and sort are applied.
   const filteredTraces = useMemo(
     () =>
       filterAndSortTraces(traces, {
@@ -289,10 +298,13 @@ export const TracesView: React.FC<TracesViewProps> = ({
     setCurrentPage(1);
   }, [filterAgentId, statusFilter, durationPreset, customMinDuration, customMaxDuration, searchQuery, sortOption]);
 
+  // In short: 8 traces per page. safePage keeps the page number between 1 and totalPages.
   const totalPages = Math.max(1, Math.ceil(filteredTraces.length / PAGE_SIZE));
   const safePage = Math.min(Math.max(1, currentPage), totalPages);
   const paginatedTraces = filteredTraces.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
+  // In short: what is shown now. The trace: the selected one, else the first on the page, else the first filtered
+  // one, else the first of all. The span: the selected one, else the first span of that trace.
   const currentTrace = selectedTrace || paginatedTraces[0] || filteredTraces[0] || traces[0];
   const currentSpan = selectedSpan || currentTrace?.spans[0];
   const groundingResult = currentSpan?.evaluatorResults?.find(r => r.name === 'Grounding');
@@ -394,6 +406,8 @@ export const TracesView: React.FC<TracesViewProps> = ({
     }
   };
 
+  // In short: go to the next page, select its first trace and that trace's most important span, and scroll it
+  // into view. Does nothing on the last page.
   const handleNextPage = () => {
     if (safePage < totalPages) {
       const targetPage = safePage + 1;
@@ -408,6 +422,7 @@ export const TracesView: React.FC<TracesViewProps> = ({
     }
   };
 
+  // In short: the same, one page back. Does nothing on the first page.
   const handlePrevPage = () => {
     if (safePage > 1) {
       const targetPage = safePage - 1;
@@ -422,6 +437,8 @@ export const TracesView: React.FC<TracesViewProps> = ({
     }
   };
 
+  // In short: save the shown span as a benchmark case through the page's onCurateToDataset. The "saved" mark
+  // shows for 2.5 seconds, and only if the case was really saved.
   const handleCurate = async () => {
     if (currentSpan && currentTrace) {
       // The handler returns false when it refused or failed; only a real curation shows success.
@@ -431,6 +448,8 @@ export const TracesView: React.FC<TracesViewProps> = ({
     }
   };
 
+  // In short: open or close one span's children in the tree. stopPropagation keeps the click from also
+  // reaching the row behind it.
   const handleToggleSpanExpand = (spanId: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
     setExpandedSpanIds(prev => {
@@ -444,6 +463,8 @@ export const TracesView: React.FC<TracesViewProps> = ({
     });
   };
 
+  // In short: jump to the next flagged span of this trace (an error, a warning or a failed check), wrapping
+  // round to the first, and open its parent in the tree.
   const handleCycleFlaggedSpan = () => {
     if (flaggedSpans.length === 0) return;
     const currentIndex = flaggedSpans.findIndex(s => s.id === currentSpan?.id);
@@ -642,6 +663,8 @@ export const TracesView: React.FC<TracesViewProps> = ({
     await action(full);
   };
 
+  // In short: export every trace that passes the current filters as one CSV file. Each trace's detail is loaded
+  // first, so no row is an empty shell.
   const handleDownloadCSV = async () => {
     if (filteredTraces.length === 0) return;
     let full: Trace[];
@@ -659,6 +682,7 @@ export const TracesView: React.FC<TracesViewProps> = ({
     }
   };
 
+  // In short: download one trace as a JSON file (its detail is loaded first).
   const handleExportTraceJson = (trace: Trace) =>
     withFullTrace(trace, (full) => {
       if (downloadTraceAsJson(full)) {
@@ -669,6 +693,7 @@ export const TracesView: React.FC<TracesViewProps> = ({
       }
     });
 
+  // In short: copy the trace id to the clipboard. If the browser blocks the clipboard, a notice says so.
   const handleCopyTraceId = async (trace: Trace) => {
     if (await copyTraceIdToClipboard(trace.id)) {
       setCopiedTraceId(trace.id);
@@ -678,6 +703,7 @@ export const TracesView: React.FC<TracesViewProps> = ({
     }
   };
 
+  // In short: copy the trace's log text to the clipboard (its detail is loaded first).
   const handleCopyTraceLog = (trace: Trace) =>
     withFullTrace(trace, async (full) => {
       if (await copyTraceLogBodyToClipboard(full)) {
