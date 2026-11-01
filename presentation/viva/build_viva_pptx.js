@@ -426,5 +426,15 @@ pres.addSection({ title: 'Appendix (Q&A)' });
   } else {
     console.warn('APPLY_THEME not set: scheme colours fall back to the stock Office palette');
   }
+  // In short: a quiet fade between slides (pptxgenjs cannot write transitions, so add the XML).
+  const JSZip = require('jszip');
+  const zip = await JSZip.loadAsync(fs.readFileSync(OUT));
+  for (const name of Object.keys(zip.files).filter((f) => /^ppt\/slides\/slide\d+\.xml$/.test(f))) {
+    const xml = await zip.file(name).async('string');
+    if (!xml.includes('<p:transition')) {
+      zip.file(name, xml.replace('</p:clrMapOvr>', '</p:clrMapOvr><p:transition spd="med"><p:fade/></p:transition>'));
+    }
+  }
+  fs.writeFileSync(OUT, await zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' }));
   console.log('wrote', OUT, n, 'slides');
 })();
