@@ -163,7 +163,7 @@ pres.addSection({ title: 'Talk' });
     text(s, st, x + 0.15, y + 0.75, 1.8, 0.4, { fontFace: MONO, fontSize: 10.5, color: bad ? RED : INK });
     if (i < 2) text(s, '→', x + 2.05, y + 0.35, 0.4, 0.45, { fontSize: 20, align: 'center', color: i === 1 ? RED : INK });
   });
-  caption(s, 'Every call returns 200, nothing throws, latency is normal. Schematic, not data.', null, M, 4.95, EX_W, 0.4);
+  caption(s, 'Every call returns 200, nothing throws, latency is normal. The diagram is a schematic.', null, M, 4.95, EX_W, 0.4);
   notecol(s, [
     { runs: [{ text: 'Grounding failure:', b: 1 }, { text: ' an agent says what its evidence does not support.' }], h: 1.0 },
     { runs: [{ text: 'Drift:', b: 1 }, { text: ' an agent slowly answers differently after a change.' }], h: 1.0 },
@@ -302,7 +302,7 @@ pres.addSection({ title: 'Talk' });
   page(s, 'Live demo', 'Page 9', 'Live demo · agentpulse.centralindia.cloudapp.azure.com', 'One question, three agents, and every step scored as it happens');
   const pw = 7.15, ph = pw / 1.82 + 0.12;
   photo(s, 'live_rag.jpg', M, 2.35, pw, Math.min(ph, 3.75));
-  caption(s, 'A real turn on 1 November: 3.2 s, all agents on Groq; answerer risk 0.191. One turn, not a rate.', 'Photo: live site', M, 2.35 + Math.min(ph, 3.75) + 0.1, pw, 0.5);
+  caption(s, 'A real turn on 1 November: 3.2 s, all agents on Groq; answerer risk 0.191. A single turn; others were faster or slower.', 'Photo: live site', M, 2.35 + Math.min(ph, 3.75) + 0.1, pw, 0.5);
   vrule(s, RULE_X, BODY_Y + 0.1, BODY_B - 0.1);
   const steps = ['Ask how SQLite WAL improves concurrency', 'Read the three stages', 'Open the agent ledger', 'Ask an out-of-corpus question', 'Export the trace (key X)'];
   steps.forEach((t, i) => {
@@ -342,7 +342,7 @@ pres.addSection({ title: 'Talk' });
     { cells: ['Deployment', '1 VM, 1 SQLite file'] }], M, 2.65, EX_W, [4.55, 2.6]);
   vrule(s, RULE_X, BODY_Y + 0.1, BODY_B - 0.1);
   pull(s, [{ text: 'Grounding and drift are the two signals that ' }, { text: 'held up', red: 1 }, { text: '.' }], NOTE_X, 3.2, NOTE_W, 1.2);
-  text(s, 'The two failed alerts are withdrawn, not hidden.', NOTE_X, 4.65, NOTE_W, 0.8, { fontFace: 'Cambria', fontSize: 17, color: INK2 });
+  text(s, 'Both failed alerts were withdrawn, and this slide reports them.', NOTE_X, 4.65, NOTE_W, 0.8, { fontFace: 'Cambria', fontSize: 17, color: INK2 });
   source(s, 'README.md, Known limits; COMPETITIVE_POSITIONING.md 5.2; TOOL_CLAIM_EXTERNAL_TEST_REPORT.md section 10; GROUNDING_RECALIBRATION_2026-10.md; DRIFT_REAL_TEXT_DIAGNOSIS_REPORT.md 11.5.');
 }
 
