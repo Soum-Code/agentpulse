@@ -26,7 +26,7 @@ From the repository root:
 python demo/auto_demo/auto_demo.py
 ```
 
-A full run takes about 5 to 6 minutes at normal speed. The video is saved as `demo/auto_demo/output/agentpulse_auto_demo_<date>_<time>_<size>.webm`. The folder is in `.gitignore`, so the video never goes into git. Chrome, VLC and Windows Media Player all play `.webm`.
+A full run takes about 5 minutes at normal speed, then about 1.5 minutes to compress the video. The video is saved as `demo/auto_demo/output/agentpulse_auto_demo_<date>_<time>_<size>.webm` (VP9, about 60 MB for a full run; `--keep-raw` keeps Playwright's raw file, about 4 times bigger). The folder is in `.gitignore`, so the video never goes into git. Chrome, VLC and Windows Media Player all play `.webm`.
 
 ## Flags
 
@@ -98,4 +98,14 @@ The script needs the live site. Without internet, play the recorded video instea
 
 Copy the video to a USB stick or the laptop's desktop before the viva; it is not in git.
 
-The run recorded on 1 Nov 2026 against the live site: see the PR description for its file name, length and size.
+## The recorded run of 1 Nov 2026
+
+One full run against the live site, 1920x1080, normal speed, every step passed (exit code 0):
+
+- File: `agentpulse_auto_demo_20261101_185806_1920x1080.webm`, 4 min 57 s, 61 MB.
+- Where: `demo/auto_demo/output/` in the main checkout (`C:\MLOPs\3rd sem project\Agentpluse`). It is not in git.
+- What it showed (read from the screen during that run):
+  - WAL question: retriever 0.301, verifier 0.301, answerer 0.305, all Unverifiable; no grounding alert. The trace carried one DRIFT DETECTED (medium) alert.
+  - Football question: retriever 0.616 Unverifiable, verifier 0.980 Contradicted, answerer 0.311 Unverifiable; GROUNDING FAILURE and HIGH HALLUCINATION RISK raised.
+  - Lab hallucination: 5 of 5 spans scored; HIGH_HALLUCINATION_RISK for the analyst. The verifier's was held back by the 15-minute cooldown, because the chat's verifier (same agent name) had just raised it.
+  - Lab drift: final distance 0.968, DRIFT_DETECTED fired.
