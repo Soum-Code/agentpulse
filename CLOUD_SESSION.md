@@ -67,3 +67,30 @@ so the owner can read it in five minutes before the review. Same PR as task 1, o
 ## When you finish
 
 Write a short summary at the top of your PR: what was done, the proof, and what was not done.
+
+## Ready-to-paste prompt (copy this into a new cloud session)
+
+```
+Read CLOUD_SESSION.md in this repository and follow it. Do task 1 (comment-only pass) and
+task 2 (docs/CODE_TOUR.md). Explain the code in SIMPLE one-line comments in easy English,
+like you are telling a friend what the block does and why, for example:
+  # In short: saves the spans and puts one scoring job per span on the queue.
+  // In short: turns the API's trace into the shape the Traces view draws.
+One line per function or block is best; use two or three only when one line cannot say it.
+Prove the change is comment-only (ast.dump identical for Python; tsc, vitest and pytest pass
+with the same counts) and put the proof in the PR. Open ONE pull request into main, do not merge.
+```
+
+## Negative prompt (what NOT to do)
+
+```
+Do NOT change any code, logic, variable name, string, import, test or formatting.
+Do NOT reformat files, sort imports, fix lint, or "improve" anything while you are there.
+Do NOT write long paragraphs, jargon, marketing words or emojis in comments.
+Do NOT explain obvious lines one by one (no "# increment i by 1").
+Do NOT guess what code does: read it first; if unsure, leave it uncommented.
+Do NOT invent numbers, results, or claims that are not in the code or the repo's documents.
+Do NOT touch .env files, keys, tokens, passwords, the Azure VM, or deploy settings.
+Do NOT merge the pull request, push to main, or delete any branch.
+Do NOT add new files except docs/CODE_TOUR.md.
+```
