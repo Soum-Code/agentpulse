@@ -66,7 +66,7 @@ img, video, canvas, svg { max-width: 100%; max-height: 100%; }
 }
 
 /* ===========================================
-   SLIDE ATMOSPHERE: dark base, a faint blue glow (the site's marble, toned down), hairline grid
+   SLIDE ATMOSPHERE: dark base and a faint blue glow (the site's marble, toned down)
    =========================================== */
 body { font-family: var(--font-display); color: var(--text); }
 .slide {
@@ -74,15 +74,6 @@ body { font-family: var(--font-display); color: var(--text); }
         radial-gradient(1100px 700px at 88% -10%, rgba(40, 90, 200, 0.22), transparent 60%),
         radial-gradient(900px 600px at -10% 110%, rgba(30, 70, 160, 0.16), transparent 60%),
         var(--slide-bg);
-}
-.slide::before {
-    content: ""; position: absolute; inset: 0; pointer-events: none;
-    background-image:
-        linear-gradient(var(--line) 1px, transparent 1px),
-        linear-gradient(90deg, var(--line) 1px, transparent 1px);
-    background-size: 120px 120px;
-    opacity: 0.35;
-    mask-image: radial-gradient(1200px 800px at 50% 40%, #000 30%, transparent 85%);
 }
 .slide > * { position: relative; }
 
@@ -318,7 +309,7 @@ aside.notes { display: none; }
 .backup-tag { font-family: var(--font-mono); font-size: 19px; color: var(--amber); letter-spacing: 0.14em; }
 
 /* Deck chrome outside the stage */
-.progress { position: fixed; left: 0; top: 0; height: 3px; background: var(--mint); z-index: 1001; transition: width 0.3s var(--ease); }
+.progress { position: fixed; left: 0; top: 0; width: 100%; height: 3px; background: var(--mint); z-index: 1001; transform-origin: 0 0; transform: scaleX(0); transition: transform 0.3s var(--ease); }
 .counter { position: fixed; right: 18px; bottom: 14px; font: 13px 'JetBrains Mono', monospace; color: #6f7a8c; z-index: 1001; }
 </style>
 </head>
@@ -857,7 +848,7 @@ class SlidePresentation {
         });
         const n = this.slides[this.current].querySelector('aside.notes');
         this.notes.textContent = `Slide ${this.current + 1} · ${this.slides[this.current].dataset.time || ''}\n` + (n ? n.textContent.trim() : '');
-        document.getElementById('progress').style.width = ((this.current + 1) / this.slides.length * 100) + '%';
+        document.getElementById('progress').style.transform = `scaleX(${(this.current + 1) / this.slides.length})`;
         document.getElementById('counter').textContent = `${this.current + 1} / ${this.slides.length}`;
         history.replaceState(null, '', '#' + (this.current + 1));
     }
