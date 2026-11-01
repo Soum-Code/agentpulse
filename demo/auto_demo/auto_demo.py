@@ -685,7 +685,7 @@ LAB_WHAT = {
 }
 
 
-def make_lab_step(scenario_label: str, uses_topic: bool, rng: random.Random, first: bool):
+def make_lab_step(scenario_label: str, topic: str | None, first: bool):
     def step(d: Demo) -> None:
         if first:
             d.open_more("Telemetry Lab & Live Simulator")
@@ -697,7 +697,6 @@ def make_lab_step(scenario_label: str, uses_topic: bool, rng: random.Random, fir
             d.page.evaluate("window.scrollTo({top: 0, behavior: 'smooth'})")
             d.log("scroll", to="top")
             d.caption(f"Scenario: {scenario_label}.", LAB_WHAT[scenario_label], where="top-right", new_step=True)
-        topic = rng.choice(LAB_TOPICS) if uses_topic else None
         d.asked.append({"kind": "lab", "scenario": scenario_label, "topic": topic})
         state, text = run_lab(d, scenario_label, topic)
         d.asked[-1]["state"] = state
@@ -1111,7 +1110,10 @@ def main(argv: list[str] | None = None) -> int:
         steps = [step_landing, step_overview, step_rag_intro]
         steps += [make_question_step(q, i + 1) for i, q in enumerate(questions)]
         if not args.no_lab:
-            steps += [make_lab_step(label, uses, rng, first=(i == 0)) for i, (label, uses) in enumerate(LAB_SCENARIOS)]
+            # Three different random topics, one per scenario that uses the topic box.
+            topics = iter(rng.sample(LAB_TOPICS, sum(1 for _, uses in LAB_SCENARIOS if uses)))
+            steps += [make_lab_step(label, next(topics) if uses else None, first=(i == 0))
+                      for i, (label, uses) in enumerate(LAB_SCENARIOS)]
         steps += [step_agents, step_traces, step_apm, step_incidents, step_drift,
                   step_replay, step_experiments, step_datasets, step_settings, step_back_to_overview]
         # In short: the number of numbered captions ("Step n of N"). step_traces has two, the rest one.
