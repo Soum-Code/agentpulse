@@ -577,7 +577,7 @@ def create_app(
                 "total_ms": elapsed_ms(),
             }
             return
-        # In short: any other bug. Log only the error's type, never its text, and send a plain 500 event.
+        # In short: any other error. Log only the error's type, never its text, and send a plain 500 event.
         except Exception as exc:  # noqa: BLE001 - the stream must still end with one event
             logger.error("chat: turn failed with %s after %d ms", type(exc).__name__, elapsed_ms())
             yield {
