@@ -58,7 +58,7 @@ node render.mjs --cut cuts/full.json --recording ../auto_demo/output/<recording>
 1. Re-encodes the recording once to 30 fps H.264 with a keyframe every half second.
 2. Writes a HyperFrames project to `build/<cut id>/`.
 
-It then renders that project with `--quality delivery` into `output/<cut id>.mp4`, with HyperFrames' usage telemetry turned off. For a quick look, add `--quality draft`. The highlight takes about 10 minutes to render on this laptop; the full cut takes about 2.5 times its length.
+It then renders that project with `--quality delivery` into `output/<cut id>.mp4`, with HyperFrames' usage telemetry turned off. For a quick look, add `--quality draft`. On this laptop the highlight takes about 5 minutes to render and the full cut about 15. The delivery files are large (about 300 MB and 800 MB).
 
 To check a render without watching it in real time:
 
