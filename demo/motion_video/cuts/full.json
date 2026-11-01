@@ -1,0 +1,44 @@
+{
+  "id": "full",
+  "camera": { "lead": 1.0, "tail": 1.3, "gap": 2.6, "maxScale": 1.75 },
+  "idle": { "min": 8, "rate": 3, "leadIn": 2 },
+  "intro": {
+    "dur": 5.5,
+    "earLeft": "AgentPulse · live demo",
+    "earCenter": "Full walkthrough",
+    "earRight": "Recorded 1 November 2026",
+    "motto": "Observability for multi-agent LLM pipelines",
+    "head": "Every agent step, *checked* for grounding and drift",
+    "deck": "The live site, recorded in a browser. Waiting is sped up and marked on screen.",
+    "footLeft": "Live: agentpulse.centralindia.cloudapp.azure.com",
+    "footRight": "Code: github.com/Soum-Code/agentpulse"
+  },
+  "sections": [
+    { "title": "The landing page", "clips": [ { "in": "step 1 -1.5", "out": "step 3 -0.4" } ] },
+    { "title": "The console: *Overview*", "kicker": "The console", "ear": "Overview",
+      "deck": "The counters are read from the live API.",
+      "clips": [ { "in": "step 3 -0.4", "out": "step 4 -0.4" } ] },
+    { "title": "Three agents answer, and each step is *scored*", "kicker": "RAG Live", "ear": "RAG Live",
+      "deck": "First a question the corpus covers, then one it does not.",
+      "clips": [ { "in": "step 4 -0.4", "out": "step 7 -0.4" } ] },
+    { "title": "Every answer leaves a *trace*", "kicker": "Traces", "ear": "Traces",
+      "deck": "The span inspector, the verdict with its risk, and a JSON download.",
+      "clips": [ { "in": "step 7 -0.4", "out": "step 10 -0.4" } ] },
+    { "title": "The Telemetry Lab: *hallucination* and drift runs", "kicker": "Telemetry Lab", "ear": "Telemetry Lab",
+      "deck": "A hallucination run, then a drift run, scored by the evaluator worker.",
+      "clips": [ { "in": "step 10 -0.4", "out": "step 12 -0.4" } ] },
+    { "title": "*Drift*: one agent against its threshold", "kicker": "Drift", "ear": "Drift",
+      "clips": [ { "in": "step 12 -0.4", "out": "step 13 -0.4" } ] },
+    { "title": "*Incidents*: the alerts, newest first", "kicker": "Incidents", "ear": "Incidents",
+      "clips": [ { "in": "step 13 -0.4", "out": "end" } ] }
+  ],
+  "outro": {
+    "dur": 6.5,
+    "kicker": "Open it yourself",
+    "head": "AgentPulse is *live*",
+    "url": "agentpulse.centralindia.cloudapp.azure.com",
+    "deck": "No sign-in needed to look around.",
+    "footLeft": "Code: github.com/Soum-Code/agentpulse",
+    "footRight": "M.Tech (AIML) final review"
+  }
+}
