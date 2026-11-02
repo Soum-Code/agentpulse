@@ -1,9 +1,10 @@
 # AgentPulse viva: speaker notes (final review, 3 November 2026, 10 AM)
 
-Ten minutes of talk, five minutes of questions. Two copies of the same deck, the same 16 slides in the same order (12 for the talk, then appendix A1-A4 for questions):
+Ten minutes of talk, five minutes of questions. The talk is **11 slides**, ending on Conclusions. Four backup slides (B1-B3 and References) live in a separate deck and are shown **only if asked**.
 
-- `AgentPulse_Viva.html`: open it in Chrome and press F11. Arrows or Space move. **N** shows the notes for the current slide below it. Home and End jump. `AgentPulse_Viva.pdf` is the same deck as pictures, for when a browser is not allowed.
-- `AgentPulse_Viva.pptx`: the PowerPoint copy the college asks for. Every slide's notes field has the same text as below, so PowerPoint's Presenter View shows it. Rebuild it with `build_viva_pptx.js` (the top of that file says how).
+- The talk: `AgentPulse_Viva.pptx` (the PowerPoint the college asks for), `AgentPulse_Viva.html` (open in Chrome, press F11; arrows or Space move, **N** shows the notes, Home and End jump) and `AgentPulse_Viva.pdf` (the same slides as pictures). Every slide's notes field has the same text as below, so PowerPoint's Presenter View shows it.
+- The backup, only if asked: `AgentPulse_Viva_Backup.pptx`, `AgentPulse_Viva_Backup.html`, `AgentPulse_Viva_Backup.pdf`. Keep it open in a second window during questions.
+- `build_viva_pptx.js` rebuilds both PowerPoint files (the top of that file says how).
 
 Rule for the whole talk, from `DEMO_GUIDE.md`: **say only what the screen shows.** Every number below has its source. If you are asked for a number that is not here, say "I would have to check the report" and name the report. Do not guess.
 
@@ -41,20 +42,19 @@ Words used below, in one line each:
 | 1 Front page | 0:00 – 0:20 | 0:20 |
 | 2 The problem | 0:20 – 1:10 | 0:50 |
 | 3 How it works | 1:10 – 2:15 | 1:05 |
-| 4 Grounding: method | 2:15 – 3:10 | 0:55 |
-| 5 Grounding: result | 3:10 – 3:55 | 0:45 |
-| 6 Drift | 3:55 – 4:35 | 0:40 |
-| 7 Cost | 4:35 – 5:20 | 0:45 |
-| 8 Verification | 5:20 – 5:55 | 0:35 |
-| 9 Live demo | 5:55 – 8:15 | 2:20 |
-| 10 Engineering | 8:15 – 8:55 | 0:40 |
-| 11 Honest limits | 8:55 – 9:35 | 0:40 |
-| 12 Conclusions (stays up for Q&A) | 9:35 – 10:00 | 0:25 |
+| 4 Grounding: method and result | 2:15 – 3:45 | 1:30 |
+| 5 Drift | 3:45 – 4:25 | 0:40 |
+| 6 Cost | 4:25 – 5:10 | 0:45 |
+| 7 Verification | 5:10 – 5:45 | 0:35 |
+| 8 Live demo | 5:45 – 8:05 | 2:20 |
+| 9 Engineering | 8:05 – 8:45 | 0:40 |
+| 10 Honest limits | 8:45 – 9:30 | 0:45 |
+| 11 Conclusions (stays up for Q&A) | 9:30 – 10:00 | 0:30 |
 | **Total** | | **10:00** |
 
-If the demo runs long, cut slide 10 to one sentence ("one VM, auto-deploy, writes closed") and keep the limits slide whole.
+If the demo runs long, cut slide 9 to one sentence ("one VM, auto-deploy, writes closed") and keep the limits slide whole.
 
-## Slide by slide (the same text is in each slide's notes)
+## The talk, slide by slide (the same text is in each slide's notes)
 
 ### Slide 1. Front page: "Every agent step, checked for grounding and drift, without an LLM judge"
 
@@ -104,41 +104,27 @@ If the demo runs long, cut slide 10 to one sentence ("one VM, auto-deploy, write
 
 *Sources:* README.md "Architecture in short"; HOW_IT_WORKS.md (buffer of 10,000 spans, oldest dropped; cooldown 900 s per alert type and agent); benchmarks/benchmark_results.json, 2026-08-18 (SDK decorator 0.005 ms, P50 over 2,000 calls).
 
-### Slide 4. "Grounding risk is an NLI probability, and its 0.3 weight is a design choice"
+### Slide 4. "An NLI check with a 0.3 design weight catches contradictions on 68 labelled cases"
 
-**TIME: 2:15-3:10 (55 seconds)**
+**TIME: 2:15-3:45 (90 seconds)**
 
 **SAY:**
 
-- Grounding means: is the answer supported by the evidence the agent had?
-- An NLI model (natural language inference) reads two texts and gives three probabilities: the evidence supports the answer, contradicts it, or is neutral (says neither).
-- Our risk score is contradiction plus 0.3 times neutral. 0 is safe, 1 is risky. Above 0.4 is medium, above 0.7 is high.
+- Grounding means: is the answer supported by the evidence the agent had? An NLI model (natural language inference) reads the two texts and gives three probabilities: supports, contradicts, or neutral (says neither).
+- Our risk is contradiction plus 0.3 times neutral. 0 is safe, 1 is risky; above 0.4 is medium, above 0.7 is high. The 0.3 is my design choice, not a fitted number: any weight from 0 to 0.3 gives the same result on our data.
 - Next to the score we show a verdict. "Unverifiable" means the evidence neither supports nor contradicts. It is not a pass; it means "could not check".
-- The 0.3 is my design choice, not a fitted number. On our data, any weight from 0 to 0.3 gives the same result.
+- Result on 68 hand-labelled cases: on the 30-case test split F1 is 0.963 (F1 = "finds the failures and does not cry wolf"; 1.0 is perfect), and only 1 of 17 correct answers was wrongly flagged. On 47 cases never used for design, F1 is 0.927 or 0.952.
+- Honest point: this is a small sample, and 5 test cases copy development cases. It is not a production benchmark.
 
-**If asked** "Why 0.3 and not 0.5?": At 0.5, 7 of 17 correct test answers were wrongly flagged medium; at 0.3 only 1 of 17 (appendix A1).
-
-*Sources:* GROUNDING_RECALIBRATION_2026-10.md (banner, finding 4, section 3.6; analysis 2026-10-22); HOW_IT_WORKS.md "The verdict, next to the score"; grounding.py NEUTRAL_RISK_WEIGHT = 0.3 (PR #89). Model: cross-encoder/nli-deberta-v3-small.
-
-### Slide 5. "On 68 hand-labelled cases, grounding catches contradictions with few false alarms"
-
-**TIME: 3:10-3:55 (45 seconds)**
-
-**SAY:**
-
-- How good is the grounding check? I measured it on 68 cases that were labelled by hand: 39 correct answers and 29 failures.
-- On the 30-case test split, F1 is 0.963. F1 is one number for "finds the failures and does not cry wolf"; 1.0 is perfect.
-- False alarms: 1 of 17 correct answers was flagged, so 0.059.
-- On 47 cases never used for design, F1 is 0.927 or 0.952, depending on the cut-off.
-- Honest point: this is a small sample, and 5 test cases are copies of development cases. It is not a production benchmark.
+**If asked** "Why 0.3 and not 0.5?": At 0.5, 7 of 17 correct test answers were wrongly flagged medium; at 0.3 only 1 of 17 (backup slide B1).
 
 **If asked** "Is 68 cases enough?": No, not for a general claim; the 95% interval on the test F1 is 0.897 to 1.000, and more labelled data is my first next step.
 
-*Sources:* GROUNDING_RECALIBRATION_2026-10.md T3c (test split: F1 0.963, FPR 0.059 = 1/17; 5 of 30 copy dev), T3d (held-out 47: F1 0.927 at 0.7, 0.952 at 0.4, FPR 0.074 = 2/27), T3b (interval [0.897, 1.000]); README.md table.
+*Sources:* GROUNDING_RECALIBRATION_2026-10.md (banner, finding 4, section 3.6; T3c: F1 0.963, FPR 0.059 = 1/17, 5 of 30 copy dev; T3d: held-out 47, F1 0.927 at 0.7 and 0.952 at 0.4, FPR 0.074 = 2/27; T3b: interval [0.897, 1.000]; analysis 2026-10-22); HOW_IT_WORKS.md "The verdict, next to the score"; grounding.py NEUTRAL_RISK_WEIGHT = 0.3 (PR #89). Model: cross-encoder/nli-deberta-v3-small.
 
-### Slide 6. "Drift detection is accurate, but only a quarter of real sessions are long enough to measure"
+### Slide 5. "Drift detection is accurate, but only a quarter of real sessions are long enough to measure"
 
-**TIME: 3:55-4:35 (40 seconds)**
+**TIME: 3:45-4:25 (40 seconds)**
 
 **SAY:**
 
@@ -152,9 +138,9 @@ If the demo runs long, cut slide 10 to one sentence ("one VM, auto-deploy, write
 
 *Sources:* DRIFT_REAL_TEXT_DIAGNOSIS_REPORT.md 11.3 and 11.5 (2026-08-27, offline, held-out split of an external real-trace corpus, measured once); HOW_IT_WORKS.md; README "What it does" (32 outputs).
 
-### Slide 7. "The evaluator is 15.6 times faster than an LLM judge, at a small accuracy cost"
+### Slide 6. "The evaluator is 15.6 times faster than an LLM judge, at a small accuracy cost"
 
-**TIME: 4:35-5:20 (45 seconds)**
+**TIME: 4:25-5:10 (45 seconds)**
 
 **SAY:**
 
@@ -168,9 +154,9 @@ If the demo runs long, cut slide 10 to one sentence ("one VM, auto-deploy, write
 
 *Sources:* LLM_JUDGE_COMPARISON_REPORT.md (median 202.94 vs 3,170.39 ms, 15.6x; judge Qwen3-8B-GGUF Q4_K_M via llama.cpp, CPU; 2026-08-26). F1 1.000 vs 0.963 at weight 0.3: the report's correction banner, derived from stored probabilities, not re-run. Other single-run latencies (not on the slide): MiniLM 15.1 ms and DeBERTa 88.5 ms P50 (benchmarks/benchmark_results.json, 2026-08-18); 151.19 / 165.18 ms per case (experiments/results/ablation_results.json, 2026-09-18); live median 180 ms over 172 spans (docs/E2E_TEST_2026-10-27.md item 23).
 
-### Slide 8. "The live site passed an end-to-end test from outside on 27 October"
+### Slide 7. "The live site passed an end-to-end test from outside on 27 October"
 
-**TIME: 5:20-5:55 (35 seconds)**
+**TIME: 5:10-5:45 (35 seconds)**
 
 **SAY:**
 
@@ -184,9 +170,9 @@ If the demo runs long, cut slide 10 to one sentence ("one VM, auto-deploy, write
 
 *Sources:* docs/E2E_TEST_2026-10-27.md: items 1-4 health 200; item 7 /v1/keys and 3 variants 401; items 8-9 ingest and PUT /v1/simulate 401; item 10 chat 6.35 s (stream 6,148 ms; Groq gpt-oss-20b), spans 0.306 unverifiable, 0.135 and 0.027 supported; item 11 HIGH_HALLUCINATION_RISK and GROUNDING_FAILURE, verifier 0.971, analyst 0.999; items 14-24 views in Dark and Chalk, 0 NaN/undefined; F1 SVG arrowhead and F2 header at 1366 px fixed (PR #112), F3 open. README "Testing and benchmarks": 628 passed (4 min 12 s), 404 passed (35 files), tsc clean, 2026-10-27. 1.6 s: SESSION_HANDOFF.md 29.17.3.
 
-### Slide 9. "One question, three agents, and every step scored as it happens"
+### Slide 8. "One question, three agents, and every step scored as it happens"
 
-**TIME: 5:55-8:15 (2 minutes 20 seconds). Switch to the browser.**
+**TIME: 5:45-8:05 (2 minutes 20 seconds). Switch to the browser.**
 
 **SAY (follow DEMO_GUIDE.md; say only what the screen shows):**
 
@@ -198,13 +184,13 @@ If the demo runs long, cut slide 10 to one sentence ("one VM, auto-deploy, write
 
 **If asked** "What if a provider fails?": The chat tries the next provider in the chain (Groq, NVIDIA, OpenRouter, Pollinations) and the screen says which one answered, or that all were at their limit.
 
-**If the demo fails:** "Limit reached" = the abuse limit (5 questions a minute per visitor) is working; "Providers at their limit" = press Retry once, then show an earlier turn; no network = use this slide's photo and appendix A3. Never call a failure a success.
+**If the demo fails:** "Limit reached" = the abuse limit (5 questions a minute per visitor) is working; "Providers at their limit" = press Retry once, then show an earlier turn; no network = use this slide's photo and backup slide B3. Never call a failure a success.
 
 *Sources:* DEMO_GUIDE.md; screenshot 2026-11-01 (assets/live_rag.jpg): 3.2 s total, retriever 410 ms, verifier 510 ms, answerer 378 ms, all groq openai/gpt-oss-20b, answerer grounding 0.191 low_risk. Provider chain: README "What works live".
 
-### Slide 10. "One small Azure VM, deployed automatically and closed to writes"
+### Slide 9. "One small Azure VM, deployed automatically and closed to writes"
 
-**TIME: 8:15-8:55 (40 seconds)**
+**TIME: 8:05-8:45 (40 seconds)**
 
 **SAY:**
 
@@ -218,9 +204,9 @@ If the demo runs long, cut slide 10 to one sentence ("one VM, auto-deploy, write
 
 *Sources:* deploy/azure/README.md (Standard_B2als_v2, 2 vCPU / 4 GB); five containers: caddy, dashboard (nginx), backend, worker, chat (README "Architecture in short"); tests.yml and dashboard.yml run on pull requests; deploy-azure.yml (rebuild changed images, test against a copy of the live DB, swap, roll back); Caddyfile basic_auth on writes, exemption only for the exact POST /v1/simulate (SESSION_HANDOFF 29.17.2); E2E item 7 (four key paths 401); limits from README "What works live".
 
-### Slide 11. "Two of the four signals failed on real traces, and the evidence base is small"
+### Slide 10. "Two of the four signals failed on real traces, and the evidence base is small"
 
-**TIME: 8:55-9:35 (40 seconds)**
+**TIME: 8:45-9:30 (45 seconds)**
 
 **SAY:**
 
@@ -230,13 +216,13 @@ If the demo runs long, cut slide 10 to one sentence ("one VM, auto-deploy, write
 - Grounding rests on only 68 labelled cases. Drift can be measured on only a quarter of sessions.
 - And it is one VM with one SQLite file: fine for a prototype, not for production.
 
-**If asked** "Why keep the failed signals in the code?": They are measured negative results; the scores are stored for study, but no alert is raised on them (appendix A2).
+**If asked** "Why keep the failed signals in the code?": They are measured negative results; the scores are stored for study, but no alert is raised on them (backup slide B2).
 
 *Sources:* README "Known limits"; COMPETITIVE_POSITIONING.md 5.2 and SESSION_HANDOFF.md 24.9.5 (0 of 10; AUC 0.457 without the planner); TOOL_CLAIM_EXTERNAL_TEST_REPORT.md section 10 (F1 0.000; no claim in 8,353 prose spans; 0.842 on 19 hand-written cases); GROUNDING_RECALIBRATION_2026-10.md (68 = 39 + 29; one neutral failure, val_17); DRIFT_REAL_TEXT_DIAGNOSIS_REPORT.md 11.5 (24.5%); README (one VM, one SQLite file, one worker, backup on the same disk); deploy not gated on tests: SESSION_HANDOFF 29.16.6.
 
-### Slide 12. "Conclusions"
+### Slide 11. "Conclusions"
 
-**TIME: 9:35-10:00 (25 seconds). Then leave this slide on screen for questions.**
+**TIME: 9:30-10:00 (30 seconds). Then leave this slide on screen for questions.**
 
 **SAY:**
 
@@ -250,9 +236,13 @@ If the demo runs long, cut slide 10 to one sentence ("one VM, auto-deploy, write
 
 *Sources:* 202.94 ms (LLM_JUDGE_COMPARISON_REPORT.md); F1 0.963 (GROUNDING_RECALIBRATION_2026-10.md T3c); 628 + 404 tests (README, 2026-10-27). Next steps: SESSION_HANDOFF.md 29.16.4, 29.16.6.
 
-### Appendix A1. "After a label-order bug was fixed, 0.5 flagged 7 of 17 correct answers; 0.3 flags 1"
+## Backup slides: only if asked (separate deck, `AgentPulse_Viva_Backup.pptx`)
 
-**APPENDIX, only for questions.**
+Not part of the 10 minutes. Open this deck only when a question needs it: B1 for "why 0.3?", B2 for "what failed?", B3 if the live demo fails or someone asks about the Lab, B4 for "where does this number come from?".
+
+### Backup B1. "After a label-order bug was fixed, 0.5 flagged 7 of 17 correct answers; 0.3 flags 1"
+
+**BACKUP, only if asked.**
 
 **SAY:**
 
@@ -266,9 +256,9 @@ If the demo runs long, cut slide 10 to one sentence ("one VM, auto-deploy, write
 
 *Sources:* GROUNDING_RECALIBRATION_2026-10.md finding 4 (w 0.0-0.3: 0.963 / 0.059; 0.4: 0.897 / 0.176; 0.5: 0.788 / 0.412, 7 of 17), finding 7 and banner (live rows 90/7/19 and 1 without label at 0.3; 12/81/23 at 0.5), finding 5 (contradiction-only results unaffected); PR #69 (label order from the model config), PR #89 (weight 0.3).
 
-### Appendix A2. "Both withdrawn signals looked good on hand-written cases and failed on real traces"
+### Backup B2. "Both withdrawn signals looked good on hand-written cases and failed on real traces"
 
-**APPENDIX, only for questions.**
+**BACKUP, only if asked.**
 
 **SAY:**
 
@@ -280,9 +270,9 @@ If the demo runs long, cut slide 10 to one sentence ("one VM, auto-deploy, write
 
 *Sources:* TOOL_CLAIM_EXTERNAL_TEST_REPORT.md section 10 (0.842 on 19 hand-written cases; 0.000 real; 8,353 prose spans; only fires on counts written in digits: README "What it does"); COMPETITIVE_POSITIONING.md 5.1, 5.2; SESSION_HANDOFF.md 14.1, 24.9.5 (0 of 10; AUC 0.457 without the planner).
 
-### Appendix A3. "A fault injected in the Lab becomes a scored trace and a HIGH incident"
+### Backup B3. "A fault injected in the Lab becomes a scored trace and a HIGH incident"
 
-**APPENDIX, only for questions or if the live demo fails.**
+**BACKUP B3, only if asked or if the live demo fails.**
 
 **SAY:**
 
@@ -295,9 +285,9 @@ If the demo runs long, cut slide 10 to one sentence ("one VM, auto-deploy, write
 
 *Sources:* HOW_IT_WORKS.md (fixture text in backend/app/routers/ingest.py); docs/E2E_TEST_2026-10-27.md item 11 (verifier 0.971, analyst 0.999), item 12 (no alert on a repeat within 15 min, cooldown 900 s), item 22; screenshots 2026-11-01.
 
-### Appendix A4. References
+### Backup B4. References
 
-**APPENDIX. Show only if asked where a number comes from.**
+**BACKUP B4. Show only if asked where a number comes from.**
 
 **SAY:**
 
@@ -307,13 +297,14 @@ If the demo runs long, cut slide 10 to one sentence ("one VM, auto-deploy, write
 **If asked** "Is there a paper?": Show the paper-communication proof you brought separately; this deck does not claim a publication.
 
 *Sources:* HOW_IT_WORKS.md (model table).
+
 ## Ten likely questions, with honest answers
 
 **1. Why not just use an LLM as the judge? Wouldn't it be more accurate?**
 On our 30 test cases it was more accurate: the judge (Qwen3-8B on a CPU) scored F1 1.000 against 0.963 for our NLI check at the shipped weight, and the whole difference is in the 20 cases the judge itself labelled. But it took 3,170.39 ms per case against 202.94 ms (15.6 times slower), and it needs a big model or a paid API call for every span. AgentPulse checks every span, so speed and cost decide. One judge model and 30 cases: I do not claim more than that. (`LLM_JUDGE_COMPARISON_REPORT.md`, correction banner and median table.)
 
 **2. Why is the neutral weight 0.3? Did you tune it?**
-No, and the slide says so: it is a design choice. On the corrected labels, every weight from 0.0 to 0.3 gives the same result, so the data cannot choose between them. What the data does show: 0.5 was wrong for the medium band. At 0.5, 7 of 17 correct test answers were flagged medium (false alarms 0.412); at 0.3 only 1 (0.059). High alerts (above 0.7) are the same for any weight up to 0.6. (`GROUNDING_RECALIBRATION_2026-10.md` findings 4 and 7; appendix A1.)
+No, and the slide says so: it is a design choice. On the corrected labels, every weight from 0.0 to 0.3 gives the same result, so the data cannot choose between them. What the data does show: 0.5 was wrong for the medium band. At 0.5, 7 of 17 correct test answers were flagged medium (false alarms 0.412); at 0.3 only 1 (0.059). High alerts (above 0.7) are the same for any weight up to 0.6. (`GROUNDING_RECALIBRATION_2026-10.md` findings 4 and 7; backup slide B1.)
 
 **3. 68 labelled cases is small. How much do you trust F1 0.963?**
 Not as a general figure, and the slide says so. The 95% interval on the test split is 0.897 to 1.000; 5 of the 30 test cases copy development cases; on the 47 truly held-out cases F1 is 0.927 at the 0.7 cut-off and 0.952 at 0.4. It shows the method separates clear contradictions from supported text; it is not a benchmark of real traffic. A bigger labelled set from real traces is my first next step. (`GROUNDING_RECALIBRATION_2026-10.md` T3b, T3c, T3d.)
@@ -322,13 +313,13 @@ Not as a general figure, and the slide says so. The 95% interval on the test spl
 It is the verdict when the NLI model's "neutral" probability is the highest: the evidence neither supports nor contradicts the answer. It says nothing about truth. It does not change the score or the alerts; it is shown next to the score so a low score is not read as "supported". In the live chat it is common for the retriever, because its evidence is a short prompt. (`HOW_IT_WORKS.md`, "The verdict, next to the score"; `DEMO_GUIDE.md`.)
 
 **5. You had a bug in the label order. How do I know the other numbers are right?**
-Until 21 October the code read DeBERTa's entailment and neutral outputs in swapped order. It was found, fixed in PR #69 (the order is now read from the model's own config), and every grounding number was re-measured in `GROUNDING_RECALIBRATION_2026-10.md`, which lists every result the bug touched. Anything built only on the contradiction probability was not affected. The live database was re-scored. (Appendix A1.)
+Until 21 October the code read DeBERTa's entailment and neutral outputs in swapped order. It was found, fixed in PR #69 (the order is now read from the model's own config), and every grounding number was re-measured in `GROUNDING_RECALIBRATION_2026-10.md`, which lists every result the bug touched. Anything built only on the contradiction probability was not affected. The live database was re-scored. (Backup slide B1.)
 
 **6. How does drift detection work, and why only 24.5%?**
 MiniLM turns every answer into an embedding. For each agent, the average of its first 20 answers is the baseline and the average of its latest 12 is the window; "drift detected" fires when they are more than 0.30 apart (cosine distance). On a held-out split of an external real-trace corpus: 91.9% detection, 1.5% false alarms. But an agent needs 32 answers before there is any distance, and only 24.5% of real sessions had that many. Short sessions get no drift value; the console shows a dash, not zero. (`DRIFT_REAL_TEXT_DIAGNOSIS_REPORT.md` 11.3, 11.5.)
 
 **7. Why did inter-agent disagreement fail, and why keep it?**
-On real multi-agent traces it found 0 of 10 labelled contradictions, and without the planner agent its AUC was 0.457, which is chance. So the alert was withdrawn; the score is still stored for study. It stays in the code as a measured negative result, and the Lab can still show it on fixed text. The diagnosis is in `DISAGREEMENT_FORMULATION_DIAGNOSIS_REPORT.md` and `REFUSAL_DISAGREEMENT_REPORT.md`; point there rather than guessing. (`COMPETITIVE_POSITIONING.md` 5.2; `SESSION_HANDOFF.md` 24.9.5; appendix A2.)
+On real multi-agent traces it found 0 of 10 labelled contradictions, and without the planner agent its AUC was 0.457, which is chance. So the alert was withdrawn; the score is still stored for study. It stays in the code as a measured negative result, and the Lab can still show it on fixed text. The diagnosis is in `DISAGREEMENT_FORMULATION_DIAGNOSIS_REPORT.md` and `REFUSAL_DISAGREEMENT_REPORT.md`; point there rather than guessing. (`COMPETITIVE_POSITIONING.md` 5.2; `SESSION_HANDOFF.md` 24.9.5; backup slide B2.)
 
 **8. How is this different from LangSmith, Arize Phoenix or MLflow?**
 Those trace calls well. AgentPulse's difference is that it scores every span with small local models instead of optional or sampled evaluations. I had once written that none of them ships tool-call checks; a programmatic audit of Phoenix's package proved that wrong (it ships three tool evaluators), and the positioning document was corrected. (`PHOENIX_CAPABILITY_AUDIT.md`, `MLFLOW_CAPABILITY_AUDIT.md`, `COMPETITIVE_POSITIONING.md`.)
@@ -354,9 +345,9 @@ Yes, through the SDK: `pip install -e ./sdk` from the repository, then the decor
 | **0 of 10** | Labelled contradictions the inter-agent disagreement signal found on real traces; its alert is withdrawn. | `COMPETITIVE_POSITIONING.md` 5.2 |
 | **F1 0.000** | The tool-claim check on real traces; it only reads counts written in digits. | `TOOL_CLAIM_EXTERNAL_TEST_REPORT.md` section 10 |
 
-Live, for the demo: one chat turn took 6.35 s on 27 October (`docs/E2E_TEST_2026-10-27.md` item 10), 1.6 s earlier that day (`SESSION_HANDOFF.md` 29.17.3) and 3.2 s on 1 November (the photo on slide 9). Never quote one of them as "the" speed.
+Live, for the demo: one chat turn took 6.35 s on 27 October (`docs/E2E_TEST_2026-10-27.md` item 10), 1.6 s earlier that day (`SESSION_HANDOFF.md` 29.17.3) and 3.2 s on 1 November (the photo on slide 8). Never quote one of them as "the" speed.
 
 ## Not in this deck (for the owner)
 
-- **Paper-communication proof.** The panel asks for it, but nothing in the repository records a paper submission (venue, ID or date), so the deck makes no claim. Bring the proof (an email or portal screenshot) separately, or add an appendix slide yourself with the real details.
+- **Paper-communication proof.** The panel asks for it, but nothing in the repository records a paper submission (venue, ID or date), so the deck makes no claim. Bring the proof (an email or portal screenshot) separately, or add a backup slide yourself with the real details.
 - **Guide and panel names.** The front page has only your name. Add them if your department expects them.
