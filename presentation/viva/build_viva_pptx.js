@@ -1,10 +1,13 @@
 /*
- * Builds presentation/viva/AgentPulse_Viva.pptx: the PowerPoint twin of AgentPulse_Viva.html (broadsheet edition).
- * Same 16 slides, same order, same numbers. The speaker notes are read from the HTML deck's
- * <aside class="notes"> blocks, so the two decks cannot drift apart on notes or sources.
+ * Builds the two PowerPoint decks of the viva (broadsheet edition):
+ *   AgentPulse_Viva.pptx         the 11 slides of the talk, twin of AgentPulse_Viva.html
+ *   AgentPulse_Viva_Backup.pptx  4 backup slides, only if asked, twin of AgentPulse_Viva_Backup.html
+ * Same slides, same order, same numbers as the HTML. The speaker notes are read from each HTML deck's
+ * notes asides, so the decks cannot drift apart on notes or sources.
  *
  * Run (pptxgenjs must be resolvable; APPLY_THEME points at the pptx skill's apply_theme.js):
  *   NODE_PATH=<dir with node_modules> APPLY_THEME=<path>/apply_theme.js node presentation/viva/build_viva_pptx.js
+ * With no argument it builds both decks; pass `main` or `backup` to build one.
  *
  * In short: a theme (newsprint, ink, one red), two layouts (front page, content page), then one block per slide.
  * Fonts ship with Office: Times New Roman (headlines), Cambria (text), Arial (labels), Consolas (formula).
@@ -14,7 +17,15 @@ const path = require('path');
 const pptxgen = require('pptxgenjs');
 
 const HERE = __dirname;
-const OUT = path.join(HERE, 'AgentPulse_Viva.pptx');
+// In short: no argument = build both decks, each in its own child process (one pptxgen per file).
+const DECK = process.argv[2];
+if (!DECK) {
+  const { execFileSync } = require('child_process');
+  for (const d of ['main', 'backup']) execFileSync(process.execPath, [__filename, d], { stdio: 'inherit' });
+  process.exit(0);
+}
+const MAIN = DECK === 'main';
+const OUT = path.join(HERE, MAIN ? 'AgentPulse_Viva.pptx' : 'AgentPulse_Viva_Backup.pptx');
 const A = (f) => path.join(HERE, 'assets', f);
 
 // In short: the newspaper palette of the HTML :root (paper, ink, one deep red).
@@ -33,7 +44,7 @@ const HEAD = 'Times New Roman', LABEL = 'Arial', MONO = 'Consolas';
 const pres = new pptxgen();
 pres.layout = 'LAYOUT_WIDE'; // 13.333 x 7.5 in
 pres.author = 'Somnath Reddy';
-pres.title = 'AgentPulse — M.Tech final review';
+pres.title = MAIN ? 'AgentPulse — M.Tech final review' : 'AgentPulse — backup slides (only if asked)';
 pres.subject = 'Grounding and drift monitoring for multi-agent LLM pipelines';
 pres.theme = { headFontFace: THEME.headFontFace, bodyFontFace: THEME.bodyFontFace };
 const C = pres.SchemeColor;
@@ -47,7 +58,7 @@ const BODY_Y = 2.3, BODY_B = 6.7;
 
 // ---------- notes from the HTML deck ----------
 // In short: pull every <aside class="notes"> in order and decode the few entities used.
-const html = fs.readFileSync(path.join(HERE, 'AgentPulse_Viva.html'), 'utf8');
+const html = fs.readFileSync(path.join(HERE, MAIN ? 'AgentPulse_Viva.html' : 'AgentPulse_Viva_Backup.html'), 'utf8');
 const NOTES = [...html.replace(/<!--[\s\S]*?-->/g, '').matchAll(/<aside class="notes">([\s\S]*?)<\/aside>/g)].map((m) =>
   m[1].replace(/&gt;/g, '>').replace(/&lt;/g, '<').replace(/&amp;/g, '&').trim());
 
@@ -126,6 +137,7 @@ function ntable(s, header, rows, x, y, w, colW, o = {}) {
   s.addTable([head, ...body], { x, y, w, colW, fontFace: 'Cambria', fontSize: o.fontSize || 18, rowH: o.rowH || 0.55, valign: 'middle', margin: [0, 0.06, 0, 0], fill: { color: 'F4F0E6' } });
 }
 
+if (MAIN) {
 // =================== TALK ===================
 pres.addSection({ title: 'Talk' });
 
@@ -192,56 +204,32 @@ pres.addSection({ title: 'Talk' });
   source(s, 'README.md, Architecture in short; HOW_IT_WORKS.md (bounded buffer, cooldown 900 s); benchmarks/benchmark_results.json, 2026-08-18 (0.005 ms, P50 over 2,000 calls).');
 }
 
-// 4 Grounding method
+// 4 Grounding: method and result on one page
 {
   const s = slide('PAGE', 'Talk');
-  page(s, 'Signal 1: grounding', 'Page 4', 'Method · grounding', 'Grounding risk is an NLI probability, and its 0.3 weight is a design choice');
-  const y0 = 2.75;
+  page(s, 'Signal 1: grounding', 'Page 4', 'Signal 1 · grounding', 'An NLI check with a 0.3 design weight catches contradictions on 68 labelled cases');
+  const y0 = 2.5;
   s.addShape(pres.shapes.LINE, { x: M, y: y0, w: EX_W, h: 0, line: { color: INK_HEX, width: 2.25 } });
   s.addText([{ text: 'risk = P(contradiction) + ' }, { text: '0.3', options: { color: RED } }, { text: ' × P(neutral)' }],
-    { x: M, y: y0 + 0.08, w: EX_W, h: 0.75, isTextBox: true, margin: 0, fontFace: MONO, fontSize: 21, color: INK, valign: 'middle' });
-  s.addShape(pres.shapes.LINE, { x: M, y: y0 + 0.91, w: EX_W, h: 0, line: { color: INK_HEX, width: 0.75 } });
-  const bands = [['LOW · 0 TO 0.4', 0.4, '9C978C', INK], ['MEDIUM · ABOVE 0.4', 0.3, '3D3A35', INK], ['HIGH · ABOVE 0.7', 0.3, 'A4161A', RED]];
-  let bx = M;
-  bands.forEach(([t, frac, col, tc]) => {
-    const bw = EX_W * frac;
-    s.addShape(pres.shapes.RECTANGLE, { x: bx, y: y0 + 1.2, w: bw, h: 0.07, fill: { color: col }, line: { color: col, width: 0 } });
-    text(s, t, bx, y0 + 1.33, bw, 0.25, { fontFace: LABEL, fontSize: 10.5, color: tc, charSpacing: 1 });
-    bx += bw;
-  });
-  [['CONTRADICTED', 'A4161A', RED], ['UNVERIFIABLE', '6B665D', GREY], ['SUPPORTED', INK_HEX, INK]].forEach(([t, lc, tc], i) => {
-    const x = M + i * 2.05;
-    s.addShape(pres.shapes.RECTANGLE, { x, y: y0 + 1.85, w: 1.85, h: 0.4, fill: { color: PAPER }, line: { color: lc, width: 1.5 } });
-    text(s, t, x, y0 + 1.85, 1.85, 0.4, { fontFace: LABEL, fontSize: 10.5, bold: true, color: tc, charSpacing: 1, align: 'center', valign: 'middle' });
-  });
-  caption(s, 'Verdict = whichever of the three probabilities is highest.', null, M, y0 + 2.4, EX_W, 0.35);
-  notecol(s, [
-    { text: 'DeBERTa compares each output with the evidence the agent was given.', h: 1.0 },
-    { runs: [{ text: 'Unverifiable', b: 1 }, { text: ': neither supported nor contradicted. A status, not a pass.' }], h: 1.0 },
-    { text: 'Weights 0 to 0.3 give identical results on our data.', small: 1, h: 0.7 },
-  ], 2.85);
-  source(s, 'GROUNDING_RECALIBRATION_2026-10.md, section 3.6 (analysis 2026-10-22); HOW_IT_WORKS.md, the verdict rule; backend/app/services/grounding.py (NEUTRAL_RISK_WEIGHT = 0.3).');
-}
-
-// 5 Grounding result
-{
-  const s = slide('PAGE', 'Talk');
-  page(s, 'Signal 1: grounding', 'Page 5', 'Result · grounding', 'On 68 hand-labelled cases, grounding catches contradictions with few false alarms');
+    { x: M, y: y0 + 0.06, w: EX_W, h: 0.62, isTextBox: true, margin: 0, fontFace: MONO, fontSize: 19, color: INK, valign: 'middle' });
+  s.addShape(pres.shapes.LINE, { x: M, y: y0 + 0.74, w: EX_W, h: 0, line: { color: INK_HEX, width: 0.75 } });
   ntable(s, ['Evaluation set', 'Cases', 'F1', 'False alarms'], [
     { cells: ['Test split', '30', '0.963', '0.059'], red: 1 },
     { cells: ['Held-out pool, cut-off 0.7', '47', '0.927', '0.074'] },
-    { cells: ['Held-out pool, cut-off 0.4', '47', '0.952', '0.074'] }], M, 3.05, EX_W, [3.55, 1.0, 1.1, 1.5]);
-  caption(s, 'False alarms = share of supported cases flagged (1 of 17 on the test split; 2 of 27 held out).', null, M, 5.35, EX_W, 0.5);
-  vrule(s, RULE_X, BODY_Y + 0.1, BODY_B - 0.1);
-  pull(s, [{ text: 'A small sample, ' }, { text: 'not production traffic', red: 1 }, { text: '.' }], NOTE_X, 3.0, NOTE_W, 1.15);
-  text(s, '68 cases: 39 supported, 29 failures. 5 of the 30 test cases copy development cases.', NOTE_X, 4.4, NOTE_W, 1.1, { fontFace: 'Cambria', fontSize: 17, color: INK2 });
-  source(s, 'GROUNDING_RECALIBRATION_2026-10.md, tables T3c and T3d (analysis 2026-10-22); README.md, Numbers and where they come from.');
+    { cells: ['Held-out pool, cut-off 0.4', '47', '0.952', '0.074'] }], M, y0 + 1.05, EX_W, [3.55, 1.0, 1.1, 1.5], { rowH: 0.5, fontSize: 17 });
+  caption(s, 'High risk above 0.7, medium above 0.4. False alarms = share of supported cases flagged (1 of 17; 2 of 27).', null, M, y0 + 3.2, EX_W, 0.6);
+  notecol(s, [
+    { runs: [{ text: 'Unverifiable', b: 1 }, { text: ': neither supported nor contradicted. A status, not a pass.' }], h: 1.0 },
+    { text: 'Weights 0 to 0.3 give identical results on our data.', h: 0.7 },
+    { text: '68 cases (39 supported, 29 failures) is a small sample; 5 test cases copy development cases.', small: 1, h: 1.1 },
+  ], 2.65);
+  source(s, 'GROUNDING_RECALIBRATION_2026-10.md, section 3.6 and tables T3c, T3d (analysis 2026-10-22); HOW_IT_WORKS.md, the verdict rule; backend/app/services/grounding.py (NEUTRAL_RISK_WEIGHT = 0.3).');
 }
 
-// 6 Drift
+// 5 Drift
 {
   const s = slide('PAGE', 'Talk');
-  page(s, 'Signal 2: drift', 'Page 6', 'Result · drift', 'Drift detection is accurate, but only a quarter of real sessions are long enough to measure');
+  page(s, 'Signal 2: drift', 'Page 5', 'Result · drift', 'Drift detection is accurate, but only a quarter of real sessions are long enough to measure');
   // In short: a native bar chart drawn to scale, 0-100 percent; the coverage bar is red.
   s.addChart(pres.charts.BAR, [{ name: 'Percent', labels: ['Detection', 'False alarms', 'Sessions long enough to measure'], values: [91.9, 1.5, 24.5] }], {
     x: M - 0.1, y: 2.75, w: EX_W + 0.1, h: 3.0, barDir: 'bar', chartColors: ['141414', '141414', 'A4161A'], showValue: true, dataLabelPosition: 'outEnd',
@@ -259,10 +247,10 @@ pres.addSection({ title: 'Talk' });
   source(s, 'DRIFT_REAL_TEXT_DIAGNOSIS_REPORT.md, sections 11.3 and 11.5 (2026-08-27); HOW_IT_WORKS.md (baseline 20, window 12, threshold 0.30).');
 }
 
-// 7 Cost
+// 6 Cost
 {
   const s = slide('PAGE', 'Talk');
-  page(s, 'Results: cost', 'Page 7', 'Result · cost', 'The evaluator is 15.6 times faster than an LLM judge, at a small accuracy cost');
+  page(s, 'Results: cost', 'Page 6', 'Result · cost', 'The evaluator is 15.6 times faster than an LLM judge, at a small accuracy cost');
   // In short: two bars drawn to scale with shapes (a chart's data labels wrap unpredictably in some viewers).
   const tx = M + 2.7, tw = EX_W - 2.7, vmax = 3170.39;
   [['AgentPulse (MiniLM + DeBERTa)', 202.94, '202.94', INK, false], ['LLM judge (Qwen3-8B, CPU)', 3170.39, '3,170.39', RED, true]].forEach(([nm, v, lab, col, inside], i) => {
@@ -281,10 +269,10 @@ pres.addSection({ title: 'Talk' });
   source(s, 'LLM_JUDGE_COMPARISON_REPORT.md, median latency table and correction banner (2026-08-26; F1 at the shipped weight derived from stored probabilities).');
 }
 
-// 8 Verification
+// 7 Verification
 {
   const s = slide('PAGE', 'Talk');
-  page(s, 'Results: verification', 'Page 8', 'Result · verification', 'The live site passed an end-to-end test from outside on 27 October');
+  page(s, 'Results: verification', 'Page 7', 'Result · verification', 'The live site passed an end-to-end test from outside on 27 October');
   ntable(s, ['Check on the live site', 'Result'], [
     { cells: ['Health endpoints', '200'] }, { cells: ['Key routes, writes without a key', '401'] },
     { cells: ['Chat turn, three agents on Groq', '6.35 s, all scored'] }, { cells: ['Lab hallucination run', 'HIGH alerts'] },
@@ -296,10 +284,10 @@ pres.addSection({ title: 'Talk' });
   source(s, 'docs/E2E_TEST_2026-10-27.md, items 1-25 and findings F1-F3; README.md, Testing and benchmarks (re-run 2026-10-27).');
 }
 
-// 9 Live demo
+// 8 Live demo
 {
   const s = slide('PAGE', 'Talk');
-  page(s, 'Live demo', 'Page 9', 'Live demo · agentpulse.centralindia.cloudapp.azure.com', 'One question, three agents, and every step scored as it happens');
+  page(s, 'Live demo', 'Page 8', 'Live demo · agentpulse.centralindia.cloudapp.azure.com', 'One question, three agents, and every step scored as it happens');
   const pw = 7.15, ph = pw / 1.82 + 0.12;
   photo(s, 'live_rag.jpg', M, 2.35, pw, Math.min(ph, 3.75));
   caption(s, 'A real turn on 1 November: 3.2 s, all agents on Groq; answerer risk 0.191. A single turn; others were faster or slower.', 'Photo: live site', M, 2.35 + Math.min(ph, 3.75) + 0.1, pw, 0.5);
@@ -314,10 +302,10 @@ pres.addSection({ title: 'Talk' });
   source(s, 'DEMO_GUIDE.md, steps 1-5; screenshot of the live RAG Live view, 1 November 2026.');
 }
 
-// 10 Engineering
+// 9 Engineering
 {
   const s = slide('PAGE', 'Talk');
-  page(s, 'Engineering', 'Page 10', 'Engineering', 'One small Azure VM, deployed automatically and closed to writes');
+  page(s, 'Engineering', 'Page 9', 'Engineering', 'One small Azure VM, deployed automatically and closed to writes');
   const items = [['DEPLOYMENT', 'One VM, five containers', 'Azure B2als_v2: 2 vCPU, 4 GB. Docker Compose with TLS.'],
     ['CI / CD', 'Tested, then shipped', 'Every pull request runs the tests. A push to main deploys and rolls back if unhealthy.'],
     ['SECURITY', 'Read-open, write-closed', 'Writes need a password. Key routes return 401. Every public route is rate-limited.']];
@@ -332,10 +320,10 @@ pres.addSection({ title: 'Talk' });
   source(s, 'deploy/azure/README.md (VM size); .github/workflows/tests.yml, dashboard.yml, deploy-azure.yml; deploy/azure/Caddyfile; README.md, What works live; SESSION_HANDOFF.md 29.17.2.');
 }
 
-// 11 Limits
+// 10 Limits
 {
   const s = slide('PAGE', 'Talk');
-  page(s, 'Corrections and limits', 'Page 11', 'Honest limits', 'Two of the four signals failed on real traces, and the evidence base is small');
+  page(s, 'Corrections and limits', 'Page 10', 'Honest limits', 'Two of the four signals failed on real traces, and the evidence base is small');
   ntable(s, ['Limit', 'Evidence'], [
     { cells: ['Inter-agent disagreement', '0 of 10 found'], red: 1 }, { cells: ['Tool-claim check', 'F1 0.000'], red: 1 },
     { cells: ['Labelled grounding cases', '68'] }, { cells: ['Sessions long enough for drift', '24.5%'] },
@@ -346,10 +334,10 @@ pres.addSection({ title: 'Talk' });
   source(s, 'README.md, Known limits; COMPETITIVE_POSITIONING.md 5.2; TOOL_CLAIM_EXTERNAL_TEST_REPORT.md section 10; GROUNDING_RECALIBRATION_2026-10.md; DRIFT_REAL_TEXT_DIAGNOSIS_REPORT.md 11.5.');
 }
 
-// 12 Conclusions
+// 11 Conclusions
 {
   const s = slide('PAGE', 'Talk');
-  page(s, 'Conclusions', 'Page 12', 'Conclusions', 'Conclusions');
+  page(s, 'Conclusions', 'Page 11', 'Conclusions', 'Conclusions');
   const items = [[{ text: 'Every span can be scored on a CPU without an LLM judge: ' }, { text: '202.94 ms', b: 1 }, { text: ' per case.' }],
     [{ text: 'Grounding (F1 ' }, { text: '0.963', b: 1 }, { text: ') and drift held up; two other signals failed and are withdrawn.' }],
     [{ text: 'It is live, tested (' }, { text: '628 + 404', b: 1 }, { text: ') and open to examiners.' }]];
@@ -366,13 +354,17 @@ pres.addSection({ title: 'Talk' });
   source(s, 'LLM_JUDGE_COMPARISON_REPORT.md; GROUNDING_RECALIBRATION_2026-10.md T3c; README.md, Testing and benchmarks (2026-10-27).');
 }
 
-// =================== APPENDIX ===================
-pres.addSection({ title: 'Appendix (Q&A)' });
+} // end of the talk deck
 
-// A1
+// =================== BACKUP (separate deck, only if asked) ===================
+if (!MAIN) {
+
+pres.addSection({ title: 'Backup (only if asked)' });
+
+// B1
 {
-  const s = slide('PAGE', 'Appendix (Q&A)');
-  page(s, 'Appendix A1', 'For questions', 'Appendix · the 0.3 weight', 'After a label-order bug was fixed, 0.5 flagged 7 of 17 correct answers; 0.3 flags 1', true);
+  const s = slide('PAGE', 'Backup (only if asked)');
+  page(s, 'Backup B1', 'Only if asked', 'Backup · the 0.3 weight', 'After a label-order bug was fixed, 0.5 flagged 7 of 17 correct answers; 0.3 flags 1', true);
   ntable(s, ['Neutral weight', 'F1', 'False alarms'], [
     { cells: ['0.0 to 0.3', '0.963', '0.059'], red: 1 }, { cells: ['0.4', '0.897', '0.176'] }, { cells: ['0.5', '0.788', '0.412'] }], M, 3.0, EX_W, [3.55, 1.6, 2.0]);
   caption(s, 'Test split, cut-off 0.4, corrected labels. At the 0.7 cut-off every weight up to 0.6 gives the same result.', null, M, 5.3, EX_W, 0.6);
@@ -380,10 +372,10 @@ pres.addSection({ title: 'Appendix (Q&A)' });
   source(s, 'GROUNDING_RECALIBRATION_2026-10.md, banner and findings 4-7 (T3c, T5b, T7); PR #69; PR #89.');
 }
 
-// A2
+// B2
 {
-  const s = slide('PAGE', 'Appendix (Q&A)');
-  page(s, 'Appendix A2', 'For questions', 'Appendix · negative results', 'Both withdrawn signals looked good on hand-written cases and failed on real traces', true);
+  const s = slide('PAGE', 'Backup (only if asked)');
+  page(s, 'Backup B2', 'Only if asked', 'Backup · negative results', 'Both withdrawn signals looked good on hand-written cases and failed on real traces', true);
   ntable(s, ['Signal', 'Hand-written', 'Real traces'], [
     { cells: ['Tool-claim check, F1', '0.842', '0.000'] }, { cells: ['Inter-agent disagreement', '—', '0 of 10 found'] }], M, 3.0, EX_W, [3.35, 1.7, 2.1]);
   caption(s, 'Tool-claim: 19 hand-written cases; no claim found in 8,353 real prose spans. Disagreement: AUC 0.457 without the planner, which is chance.', null, M, 4.85, EX_W, 0.8);
@@ -391,10 +383,10 @@ pres.addSection({ title: 'Appendix (Q&A)' });
   source(s, 'TOOL_CLAIM_EXTERNAL_TEST_REPORT.md section 10; COMPETITIVE_POSITIONING.md 5.1, 5.2; SESSION_HANDOFF.md 14.1, 24.9.5.');
 }
 
-// A3
+// B3
 {
-  const s = slide('PAGE', 'Appendix (Q&A)');
-  page(s, 'Appendix A3', 'For questions', 'Appendix · Telemetry Lab', 'A fault injected in the Lab becomes a scored trace and a HIGH incident', true);
+  const s = slide('PAGE', 'Backup (only if asked)');
+  page(s, 'Backup B3', 'Only if asked', 'Backup · Telemetry Lab', 'A fault injected in the Lab becomes a scored trace and a HIGH incident', true);
   const hw = (CW - 0.6) / 2, ph = 3.4;
   photo(s, 'live_lab.jpg', M, 2.45, hw, ph);
   caption(s, 'Five scenarios; the agent text is fixed, the evaluator is real.', 'Photo: live site', M, 2.45 + ph + 0.1, hw, 0.5);
@@ -404,10 +396,10 @@ pres.addSection({ title: 'Appendix (Q&A)' });
   source(s, 'HOW_IT_WORKS.md, Telemetry Lab; docs/E2E_TEST_2026-10-27.md, items 11, 12 and 22.');
 }
 
-// A4 References
+// B4 References
 {
-  const s = slide('PAGE', 'Appendix (Q&A)');
-  page(s, 'References', 'For questions', 'References', 'Every figure in this deck comes from these documents in the repository', true);
+  const s = slide('PAGE', 'Backup (only if asked)');
+  page(s, 'References', 'Only if asked', 'References', 'Every figure in this deck comes from these documents in the repository', true);
   const left = ['README.md (state of 2026-10-27)', 'docs/E2E_TEST_2026-10-27.md', 'GROUNDING_RECALIBRATION_2026-10.md', 'DRIFT_REAL_TEXT_DIAGNOSIS_REPORT.md', 'LLM_JUDGE_COMPARISON_REPORT.md', 'TOOL_CLAIM_EXTERNAL_TEST_REPORT.md', 'COMPETITIVE_POSITIONING.md'];
   const right = ['HOW_IT_WORKS.md; DEMO_GUIDE.md', 'benchmarks/benchmark_results.json', 'experiments/results/ablation_results.json', 'deploy/azure/README.md; .github/workflows/', 'SESSION_HANDOFF.md, sections 14, 24, 29', 'Models: sentence-transformers/all-MiniLM-L6-v2; cross-encoder/nli-deberta-v3-small'];
   const hw = (CW - 0.6) / 2;
@@ -416,6 +408,8 @@ pres.addSection({ title: 'Appendix (Q&A)' });
   text(s, right.join('\n'), M + hw + 0.6, 2.45, hw, 4.1, { fontFace: 'Cambria', fontSize: 15, lineSpacingMultiple: 1.25 });
   source(s, 'Repository github.com/Soum-Code/agentpulse; model names from HOW_IT_WORKS.md.');
 }
+
+} // end of the backup deck
 
 (async () => {
   if (NOTES.length !== n) throw new Error(`notes ${NOTES.length} != slides ${n}`);

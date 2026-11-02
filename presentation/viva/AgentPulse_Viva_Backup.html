@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AgentPulse — backup slides for questions, 3 November 2026</title>
+<!--
+  AgentPulse viva BACKUP slides (only if asked), broadsheet edition; the talk itself is AgentPulse_Viva.html (frontend-slides skill, "Paper & Ink" preset adapted to a newspaper front page).
+  One self-contained file; photos in ./assets/.
+  Content rules from the academic-pptx skill: every headline is a takeaway sentence, one exhibit per results slide,
+  Backup slides for questions only: B1-B3 and References. The talk itself is AgentPulse_Viva.html.
+  Keys: arrows / Space / PageUp / PageDown move; N shows the speaker notes under the slide; Home / End jump.
+  Theme: change the :root variables. Speaker notes live in each slide's notes aside (the .pptx build reads them too).
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,800;0,900;1,700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=Libre+Franklin:wght@500;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+/* ===========================================
+   THEME: newsprint paper, black ink, one deep-red accent
+   =========================================== */
+:root {
+    --stage-bg: #2b2925;
+    --slide-bg: #f4f0e6;
+    --paper: #f4f0e6;
+    --ink: #141414;
+    --ink-2: #3d3a35;
+    --grey: #6b665d;
+    --hair: #b9b2a3;
+    --rule: #141414;
+    --red: #a4161a;
+    --font-head: 'Playfair Display', 'Times New Roman', serif;
+    --font-body: 'Source Serif 4', Cambria, serif;
+    --font-label: 'Libre Franklin', Arial, sans-serif;
+    --font-mono: 'IBM Plex Mono', Consolas, monospace;
+    --pad-x: 110px;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+/* ===========================================
+   FIXED 16:9 STAGE: viewport-base.css (frontend-slides), included in full
+   =========================================== */
+html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: var(--stage-bg, #000); }
+.deck-viewport { position: fixed; inset: 0; overflow: hidden; background: var(--stage-bg, #000); }
+.deck-stage { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; overflow: hidden; transform-origin: 0 0; background: var(--slide-bg, #fff); }
+.slide { position: absolute; inset: 0; width: 1920px; height: 1080px; overflow: hidden; display: block; visibility: hidden; opacity: 0; pointer-events: none; background: var(--slide-bg, #fff); }
+.slide.active, .slide.visible { visibility: visible; opacity: 1; pointer-events: auto; z-index: 1; }
+img, video, canvas, svg { max-width: 100%; max-height: 100%; }
+.deck-controls { position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); z-index: 1000; }
+@media print {
+    html, body { width: 1920px; height: auto; overflow: visible; background: #fff; }
+    .deck-viewport { position: static; overflow: visible; background: #fff; }
+    .deck-stage { position: static; width: auto; height: auto; transform: none !important; background: none; }
+    .slide { position: relative; display: block !important; visibility: visible !important; opacity: 1 !important; pointer-events: auto !important; width: 1920px; height: 1080px; break-after: page; page-break-after: always; }
+    .slide:last-child { break-after: auto; page-break-after: auto; }
+    .deck-controls { display: none !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.2s !important; }
+}
+
+/* ===========================================
+   PAPER: flat newsprint, ink text
+   =========================================== */
+body { font-family: var(--font-body); color: var(--ink); }
+.slide { background: var(--paper); color: var(--ink); }
+
+/* ===========================================
+   PAGE FURNITURE: running head with a double rule, kicker, takeaway headline, source line
+   =========================================== */
+.runhead {
+    position: absolute; left: var(--pad-x); right: var(--pad-x); top: 46px; height: 46px;
+    display: grid; grid-template-columns: 1fr auto 1fr; align-items: end;
+    font-family: var(--font-label); font-size: 19px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-2);
+}
+.runhead .paper { font-family: var(--font-head); font-size: 30px; font-weight: 900; letter-spacing: 0; text-transform: none; color: var(--ink); }
+.runhead .mid { text-align: center; }
+.runhead .pg { text-align: right; }
+.runhead::after {
+    content: ""; position: absolute; left: 0; right: 0; bottom: -16px; height: 7px;
+    border-top: 3px solid var(--rule); border-bottom: 1px solid var(--rule);
+}
+.frame { position: absolute; left: var(--pad-x); right: var(--pad-x); top: 128px; bottom: 112px; display: flex; flex-direction: column; }
+.kicker { font-family: var(--font-label); font-weight: 700; font-size: 22px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--red); }
+.headline { font-family: var(--font-head); font-weight: 800; font-size: 62px; line-height: 1.07; letter-spacing: -0.01em; margin-top: 12px; max-width: 1640px; }
+.body { flex: 1; display: grid; grid-template-columns: 1.62fr 1fr; gap: 0; margin-top: 34px; min-height: 0; }
+.body.full { grid-template-columns: 1fr; }
+.exhibit { padding-right: 52px; display: flex; flex-direction: column; justify-content: center; min-height: 0; }
+.notecol { border-left: 1px solid var(--rule); padding-left: 48px; display: flex; flex-direction: column; justify-content: center; gap: 26px; }
+.notecol p { font-size: 34px; line-height: 1.32; color: var(--ink); }
+.notecol p b { font-weight: 600; }
+.notecol .small { font-size: 28px; color: var(--ink-2); }
+.source {
+    position: absolute; left: var(--pad-x); right: var(--pad-x); bottom: 44px;
+    border-top: 1px solid var(--rule); padding-top: 12px;
+    font-family: var(--font-body); font-style: italic; font-size: 22px; color: var(--grey); line-height: 1.35;
+}
+.source b { font-style: normal; font-family: var(--font-label); font-weight: 700; font-size: 17px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-2); margin-right: 8px; }
+.red { color: var(--red); }
+.mono { font-family: var(--font-mono); }
+
+/* Pull quote: the key finding between two rules */
+.pull {
+    border-top: 3px solid var(--rule); border-bottom: 1px solid var(--rule); padding: 22px 0 24px;
+    font-family: var(--font-head); font-style: italic; font-weight: 700; font-size: 40px; line-height: 1.18;
+}
+
+/* Photo with caption and credit, like a news photo */
+.photo { border: 1px solid var(--ink); background: #fff; padding: 8px; }
+.photo img { display: block; width: 100%; object-fit: cover; object-position: top left; max-height: none; }
+.caption { font-family: var(--font-body); font-size: 24px; line-height: 1.35; color: var(--ink-2); margin-top: 12px; }
+.caption .credit { font-family: var(--font-label); font-size: 16px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--grey); margin-left: 6px; }
+
+/* Newspaper table */
+.ntable { width: 100%; border-collapse: collapse; }
+.ntable th { font-family: var(--font-label); font-weight: 700; font-size: 19px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-2); text-align: left; padding: 0 0 12px; border-bottom: 3px solid var(--rule); }
+.ntable td { font-size: 34px; padding: 20px 0; border-bottom: 1px solid var(--hair); vertical-align: top; }
+.ntable td.num, .ntable th.num { text-align: right; font-variant-numeric: tabular-nums lining-nums; white-space: nowrap; padding-left: 24px; }
+.ntable td.num { font-weight: 600; }
+.ntable tr.hl td { color: var(--red); }
+
+/* Bar exhibit (drawn to scale) */
+.bars .row { display: grid; grid-template-columns: 330px 1fr; align-items: center; gap: 24px; margin: 22px 0; }
+.bars .nm { font-size: 29px; line-height: 1.2; }
+.bars .track { position: relative; height: 62px; border-left: 2px solid var(--ink); }
+.bars .bar { height: 100%; background: var(--ink); }
+.bars .bar.red { background: var(--red); }
+.bars .val { position: absolute; top: 50%; transform: translateY(-50%); font-weight: 600; font-size: 30px; padding-left: 14px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.bars .axis { font-family: var(--font-label); font-size: 18px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--grey); margin-top: 6px; }
+
+/* Diagram boxes (ink outlines, like a printed figure) */
+.flow { display: grid; grid-template-columns: repeat(6, 1fr); gap: 34px; align-items: stretch; }
+.flow .box { border: 2px solid var(--ink); background: #fbf8f1; padding: 22px 18px; position: relative; min-height: 250px; }
+.flow .box .lab { font-family: var(--font-label); font-weight: 700; font-size: 16px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--grey); }
+.flow .box h4 { font-family: var(--font-head); font-weight: 800; font-size: 33px; line-height: 1.08; margin-top: 10px; }
+.flow .box p { font-size: 25px; line-height: 1.3; margin-top: 12px; color: var(--ink-2); }
+.flow .box.key { background: var(--ink); color: var(--paper); }
+.flow .box.key .lab, .flow .box.key p { color: #d9d2c3; }
+.flow .box:not(:last-child)::after { content: "→"; position: absolute; right: -31px; top: 44%; font-size: 30px; font-family: var(--font-body); color: var(--ink); }
+
+/* Chain (problem slide) */
+.chain { display: flex; align-items: center; }
+.chain .node { width: 300px; border: 2px solid var(--ink); background: #fbf8f1; padding: 24px 24px; }
+.chain .node .lab { font-family: var(--font-label); font-weight: 700; font-size: 16px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--grey); }
+.chain .node h4 { font-family: var(--font-head); font-weight: 800; font-size: 38px; margin-top: 6px; }
+.chain .node .st { font-family: var(--font-mono); font-size: 22px; margin-top: 10px; }
+.chain .node.bad { border-color: var(--red); }
+.chain .node.bad .st { color: var(--red); }
+.chain .arr { width: 60px; text-align: center; font-size: 36px; }
+
+/* Verdict stamps */
+.stamp { display: inline-block; font-family: var(--font-label); font-weight: 700; font-size: 22px; letter-spacing: 0.12em; text-transform: uppercase; border: 2px solid currentColor; padding: 8px 16px; margin-right: 14px; }
+
+/* Briefs: three short news items between column rules */
+.briefs { display: grid; grid-template-columns: repeat(3, 1fr); }
+.briefs .item { padding: 0 40px; border-left: 1px solid var(--rule); }
+.briefs .item:first-child { padding-left: 0; border-left: none; }
+.briefs .item:last-child { padding-right: 0; }
+.briefs h3 { font-family: var(--font-head); font-weight: 800; font-size: 40px; line-height: 1.1; }
+.briefs .lab { font-family: var(--font-label); font-weight: 700; font-size: 18px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--red); margin-bottom: 10px; }
+.briefs p { font-size: 31px; line-height: 1.35; margin-top: 16px; color: var(--ink-2); }
+
+/* Numbered steps */
+.steps { list-style: none; counter-reset: s; }
+.steps li { counter-increment: s; font-size: 31px; line-height: 1.28; padding: 12px 0 12px 58px; position: relative; border-bottom: 1px solid var(--hair); }
+.steps li::before { content: counter(s); position: absolute; left: 0; top: 10px; font-family: var(--font-head); font-weight: 900; font-size: 38px; color: var(--red); }
+
+/* Conclusions list */
+.concl { list-style: none; counter-reset: c; }
+.concl li { counter-increment: c; font-size: 36px; line-height: 1.3; padding: 18px 0 18px 76px; position: relative; border-bottom: 1px solid var(--hair); }
+.concl li::before { content: counter(c); position: absolute; left: 0; top: 8px; font-family: var(--font-head); font-weight: 900; font-size: 54px; color: var(--red); }
+.concl li b { font-weight: 600; }
+
+.refs p { font-size: 26px; line-height: 1.5; }
+.app { color: var(--red); }
+
+/* Playfair defaults to old-style figures; numbers in this deck must read clearly */
+.headline, .pull, .front h1, .mast, .steps li::before, .concl li::before, .briefs h3, .flow h4 { font-variant-numeric: lining-nums; }
+
+/* Speaker notes: hidden in the slide; N shows them in a panel below the stage (presenter aid) */
+aside.notes { display: none; }
+.notes-overlay {
+    position: fixed; left: 0; right: 0; bottom: 0; max-height: 42vh; overflow: auto; z-index: 2000;
+    background: rgba(20, 20, 20, 0.95); color: #f4f0e6; border-top: 2px solid #a4161a;
+    font: 16px/1.5 'Source Serif 4', Georgia, serif; padding: 16px 28px; display: none; white-space: pre-wrap;
+}
+.notes-overlay.show { display: block; }
+
+/* ===========================================
+   MOTION: smooth and quiet, like a page being laid out. Each slide builds in reading order:
+   the rules draw from left to right, then kicker, headline, exhibit (rows, bars, boxes one
+   after another), the side column, and the source line last. Nothing bounces; everything
+   uses opacity and transform only. All of it is off under prefers-reduced-motion.
+   =========================================== */
+:root { --ease-smooth: cubic-bezier(0.22, 0.61, 0.36, 1); }
+@keyframes rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+@keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes draw { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes grow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+
+/* Running head: the double rule draws in, the labels fade */
+.slide.visible .runhead span { animation: fade 0.5s var(--ease-smooth) both; }
+.runhead::after { transform-origin: left center; }
+.slide.visible .runhead::after { animation: draw 0.8s var(--ease-smooth) both; }
+
+/* Reading order: kicker, headline, exhibit, side column, source */
+.slide.visible .kicker { animation: rise 0.6s var(--ease-smooth) 0.10s both; }
+.slide.visible .headline { animation: rise 0.7s var(--ease-smooth) 0.18s both; }
+.slide.visible .body > :first-child { animation: rise 0.7s var(--ease-smooth) 0.34s both; }
+.slide.visible .body > :nth-child(2) { animation: rise 0.7s var(--ease-smooth) 0.62s both; }
+.slide.visible .source { animation: fade 0.6s var(--ease-smooth) 0.9s both; }
+
+/* Exhibits build piece by piece */
+.slide.visible .ntable tr { animation: rise 0.5s var(--ease-smooth) both; }
+.slide.visible .ntable tr:nth-child(1) { animation-delay: 0.40s; }
+.slide.visible .ntable tr:nth-child(2) { animation-delay: 0.50s; }
+.slide.visible .ntable tr:nth-child(3) { animation-delay: 0.60s; }
+.slide.visible .ntable tr:nth-child(4) { animation-delay: 0.70s; }
+.slide.visible .ntable tr:nth-child(5) { animation-delay: 0.80s; }
+.slide.visible .ntable tr:nth-child(6) { animation-delay: 0.90s; }
+.bars .bar { transform-origin: left center; }
+.slide.visible .bars .bar { animation: grow 1.0s var(--ease-smooth) 0.5s both; }
+.slide.visible .bars .row:nth-child(2) .bar { animation-delay: 0.62s; }
+.slide.visible .bars .row:nth-child(3) .bar { animation-delay: 0.74s; }
+.slide.visible .bars .val { animation: fade 0.5s var(--ease-smooth) 1.25s both; }
+.slide.visible .flow .box, .slide.visible .chain > *, .slide.visible .briefs .item,
+.slide.visible .steps li, .slide.visible .concl li { animation: rise 0.55s var(--ease-smooth) both; }
+.slide.visible .flow .box:nth-child(1), .slide.visible .chain > :nth-child(1), .slide.visible .briefs .item:nth-child(1), .slide.visible .steps li:nth-child(1), .slide.visible .concl li:nth-child(1) { animation-delay: 0.40s; }
+.slide.visible .flow .box:nth-child(2), .slide.visible .chain > :nth-child(2), .slide.visible .briefs .item:nth-child(2), .slide.visible .steps li:nth-child(2), .slide.visible .concl li:nth-child(2) { animation-delay: 0.52s; }
+.slide.visible .flow .box:nth-child(3), .slide.visible .chain > :nth-child(3), .slide.visible .briefs .item:nth-child(3), .slide.visible .steps li:nth-child(3), .slide.visible .concl li:nth-child(3) { animation-delay: 0.64s; }
+.slide.visible .flow .box:nth-child(4), .slide.visible .chain > :nth-child(4), .slide.visible .steps li:nth-child(4) { animation-delay: 0.76s; }
+.slide.visible .flow .box:nth-child(5), .slide.visible .chain > :nth-child(5), .slide.visible .steps li:nth-child(5) { animation-delay: 0.88s; }
+.slide.visible .flow .box:nth-child(6) { animation-delay: 1.0s; }
+.slide.visible .pull { animation: rise 0.7s var(--ease-smooth) 0.75s both; }
+
+/* Front page: ears, masthead, motto, dateline rules, lead story, photo */
+.slide.visible .front .ears { animation: fade 0.6s var(--ease-smooth) both; }
+.slide.visible .front .mast { animation: rise 0.9s var(--ease-smooth) 0.1s both; }
+.slide.visible .front .motto { animation: fade 0.7s var(--ease-smooth) 0.45s both; }
+.slide.visible .front .dateline { animation: fade 0.8s var(--ease-smooth) 0.5s both; }
+.slide.visible .front .lead { animation: rise 0.8s var(--ease-smooth) 0.75s both; }
+.slide.visible .front .pic { animation: rise 0.8s var(--ease-smooth) 0.95s both; }
+
+@media (prefers-reduced-motion: reduce) {
+    .slide.visible *, .slide.visible *::after, .slide.visible .runhead::after { animation: none !important; }
+}
+
+/* ===========================================
+   FRONT PAGE (title slide): ears, masthead, dateline, lead story and photo
+   =========================================== */
+.front { position: absolute; inset: 0; padding: 40px var(--pad-x) 0; }
+.front .ears { display: grid; grid-template-columns: 1fr auto 1fr; font-family: var(--font-label); font-size: 20px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-2); padding-bottom: 10px; border-bottom: 1px solid var(--rule); }
+.front .ears .c { text-align: center; } .front .ears .r { text-align: right; }
+.front .mast { font-family: var(--font-head); font-weight: 900; font-size: 196px; line-height: 1; text-align: center; letter-spacing: -0.02em; margin-top: 16px; }
+.front .motto { text-align: center; font-style: italic; font-size: 30px; color: var(--ink-2); margin-top: 4px; }
+.front .dateline {
+    margin-top: 18px; border-top: 3px solid var(--rule); border-bottom: 1px solid var(--rule); padding: 10px 0;
+    display: flex; justify-content: space-between; font-family: var(--font-label); font-size: 20px; letter-spacing: 0.1em; text-transform: uppercase;
+}
+.front .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 0; margin-top: 34px; }
+.front .lead { padding-right: 48px; }
+.front .lead h1 { font-family: var(--font-head); font-weight: 800; font-size: 64px; line-height: 1.06; }
+.front .lead .deck { font-size: 32px; line-height: 1.34; color: var(--ink-2); margin-top: 22px; }
+.front .lead .by { font-family: var(--font-label); font-weight: 700; font-size: 22px; letter-spacing: 0.14em; text-transform: uppercase; margin-top: 26px; }
+.front .lead .by span { color: var(--red); }
+.front .pic { border-left: 1px solid var(--rule); padding-left: 48px; }
+
+/* Deck chrome outside the stage */
+.progress { position: fixed; left: 0; top: 0; width: 100%; height: 3px; background: #a4161a; z-index: 1001; transform-origin: 0 0; transform: scaleX(0); transition: transform 0.3s ease-out; }
+.counter { position: fixed; right: 18px; bottom: 14px; font: 13px 'Libre Franklin', Arial, sans-serif; color: #b9b2a3; z-index: 1001; }
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<div class="counter" id="counter"></div>
+<div class="notes-overlay" id="notesOverlay"></div>
+
+<div class="deck-viewport">
+<main class="deck-stage" id="deckStage">
+
+<!-- =========================================================
+     B1 BACKUP: the label-order bug and the weight
+     ========================================================= -->
+<section class="slide active">
+    <div class="runhead"><span class="paper">AgentPulse</span><span class="mid app">Backup B1</span><span class="pg">Only if asked</span></div>
+    <div class="frame">
+        <div class="kicker">Backup · the 0.3 weight</div>
+        <h2 class="headline">After a label-order bug was fixed, 0.5 flagged 7 of 17 correct answers; 0.3 flags 1</h2>
+        <div class="body">
+            <div class="exhibit">
+                <table class="ntable">
+                    <tr><th>Neutral weight</th><th class="num">F1</th><th class="num">False alarms</th></tr>
+                    <tr class="hl"><td>0.0 to 0.3</td><td class="num">0.963</td><td class="num">0.059</td></tr>
+                    <tr><td>0.4</td><td class="num">0.897</td><td class="num">0.176</td></tr>
+                    <tr><td>0.5</td><td class="num">0.788</td><td class="num">0.412</td></tr>
+                </table>
+                <p class="caption">Test split, cut-off 0.4, corrected labels. At the 0.7 cut-off every weight up to 0.6 gives the same result.</p>
+            </div>
+            <div class="notecol">
+                <p>Before 21 October the code read two DeBERTa labels in swapped order. PR #69 fixed it; every figure was re-measured.</p>
+            </div>
+        </div>
+    </div>
+    <div class="source"><b>Source</b>GROUNDING_RECALIBRATION_2026-10.md, banner and findings 4-7 (T3c, T5b, T7); PR #69; PR #89.</div>
+    <aside class="notes">BACKUP, only if asked.
+SAY:
+- Until 21 October the code read DeBERTa's "entailment" and "neutral" outputs in the wrong order. It was found, fixed (PR #69), and every grounding number was re-measured.
+- With correct labels, a weight of 0.5 flagged 7 of 17 correct answers as medium risk. 0.3 flags only 1.
+- Weights from 0 to 0.3 give identical results, so 0.3 is a choice inside that range, not a fitted value.
+- High-risk alerts (above 0.7) do not change for any weight up to 0.6.
+- The live database was re-scored: 90 low, 7 medium, 19 high (it was 12, 81, 23 at 0.5).
+IF ASKED "How do I know other numbers are not also wrong?": The recalibration report lists every result the bug touched; anything built only on the contradiction probability was unaffected.
+SOURCES: GROUNDING_RECALIBRATION_2026-10.md finding 4 (w 0.0-0.3: 0.963 / 0.059; 0.4: 0.897 / 0.176; 0.5: 0.788 / 0.412, 7 of 17), finding 7 and banner (live rows 90/7/19 and 1 without label at 0.3; 12/81/23 at 0.5), finding 5 (contradiction-only results unaffected); PR #69 (label order from the model config), PR #89 (weight 0.3).</aside>
+</section>
+
+<!-- =========================================================
+     B2 BACKUP: two withdrawn signals
+     ========================================================= -->
+<section class="slide">
+    <div class="runhead"><span class="paper">AgentPulse</span><span class="mid app">Backup B2</span><span class="pg">Only if asked</span></div>
+    <div class="frame">
+        <div class="kicker">Backup · negative results</div>
+        <h2 class="headline">Both withdrawn signals looked good on hand-written cases and failed on real traces</h2>
+        <div class="body">
+            <div class="exhibit">
+                <table class="ntable">
+                    <tr><th>Signal</th><th class="num">Hand-written</th><th class="num">Real traces</th></tr>
+                    <tr><td>Tool-claim check, F1</td><td class="num">0.842</td><td class="num red">0.000</td></tr>
+                    <tr><td>Inter-agent disagreement</td><td class="num">—</td><td class="num red">0 of 10 found</td></tr>
+                </table>
+                <p class="caption">Tool-claim: 19 hand-written cases; no claim found in 8,353 real prose spans. Disagreement: AUC 0.457 without the planner, which is chance.</p>
+            </div>
+            <div class="notecol">
+                <p>Real agents write counts in words, not digits; the tool-claim check only reads digits.</p>
+            </div>
+        </div>
+    </div>
+    <div class="source"><b>Source</b>TOOL_CLAIM_EXTERNAL_TEST_REPORT.md section 10; COMPETITIVE_POSITIONING.md 5.1, 5.2; SESSION_HANDOFF.md 14.1, 24.9.5.</div>
+    <aside class="notes">BACKUP, only if asked.
+SAY:
+- Tool-claim check: it compares a count that the agent writes ("I found 12 papers") with the count the tool really returned. On 19 hand-written cases F1 was 0.842. On real traces it found no claim at all in 8,353 steps, because real agents write in words, not digits. F1 0.000.
+- Disagreement: it compares agents' outputs in one trace with NLI. On real multi-agent traces it found 0 of 10 labelled contradictions; without the planner agent its AUC was 0.457, which is chance (0.5 = a coin toss).
+- So I withdrew both alerts. The scores are still stored for study.
+IF ASKED "Why did disagreement fail?": Point to the diagnosis in DISAGREEMENT_FORMULATION_DIAGNOSIS_REPORT.md rather than guessing; the measured fact is 0 of 10 and AUC 0.457.
+SOURCES: TOOL_CLAIM_EXTERNAL_TEST_REPORT.md section 10 (0.842 on 19 hand-written cases; 0.000 real; 8,353 prose spans; only fires on counts written in digits: README "What it does"); COMPETITIVE_POSITIONING.md 5.1, 5.2; SESSION_HANDOFF.md 14.1, 24.9.5 (0 of 10; AUC 0.457 without the planner).</aside>
+</section>
+
+<!-- =========================================================
+     B3 BACKUP: Telemetry Lab and incidents
+     ========================================================= -->
+<section class="slide">
+    <div class="runhead"><span class="paper">AgentPulse</span><span class="mid app">Backup B3</span><span class="pg">Only if asked</span></div>
+    <div class="frame">
+        <div class="kicker">Backup · Telemetry Lab</div>
+        <h2 class="headline">A fault injected in the Lab becomes a scored trace and a HIGH incident</h2>
+        <div class="body" style="grid-template-columns: 1fr 1fr;">
+            <div class="exhibit">
+                <div class="photo"><img src="assets/live_lab.jpg" alt="Telemetry Lab view" style="height: 450px;"></div>
+                <p class="caption">Five scenarios; the agent text is fixed, the evaluator is real. <span class="credit">Photo: live site</span></p>
+            </div>
+            <div class="exhibit" style="padding-right: 0; padding-left: 26px; border-left: 1px solid var(--rule);">
+                <div class="photo"><img src="assets/live_incidents.jpg" alt="Incidents view with Lab alerts" style="height: 450px;"></div>
+                <p class="caption">Lab runs of 27 October: GROUNDING_FAILURE for analyst, risk 0.999. <span class="credit">Photo: live site</span></p>
+            </div>
+        </div>
+    </div>
+    <div class="source"><b>Source</b>HOW_IT_WORKS.md, Telemetry Lab; docs/E2E_TEST_2026-10-27.md, items 11, 12 and 22.</div>
+    <aside class="notes">BACKUP B3, only if asked or if the live demo fails.
+SAY:
+- The Telemetry Lab lets anyone inject one of five faults: clean, hallucination, tool-claim mismatch, drift, disagreement.
+- The agent text is fixed in the code; everything after it (scoring, alerts) is the real system.
+- On 27 October the hallucination run raised HIGH alerts: verifier 0.971, analyst 0.999.
+- If you run it twice within 15 minutes you see the scores but no new alert, because of the 15-minute cooldown.
+IF ASKED "Is the Lab data real?": The text is a fixture; the scores and alerts come from the real evaluator.
+SOURCES: HOW_IT_WORKS.md (fixture text in backend/app/routers/ingest.py); docs/E2E_TEST_2026-10-27.md item 11 (verifier 0.971, analyst 0.999), item 12 (no alert on a repeat within 15 min, cooldown 900 s), item 22; screenshots 2026-11-01.</aside>
+</section>
+
+<!-- =========================================================
+     B4 REFERENCES
+     ========================================================= -->
+<section class="slide">
+    <div class="runhead"><span class="paper">AgentPulse</span><span class="mid app">References</span><span class="pg">Only if asked</span></div>
+    <div class="frame">
+        <div class="kicker">References</div>
+        <h2 class="headline">Every figure in this deck comes from these documents in the repository</h2>
+        <div class="body" style="grid-template-columns: 1fr 1fr;">
+            <div class="exhibit refs" style="justify-content: flex-start;">
+                <p>README.md (state of 2026-10-27)</p>
+                <p>docs/E2E_TEST_2026-10-27.md</p>
+                <p>GROUNDING_RECALIBRATION_2026-10.md</p>
+                <p>DRIFT_REAL_TEXT_DIAGNOSIS_REPORT.md</p>
+                <p>LLM_JUDGE_COMPARISON_REPORT.md</p>
+                <p>TOOL_CLAIM_EXTERNAL_TEST_REPORT.md</p>
+                <p>COMPETITIVE_POSITIONING.md</p>
+            </div>
+            <div class="exhibit refs" style="justify-content: flex-start; padding-left: 26px; border-left: 1px solid var(--rule);">
+                <p>HOW_IT_WORKS.md; DEMO_GUIDE.md</p>
+                <p>benchmarks/benchmark_results.json</p>
+                <p>experiments/results/ablation_results.json</p>
+                <p>deploy/azure/README.md; .github/workflows/</p>
+                <p>SESSION_HANDOFF.md, sections 14, 24, 29</p>
+                <p>Models: sentence-transformers/all-MiniLM-L6-v2; cross-encoder/nli-deberta-v3-small</p>
+            </div>
+        </div>
+    </div>
+    <div class="source"><b>Source</b>Repository github.com/Soum-Code/agentpulse; model names from HOW_IT_WORKS.md.</div>
+    <aside class="notes">BACKUP B4. Show only if asked where a number comes from.
+SAY:
+- Every number in this deck comes from a document in the repository; each slide names its source at the bottom.
+- The two models are public Hugging Face models: all-MiniLM-L6-v2 for embeddings and nli-deberta-v3-small for NLI.
+IF ASKED "Is there a paper?": Show the paper-communication proof you brought separately; this deck does not claim a publication.
+SOURCES: HOW_IT_WORKS.md (model table).</aside>
+</section>
+
+</main>
+</div>
+
+<script>
+/* ===========================================
+   SLIDE PRESENTATION CONTROLLER
+   Fixed 1920x1080 stage scaled to the window; keys, wheel, touch; N toggles the notes panel.
+   =========================================== */
+class SlidePresentation {
+    constructor() {
+        this.slides = Array.from(document.querySelectorAll('.slide'));
+        this.stage = document.getElementById('deckStage');
+        this.notes = document.getElementById('notesOverlay');
+        this.current = 0;
+        const fromHash = parseInt((location.hash || '').replace('#', ''), 10);
+        this.setupScale();
+        this.setupKeys();
+        this.setupTouchAndWheel();
+        this.show(Number.isFinite(fromHash) ? fromHash - 1 : 0);
+    }
+    setupScale() {
+        const scale = () => {
+            const f = Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
+            const x = (window.innerWidth - 1920 * f) / 2;
+            const y = (window.innerHeight - 1080 * f) / 2;
+            this.stage.style.transform = `translate(${x}px, ${y}px) scale(${f})`;
+        };
+        scale();
+        window.addEventListener('resize', scale);
+    }
+    setupKeys() {
+        document.addEventListener('keydown', (e) => {
+            if (['ArrowRight', 'ArrowDown', 'PageDown', ' '].includes(e.key)) { e.preventDefault(); this.show(this.current + 1); }
+            else if (['ArrowLeft', 'ArrowUp', 'PageUp'].includes(e.key)) { e.preventDefault(); this.show(this.current - 1); }
+            else if (e.key === 'Home') this.show(0);
+            else if (e.key === 'End') this.show(this.slides.length - 1);
+            else if (e.key === 'n' || e.key === 'N') this.notes.classList.toggle('show');
+        });
+    }
+    setupTouchAndWheel() {
+        let x0 = null, lock = false;
+        document.addEventListener('touchstart', (e) => { x0 = e.touches[0].clientX; }, { passive: true });
+        document.addEventListener('touchend', (e) => {
+            if (x0 === null) return;
+            const dx = e.changedTouches[0].clientX - x0;
+            if (Math.abs(dx) > 50) this.show(this.current + (dx < 0 ? 1 : -1));
+            x0 = null;
+        });
+        document.addEventListener('wheel', (e) => {
+            if (lock || Math.abs(e.deltaY) < 30) return;
+            lock = true; setTimeout(() => (lock = false), 700);
+            this.show(this.current + (e.deltaY > 0 ? 1 : -1));
+        }, { passive: true });
+    }
+    show(i) {
+        this.current = Math.max(0, Math.min(i, this.slides.length - 1));
+        this.slides.forEach((s, k) => {
+            s.classList.toggle('active', k === this.current);
+            s.classList.toggle('visible', k === this.current);
+        });
+        const n = this.slides[this.current].querySelector('aside.notes');
+        this.notes.textContent = `Slide ${this.current + 1} of ${this.slides.length}\n` + (n ? n.textContent.trim() : '');
+        document.getElementById('progress').style.transform = `scaleX(${(this.current + 1) / this.slides.length})`;
+        document.getElementById('counter').textContent = `${this.current + 1} / ${this.slides.length}`;
+        history.replaceState(null, '', '#' + (this.current + 1));
+    }
+}
+const deck = new SlidePresentation();
+</script>
+</body>
+</html>
