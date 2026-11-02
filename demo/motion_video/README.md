@@ -95,6 +95,34 @@ It then places every line at its time, mixes them, normalises the loudness (EBU 
 
 A more natural open-source engine (Kokoro-82M, Apache-2.0, through `npx hyperframes tts`) needs `pip install kokoro-onnx soundfile`, which was not allowed in the session that made these files.
 
+## Highlight v2 (2 minutes, punchier)
+
+`cuts/highlight_v2.json` and `build_v2.mjs` make a faster cut of the same recording. v1 stays as it is. v2 has:
+
+- **Hook (first 5 s):** "Every agent step, checked. Live." slammed onto a paper band over four 1.2-second moments from the run: the 0.666 ledger row, the alert caption, the Lab result and the 0.968 drift card.
+- **Fast-forwarded waits:** typing, sending, waiting for scores and page loads play at 4x to 8x, with a "» FAST-FORWARD 6×" badge. Other stretches are cut.
+- **Motion:** a slow push-in (Ken Burns, 4.5%) on every shot, the v1 camera zooms with shorter lead and tail, and sections that whip in from the right with motion blur.
+- **Lower-thirds:** one per section, instead of full-page cards.
+- **Progress bar:** a thin bar along the bottom edge, below the site's dock, showing the section names.
+- **Callouts:** big numbers in the newspaper style. Each one is copied from a caption of the run in `events.json`: 398 / 50 / 2, 0.666, DRIFT DETECTED, 0.973, GROUNDING FAILURE, 16 error traces, 0.37, 50 incidents, 0.968, and 398 to 456 spans.
+- **End card:** the live URL.
+
+Build, render, and add the voice and music:
+
+```bash
+node build_v2.mjs --cut cuts/highlight_v2.json --recording ../auto_demo/output/agentpulse_auto_demo.webm --events ../auto_demo/output/events.json
+```
+
+```bash
+cd build/highlight_v2 && npx hyperframes render --quality delivery --fps 30 -o ../../output/highlight_v2.mp4
+```
+
+```bash
+node tools/narrate.mjs highlight_v2 --rate 1.1 --music
+```
+
+**Music.** `--music` adds a soft four-chord pad (A minor, F, C, G; 4 s per chord) that `tools/narrate.mjs` synthesises with FFmpeg from sine tones. It is made here, so there is no third-party music and no licence to cite. Without speech it sits about 20 dB under the voice, and a sidechain compressor pushes it down further whenever the voice speaks.
+
 ## How a cut is written
 
 The two cuts in `cuts/` are tuned to the auto-demo run of 1 Nov 2026, 19:47 (22 steps, 9 min 27 s). For a new recording, check the clip edges against its `events.json`, or use the step anchors below.

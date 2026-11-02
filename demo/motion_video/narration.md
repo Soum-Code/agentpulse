@@ -100,3 +100,31 @@ The timestamps follow the shots in `build/highlight/shots.txt`; for example, a c
 - [09:37.9] Spans ingested went from 398 to 456 during this demo. Active incidents: 50 then, 50 now.
 - [09:48.9] Everything you saw is live, on one small Azure VM. Thank you.
 - [09:56.6] AgentPulse is live. Open it yourself at the address on screen.
+
+## highlight_v2
+
+Shorter lines for the 2-minute cut, spoken at rate 1.1. Same rule: every number is read from a caption of the run.
+
+- [00:00.3] Every agent step, checked. Live.
+- [00:05.0] AgentPulse watches AI agents that work together.
+- [00:11.4] Open the console.
+- [00:15.2] Live numbers: 398 spans, 50 incidents, 2 drifting.
+- [00:21.2] RAG Live. Three agents answer each question.
+- [00:26.8] Each step is timed, and scored.
+- [00:30.6] The ledger scores every agent.
+- [00:33.8] The answerer is contradicted: 0.666.
+- [00:39.8] And the worker raises an alert.
+- [00:42.8] Now a question the documents cannot answer.
+- [00:48.8] The verifier is contradicted: 0.973.
+- [00:54.0] The Telemetry Lab injects a hallucination on purpose.
+- [01:00.6] Grounding failure fires, for the analyst.
+- [01:05.6] Traces: 16 errors on this page.
+- [01:11.2] Filter to errors, and open one.
+- [01:16.4] Its verdict: unverifiable, grounding risk 0.37.
+- [01:24.4] Press X, and the whole trace is saved as JSON.
+- [01:29.2] Incidents: 50 active, newest first.
+- [01:35.6] Each one shows the rule, the agent, and the trace.
+- [01:40.8] Drift compares an agent's latest outputs with its first.
+- [01:49.6] Distance 0.968. Above 0.30, so it is drift.
+- [01:56.0] Spans went from 398 to 456 during this demo.
+- [02:02.0] AgentPulse is live. Open it yourself.
