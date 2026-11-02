@@ -13,7 +13,7 @@ Both are 1920x1080 at 30 fps. Each one has:
 - A cursor ring that moves to each click, with a ripple on the click.
 - Speed-ups, when a cut asks for them, marked on screen ("Waiting, shown at 3× speed"). The 1 Nov recording has captions almost end to end, so neither cut uses one.
 
-There is no music and no voice. The recording's own captions narrate it.
+There is no music. The silent versions rely on the recording's own captions; the `_voice` versions add a spoken voice-over (see below).
 
 Nothing on screen is invented. Footage and its captions come from the recording. Card text is in `cuts/*.json` and only names what the next part shows, with no numbers.
 
@@ -71,6 +71,30 @@ That command writes two contact sheets to `output/verify/`:
 - `highlight_targets.jpg`: one frame at every zoom target, labelled with the element's name.
 - `highlight_timeline.jpg`: one frame every 4 seconds.
 
+## Voice-over
+
+`narration.md` holds the spoken script for each cut: short sentences, each with its start time in the video. Every number in it is read from a caption of the 1 Nov run. To add it to a rendered cut:
+
+```bash
+node tools/narrate.mjs highlight
+```
+
+```bash
+node tools/narrate.mjs full
+```
+
+That writes `output/highlight_voice.mp4` and `output/full_voice.mp4`. The silent `output/highlight.mp4` and `output/full.mp4` stay as they are. For each line, the script:
+
+1. Speaks the line, offline, with `tools/tts_windows.ps1`.
+2. Trims the silence around it.
+3. Fits it into its slot, which ends 0.25 s before the next line. A line that runs long is sped up by at most 20%. If it still does not fit, the script stops and names the line to shorten.
+
+It then places every line at its time, mixes them, normalises the loudness (EBU R128 loudnorm: -16 LUFS, peaks under -1.5 dBTP), and muxes the voice in as AAC without re-encoding the video.
+
+**Voice and licence.** The voice is Microsoft Heera (en-IN), one of the Windows 11 built-in speech voices (Windows.Media.SpeechSynthesis, OneCore). It runs offline with nothing to download, and it is used here under the Windows licence. It is not open source. `--voice "Microsoft Ravi"` gives the male en-IN voice.
+
+A more natural open-source engine (Kokoro-82M, Apache-2.0, through `npx hyperframes tts`) needs `pip install kokoro-onnx soundfile`, which was not allowed in the session that made these files.
+
 ## How a cut is written
 
 The two cuts in `cuts/` are tuned to the auto-demo run of 1 Nov 2026, 19:47 (22 steps, 9 min 27 s). For a new recording, check the clip edges against its `events.json`, or use the step anchors below.
@@ -117,4 +141,6 @@ node render.mjs --cut cuts/sample.json --recording sample/sample.webm --events s
 | `render.mjs` | Build, then render with the pinned CLI |
 | `cuts/*.json` | The highlight cut, the full cut, and the sample cut |
 | `tools/verify.mjs` | Contact sheets of a render |
+| `narration.md` | The timed voice-over script for both cuts |
+| `tools/narrate.mjs`, `tools/tts_windows.ps1` | Speak, fit, mix and mux the voice-over |
 | `tools/sample_record.py` | A short test recording of the live site |
