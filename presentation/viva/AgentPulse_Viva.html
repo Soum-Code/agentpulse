@@ -8,7 +8,7 @@
   AgentPulse viva deck, broadsheet edition (frontend-slides skill, "Paper & Ink" preset adapted to a newspaper front page).
   One self-contained file; photos in ./assets/.
   Content rules from the academic-pptx skill: every headline is a takeaway sentence, one exhibit per results slide,
-  every borrowed number cited on the slide, a Conclusions slide that stays up for Q&A, References in the appendix.
+  every borrowed number cited on the slide, a Conclusions slide that stays up for Q&A. Backup slides and References are in AgentPulse_Viva_Backup.html.
   Keys: arrows / Space / PageUp / PageDown move; N shows the speaker notes under the slide; Home / End jump.
   Theme: change the :root variables. Speaker notes live in each slide's notes aside (the .pptx build reads them too).
 -->
@@ -384,84 +384,48 @@ SOURCES: README.md "Architecture in short"; HOW_IT_WORKS.md (buffer of 10,000 sp
 </section>
 
 <!-- =========================================================
-     4 GROUNDING METHOD
+     4 GROUNDING: method and result on one page
      ========================================================= -->
 <section class="slide">
     <div class="runhead"><span class="paper">AgentPulse</span><span class="mid">Signal 1: grounding</span><span class="pg">Page 4</span></div>
     <div class="frame">
-        <div class="kicker">Method · grounding</div>
-        <h2 class="headline">Grounding risk is an NLI probability, and its 0.3 weight is a design choice</h2>
+        <div class="kicker">Signal 1 · grounding</div>
+        <h2 class="headline">An NLI check with a 0.3 design weight catches contradictions on 68 labelled cases</h2>
         <div class="body">
             <div class="exhibit">
-                <div style="font-family: var(--font-mono); font-size: 36px; white-space: nowrap; border-top: 3px solid var(--rule); border-bottom: 1px solid var(--rule); padding: 30px 0;">risk = P(contradiction) + <span class="red">0.3</span> × P(neutral)</div>
-                <div style="display: grid; grid-template-columns: 4fr 3fr 3fr; margin-top: 34px; font-family: var(--font-label); font-size: 22px; letter-spacing: 0.08em; text-transform: uppercase;">
-                    <div style="border-top: 10px solid #9c978c; padding-top: 10px;">Low · 0 to 0.4</div>
-                    <div style="border-top: 10px solid var(--ink-2); padding-top: 10px;">Medium · above 0.4</div>
-                    <div style="border-top: 10px solid var(--red); padding-top: 10px; color: var(--red);">High · above 0.7</div>
-                </div>
-                <div style="margin-top: 40px;"><span class="stamp red">Contradicted</span><span class="stamp" style="color: var(--grey);">Unverifiable</span><span class="stamp">Supported</span></div>
-                <p class="caption">Verdict = whichever of the three probabilities is highest.</p>
-            </div>
-            <div class="notecol">
-                <p>DeBERTa compares each output with the evidence the agent was given.</p>
-                <p><b>Unverifiable</b>: neither supported nor contradicted. A status, not a pass.</p>
-                <p class="small">Weights 0 to 0.3 give identical results on our data.</p>
-            </div>
-        </div>
-    </div>
-    <div class="source"><b>Source</b>GROUNDING_RECALIBRATION_2026-10.md, section 3.6 (analysis 2026-10-22); HOW_IT_WORKS.md, the verdict rule; backend/app/services/grounding.py (NEUTRAL_RISK_WEIGHT = 0.3).</div>
-    <aside class="notes">TIME: 2:15-3:10 (55 seconds)
-SAY:
-- Grounding means: is the answer supported by the evidence the agent had?
-- An NLI model (natural language inference) reads two texts and gives three probabilities: the evidence supports the answer, contradicts it, or is neutral (says neither).
-- Our risk score is contradiction plus 0.3 times neutral. 0 is safe, 1 is risky. Above 0.4 is medium, above 0.7 is high.
-- Next to the score we show a verdict. "Unverifiable" means the evidence neither supports nor contradicts. It is not a pass; it means "could not check".
-- The 0.3 is my design choice, not a fitted number. On our data, any weight from 0 to 0.3 gives the same result.
-IF ASKED "Why 0.3 and not 0.5?": At 0.5, 7 of 17 correct test answers were wrongly flagged medium; at 0.3 only 1 of 17 (appendix A1).
-SOURCES: GROUNDING_RECALIBRATION_2026-10.md (banner, finding 4, section 3.6; analysis 2026-10-22); HOW_IT_WORKS.md "The verdict, next to the score"; grounding.py NEUTRAL_RISK_WEIGHT = 0.3 (PR #89). Model: cross-encoder/nli-deberta-v3-small.</aside>
-</section>
-
-<!-- =========================================================
-     5 GROUNDING RESULT
-     ========================================================= -->
-<section class="slide">
-    <div class="runhead"><span class="paper">AgentPulse</span><span class="mid">Signal 1: grounding</span><span class="pg">Page 5</span></div>
-    <div class="frame">
-        <div class="kicker">Result · grounding</div>
-        <h2 class="headline">On 68 hand-labelled cases, grounding catches contradictions with few false alarms</h2>
-        <div class="body">
-            <div class="exhibit">
+                <div style="font-family: var(--font-mono); font-size: 34px; white-space: nowrap; border-top: 3px solid var(--rule); border-bottom: 1px solid var(--rule); padding: 22px 0; margin-bottom: 34px;">risk = P(contradiction) + <span class="red">0.3</span> × P(neutral)</div>
                 <table class="ntable">
                     <tr><th>Evaluation set</th><th class="num">Cases</th><th class="num">F1</th><th class="num">False alarms</th></tr>
                     <tr class="hl"><td>Test split</td><td class="num">30</td><td class="num">0.963</td><td class="num">0.059</td></tr>
                     <tr><td>Held-out pool, cut-off 0.7</td><td class="num">47</td><td class="num">0.927</td><td class="num">0.074</td></tr>
                     <tr><td>Held-out pool, cut-off 0.4</td><td class="num">47</td><td class="num">0.952</td><td class="num">0.074</td></tr>
                 </table>
-                <p class="caption">False alarms = share of supported cases flagged (1 of 17 on the test split; 2 of 27 held out).</p>
+                <p class="caption">High risk above 0.7, medium above 0.4. False alarms = share of supported cases flagged (1 of 17; 2 of 27).</p>
             </div>
             <div class="notecol">
-                <div class="pull">A small sample, <span class="red">not production traffic</span>.</div>
-                <p class="small">68 cases: 39 supported, 29 failures. 5 of the 30 test cases copy development cases.</p>
+                <p><b>Unverifiable</b>: neither supported nor contradicted. A status, not a pass.</p>
+                <p>Weights 0 to 0.3 give identical results on our data.</p>
+                <p class="small">68 cases (39 supported, 29 failures) is a small sample; 5 test cases copy development cases.</p>
             </div>
         </div>
     </div>
-    <div class="source"><b>Source</b>GROUNDING_RECALIBRATION_2026-10.md, tables T3c and T3d (analysis 2026-10-22); README.md, Numbers and where they come from.</div>
-    <aside class="notes">TIME: 3:10-3:55 (45 seconds)
+    <div class="source"><b>Source</b>GROUNDING_RECALIBRATION_2026-10.md, section 3.6 and tables T3c, T3d (analysis 2026-10-22); HOW_IT_WORKS.md, the verdict rule; backend/app/services/grounding.py (NEUTRAL_RISK_WEIGHT = 0.3).</div>
+    <aside class="notes">TIME: 2:15-3:45 (90 seconds)
 SAY:
-- How good is the grounding check? I measured it on 68 cases that were labelled by hand: 39 correct answers and 29 failures.
-- On the 30-case test split, F1 is 0.963. F1 is one number for "finds the failures and does not cry wolf"; 1.0 is perfect.
-- False alarms: 1 of 17 correct answers was flagged, so 0.059.
-- On 47 cases never used for design, F1 is 0.927 or 0.952, depending on the cut-off.
-- Honest point: this is a small sample, and 5 test cases are copies of development cases. It is not a production benchmark.
-IF ASKED "Is 68 cases enough?": No, not for a general claim; the 95% interval on the test F1 is 0.897 to 1.000, and more labelled data is my first next step.
-SOURCES: GROUNDING_RECALIBRATION_2026-10.md T3c (test split: F1 0.963, FPR 0.059 = 1/17; 5 of 30 copy dev), T3d (held-out 47: F1 0.927 at 0.7, 0.952 at 0.4, FPR 0.074 = 2/27), T3b (interval [0.897, 1.000]); README.md table.</aside>
+- Grounding means: is the answer supported by the evidence the agent had? An NLI model (natural language inference) reads the two texts and gives three probabilities: supports, contradicts, or neutral (says neither).
+- Our risk is contradiction plus 0.3 times neutral. 0 is safe, 1 is risky; above 0.4 is medium, above 0.7 is high. The 0.3 is my design choice, not a fitted number: any weight from 0 to 0.3 gives the same result on our data.
+- Next to the score we show a verdict. "Unverifiable" means the evidence neither supports nor contradicts. It is not a pass; it means "could not check".
+- Result on 68 hand-labelled cases: on the 30-case test split F1 is 0.963 (F1 = "finds the failures and does not cry wolf"; 1.0 is perfect), and only 1 of 17 correct answers was wrongly flagged. On 47 cases never used for design, F1 is 0.927 or 0.952.
+- Honest point: this is a small sample, and 5 test cases copy development cases. It is not a production benchmark.
+IF ASKED "Why 0.3 and not 0.5?": At 0.5, 7 of 17 correct test answers were wrongly flagged medium; at 0.3 only 1 of 17 (backup slide B1). IF ASKED "Is 68 cases enough?": No, not for a general claim; the 95% interval on the test F1 is 0.897 to 1.000, and more labelled data is my first next step.
+SOURCES: GROUNDING_RECALIBRATION_2026-10.md (banner, finding 4, section 3.6; T3c: F1 0.963, FPR 0.059 = 1/17, 5 of 30 copy dev; T3d: held-out 47, F1 0.927 at 0.7 and 0.952 at 0.4, FPR 0.074 = 2/27; T3b: interval [0.897, 1.000]; analysis 2026-10-22); HOW_IT_WORKS.md "The verdict, next to the score"; grounding.py NEUTRAL_RISK_WEIGHT = 0.3 (PR #89). Model: cross-encoder/nli-deberta-v3-small.</aside>
 </section>
 
 <!-- =========================================================
      6 DRIFT
      ========================================================= -->
 <section class="slide">
-    <div class="runhead"><span class="paper">AgentPulse</span><span class="mid">Signal 2: drift</span><span class="pg">Page 6</span></div>
+    <div class="runhead"><span class="paper">AgentPulse</span><span class="mid">Signal 2: drift</span><span class="pg">Page 5</span></div>
     <div class="frame">
         <div class="kicker">Result · drift</div>
         <h2 class="headline">Drift detection is accurate, but only a quarter of real sessions are long enough to measure</h2>
@@ -482,7 +446,7 @@ SOURCES: GROUNDING_RECALIBRATION_2026-10.md T3c (test split: F1 0.963, FPR 0.059
         </div>
     </div>
     <div class="source"><b>Source</b>DRIFT_REAL_TEXT_DIAGNOSIS_REPORT.md, sections 11.3 and 11.5 (2026-08-27); HOW_IT_WORKS.md (baseline 20, window 12, threshold 0.30).</div>
-    <aside class="notes">TIME: 3:55-4:35 (40 seconds)
+    <aside class="notes">TIME: 3:45-4:25 (40 seconds)
 SAY:
 - Drift compares an agent with its own past, not with a correct answer.
 - MiniLM turns each answer into a vector (a list of numbers). We average the agent's first 20 answers (baseline) and its latest 12 answers (window).
@@ -497,7 +461,7 @@ SOURCES: DRIFT_REAL_TEXT_DIAGNOSIS_REPORT.md 11.3 and 11.5 (2026-08-27, offline,
      7 COST
      ========================================================= -->
 <section class="slide">
-    <div class="runhead"><span class="paper">AgentPulse</span><span class="mid">Results: cost</span><span class="pg">Page 7</span></div>
+    <div class="runhead"><span class="paper">AgentPulse</span><span class="mid">Results: cost</span><span class="pg">Page 6</span></div>
     <div class="frame">
         <div class="kicker">Result · cost</div>
         <h2 class="headline">The evaluator is 15.6 times faster than an LLM judge, at a small accuracy cost</h2>
@@ -516,7 +480,7 @@ SOURCES: DRIFT_REAL_TEXT_DIAGNOSIS_REPORT.md 11.3 and 11.5 (2026-08-27, offline,
         </div>
     </div>
     <div class="source"><b>Source</b>LLM_JUDGE_COMPARISON_REPORT.md, median latency table and correction banner (2026-08-26; F1 at the shipped weight derived from stored probabilities).</div>
-    <aside class="notes">TIME: 4:35-5:20 (45 seconds)
+    <aside class="notes">TIME: 4:25-5:10 (45 seconds)
 SAY:
 - Can we afford to check every step? Yes. Our two models took 202.94 milliseconds per case.
 - A local 8-billion-parameter LLM judge took 3,170.39 milliseconds. That is 15.6 times slower.
@@ -531,7 +495,7 @@ SOURCES: LLM_JUDGE_COMPARISON_REPORT.md (median 202.94 vs 3,170.39 ms, 15.6x; ju
      8 VERIFICATION
      ========================================================= -->
 <section class="slide">
-    <div class="runhead"><span class="paper">AgentPulse</span><span class="mid">Results: verification</span><span class="pg">Page 8</span></div>
+    <div class="runhead"><span class="paper">AgentPulse</span><span class="mid">Results: verification</span><span class="pg">Page 7</span></div>
     <div class="frame">
         <div class="kicker">Result · verification</div>
         <h2 class="headline">The live site passed an end-to-end test from outside on 27 October</h2>
@@ -553,7 +517,7 @@ SOURCES: LLM_JUDGE_COMPARISON_REPORT.md (median 202.94 vs 3,170.39 ms, 15.6x; ju
         </div>
     </div>
     <div class="source"><b>Source</b>docs/E2E_TEST_2026-10-27.md, items 1-25 and findings F1-F3; README.md, Testing and benchmarks (re-run 2026-10-27).</div>
-    <aside class="notes">TIME: 5:20-5:55 (35 seconds)
+    <aside class="notes">TIME: 5:10-5:45 (35 seconds)
 SAY:
 - Tests: 628 backend tests and 404 dashboard tests pass. I re-ran them on 27 October.
 - The same day I tested the live site from outside, like a visitor would.
@@ -568,7 +532,7 @@ SOURCES: docs/E2E_TEST_2026-10-27.md: items 1-4 health 200; item 7 /v1/keys and 
      9 LIVE DEMO
      ========================================================= -->
 <section class="slide">
-    <div class="runhead"><span class="paper">AgentPulse</span><span class="mid">Live demo</span><span class="pg">Page 9</span></div>
+    <div class="runhead"><span class="paper">AgentPulse</span><span class="mid">Live demo</span><span class="pg">Page 8</span></div>
     <div class="frame">
         <div class="kicker">Live demo · agentpulse.centralindia.cloudapp.azure.com</div>
         <h2 class="headline">One question, three agents, and every step scored as it happens</h2>
@@ -589,7 +553,7 @@ SOURCES: docs/E2E_TEST_2026-10-27.md: items 1-4 health 200; item 7 /v1/keys and 
         </div>
     </div>
     <div class="source"><b>Source</b>DEMO_GUIDE.md, steps 1-5; screenshot of the live RAG Live view, 1 November 2026.</div>
-    <aside class="notes">TIME: 5:55-8:15 (2 minutes 20 seconds). Switch to the browser.
+    <aside class="notes">TIME: 5:45-8:05 (2 minutes 20 seconds). Switch to the browser.
 SAY (follow DEMO_GUIDE.md; say only what the screen shows):
 - Open the site, Launch App, RAG Live. Ask: "how does SQLite WAL improve concurrency?"
 - Point at the three stages: retriever, verifier, answerer. Each shows its time, the provider and the model.
@@ -597,7 +561,7 @@ SAY (follow DEMO_GUIDE.md; say only what the screen shows):
 - Ask: "who won the 2022 football world cup?" The corpus has nothing on football. Read the verdicts from the screen; do not predict them.
 - Go to Traces, open the newest trace, press X: "Everything on the screen is in this JSON file. Nothing is computed in the browser."
 IF ASKED "What if a provider fails?": The chat tries the next provider in the chain (Groq, NVIDIA, OpenRouter, Pollinations) and the screen says which one answered, or that all were at their limit.
-IF THE DEMO FAILS: "Limit reached" = the abuse limit (5 questions a minute per visitor) is working; "Providers at their limit" = press Retry once, then show an earlier turn; no network = use this slide's photo and appendix A3. Never call a failure a success.
+IF THE DEMO FAILS: "Limit reached" = the abuse limit (5 questions a minute per visitor) is working; "Providers at their limit" = press Retry once, then show an earlier turn; no network = use this slide's photo and backup slide B3. Never call a failure a success.
 SOURCES: DEMO_GUIDE.md; screenshot 2026-11-01 (assets/live_rag.jpg): 3.2 s total, retriever 410 ms, verifier 510 ms, answerer 378 ms, all groq openai/gpt-oss-20b, answerer grounding 0.191 low_risk. Provider chain: README "What works live".</aside>
 </section>
 
@@ -605,7 +569,7 @@ SOURCES: DEMO_GUIDE.md; screenshot 2026-11-01 (assets/live_rag.jpg): 3.2 s total
      10 ENGINEERING
      ========================================================= -->
 <section class="slide">
-    <div class="runhead"><span class="paper">AgentPulse</span><span class="mid">Engineering</span><span class="pg">Page 10</span></div>
+    <div class="runhead"><span class="paper">AgentPulse</span><span class="mid">Engineering</span><span class="pg">Page 9</span></div>
     <div class="frame">
         <div class="kicker">Engineering</div>
         <h2 class="headline">One small Azure VM, deployed automatically and closed to writes</h2>
@@ -618,7 +582,7 @@ SOURCES: DEMO_GUIDE.md; screenshot 2026-11-01 (assets/live_rag.jpg): 3.2 s total
         </div>
     </div>
     <div class="source"><b>Source</b>deploy/azure/README.md (VM size); .github/workflows/tests.yml, dashboard.yml, deploy-azure.yml; deploy/azure/Caddyfile; README.md, What works live; SESSION_HANDOFF.md 29.17.2.</div>
-    <aside class="notes">TIME: 8:15-8:55 (40 seconds)
+    <aside class="notes">TIME: 8:05-8:45 (40 seconds)
 SAY:
 - It runs on one small Azure VM: 2 CPUs, 4 GB memory, in Central India. Five containers: the web server with HTTPS, the dashboard, the API, the evaluator worker and the chat.
 - Every pull request runs the test suite automatically (GitHub Actions).
@@ -633,7 +597,7 @@ SOURCES: deploy/azure/README.md (Standard_B2als_v2, 2 vCPU / 4 GB); five contain
      11 LIMITS
      ========================================================= -->
 <section class="slide">
-    <div class="runhead"><span class="paper">AgentPulse</span><span class="mid">Corrections and limits</span><span class="pg">Page 11</span></div>
+    <div class="runhead"><span class="paper">AgentPulse</span><span class="mid">Corrections and limits</span><span class="pg">Page 10</span></div>
     <div class="frame">
         <div class="kicker">Honest limits</div>
         <h2 class="headline">Two of the four signals failed on real traces, and the evidence base is small</h2>
@@ -655,14 +619,14 @@ SOURCES: deploy/azure/README.md (Standard_B2als_v2, 2 vCPU / 4 GB); five contain
         </div>
     </div>
     <div class="source"><b>Source</b>README.md, Known limits; COMPETITIVE_POSITIONING.md 5.2; TOOL_CLAIM_EXTERNAL_TEST_REPORT.md section 10; GROUNDING_RECALIBRATION_2026-10.md; DRIFT_REAL_TEXT_DIAGNOSIS_REPORT.md 11.5.</div>
-    <aside class="notes">TIME: 8:55-9:35 (40 seconds)
+    <aside class="notes">TIME: 8:45-9:30 (45 seconds)
 SAY:
 - I want to say the weak points before you ask.
 - Disagreement between agents: on real traces it found 0 of 10 real contradictions. So I withdrew that alert.
 - The tool-claim check scored F1 0.000 on real traces, because real agents do not write counts as digits.
 - Grounding rests on only 68 labelled cases. Drift can be measured on only a quarter of sessions.
 - And it is one VM with one SQLite file: fine for a prototype, not for production.
-IF ASKED "Why keep the failed signals in the code?": They are measured negative results; the scores are stored for study, but no alert is raised on them (appendix A2).
+IF ASKED "Why keep the failed signals in the code?": They are measured negative results; the scores are stored for study, but no alert is raised on them (backup slide B2).
 SOURCES: README "Known limits"; COMPETITIVE_POSITIONING.md 5.2 and SESSION_HANDOFF.md 24.9.5 (0 of 10; AUC 0.457 without the planner); TOOL_CLAIM_EXTERNAL_TEST_REPORT.md section 10 (F1 0.000; no claim in 8,353 prose spans; 0.842 on 19 hand-written cases); GROUNDING_RECALIBRATION_2026-10.md (68 = 39 + 29; one neutral failure, val_17); DRIFT_REAL_TEXT_DIAGNOSIS_REPORT.md 11.5 (24.5%); README (one VM, one SQLite file, one worker, backup on the same disk); deploy not gated on tests: SESSION_HANDOFF 29.16.6.</aside>
 </section>
 
@@ -670,7 +634,7 @@ SOURCES: README "Known limits"; COMPETITIVE_POSITIONING.md 5.2 and SESSION_HANDO
      12 CONCLUSIONS (stays up during Q&A)
      ========================================================= -->
 <section class="slide">
-    <div class="runhead"><span class="paper">AgentPulse</span><span class="mid">Conclusions</span><span class="pg">Page 12</span></div>
+    <div class="runhead"><span class="paper">AgentPulse</span><span class="mid">Conclusions</span><span class="pg">Page 11</span></div>
     <div class="frame">
         <div class="kicker">Conclusions</div>
         <h2 class="headline">Conclusions</h2>
@@ -690,7 +654,7 @@ SOURCES: README "Known limits"; COMPETITIVE_POSITIONING.md 5.2 and SESSION_HANDO
         </div>
     </div>
     <div class="source"><b>Source</b>LLM_JUDGE_COMPARISON_REPORT.md; GROUNDING_RECALIBRATION_2026-10.md T3c; README.md, Testing and benchmarks (2026-10-27).</div>
-    <aside class="notes">TIME: 9:35-10:00 (25 seconds). Then leave this slide on screen for questions.
+    <aside class="notes">TIME: 9:30-10:00 (30 seconds). Then leave this slide on screen for questions.
 SAY:
 - One: every step can be checked on a normal CPU, without an LLM judge, in about 200 milliseconds.
 - Two: grounding and drift held up when measured. Two other signals failed, and I withdrew them.
@@ -699,140 +663,6 @@ SAY:
 - Thank you. I am happy to take questions.
 IF ASKED "What is your main contribution?": Per-span grounding and drift scoring with small local models, measured honestly, inside a working deployed system.
 SOURCES: 202.94 ms (LLM_JUDGE_COMPARISON_REPORT.md); F1 0.963 (GROUNDING_RECALIBRATION_2026-10.md T3c); 628 + 404 tests (README, 2026-10-27). Next steps: SESSION_HANDOFF.md 29.16.4, 29.16.6.</aside>
-</section>
-
-<!-- =========================================================
-     A1 APPENDIX: the label-order bug and the weight
-     ========================================================= -->
-<section class="slide">
-    <div class="runhead"><span class="paper">AgentPulse</span><span class="mid app">Appendix A1</span><span class="pg">For questions</span></div>
-    <div class="frame">
-        <div class="kicker">Appendix · the 0.3 weight</div>
-        <h2 class="headline">After a label-order bug was fixed, 0.5 flagged 7 of 17 correct answers; 0.3 flags 1</h2>
-        <div class="body">
-            <div class="exhibit">
-                <table class="ntable">
-                    <tr><th>Neutral weight</th><th class="num">F1</th><th class="num">False alarms</th></tr>
-                    <tr class="hl"><td>0.0 to 0.3</td><td class="num">0.963</td><td class="num">0.059</td></tr>
-                    <tr><td>0.4</td><td class="num">0.897</td><td class="num">0.176</td></tr>
-                    <tr><td>0.5</td><td class="num">0.788</td><td class="num">0.412</td></tr>
-                </table>
-                <p class="caption">Test split, cut-off 0.4, corrected labels. At the 0.7 cut-off every weight up to 0.6 gives the same result.</p>
-            </div>
-            <div class="notecol">
-                <p>Before 21 October the code read two DeBERTa labels in swapped order. PR #69 fixed it; every figure was re-measured.</p>
-            </div>
-        </div>
-    </div>
-    <div class="source"><b>Source</b>GROUNDING_RECALIBRATION_2026-10.md, banner and findings 4-7 (T3c, T5b, T7); PR #69; PR #89.</div>
-    <aside class="notes">APPENDIX, only for questions.
-SAY:
-- Until 21 October the code read DeBERTa's "entailment" and "neutral" outputs in the wrong order. It was found, fixed (PR #69), and every grounding number was re-measured.
-- With correct labels, a weight of 0.5 flagged 7 of 17 correct answers as medium risk. 0.3 flags only 1.
-- Weights from 0 to 0.3 give identical results, so 0.3 is a choice inside that range, not a fitted value.
-- High-risk alerts (above 0.7) do not change for any weight up to 0.6.
-- The live database was re-scored: 90 low, 7 medium, 19 high (it was 12, 81, 23 at 0.5).
-IF ASKED "How do I know other numbers are not also wrong?": The recalibration report lists every result the bug touched; anything built only on the contradiction probability was unaffected.
-SOURCES: GROUNDING_RECALIBRATION_2026-10.md finding 4 (w 0.0-0.3: 0.963 / 0.059; 0.4: 0.897 / 0.176; 0.5: 0.788 / 0.412, 7 of 17), finding 7 and banner (live rows 90/7/19 and 1 without label at 0.3; 12/81/23 at 0.5), finding 5 (contradiction-only results unaffected); PR #69 (label order from the model config), PR #89 (weight 0.3).</aside>
-</section>
-
-<!-- =========================================================
-     A2 APPENDIX: two withdrawn signals
-     ========================================================= -->
-<section class="slide">
-    <div class="runhead"><span class="paper">AgentPulse</span><span class="mid app">Appendix A2</span><span class="pg">For questions</span></div>
-    <div class="frame">
-        <div class="kicker">Appendix · negative results</div>
-        <h2 class="headline">Both withdrawn signals looked good on hand-written cases and failed on real traces</h2>
-        <div class="body">
-            <div class="exhibit">
-                <table class="ntable">
-                    <tr><th>Signal</th><th class="num">Hand-written</th><th class="num">Real traces</th></tr>
-                    <tr><td>Tool-claim check, F1</td><td class="num">0.842</td><td class="num red">0.000</td></tr>
-                    <tr><td>Inter-agent disagreement</td><td class="num">—</td><td class="num red">0 of 10 found</td></tr>
-                </table>
-                <p class="caption">Tool-claim: 19 hand-written cases; no claim found in 8,353 real prose spans. Disagreement: AUC 0.457 without the planner, which is chance.</p>
-            </div>
-            <div class="notecol">
-                <p>Real agents write counts in words, not digits; the tool-claim check only reads digits.</p>
-            </div>
-        </div>
-    </div>
-    <div class="source"><b>Source</b>TOOL_CLAIM_EXTERNAL_TEST_REPORT.md section 10; COMPETITIVE_POSITIONING.md 5.1, 5.2; SESSION_HANDOFF.md 14.1, 24.9.5.</div>
-    <aside class="notes">APPENDIX, only for questions.
-SAY:
-- Tool-claim check: it compares a count that the agent writes ("I found 12 papers") with the count the tool really returned. On 19 hand-written cases F1 was 0.842. On real traces it found no claim at all in 8,353 steps, because real agents write in words, not digits. F1 0.000.
-- Disagreement: it compares agents' outputs in one trace with NLI. On real multi-agent traces it found 0 of 10 labelled contradictions; without the planner agent its AUC was 0.457, which is chance (0.5 = a coin toss).
-- So I withdrew both alerts. The scores are still stored for study.
-IF ASKED "Why did disagreement fail?": Point to the diagnosis in DISAGREEMENT_FORMULATION_DIAGNOSIS_REPORT.md rather than guessing; the measured fact is 0 of 10 and AUC 0.457.
-SOURCES: TOOL_CLAIM_EXTERNAL_TEST_REPORT.md section 10 (0.842 on 19 hand-written cases; 0.000 real; 8,353 prose spans; only fires on counts written in digits: README "What it does"); COMPETITIVE_POSITIONING.md 5.1, 5.2; SESSION_HANDOFF.md 14.1, 24.9.5 (0 of 10; AUC 0.457 without the planner).</aside>
-</section>
-
-<!-- =========================================================
-     A3 APPENDIX: Telemetry Lab and incidents
-     ========================================================= -->
-<section class="slide">
-    <div class="runhead"><span class="paper">AgentPulse</span><span class="mid app">Appendix A3</span><span class="pg">For questions</span></div>
-    <div class="frame">
-        <div class="kicker">Appendix · Telemetry Lab</div>
-        <h2 class="headline">A fault injected in the Lab becomes a scored trace and a HIGH incident</h2>
-        <div class="body" style="grid-template-columns: 1fr 1fr;">
-            <div class="exhibit">
-                <div class="photo"><img src="assets/live_lab.jpg" alt="Telemetry Lab view" style="height: 450px;"></div>
-                <p class="caption">Five scenarios; the agent text is fixed, the evaluator is real. <span class="credit">Photo: live site</span></p>
-            </div>
-            <div class="exhibit" style="padding-right: 0; padding-left: 26px; border-left: 1px solid var(--rule);">
-                <div class="photo"><img src="assets/live_incidents.jpg" alt="Incidents view with Lab alerts" style="height: 450px;"></div>
-                <p class="caption">Lab runs of 27 October: GROUNDING_FAILURE for analyst, risk 0.999. <span class="credit">Photo: live site</span></p>
-            </div>
-        </div>
-    </div>
-    <div class="source"><b>Source</b>HOW_IT_WORKS.md, Telemetry Lab; docs/E2E_TEST_2026-10-27.md, items 11, 12 and 22.</div>
-    <aside class="notes">APPENDIX, only for questions or if the live demo fails.
-SAY:
-- The Telemetry Lab lets anyone inject one of five faults: clean, hallucination, tool-claim mismatch, drift, disagreement.
-- The agent text is fixed in the code; everything after it (scoring, alerts) is the real system.
-- On 27 October the hallucination run raised HIGH alerts: verifier 0.971, analyst 0.999.
-- If you run it twice within 15 minutes you see the scores but no new alert, because of the 15-minute cooldown.
-IF ASKED "Is the Lab data real?": The text is a fixture; the scores and alerts come from the real evaluator.
-SOURCES: HOW_IT_WORKS.md (fixture text in backend/app/routers/ingest.py); docs/E2E_TEST_2026-10-27.md item 11 (verifier 0.971, analyst 0.999), item 12 (no alert on a repeat within 15 min, cooldown 900 s), item 22; screenshots 2026-11-01.</aside>
-</section>
-
-<!-- =========================================================
-     A4 REFERENCES
-     ========================================================= -->
-<section class="slide">
-    <div class="runhead"><span class="paper">AgentPulse</span><span class="mid app">References</span><span class="pg">For questions</span></div>
-    <div class="frame">
-        <div class="kicker">References</div>
-        <h2 class="headline">Every figure in this deck comes from these documents in the repository</h2>
-        <div class="body" style="grid-template-columns: 1fr 1fr;">
-            <div class="exhibit refs" style="justify-content: flex-start;">
-                <p>README.md (state of 2026-10-27)</p>
-                <p>docs/E2E_TEST_2026-10-27.md</p>
-                <p>GROUNDING_RECALIBRATION_2026-10.md</p>
-                <p>DRIFT_REAL_TEXT_DIAGNOSIS_REPORT.md</p>
-                <p>LLM_JUDGE_COMPARISON_REPORT.md</p>
-                <p>TOOL_CLAIM_EXTERNAL_TEST_REPORT.md</p>
-                <p>COMPETITIVE_POSITIONING.md</p>
-            </div>
-            <div class="exhibit refs" style="justify-content: flex-start; padding-left: 26px; border-left: 1px solid var(--rule);">
-                <p>HOW_IT_WORKS.md; DEMO_GUIDE.md</p>
-                <p>benchmarks/benchmark_results.json</p>
-                <p>experiments/results/ablation_results.json</p>
-                <p>deploy/azure/README.md; .github/workflows/</p>
-                <p>SESSION_HANDOFF.md, sections 14, 24, 29</p>
-                <p>Models: sentence-transformers/all-MiniLM-L6-v2; cross-encoder/nli-deberta-v3-small</p>
-            </div>
-        </div>
-    </div>
-    <div class="source"><b>Source</b>Repository github.com/Soum-Code/agentpulse; model names from HOW_IT_WORKS.md.</div>
-    <aside class="notes">APPENDIX. Show only if asked where a number comes from.
-SAY:
-- Every number in this deck comes from a document in the repository; each slide names its source at the bottom.
-- The two models are public Hugging Face models: all-MiniLM-L6-v2 for embeddings and nli-deberta-v3-small for NLI.
-IF ASKED "Is there a paper?": Show the paper-communication proof you brought separately; this deck does not claim a publication.
-SOURCES: HOW_IT_WORKS.md (model table).</aside>
 </section>
 
 </main>
