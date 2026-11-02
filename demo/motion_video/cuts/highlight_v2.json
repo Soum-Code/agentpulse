@@ -1,0 +1,344 @@
+{
+  "id": "highlight_v2",
+  "recordingNote": "Clip edges and callouts are tuned to the auto-demo run of 2026-11-01 19:47. Every callout number is copied from a caption of that run (events.json).",
+  "camera": {
+    "lead": 0.8,
+    "tail": 1.0,
+    "gap": 2.2,
+    "maxScale": 1.8
+  },
+  "badge": "ff",
+  "kenBurns": 0.045,
+  "hook": {
+    "dur": 5.2,
+    "kicker": "AgentPulse · live demo",
+    "line": "Every agent step, checked. *Live.*",
+    "clips": [
+      {
+        "in": 122.0,
+        "out": 123.2
+      },
+      {
+        "in": 128.6,
+        "out": 129.8
+      },
+      {
+        "in": 270.2,
+        "out": 271.4
+      },
+      {
+        "in": 473.0,
+        "out": 474.4
+      }
+    ]
+  },
+  "sections": [
+    {
+      "name": "Landing",
+      "lower": {
+        "kicker": "The live site",
+        "title": "AgentPulse"
+      },
+      "clips": [
+        {
+          "in": 4.1,
+          "out": 9.6
+        },
+        {
+          "in": 9.6,
+          "out": 15.6,
+          "rate": 6
+        },
+        {
+          "in": 52.8,
+          "out": 56.6
+        }
+      ]
+    },
+    {
+      "name": "Overview",
+      "lower": {
+        "kicker": "The console",
+        "title": "Overview: live numbers"
+      },
+      "clips": [
+        {
+          "in": 57.4,
+          "out": 64.0,
+          "callouts": [
+            {
+              "at": 58.2,
+              "big": "398",
+              "label": "Spans ingested",
+              "dur": 1.9,
+              "pos": "br"
+            },
+            {
+              "at": 60.2,
+              "big": "50",
+              "label": "Active incidents",
+              "dur": 1.9,
+              "pos": "br"
+            },
+            {
+              "at": 62.2,
+              "big": "2",
+              "label": "Agents drifting",
+              "dur": 1.7,
+              "pos": "br"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "RAG Live",
+      "lower": {
+        "kicker": "RAG Live",
+        "title": "Three agents, every step scored"
+      },
+      "clips": [
+        {
+          "in": 91.5,
+          "out": 95.0
+        },
+        {
+          "in": 95.0,
+          "out": 108.0,
+          "rate": 6
+        },
+        {
+          "in": 108.0,
+          "out": 111.5
+        },
+        {
+          "in": 111.5,
+          "out": 121.4,
+          "rate": 4
+        },
+        {
+          "in": 121.4,
+          "out": 127.7,
+          "callouts": [
+            {
+              "at": 122.0,
+              "big": "0.666",
+              "label": "Answer synthesizer",
+              "sub": "Grounding risk · Contradicted",
+              "dur": 4.6,
+              "pos": "ml"
+            }
+          ]
+        },
+        {
+          "in": 127.7,
+          "out": 131.2,
+          "callouts": [
+            {
+              "at": 128.0,
+              "big": "DRIFT DETECTED",
+              "label": "Alert raised on this trace",
+              "sub": "Medium",
+              "dur": 3.0,
+              "pos": "ml"
+            }
+          ]
+        },
+        {
+          "in": 179.3,
+          "out": 183.6
+        },
+        {
+          "in": 183.6,
+          "out": 195.1,
+          "rate": 8
+        },
+        {
+          "in": 195.1,
+          "out": 201.0,
+          "callouts": [
+            {
+              "at": 195.6,
+              "big": "0.973",
+              "label": "Claim verifier",
+              "sub": "Contradicted: the corpus cannot answer",
+              "dur": 4.8,
+              "pos": "ml"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Telemetry Lab",
+      "lower": {
+        "kicker": "Telemetry Lab",
+        "title": "A fault, injected on purpose"
+      },
+      "clips": [
+        {
+          "in": 255.6,
+          "out": 259.8
+        },
+        {
+          "in": 259.8,
+          "out": 269.7,
+          "rate": 6
+        },
+        {
+          "in": 269.7,
+          "out": 275.5,
+          "callouts": [
+            {
+              "at": 270.2,
+              "big": "GROUNDING FAILURE",
+              "label": "Fired for analyst",
+              "sub": "and HIGH HALLUCINATION RISK",
+              "dur": 4.8,
+              "pos": "ml"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Traces",
+      "lower": {
+        "kicker": "Traces",
+        "title": "Every answer leaves a trace"
+      },
+      "clips": [
+        {
+          "in": 375.0,
+          "out": 381.0,
+          "callouts": [
+            {
+              "at": 375.6,
+              "big": "16",
+              "label": "Error traces on this page",
+              "sub": "5 OK · 12 warning · 17 unknown",
+              "dur": 4.6,
+              "pos": "mr"
+            }
+          ]
+        },
+        {
+          "in": 384.0,
+          "out": 390.5
+        },
+        {
+          "in": 390.5,
+          "out": 397.0,
+          "rate": 4
+        },
+        {
+          "in": 397.0,
+          "out": 402.0,
+          "callouts": [
+            {
+              "at": 397.5,
+              "big": "0.37",
+              "label": "Grounding risk",
+              "sub": "Verdict: Unverifiable",
+              "dur": 4.0,
+              "pos": "mr"
+            }
+          ]
+        },
+        {
+          "in": 405.0,
+          "out": 410.0
+        }
+      ]
+    },
+    {
+      "name": "Incidents",
+      "lower": {
+        "kicker": "Incidents",
+        "title": "Every alert, newest first"
+      },
+      "clips": [
+        {
+          "in": 434.0,
+          "out": 440.5,
+          "callouts": [
+            {
+              "at": 436.8,
+              "big": "50",
+              "label": "Active incidents",
+              "dur": 3.2,
+              "pos": "mr"
+            }
+          ]
+        },
+        {
+          "in": 445.2,
+          "out": 450.5
+        }
+      ]
+    },
+    {
+      "name": "Drift",
+      "lower": {
+        "kicker": "Drift",
+        "title": "Latest 12 outputs against the first 20"
+      },
+      "clips": [
+        {
+          "in": 454.6,
+          "out": 461.0
+        },
+        {
+          "in": 461.0,
+          "out": 472.3,
+          "rate": 6
+        },
+        {
+          "in": 472.3,
+          "out": 478.0,
+          "callouts": [
+            {
+              "at": 472.8,
+              "big": "0.968",
+              "label": "Drift distance",
+              "sub": "drift_demo_agent · threshold 0.30",
+              "dur": 4.7,
+              "pos": "mr"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Overview",
+      "lower": {
+        "kicker": "Back on the Overview",
+        "title": "With this run counted"
+      },
+      "clips": [
+        {
+          "in": 548.0,
+          "out": 556.5,
+          "callouts": [
+            {
+              "at": 549.6,
+              "big": "398 to 456",
+              "label": "Spans ingested during this demo",
+              "dur": 4.4,
+              "pos": "br"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "outro": {
+    "dur": 5.5,
+    "kicker": "Open it yourself",
+    "head": "AgentPulse is *live*",
+    "url": "agentpulse.centralindia.cloudapp.azure.com",
+    "deck": "No sign-in needed to look around.",
+    "footLeft": "Code: github.com/Soum-Code/agentpulse",
+    "footRight": "M.Tech (AIML) final review"
+  }
+}

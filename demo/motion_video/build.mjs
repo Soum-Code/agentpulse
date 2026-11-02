@@ -107,18 +107,18 @@ export function cameraPlan(points, shotDur, opt) {
 // Look: the viva deck's paper, ink and one deep red
 // ---------------------------------------------------------------------------------------
 
-const PAPER = "#f4f0e6";
-const INK = "#141414";
-const INK2 = "#3d3a35";
-const GREY = "#6b665d";
-const RED = "#a4161a";
-const STAGE = "#2b2925";
+export const PAPER = "#f4f0e6";
+export const INK = "#141414";
+export const INK2 = "#3d3a35";
+export const GREY = "#6b665d";
+export const RED = "#a4161a";
+export const STAGE = "#2b2925";
 
-const esc = (s) =>
+export const esc = (s) =>
   String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
 
 // In short: headline words become spans so they can blur in one by one; *word* is the red accent.
-function words(text, idp) {
+export function words(text, idp) {
   let on = false; // inside *...*, which may span several words
   return String(text)
     .split(/\s+/)
@@ -134,7 +134,7 @@ function words(text, idp) {
     .join(" ");
 }
 
-const CARD_CSS = `
+export const CARD_CSS = `
   #root { position: absolute; inset: 0; background: transparent; color: ${INK}; overflow: hidden; }
   .sheet { position: absolute; inset: 0; background: ${PAPER}; }
   .ears { position: absolute; left: 110px; right: 110px; top: 46px; display: grid;
@@ -180,7 +180,7 @@ function cardTimeline(id, nWords, extra = "") {
     window.__timelines["${id}"] = tl;`;
 }
 
-function sceneFile(id, css, body, script) {
+export function sceneFile(id, css, body, script) {
   return `<template>
   <style>${css}</style>
   <div id="root" data-composition-id="${id}" data-width="${W}" data-height="${H}" data-layout-allow-overflow>
@@ -234,7 +234,7 @@ function sectionScene(id, c, dur, index, total) {
 }
 
 // The closing card: the live URL, underlined in red, and the code address.
-function outroScene(id, c, dur) {
+export function outroScene(id, c, dur) {
   const n = c.head.split(/\s+/).filter(Boolean).length;
   const body = `
     <div class="sheet" id="${id}-sheet">
@@ -268,9 +268,26 @@ const SHOT_CSS = `
     color: ${INK}; border-top: 3px double ${INK}; font-family: 'IBM Plex Mono', monospace; font-size: 28px;
     letter-spacing: 0.04em; box-shadow: 0 6px 18px rgba(0,0,0,0.35); opacity: 0; }
   .rate b { color: ${RED}; }
+  .stage, .kb { position: absolute; inset: 0; }
+  .kb { transform-origin: 50% 50%; }
+  .co { position: absolute; background: ${PAPER}; color: ${INK}; border-top: 5px double ${INK};
+    padding: 14px 26px 18px; box-shadow: 0 14px 40px rgba(0,0,0,0.5); opacity: 0; max-width: 620px; }
+  .co-k { font-family: 'Inter', sans-serif; font-weight: 700; font-size: 26px; letter-spacing: 0.14em;
+    text-transform: uppercase; color: ${RED}; }
+  .co-n { font-family: 'Playfair Display', serif; font-weight: 900; font-size: 112px; line-height: 1.02;
+    letter-spacing: -0.02em; margin-top: 4px; transform-origin: 0 60%; }
+  .co-n.long { font-size: 64px; line-height: 1.08; }
+  .co-s { font-family: 'EB Garamond', serif; font-size: 32px; line-height: 1.25; color: ${INK2}; margin-top: 4px; }
+  .lt { position: absolute; left: 64px; top: 86px; background: ${PAPER}; color: ${INK}; padding: 12px 26px 16px;
+    border-left: 8px solid ${RED}; box-shadow: 0 12px 34px rgba(0,0,0,0.45); opacity: 0; }
+  .lt-k { font-family: 'Inter', sans-serif; font-weight: 700; font-size: 26px; letter-spacing: 0.16em;
+    text-transform: uppercase; color: ${RED}; }
+  .lt-t { font-family: 'Playfair Display', serif; font-weight: 800; font-size: 56px; line-height: 1.08; }
 `;
+const CO_POS = { tr: "top: 150px; right: 70px", mr: "top: 380px; right: 70px", br: "bottom: 130px; right: 70px",
+  tl: "top: 150px; left: 70px", ml: "top: 380px; left: 70px", tc: "top: 150px; left: 50%; margin-left: -310px" };
 
-function shotScene(id, shot, srcName, opt) {
+export function shotScene(id, shot, srcName, opt) {
   const dur = r3((shot.out - shot.in) / shot.rate);
   const toLocal = (t) => (t - shot.in) / shot.rate;
   const pts = shot.events
@@ -319,35 +336,67 @@ function shotScene(id, shot, srcName, opt) {
   // Speed-up label: the footage is faster than real time here, and the frame says so.
   let rateEl = "";
   if (shot.rate > 1.01) {
-    rateEl = `<div class="rate" id="${id}-rate">Waiting, shown at <b>${shot.rate}×</b> speed</div>`;
+    rateEl = opt.badge === "ff"
+      ? `<div class="rate" id="${id}-rate">» FAST-FORWARD <b>${shot.rate}×</b></div>`
+      : `<div class="rate" id="${id}-rate">Waiting, shown at <b>${shot.rate}×</b> speed</div>`;
     L.push(`tl.fromTo("#${id}-rate", { opacity: 0 }, { opacity: 1, duration: 0.25 }, 0.15);`);
     L.push(`tl.to("#${id}-rate", { opacity: 0, duration: 0.2 }, ${r3(Math.max(0.5, dur - 0.3))});`);
   }
   // Dip: the last three frames darken before a cut inside a section.
   if (shot.dipOut) L.push(`tl.fromTo("#${id}-dip", { opacity: 0 }, { opacity: 0.4, duration: ${r3(3 / FPS)}, ease: "none" }, ${r3(dur - 3 / FPS - 0.001)});`);
 
+  // v2: a slow push-in on the whole frame (Ken Burns), separate from the camera's zooms.
+  if (shot.kb) L.push(`tl.fromTo("#${id}-kb", { scale: 1 }, { scale: ${1 + shot.kb}, duration: ${dur}, ease: "sine.inOut" }, 0);`);
+  // v2: the shot whips in from the right over the previous one.
+  if (shot.whipIn) L.push(`tl.fromTo("#${id}-stage", { x: 560, filter: "blur(22px)" }, { x: 0, filter: "blur(0px)", duration: 0.36, ease: "power3.out" }, 0);`);
+  // v2: callouts, each a real number read from a caption of the run, placed at its source time.
+  const coEls = (shot.callouts || []).map((c, i) => {
+    const at = Math.max(0.1, (c.at - shot.in) / shot.rate);
+    const d = Math.min(c.dur ?? 2.6, dur - at - 0.15);
+    const cid = `${id}-co${i}`;
+    L.push(`tl.fromTo("#${cid}", { opacity: 1, clipPath: "inset(0% 100% 0% 0%)" }, { clipPath: "inset(0% 0% 0% 0%)", duration: 0.3, ease: "power3.out", immediateRender: false }, ${r3(at)});`);
+    L.push(`tl.fromTo("#${cid} .co-n", { scale: 1.35, filter: "blur(10px)", opacity: 0 }, { scale: 1, filter: "blur(0px)", opacity: 1, duration: 0.38, ease: "expo.out" }, ${r3(at + 0.12)});`);
+    L.push(`tl.to("#${cid}", { opacity: 0, y: -14, duration: 0.2, ease: "power2.in" }, ${r3(at + d - 0.2)});`);
+    const long = String(c.big).length > 8 ? " long" : "";
+    return `<div class="co" id="${cid}" style="${CO_POS[c.pos || "mr"]}"><div class="co-k">${esc(c.label)}</div><div class="co-n${long}">${esc(c.big)}</div>${c.sub ? `<div class="co-s">${esc(c.sub)}</div>` : ""}</div>`;
+  });
+  // v2: a lower-third naming the section, on the first shot of each section.
+  let ltEl = "";
+  if (shot.lower) {
+    ltEl = `<div class="lt" id="${id}-lt"><div class="lt-k">${esc(shot.lower.kicker)}</div><div class="lt-t">${words(shot.lower.title, `${id}-lt`)}</div></div>`;
+    L.push(`tl.fromTo("#${id}-lt", { opacity: 1, x: -560 }, { x: 0, duration: 0.42, ease: "expo.out", immediateRender: false }, 0.25);`);
+    L.push(`tl.to("#${id}-lt", { x: -1100, opacity: 0, duration: 0.3, ease: "power3.in" }, ${r3(Math.min(dur - 0.35, 2.9))});`);
+  }
+
   const body = `
-    <div class="cam" id="${id}-cam">
-      <video id="${id}-v" class="clip" src="assets/${srcName}" muted playsinline data-start="0" data-duration="${dur}"
-        data-media-start="${r3(shot.in)}"${shot.rate !== 1 ? ` data-playback-rate="${shot.rate}"` : ""} data-track-index="0"></video>
-      ${ringEls.join("\n      ")}
-    </div>
-    ${rateEl}
-    <div class="dip" id="${id}-dip"></div>`;
+    <div class="stage" id="${id}-stage">
+      <div class="kb" id="${id}-kb">
+        <div class="cam" id="${id}-cam">
+          <video id="${id}-v" class="clip" src="assets/${srcName}" muted playsinline data-start="0" data-duration="${dur}"
+            data-media-start="${r3(shot.in)}"${shot.rate !== 1 ? ` data-playback-rate="${shot.rate}"` : ""} data-track-index="0"></video>
+          ${ringEls.join("\n          ")}
+        </div>
+      </div>
+      ${coEls.join("\n      ")}
+      ${ltEl}
+      ${rateEl}
+      <div class="dip" id="${id}-dip"></div>
+    </div>`;
   const script = `
     const tl = gsap.timeline({ paused: true });
     ${L.join("\n    ")}
     tl.set({}, {}, ${dur});
     window.__timelines["${id}"] = tl;`;
   const marks = pts.map((e) => ({ t: r3(e.t), action: e.action, label: e.label, box: e.box }));
-  return { html: sceneFile(id, SHOT_CSS, body, script), dur, zooms: holds.length, clicks: clicks.length, marks };
+  const css = shot.whipIn ? SHOT_CSS.replace(`background: ${STAGE}; overflow`, "background: transparent; overflow") : SHOT_CSS;
+  return { html: sceneFile(id, css, body, script), dur, zooms: holds.length, clicks: clicks.length, marks };
 }
 
 // ---------------------------------------------------------------------------------------
 // Assemble the root composition
 // ---------------------------------------------------------------------------------------
 
-function rootHtml(id, hosts, total) {
+export function rootHtml(id, hosts, total) {
   const hostEls = hosts
     .map(
       (h, i) => `      <div id="${h.id}" data-composition-id="${h.id}" data-composition-src="compositions/${h.id}.html"
@@ -384,7 +433,7 @@ ${hostEls}
 
 // In short: the recording is re-encoded once to 30 fps H.264 with a short keyframe interval,
 // so every frame HyperFrames asks for can be found quickly and exactly.
-function prepareSource(recording, assetsDir) {
+export function prepareSource(recording, assetsDir) {
   const dst = path.join(assetsDir, "recording.mp4");
   const stamp = path.join(assetsDir, "recording.source.txt");
   const key = `${path.resolve(recording)}|${fs.statSync(recording).size}|${fs.statSync(recording).mtimeMs}`;
@@ -401,7 +450,7 @@ function prepareSource(recording, assetsDir) {
   return dst;
 }
 
-function probeDuration(file) {
+export function probeDuration(file) {
   const out = execFileSync("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", file]);
   return Number(String(out).trim());
 }
@@ -550,4 +599,5 @@ function main() {
   console.log(`\n${cut.id}: ${hosts.length} scenes, ${total.toFixed(1)} s (${Math.floor(total / 60)}:${String(Math.round(total % 60)).padStart(2, "0")}), project in ${dir}`);
 }
 
+export { loadEvents as _loadEvents };
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) main();
