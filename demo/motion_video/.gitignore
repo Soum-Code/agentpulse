@@ -1,0 +1,6 @@
+# Large or generated files stay out of git: renders, the HyperFrames build, the sample clip.
+node_modules/
+build/
+output/
+sample/
+.hyperframes/
