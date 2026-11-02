@@ -13,7 +13,7 @@
 #                            platform metrics.
 #
 # HOW IT FITS IN
-# main.py adds all three in create_app(). This file uses config.py (the API key and
+# main.py adds all four in create_app(). This file uses config.py (the API key and
 # dev mode), services/api_keys.py (issued keys, looked up in the database) and
 # services/runtime_metrics.py (the counters).
 

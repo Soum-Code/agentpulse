@@ -180,6 +180,7 @@ def check_ingest_limits(payload: "IngestPayload") -> None:
     def refuse(sentence: str) -> None:
         raise HTTPException(status_code=413, detail=sentence)
 
+    # In short: first check: too many spans in one request.
     max_spans = settings.ingest_max_spans
     if max_spans > 0 and len(payload.spans) > max_spans:
         refuse(
@@ -187,6 +188,8 @@ def check_ingest_limits(payload: "IngestPayload") -> None:
             f"Send them in batches of at most {max_spans}."
         )
 
+    # In short: read the other three limits once, then check the two labels that belong to the
+    # whole request (service_name and sdk_version).
     max_text = settings.ingest_max_text_chars
     max_label = settings.ingest_max_label_chars
     max_meta = settings.ingest_max_metadata_chars
@@ -194,7 +197,9 @@ def check_ingest_limits(payload: "IngestPayload") -> None:
         for name in ("service_name", "sdk_version"):
             if len(getattr(payload, name)) > max_label:
                 refuse(f"{name} is longer than {max_label} characters.")
+    # In short: now check every span. `index` is its position in the request, counting from 0.
     for index, span in enumerate(payload.spans):
+        # In short: the long text fields (summaries, error message, tool arguments and result).
         if max_text > 0:
             for name in _TEXT_FIELDS:
                 value = getattr(span, name)
@@ -203,6 +208,7 @@ def check_ingest_limits(payload: "IngestPayload") -> None:
                         f"Span {index} (counting from 0): {name} is {len(value)} characters "
                         f"long; the limit is {max_text}."
                     )
+        # In short: the short label fields (ids, names, hashes, status, model).
         if max_label > 0:
             for name in _LABEL_FIELDS:
                 value = getattr(span, name)
@@ -211,6 +217,7 @@ def check_ingest_limits(payload: "IngestPayload") -> None:
                         f"Span {index} (counting from 0): {name} is {len(value)} characters "
                         f"long; the limit is {max_label}."
                     )
+        # In short: metadata is a dict, so its size is the length of its JSON text.
         if max_meta > 0 and span.metadata:
             meta_chars = len(json.dumps(span.metadata, default=str))
             if meta_chars > max_meta:
@@ -704,6 +711,7 @@ async def simulate_result(trace_id: str):
                 .order_by(Span.start_time, literal_column("rowid"))
             )
         ).all()
+        # In short: the scores the worker has saved for this trace, looked up by span_id.
         evaluations = {
             e.span_id: e
             for e in (
@@ -720,12 +728,14 @@ async def simulate_result(trace_id: str):
                 )
             ).all()
         )
+        # In short: the alerts raised on this trace, oldest first.
         alerts = (
             await session.execute(
                 select(Alert).where(Alert.trace_id == trace_id).order_by(col(Alert.created_at))
             )
         ).scalars().all()
 
+    # In short: one entry per span. The score fields stay None until the worker has scored that span.
     out_spans = []
     for s in spans:
         e = evaluations.get(s.span_id)

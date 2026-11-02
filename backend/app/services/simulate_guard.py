@@ -275,6 +275,7 @@ class SimulateGuard:
         self._forget_old(now)
         to_midnight = _seconds_to_utc_midnight(now)
 
+        # In short: rule 1: the whole site has used up today's runs (daily_cap). The wait is until UTC midnight.
         if self._day_total >= s.daily_cap:
             return Refusal(
                 "daily_cap",
@@ -282,6 +283,7 @@ class SimulateGuard:
                 f"It starts again {_reset_text(to_midnight)}.",
                 to_midnight,
             )
+        # In short: rule 2: this IP has used up its runs for the day (ip_per_day). The wait is until UTC midnight.
         if self._day_by_ip.get(ip, 0) >= s.ip_per_day:
             return Refusal(
                 "ip_day_limit",
@@ -289,6 +291,8 @@ class SimulateGuard:
                 f"It resets {_reset_text(to_midnight)}.",
                 to_midnight,
             )
+        # In short: rule 3: this IP has used up its runs for the last hour (ip_per_hour). It may run again
+        # when its oldest run in that hour turns one hour old.
         recent = self._hour.get(ip)
         if len(recent or ()) >= s.ip_per_hour:
             # With a limit of 0 there is no oldest run; the wait is then a full hour.
@@ -316,6 +320,7 @@ class SimulateGuard:
         refusal = self._refusal(ip, self._clock())
         if refusal is not None:
             return refusal
+        # In short: too many scoring jobs are still waiting in the queue, so the answer is "busy".
         if await depth() >= self.settings.max_queue_depth:
             return Refusal(
                 "busy",
@@ -323,6 +328,7 @@ class SimulateGuard:
                 f"Try again in {_wait_text(BUSY_RETRY_SECONDS)}.",
                 BUSY_RETRY_SECONDS,
             )
+        # In short: count again (the time has moved on while the queue was read), then record this run.
         now = self._clock()
         refusal = self._refusal(ip, now)
         if refusal is not None:

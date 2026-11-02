@@ -2,11 +2,16 @@
 
 import type { ScenarioResult } from './scenarioResult';
 
+// In short: every call the dashboard makes to the backend goes through this file. The interfaces below
+// describe the JSON the backend answers with, and createApiClient() returns one function per endpoint.
+
+// In short: where the backend is (an empty baseUrl means the same site as the page) and the optional API key.
 export interface AgentPulseConnection {
   baseUrl: string;
   apiKey?: string;
 }
 
+// In short: the answer of GET /v1/health/ready: can the API serve requests (it needs its database).
 export interface ApiReadiness {
   ready: boolean;
   checks: {
@@ -15,6 +20,7 @@ export interface ApiReadiness {
   reasons: string[];
 }
 
+// In short: the answer of GET /v1/health/evaluator: how many scoring workers are alive, registered and stale.
 export interface EvaluatorReadiness {
   ready: boolean;
   workers_alive: number;
@@ -32,6 +38,8 @@ export interface Percentiles {
   p99?: number | null;
 }
 
+// In short: the answer of GET /v1/platform, which the Performance and Overview views draw: the queue,
+// timings, job reliability, in-process counters and the workers.
 export interface PlatformHealth {
   state: 'healthy' | 'degraded' | 'backlogged' | 'failing' | 'starting';
   reasons: string[];
@@ -96,6 +104,7 @@ export interface PlatformHealth {
   };
 }
 
+// In short: the answer of GET /v1/metrics: the totals for the whole system.
 export interface Metrics {
   total_traces: number;
   total_spans: number;
@@ -107,6 +116,7 @@ export interface Metrics {
   total_errors: number;
 }
 
+// In short: one trace as GET /v1/traces lists it (also the `trace` part of GET /v1/traces/{id}).
 export interface TraceListItem {
   trace_id: string;
   pipeline_id: string | null;
@@ -118,6 +128,8 @@ export interface TraceListItem {
   service_name: string;
 }
 
+// In short: one span of a trace (GET /v1/traces/{id}). `evaluation` holds its scores and is null until
+// the worker has scored the span.
 export interface SpanDetail {
   span_id: string;
   parent_span_id: string | null;
@@ -158,6 +170,7 @@ export interface SpanDetail {
  *  which grounding_score (contradiction + 0.3 * neutral) rates low. */
 export type GroundingVerdict = 'contradicted' | 'unverifiable' | 'supported';
 
+// In short: one agent as GET /v1/agents lists it, with its error rate and its stability index (ASI).
 export interface Agent {
   agent_id: string;
   agent_role: string | null;
@@ -172,6 +185,7 @@ export interface Agent {
   current_asi: number | null;
 }
 
+// In short: one alert as GET /v1/alerts lists it. `details` is the extra JSON saved with the alert.
 export interface AlertItem {
   id: number;
   alert_type: string;
@@ -186,6 +200,8 @@ export interface AlertItem {
   details: Record<string, unknown> | null;
 }
 
+// In short: the error thrown for any answer that is not OK. `status` is the HTTP code; `retryAfter` is set
+// only for the Telemetry Lab's 429.
 export class ApiError extends Error {
   constructor(
     message: string,
@@ -198,10 +214,12 @@ export class ApiError extends Error {
   }
 }
 
+// In short: cut spaces and trailing slashes off the base URL.
 function normalizeBaseUrl(baseUrl: string): string {
   return baseUrl.trim().replace(/\/+$/, '');
 }
 
+// In short: base URL plus path. With no base URL the path alone is used, so the request goes to the same site.
 function requestUrl(baseUrl: string, path: string): string {
   return baseUrl ? `${baseUrl}${path}` : path;
 }
@@ -220,16 +238,24 @@ export interface ApiKeySummary {
   active: boolean;
 }
 
+// In short: the address of the live feed: the same host with http changed to ws, then /v1/ws/live.
+// With no base URL it uses the address of the page itself. Only api.test.ts calls it: the console
+// does not open the feed but polls the API every 10 seconds (useTelemetry).
 export function websocketUrlFor(connection: AgentPulseConnection): string {
   const baseUrl = normalizeBaseUrl(connection.baseUrl);
   const resolvedBase = baseUrl || window.location.origin;
   return `${resolvedBase.replace(/^http/, 'ws')}/v1/ws/live`;
 }
 
+// In short: build the client for one connection. It returns one function per backend endpoint, and all of
+// them send the same base URL and API key.
 export function createApiClient(connection: AgentPulseConnection) {
   const baseUrl = normalizeBaseUrl(connection.baseUrl);
   const apiKey = connection.apiKey?.trim();
 
+  // In short: the one place that sends a request. It adds the JSON header and the X-API-Key, and throws an
+  // ApiError for a bad status. A 503 that has a JSON body (the health endpoints send one when not ready)
+  // is returned as data, so the page can show the reasons.
   async function fetchApi<T>(path: string, options: RequestInit = {}): Promise<T> {
     const headers = new Headers(options.headers);
     if (options.body && !headers.has('Content-Type')) {
@@ -268,6 +294,7 @@ export function createApiClient(connection: AgentPulseConnection) {
     return response.json() as Promise<T>;
   }
 
+  // In short: the endpoints. Each one is a small function that calls fetchApi with its URL.
   return {
     getReadiness: () => fetchApi<ApiReadiness>('/v1/health/ready'),
     getEvaluatorReadiness: () => fetchApi<EvaluatorReadiness>('/v1/health/evaluator'),
@@ -344,6 +371,7 @@ export function createApiClient(connection: AgentPulseConnection) {
   };
 }
 
+// In short: the type of the object above, so other files can say which client they accept.
 export type ApiClient = ReturnType<typeof createApiClient>;
 
 // Preserves development-proxy behaviour until a connection is explicitly selected.

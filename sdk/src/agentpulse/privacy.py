@@ -33,6 +33,7 @@ class PrivacyFilter:
     - Filter excluded field names
     """
 
+    # In short: keep the policy and get the redaction patterns ready (compiled once, below).
     def __init__(self, policy: CapturePolicy) -> None:
         self._policy = policy
         # Compile each pattern string once, here, so redact_text() does not have to rebuild

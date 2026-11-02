@@ -560,6 +560,8 @@ def create_app(
                 yield {"type": "agent_start", "agent": agent}
                 entry = await call(agent, prompt, source=evidence, **span_kwargs)
                 yield {"type": "agent_done", **entry}
+        # In short: one agent's step failed (no provider answered, or the time ran out). End the stream with
+        # ONE error event that says why and lists what had already run.
         except AgentFailure as exc:
             status, code, text = _failure(exc, budget)
             logger.warning("chat: turn failed at %s (%s) after %d ms", exc.agent, code, elapsed_ms())
@@ -575,6 +577,7 @@ def create_app(
                 "total_ms": elapsed_ms(),
             }
             return
+        # In short: any other error. Log only the error's type, never its text, and send a plain 500 event.
         except Exception as exc:  # noqa: BLE001 - the stream must still end with one event
             logger.error("chat: turn failed with %s after %d ms", type(exc).__name__, elapsed_ms())
             yield {
@@ -590,6 +593,8 @@ def create_app(
             }
             return
 
+        # In short: all three agents answered. Finish with one "done" event: the answerer's text is the reply
+        # and the verifier's text is the verdict.
         by_agent = {a["agent"]: a for a in state.agents}
         total_ms = elapsed_ms()
         logger.info(
@@ -621,12 +626,15 @@ def create_app(
         session_id, ip, refused = admit(request, body)
         if refused:
             return refused
+        # In short: run the turn and keep only its last event (the "done" or the "error"). The slots are
+        # freed in `finally`, even if something raises.
         final: dict[str, Any] = {}
         try:
             async for event in run_turn(body.message, session_id):
                 final = event
         finally:
             limiter.finish(ip)
+        # In short: an error event carries its HTTP status and a done event is 200. "type" is not part of the body.
         status = final.pop("status", 200) if final.get("type") == "error" else 200
         final.pop("type", None)
         return JSONResponse(status_code=status, content=final)

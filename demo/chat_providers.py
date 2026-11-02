@@ -298,6 +298,8 @@ def classify(exc: BaseException) -> tuple[str, Optional[int], Optional[float]]:
         return "empty", None, None
     if isinstance(exc, (TimeoutError, asyncio.TimeoutError)) or "Timeout" in name:
         return "timeout", None, None
+    # In short: if the error carries an HTTP status, that decides: 402 or 429 = rate limited (the route is
+    # paused), 500 and above = the provider's fault, anything else = a plain HTTP error.
     status = getattr(exc, "status_code", None)
     if isinstance(status, int):
         if status in (402, 429):
@@ -331,9 +333,11 @@ def _call(client: Any, route: Route, prompt: str, max_tokens: int, timeout: floa
         "max_tokens": max_tokens,
         "timeout": timeout,
     }
+    # In short: extra request fields for this model, such as the low-reasoning setting (see reasoning_fields).
     if route.extra_body:
         kwargs["extra_body"] = route.extra_body
     response = client.chat.completions.create(**kwargs)
+    # In short: take the text of the first answer. No text at all counts as a failure ("empty"), not as a blank reply.
     choices = getattr(response, "choices", None) or []
     text = ((choices[0].message.content if choices else None) or "").strip()
     if not text:
