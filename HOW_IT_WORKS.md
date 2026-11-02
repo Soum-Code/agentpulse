@@ -94,7 +94,7 @@ With 30 cases, one case flipping moves overall F1 by roughly 0.04. Differences o
                                                  │
                                                  ▼
                                             ┌──────────┐
-                                            │dashboard │  polls REST + WS
+                                            │dashboard │  polls REST every 10 s
                                             └──────────┘
 ```
 
@@ -231,7 +231,9 @@ One `Evaluation` row, optionally one `DriftRecord`, zero or more `Alert` rows. T
 
 ### Step 8 — the dashboard sees it
 
-The SPA polls REST and also holds a WebSocket at `/v1/ws/live`.
+The SPA polls the REST API every 10 seconds (`POLL_MS` in `dashboard/src/lib/useTelemetry.ts`).
+
+The backend also offers a WebSocket live feed at `/v1/ws/live`: `POST /v1/ingest` sends each connected client a small `new_span` message per span. **The current console does not use it.** Nothing in `dashboard/src` opens a WebSocket; `websocketUrlFor()` in `dashboard/src/lib/api.ts` only builds the address, and only its test calls it.
 
 ---
 
