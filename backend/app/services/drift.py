@@ -513,21 +513,28 @@ class DriftDetector:
         signals = []
         weights = []
 
+        # In short: output meaning (weight 0.35): how far the newest output is from the agent's usual outputs.
         if result.centroid_distance is not None:
             stability = max(0.0, 1.0 - result.centroid_distance)
             signals.append(stability)
             weights.append(0.35)
 
+        # In short: quality (weight 0.30): how much the risk score rose lately. The x2 means a rise of 0.5
+        # already leaves no stability.
         if result.quality_drift is not None:
             stability = max(0.0, 1.0 - result.quality_drift * 2)
             signals.append(stability)
             weights.append(0.30)
 
+        # In short: tool use (weight 0.15): tool_drift is 0 when one tool does all the calls and 1 when the
+        # calls are spread evenly over the tools.
         if result.tool_drift is not None:
             stability = max(0.0, 1.0 - result.tool_drift)
             signals.append(stability)
             weights.append(0.15)
 
+        # In short: errors (weight 0.20): how much the share of failed spans rose. The x5 means a rise of 0.2
+        # leaves no stability.
         if result.error_rate_delta is not None:
             stability = max(0.0, 1.0 - result.error_rate_delta * 5)
             signals.append(stability)

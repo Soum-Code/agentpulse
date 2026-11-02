@@ -237,6 +237,8 @@ class TurnLimiter:
     admitted turn, to free its concurrency slots. Used only from the event loop, so no lock.
     """
 
+    # In short: start with empty counts. Everything lives in this process's memory, so a restart
+    # resets it. `clock` can be replaced in tests.
     def __init__(self, settings: GuardSettings, clock: Callable[[], float] = time.time):
         self.settings = settings
         self._clock = clock
@@ -265,6 +267,7 @@ class TurnLimiter:
         self._roll_day(now)
         to_midnight = _seconds_to_utc_midnight(now)
 
+        # In short: rule 1: the whole site has used up today's questions (daily_cap).
         if self._day_total >= s.daily_cap:
             return Refusal(
                 429,
@@ -273,6 +276,7 @@ class TurnLimiter:
                 f"It starts again {_reset_text(to_midnight)}.",
                 to_midnight,
             )
+        # In short: rule 2: this IP has used up its questions for the day.
         if self._day_by_ip.get(ip, 0) >= s.ip_per_day:
             return Refusal(
                 429,
@@ -281,6 +285,7 @@ class TurnLimiter:
                 f"It resets {_reset_text(to_midnight)}.",
                 to_midnight,
             )
+        # In short: rule 3: too many questions from this IP in the last 60 seconds.
         # This IP's last minute: drop the turns older than 60 s, then count what is left.
         recent = self._minute.setdefault(ip, deque())
         while recent and recent[0] <= now - 60.0:
@@ -293,6 +298,7 @@ class TurnLimiter:
                 f"That is {s.ip_per_minute} questions in a minute. Try again in {wait} s.",
                 wait,
             )
+        # In short: rule 4: this IP already has a question being answered (one at a time per IP).
         if self._running_by_ip.get(ip, 0) >= 1:
             return Refusal(
                 429,
@@ -300,6 +306,7 @@ class TurnLimiter:
                 "Your previous question is still being answered. Try again when it has finished.",
                 5,
             )
+        # In short: rule 5: the whole site is already answering as many questions as it may at once.
         if self.running >= s.max_concurrent:
             return Refusal(
                 429,
@@ -308,6 +315,7 @@ class TurnLimiter:
                 5,
             )
 
+        # In short: the turn is admitted. Write it into every count (minute, day, running).
         recent.append(now)
         self._day_by_ip[ip] = self._day_by_ip.get(ip, 0) + 1
         self._day_total += 1

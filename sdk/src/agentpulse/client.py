@@ -355,6 +355,8 @@ class AgentPulse:
             asyncio.run_coroutine_threadsafe(self._start_transport(), loop)
             atexit.register(self._stop_in_thread)
 
+    # In short: the whole life of the transport thread: make `loop` this thread's event loop, run it until
+    # _stop_in_thread stops it, then close it.
     @staticmethod
     def _run_loop(loop: asyncio.AbstractEventLoop) -> None:
         asyncio.set_event_loop(loop)
